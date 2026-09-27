@@ -1,0 +1,87 @@
+---
+title: Get started
+description: Create a project from the starter and run the application and documentation locally.
+sidebar:
+  order: 1
+---
+
+## Create a project
+
+Install Node.js 24 and enable Corepack, then copy the starter without its Git history:
+
+```sh
+npx degit AdiRishi/application-platform-starter acme-platform
+cd acme-platform
+corepack enable
+pnpm install
+pnpm rename acme-platform
+pnpm install
+```
+
+Run the rename command once, before changing the starter. It updates the package name, Alchemy stack name, and README heading. The docs title follows the package name. The second install refreshes the lockfile.
+
+## Run the application
+
+From the repository root:
+
+```sh
+pnpm dev
+```
+
+Alchemy starts the web app and Worker graph in workerd, with local D1, R2, Queues, and Durable Objects. Open the web URL printed in the terminal and upload `fixtures/transactions.csv`.
+
+On the first run, Alchemy may ask you to authenticate with Cloudflare to initialize its state store. Non-interactive configuration is documented in `infra/.env.example`.
+
+Start development through Alchemy so the web app receives its Worker bindings. Running Vite directly in `apps/web` does not provide them. Internal packages export TypeScript source, so edits need no separate compilation step.
+
+## Remove the sample application
+
+The CSV profiler is sample code. Remove it before building your own application, and keep the setup around it.
+
+Delete these sample-only paths:
+
+- `fixtures/transactions.csv`.
+- `packages/contracts/src/artifacts.ts`, `packages/contracts/src/artifacts/`, `packages/contracts/tests/artifacts/`, and the `./artifacts` export in `packages/contracts/package.json`.
+- `workers/api/src/artifacts/`, `workers/api/src/platform/processor-client.ts`, and the SQL files in `workers/api/migrations/`. Start your own migrations at `0001`.
+- `apps/web/src/features/artifacts/`, `apps/web/src/routes/api/artifacts.ts`, `apps/web/src/routes/artifacts/`, and `apps/web/tests/features/artifacts/`.
+- The profiler suites in `infra/tests/`: `api.*`, `data-plane.*`, `processor.*`, and `profile-session.*`. Also delete `fixtures/`, `support/api-client.ts`, and `support/api-stack.ts`.
+
+`workers/processor/` is the example queue consumer with a Durable Object. If your application has no background work, delete it together with `infra/src/processor.ts`, `infra/src/profile-session.ts`, and the `csv-parse` catalog entry. Otherwise, replace its `src/artifacts/` directory.
+
+Then update the setup files that name the sample:
+
+- `infra/src/data-plane.ts`: declare your own databases, buckets, and queues.
+- `infra/src/worker-bindings.ts`, `infra/src/api.ts`, and `infra/src/workers.ts`: bind your resources, and remove the processor if you deleted it.
+- `workers/api/src/index.ts`: build your services and return your RPC methods as `operations`. Group them by caller, as the sample's `rpc.ts` does, so each client can pick its own methods.
+- `apps/web/src/routes/index.tsx`: replace the home route.
+- `infra/tests/alchemy.run.integration.test.ts`: keep the stack and CSRF tests, and replace the sample's page text and download-route assertions.
+- `infra/tests/alchemy.run.browser.test.ts`: rewrite it for your application's main browser flow. The integration suite runs Playwright, which fails without a browser test.
+- `docs/architecture.mdx`: replace "The reference application's data flow".
+
+Keep `packages/contracts/src/app.ts`, `apps/web/src/server/`, `apps/web/src/lib/`, the web router and Worker entry points, `infra/src/cloudflare-config.ts`, `infra/src/deployment-config.ts`, `infra/tests/support/worker-readiness.ts`, `tooling/`, and `scripts/`.
+
+Finish with `pnpm install`, `pnpm check`, `pnpm typecheck`, and `pnpm test`.
+
+## Read and edit the docs
+
+In a separate terminal:
+
+```sh
+pnpm docs:dev
+```
+
+Open the local URL printed by Blume. This server runs independently of the application and needs no Cloudflare credentials.
+
+Edit pages in `docs/` as Markdown or MDX. Blume updates the browser as you save. `blume.config.ts` sets the site title and theme. Navigation follows the directory tree; `sidebar.order` in a page's frontmatter controls its position.
+
+To check the content and generate a static site, stop the docs server and run:
+
+```sh
+pnpm docs:doctor
+pnpm docs:build
+pnpm exec blume preview
+```
+
+The static site is written to the root `dist/` directory. Blume's generated runtime lives in `.blume/`; both directories are ignored by Git.
+
+See [Blume's authoring guide](https://useblume.dev/docs/content) for page syntax and components.
