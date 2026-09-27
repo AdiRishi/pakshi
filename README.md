@@ -41,6 +41,7 @@ To read the documentation locally, run `pnpm docs:dev`. It needs no Cloudflare c
 - [Vision](docs/vision.mdx): the problem, who Pakshi is for, and its principles.
 - [Product spec](docs/product-spec.mdx): what the MVP does, and the plan to get there.
 - [Technical design](docs/technical-design.mdx): how Pakshi is built on Cloudflare.
+- [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU): every Studio screen, as a design canvas.
 
 ## Contributing
 
