@@ -1,27 +1,25 @@
 ---
 title: Pakshi
-description: A guide to the repository, its Worker graph, and local development.
+description: An internal platform that lets non-technical teams build, launch and maintain websites without a developer in the loop.
 sidebar:
   label: Overview
   icon: house
 ---
 
-This starter connects a web application, internal Workers, and shared Cloudflare resources through one typed Alchemy program. Effect services implement the application behavior; Alchemy owns deployment, bindings, and local runtimes.
-
-The included CSV profiler exercises the complete path from browser upload to background processing and source download. Replace that example with your own application once you understand the graph.
+People describe what they want to an AI agent, which assembles pages from a curated library of well-designed blocks. Editors fix small things directly on the live page, and every change goes through previews and approvals before it reaches production.
 
 <CardGroup cols={2}>
-  <Card title="Get started" href="/getting-started" icon="terminal">
-    Create a project, run the application, and browse these docs locally.
+  <Card title="Vision" href="/vision" icon="telescope">
+    The problem, who Pakshi is for, and its guiding principles.
   </Card>
-  <Card title="Architecture" href="/architecture" icon="network">
-    Find the code that owns each resource, binding, and Worker RPC method.
+  <Card title="Product spec" href="/product-spec" icon="layout-template">
+    MVP scope, roles, Studio, key journeys, and requirements.
   </Card>
-  <Card title="Testing" href="/testing" icon="flask-conical">
-    Run unit, browser, and infrastructure tests.
+  <Card title="Technical design" href="/technical-design" icon="network">
+    How Pakshi is built on Cloudflare.
   </Card>
-  <Card title="Deployment" href="/deployment" icon="cloud-upload">
-    Plan, deploy, and destroy an isolated Cloudflare stage.
+  <Card title="Decision log" href="/decision-log" icon="list-checks">
+    The significant technical decisions and why they were made.
   </Card>
 </CardGroup>
 
