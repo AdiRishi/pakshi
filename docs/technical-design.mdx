@@ -5,7 +5,7 @@ sidebar:
   order: 3
 ---
 
-Pakshi is **four Cloudflare Workers** in two pairs, each a web layer and an API layer, sharing one set of packages. `sites` (Astro) serves every public site and preview, and `sites-api` receives form submissions. `studio` (TanStack Start) is the admin UI, and `studio-api` holds the domain logic, the per-site documents and the agent. Each site's draft lives in one Durable Object that people and the agent edit together in real time. Publishing writes an immutable snapshot to R2 and moves a pointer; rollback moves it back.
+Pakshi is **four Cloudflare Workers** in two pairs, each a web layer and an API layer, sharing one set of packages. `sites` (Astro) serves every public site and preview, and `sites-api` receives form submissions. `studio` (TanStack Start) is the admin UI, and `studio-api` holds the domain logic, the per-site documents and the agent. Each site's drafts live in one Durable Object, where people and the agent edit together in real time and drafts that fall behind merge in published changes. Publishing writes an immutable snapshot to R2 and moves a pointer; rollback moves it back.
 
 This doc follows the [vision](/vision) and the [product spec](/product-spec). Decisions and their reasoning are in the [decision log](/decision-log). **Design rule:** use Cloudflare's primitives fully and design for scale, but add no machinery the product doesn't need: no extra services, fallback chains or recovery layers without a concrete reason.
 
@@ -17,7 +17,7 @@ Four Workers, connected by service-binding RPC. Public traffic never touches the
 flowchart LR
   V[Site visitors] --> S[sites<br/>Astro]
   S -->|form posts| SA[sites-api]
-  S --> KV[(KV<br/>host to release)]
+  S --> KV[(KV<br/>host to site to release)]
   S --> R2[(R2<br/>snapshots, media)]
   SA --> SUB[(D1 submissions)]
   U[Staff] --> ST[studio<br/>TanStack Start + Puck]
@@ -47,19 +47,18 @@ flowchart LR
 | Visual editor             | Puck                                                   | Fed from our schema through an adapter                                                                                                               |
 | UI primitives and styling | shadcn/ui, Tailwind v4                                 | Theme tokens as CSS variables                                                                                                                        |
 | Schema and validation     | Effect Schema (Effect v4)                              | Same library as the starter. One schema drives validation, Puck fields and agent tool definitions through its Standard Schema and JSON Schema output |
-| Rich text                 | TipTap (ProseMirror JSON)                              | Chosen over Lexical because Puck's rich text field is built on TipTap; collaborative editing through Yjs                                             |
+| Rich text                 | TipTap (ProseMirror JSON)                              | Chosen over Lexical because Puck's rich text field is built on TipTap. A rich text field is one value; no shared-cursor editing in the MVP           |
 | Site drafts               | Durable Objects (SQLite)                               | One `SiteDoc` per site, built on PartyServer for live editing and presence                                                                           |
 | Relational data           | D1                                                     | `core` and `submissions` databases                                                                                                                   |
 | Files and snapshots       | R2                                                     | Media, published and preview snapshots, source documents                                                                                             |
-| Routing                   | KV                                                     | Hostname → current release                                                                                                                           |
+| Routing                   | KV                                                     | Hostname → site → current release                                                                                                                    |
 | Images                    | Cloudflare Images                                      | Resizing and format conversion                                                                                                                       |
-| Agent runtime             | Cloudflare Agents SDK                                  | One `SiteAgent` Durable Object per conversation                                                                                                      |
+| Agent runtime             | Cloudflare Agents SDK, `@cloudflare/ai-chat`           | One `SiteAgent` Durable Object per conversation                                                                                                      |
 | Model access              | AI Gateway                                             | Logging, cost tracking, per-brand spend limits                                                                                                       |
 | Document conversion       | Workers AI `toMarkdown`                                | For uploaded source documents                                                                                                                        |
-| Staff sign-in             | Better Auth                                            | Runs in studio-api; SSO plugin connects to the organization's identity provider (OIDC or SAML); sessions in D1                                       |
+| Staff sign-in             | Better Auth                                            | Runs in studio-api; SSO plugin connects to the organization's identity provider over OIDC; sessions in D1                                            |
 | Custom domains            | Cloudflare for SaaS                                    | Custom hostnames with automatic certificates                                                                                                         |
-| Form spam                 | Turnstile, Rate Limiting binding                       | Plus a honeypot field                                                                                                                                |
-| Email                     | Cloudflare Email Service                               | Sending is in public beta                                                                                                                            |
+| Email                     | Cloudflare Email Service                               | Sending is in public beta; sender domains must use Cloudflare DNS                                                                                    |
 | Payments (later)          | Stripe Checkout                                        | Not in the MVP                                                                                                                                       |
 | Monorepo                  | application-platform-starter: pnpm, Turborepo, Alchemy | Effect for services, Alchemy for infrastructure as code, oxlint and oxfmt, Vitest, Playwright for visual regression                                  |
 
@@ -77,7 +76,7 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 | `workers/studio-api` | Domain logic, `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs                                        |
 | `workers/sites-api`  | Form intake, later payment webhooks                                                                            |
 | `packages/contracts` | Effect schemas for pages, sites, snapshots and edit operations, plus each API's RPC contract                   |
-| `packages/domain`    | Permission checks, validation, brand locks, database access, audit writes                                      |
+| `packages/domain`    | Permission checks, validation, three-way merge, database access, audit writes                                  |
 | `packages/blocks`    | Block versions, each in its own frozen folder, plus the generated registry                                     |
 | `packages/tokens`    | Theme schema, palette generation, contrast checks, CSS output                                                  |
 | `packages/ui`        | shadcn/ui primitives bound to tokens                                                                           |
@@ -86,26 +85,28 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 | `tooling/`           | Shared TypeScript configs and the starter's oxlint rules                                                       |
 | `docs/`              | Blume documentation site and repository ADRs                                                                   |
 
-**Environments** are Alchemy stages: local development uses Alchemy's local emulation, per-branch and staging stages run in a non-production Cloudflare account, and production runs in its own account so customer data and limits stay separate. CI deploys with the starter's commands, and `test:infra-live` deploys, tests and removes an isolated stage.
+**Environments** are Alchemy stages: local development uses Alchemy's local emulation, per-branch and staging stages run in a non-production Cloudflare account, and production runs in its own account so customer data and limits stay separate. CI deploys with the starter's commands, and `test:infra-live` deploys, tests and removes an isolated stage. Only staging and production have custom hostnames and a preview domain; branch stages use `workers.dev`.
+
+**First change to the starter:** remove the sample CSV app and its disposable-data settings. That means the `prod:destroy` script and `forceDestroy` on buckets. Production D1 databases, R2 buckets and Durable Object classes are retained on removal, and CI fails if a production plan deletes one; Alchemy deletes a Durable Object class's data when the class leaves the graph. `AGENTS.md` is updated for the new layout in the same change.
 
 ## Where data lives
 
 Each kind of data has exactly one home. Page bodies never go in D1, and customer data never goes in the core database.
 
-| Store                                             | Holds                                                                                                                                                                                                                    | Why here                                                                                                                                                                                |
-| ------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `SiteDoc` Durable Object (one per site)           | Draft pages and posts, header and footer, navigation, site settings, form definitions, block lockfile, theme overrides, revision history, presence                                                                       | One writer per site, so agent and editor edits are applied in order. SQLite storage up to 10 GB per site ([limits](https://developers.cloudflare.com/durable-objects/platform/limits/)) |
-| D1 `core`                                         | Organizations, brands (theme, locks, voice guide), sites, users, sessions, roles, permissions and grants, block catalog, page index, approval workflows and their progress, releases, previews, media records, audit log | Everything queried across sites. Metadata only, well within 10 GB per database ([limits](https://developers.cloudflare.com/d1/platform/limits/))                                        |
-| D1 `submissions`                                  | Form submissions                                                                                                                                                                                                         | Keeps customer data apart from everything else                                                                                                                                          |
-| R2                                                | Media originals, release and preview snapshots, uploaded source documents                                                                                                                                                | Immutable files, cheap and unlimited                                                                                                                                                    |
-| KV                                                | Hostname → site and current release; preview ID → snapshot                                                                                                                                                               | Read on every public request, fast everywhere                                                                                                                                           |
-| `SiteAgent` Durable Object (one per conversation) | Chat history and the agent's working brief                                                                                                                                                                               | Built into the Agents SDK                                                                                                                                                               |
+| Store                                             | Holds                                                                                                                                                                                                                                                 | Why here                                                                                                                                                                                     |
+| ------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `SiteDoc` Durable Object (one per site)           | Drafts, each with the release it started from: pages and posts, header and footer, navigation, form definitions, block lockfile. Site settings, revision history, presence, and an outbox for D1                                                      | One writer per site, so edits, merges and publishes are applied in order. SQLite storage up to 10 GB per site ([limits](https://developers.cloudflare.com/durable-objects/platform/limits/)) |
+| D1 `core`                                         | Organizations, brands (theme, identity, voice guide), sites, users, sessions, roles, permissions, grants and overrides, block catalog, page and draft index, draft sharing, approval workflows and their progress, releases, media records, audit log | Everything queried across sites. Metadata only, well within 10 GB per database ([limits](https://developers.cloudflare.com/d1/platform/limits/))                                             |
+| D1 `submissions`                                  | Form submissions                                                                                                                                                                                                                                      | Keeps customer data apart from everything else                                                                                                                                               |
+| R2                                                | Media originals, release and preview snapshots, uploaded source documents                                                                                                                                                                             | Immutable files, cheap and unlimited                                                                                                                                                         |
+| KV                                                | Hostname → site; site → current release; preview ID → latest preview snapshot and whether its link is public                                                                                                                                          | Read on every public request, fast everywhere                                                                                                                                                |
+| `SiteAgent` Durable Object (one per conversation) | Chat history and the agent's working brief                                                                                                                                                                                                            | Built into the Agents SDK                                                                                                                                                                    |
 
-`SiteDoc` writes the page index to D1 when a page is created, renamed or deleted, so dashboards never need to open every site's Durable Object.
+`SiteDoc` keeps the page and draft index in D1, so dashboards never need to open every site's Durable Object. A Durable Object write and a D1 write can't share a transaction, so each change writes an outbox row in the same SQLite transaction, and an alarm drains the outbox to D1 with idempotent upserts keyed on ID and revision.
 
 ## The page document
 
-A page is a flat map of block instances plus an ordered list of top-level IDs, in the style of json-render. A block's address (`/blocks/b_hero1/props/heading`) never changes when blocks move, which keeps agent edits, concurrent edits and history diffs simple.
+A page is a flat map of block instances plus an ordered list of top-level IDs, in the style of json-render. A block's address (`/blocks/b_hero1/props/heading`) never changes when blocks move, which keeps agent edits, concurrent edits, merges and history diffs simple.
 
 ```json
 {
@@ -145,9 +146,10 @@ A page is a flat map of block instances plus an ordered list of top-level IDs, i
 **Rules:**
 
 - **Nesting** goes through named slots, at most two levels (a section and its items).
-- **Block versions** are not stored on instances. They come from the site's lockfile, so an upgrade changes one place.
+- **Integrity:** every block ID appears in exactly one list (`root` or one slot), and every listed ID exists in `blocks`. Validation rejects orphans and dangling IDs.
+- **Block versions** are not stored on instances. They come from the draft's lockfile, so an upgrade changes one place.
 - **Blog posts** are pages with `type: "post"` and extra meta fields (date, author, tags, excerpt, cover image). They reuse drafts, previews, approvals and history. A `post-list` block shows them.
-- **References** to media, forms and other pages are IDs, resolved at render time from the same snapshot.
+- **References** to media, forms and other pages are IDs, resolved at render time from the same snapshot. Media files never change, so a media ID always renders the same file.
 - **Rich text** is stored as TipTap JSON, with allowed marks and nodes set per field. The agent writes restricted Markdown, which is converted and validated.
 - **Links** allow only `https`, `http`, `mailto` and `tel`, checked on save and again when rendering. There is no raw HTML anywhere.
 - A reserved `locale` field keeps localization possible later without a migration.
@@ -186,18 +188,19 @@ export default defineBlock({
 **Versioning rules** (refines [decision 001](/decision-log#decision-001)):
 
 - Editors see versions as v1, v2, v3 and so on. Under the hood each released version has an opaque ID in the registry, and each site's lockfile records those IDs.
-- Any change that alters a block's output is a new version. Released versions are frozen; CI rejects edits to them.
-- The one exception is an urgent security or accessibility fix to a released version. It needs an explicit override, is recorded in the audit log, and site admins are notified.
+- Any change that alters a block's output is a new version. Released versions are frozen; CI rejects edits to them, with no exceptions. An urgent fix is a new version, and the platform team can create upgrade drafts on every site that uses the block.
+- Frozen folders import field builders (`text`, `richText`, `media`) from `packages/blocks`, not Effect directly, so a dependency upgrade never forces an edit to frozen code. Golden tests pin each version's generated JSON Schema.
 - New sites start on the latest version of every block.
-- **Any number of versions can be live.** Studio encourages upgrades (a banner on the site, and a count of sites behind in the block catalog) but never forces them. A version leaves the registry only when no draft or retained release uses it.
-- **Upgrading** runs each version's `migrate` function in turn (v1 → v2 → v3) over the draft, creates a preview and goes through approval. Nothing changes live until it's published.
+- **Any number of versions can be live.** Studio encourages upgrades (a banner on the site, and a count of sites behind in the block catalog) but never forces them.
+- **Retention:** a version stays in the registry while any draft or live release uses it, and for 3 months after the last one stops. The latest version of every block always stays. Rollback is limited to releases whose versions are still in the registry.
+- **Upgrading** creates a draft, runs each version's `migrate` function in turn (v1 → v2 → v3) over it, and the draft follows the site's workflow. Nothing changes live until it's published.
 - Every live version adds code to the `sites` bundle and screenshots to the test run. Lazy loading keeps startup small, and CI tracks bundle size and test time as the library grows.
 
-**One registry, two renderers.** A generated registry maps `hero@2` to a lazy import. Both Astro and Puck render from it, so they use the same component code. Lazy imports keep the `sites` Worker inside the 1-second startup limit ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/)); the bundle limit is 64 MiB.
+**One registry, two renderers.** A generated registry maps `hero@2` to a dynamic import. Both Astro and Puck render from it, so they use the same component code. `sites` awaits the import and renders the component directly, not through `React.lazy`: inside Astro's React renderer, a suspending component streams its fallback and a swap script instead of finished HTML. Dynamic imports keep the `sites` Worker inside the 1-second startup limit ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/)); the bundle limit is 64 MiB.
 
 **shadcn/ui:** its primitives are the foundation and its blocks are design inspiration. Its registry, which copies code into projects, isn't used to deliver blocks: every site renders from our versioned registry instead.
 
-**Interactive blocks** (gallery lightbox, form, carousel) hydrate as Astro islands. Astro needs statically imported components for hydration, so a generated island map lists them, and interactive blocks must be top-level sections.
+**Interactive blocks** (gallery lightbox, form, carousel) hydrate as Astro islands. Astro can't hydrate a component chosen at runtime ([directives](https://docs.astro.build/en/reference/directives-reference/)), so a generated island map imports them statically, and interactive blocks must be top-level sections.
 
 **Quality gates on every block release and every shared dependency upgrade** (React, Tailwind, shadcn, Astro, Puck):
 
@@ -205,7 +208,7 @@ export default defineBlock({
 - Automated accessibility checks (axe) on every fixture, plus a manual keyboard and screen-reader review before a new block's first release.
 - A lint rule that rejects literal colors, fonts or spacing in block code: blocks may use theme tokens only.
 
-## Themes and brand locks
+## Themes
 
 A theme is a small set of tokens compiled into a CSS file of variables. Every site shares one Tailwind build; sites differ only in their variable file.
 
@@ -221,186 +224,206 @@ A theme is a small set of tokens compiled into a CSS file of variables. Every si
 
 **How it works:**
 
-- **Resolution:** organization preset → brand values → site overrides (only for tokens the brand leaves flexible). The resolved theme is part of every snapshot.
+- **Resolution:** organization preset → brand values. Sites don't override the theme. The resolved theme is part of every snapshot.
+- **Brand updates:** saving a brand's theme or identity (logo, favicon) creates a Brand update draft on every site in the brand. Each follows its site's workflow, so a live site changes only when that draft publishes.
 - **Surfaces:** blocks choose a surface, never a color. `[data-surface="brand"]` re-scopes shadcn's semantic variables (`--background`, `--primary` and so on), so every primitive inside that section adapts.
 - **Palette:** generated from the one brand color in OKLCH. Text and button pairs are picked to pass WCAG 2.2 AA contrast; the theme can't be saved if any pair fails.
-- **Locks:** a brand's lock settings compile into a validator that runs on every save and again at publish. Studio hides locked controls, and the agent is only told about allowed options.
 - **Fonts:** a curated list, self-hosted from R2 so no third-party font requests leave the site.
 
 Light and dark: palette generation produces both modes from the same brand color, each surface has light and dark values, and the contrast check runs on both. Sites follow the visitor's system setting, with an optional toggle.
 
 ## Publishing, serving and previews
 
-Everything that leaves the draft is a **snapshot**: an immutable JSON file in R2 containing the site's pages, header and footer, settings, block lockfile and resolved theme. Previews, submissions and releases are all just pointers to snapshots.
+Everything that leaves a draft is a **snapshot**: an immutable JSON file in R2 containing the site's pages, header and footer, settings, block lockfile and resolved theme. Previews, submissions and releases are all just pointers to snapshots.
 
 ```mermaid
 flowchart LR
-  D[Draft in SiteDoc] -->|freeze + validate| S[Snapshot in R2]
-  S --> P[Preview<br/>expires in 7-30 days]
-  S --> A[Submission<br/>approval workflow]
+  D[Draft in SiteDoc] -->|on save| P[Preview snapshot]
+  D -->|freeze + validate| S[Submission snapshot]
+  S --> A[Approval workflow]
   A -->|final approval| R[Release]
   R -->|update KV pointer| L[Live site]
   L -->|rollback: pointer to earlier release| L
+  R -->|merge into drafts that are behind| D
 ```
 
-**Freezing** validates the whole site first: block contracts at the pinned versions, brand locks and pre-flight checks. A snapshot that fails is never written.
+**Freezing** validates the whole draft first: block contracts at the pinned versions and pre-flight checks. A snapshot that fails is never written.
 
-**Publishing** is one function: insert a release row in D1, write `host → release` to KV for each of the site's hostnames, and write an audit entry. KV changes can take up to 60 seconds to reach every location ([KV](https://developers.cloudflare.com/kv/concepts/how-kv-works/)), which is why the product promises "live within about a minute". Approvals follow the site's workflow: an ordered list of any number of steps, each naming who can approve (roles or people) and how many approvals it needs. Workflow definitions and each submission's progress are rows in D1, and completing the last step calls publish. No workflow engine is needed. A visual, node-based workflow editor can be added later on the same definitions with an off-the-shelf flow library such as React Flow.
+**Publishing** runs inside the site's `SiteDoc`, so publishes and rollbacks for one site happen one at a time. It inserts a pending release row in D1, writes `site → release` to KV, marks the row live, and writes an audit entry. The `host → site` entries are written once, when a domain is set up, so a publish is a single KV write. A scheduled job compares D1 with KV and repairs any difference. KV changes can take up to 60 seconds to reach every location ([KV](https://developers.cloudflare.com/kv/concepts/how-kv-works/)), which is why the product promises "live within about a minute".
 
-**Serving:** `sites` reads the release for the hostname from KV, then looks in the Workers Cache API under a key of release ID plus path. On a miss it loads the snapshot from R2, renders the page with Astro, and caches the result. Because the release ID is part of the cache key, publishing never needs a cache purge.
+**Approvals** follow the applicable workflow: the site's, else the brand's, else the organization's. A workflow is an ordered list of any number of steps, each naming who can approve (roles or people) and how many approvals it needs. Workflow definitions and each submission's progress are rows in D1, and completing the last step calls publish. No workflow engine is needed. A visual, node-based workflow editor can be added later on the same definitions with an off-the-shelf flow library such as React Flow.
 
-**Rollback** points KV at an earlier release. Nothing is re-rendered or re-approved. Every release is kept.
+**Merging:** when a release publishes, every other draft on the site is behind. Updating a draft is a three-way merge of the release it started from, the draft, and the new live release, done by block ID and field across pages and the site-level parts (navigation, header and footer, lockfile). Different fields, blocks or pages merge automatically. Conflicts are limited to three cases: the same field changed on both sides, a block edited on one side and removed on the other, and the same list (`root` or a slot) reordered on both sides. The editor picks a side for each, or accepts a merged value that a model suggests for a text field. A submission under review is merged the same way when another draft publishes: if the merge is clean its approvals stand, and if it needed a person the workflow restarts.
 
-**Previews** are snapshots served by the same `sites` Worker at `{id}.{preview-domain}`:
+**Serving:** `sites` reads the site for the hostname and its current release from KV, then looks in the Workers Cache API under a key of release ID, `sites` Worker version and path, with the query string removed. On a miss it loads the snapshot from R2, renders the page with Astro, and caches the result. Because the release ID and Worker version are part of the key, neither a publish nor a deploy needs a cache purge, and a cached page never points at CSS or JavaScript that a deploy removed. The Cache API is per data centre, so each location renders its own first request.
 
-- The preview domain is its own zone, so each preview is a first-level subdomain covered by the standard certificate.
-- Previews open through Studio: it checks the person's session, then redirects to the preview host with a short-lived signed token, which sites exchanges for a preview cookie. `sites` also checks that the preview exists and hasn't expired.
-- Expiry needs no cleanup job: the KV entry is written with an expiry time, and an R2 lifecycle rule deletes preview snapshots after 30 days.
-- Previews carry a no-index header and a "Preview" ribbon, and their forms don't submit.
+**Rollback** points KV at an earlier release. Nothing is re-rendered or re-approved. Every release is kept, but rollback is limited to releases whose block versions and media are still retained. After a rollback, drafts are behind and update as after any publish.
+
+**Previews** show a draft's latest saved state, served by the same `sites` Worker at `{preview-id}.{preview-domain}`:
+
+- `SiteDoc` writes a preview snapshot a few seconds after edits settle, and points the draft's KV entry at it. The preview ID is a random 128-bit value.
+- The preview domain is its own registrable domain, separate from Studio and the sites domain, so each preview is a first-level subdomain covered by the standard certificate.
+- Access follows the draft's sharing. A link shared with anyone opens directly. Otherwise the preview opens through Studio: it checks that the person may view the draft, then redirects to the preview host with a signed token that is bound to the preview ID and expires in 60 seconds. `sites` exchanges it for a host-only `HttpOnly`, `Secure` cookie signed over the preview ID, user and expiry, valid for at most 8 hours, and redirects to the clean URL.
+- Preview snapshots are deleted when their draft publishes or is deleted.
+- Previews carry no-index and `Referrer-Policy: no-referrer` headers and a "Preview" ribbon, and their forms don't submit.
 
 **Trade-off we accept:** pages render on request with the current `sites` code. Everything editors control (content, theme, block versions) is frozen in the snapshot. Shared code outside blocks, such as page layout or the rich-text renderer, could still change a live page. The visual regression gate over every live block version is the control for that. The alternative, pre-rendering every page to static HTML at publish, needs a build pipeline and an archive of old assets, and doesn't pay for itself (see [decision 004](/decision-log#decision-004)).
 
 ## Editing: the site document and Puck
 
-Every change, from a person or the agent, goes through one method on the site's Durable Object: `applyOps(actor, baseRev, ops)`.
+Every change, from a person or the agent, goes through one method on the site's Durable Object: `applyOps(actor, draftId, ops)`.
 
 **`SiteDoc`, one per site:**
 
-- **Built on PartyServer,** Cloudflare's library from the PartyKit team that adds rooms, broadcast, connection state and hibernation to Durable Objects ([cloudflare/partykit](https://github.com/cloudflare/partykit)). The Agents SDK builds on it too. Each site is one room, and clients connect with PartySocket, which handles reconnects and buffering.
-- **Ops** are RFC 6902 JSON Patch operations against a page document ([RFC 6902](https://www.rfc-editor.org/rfc/rfc6902)). A batch is applied atomically, or rejected with structured errors (path, rule, message).
-- **Validation** on every batch: the block schema at the site's pinned version, brand locks, link rules, and a path allowlist. The lockfile changes only through the block upgrade flow; form notification addresses only through site settings.
-- **Live collaboration:** several people, and their agents, can edit the same site and page at once. Each committed batch is broadcast to everyone in the room. Presence shows who is on which page and which block, so people can see each other and avoid overlap.
-- **Conflicts:** edits are field-level, so changes to different fields or blocks never conflict. If two people change the same field, the later write wins and the earlier editor sees it replaced. A batch based on an older revision is rebased if it touches different paths, and rejected only if a path it changes has changed since.
-- **Rich text:** rich text fields are the exception to field-level edits. Each one is shared Yjs text inside one Yjs document per page, hosted by y-partyserver alongside SiteDoc and edited through TipTap's collaboration extension. Two people can type in the same paragraph, each keeps their cursor, and everyone sees each other's cursors. The content is validated against the field's allowed marks and nodes when a revision is saved and again when a snapshot is frozen.
-- **History:** one revision per editing session or agent turn, stored as operations with a full checkpoint every so often. It never stores a revision per keystroke.
-- **Authorization:** `SiteDoc` accepts connections and calls only through `studio-api`, which has verified the session and grant. Each connection carries its user and role, and every change it sends is checked against them.
+- **Built on PartyServer,** Cloudflare's library from the PartyKit team that adds rooms, broadcast, connection state and hibernation to Durable Objects ([cloudflare/partykit](https://github.com/cloudflare/partykit)). Each site is one room, with presence tracked per draft and page, and clients connect with PartySocket, which handles reconnects and buffering.
+- **Ops** address blocks by ID, never by position: `setProp(blockId, path, value)`, `insertBlock(parent, slot, afterId, block)`, `moveBlock(blockId, parent, slot, afterId)`, `removeBlock(blockId)`, and page-level `setMeta`, `createPage` and `deletePage`. A concurrent insert can't make an op hit the wrong block. A batch is applied atomically, or rejected with structured errors (path, rule, message). The same vocabulary drives Puck sync, agent tools, undo and merging.
+- **Validation** on every batch: the block schema at the draft's pinned version, document integrity, link rules, and a path allowlist. The lockfile changes only through the block upgrade flow; form notification addresses only through site settings.
+- **Live collaboration:** several people, and their agents, can edit the same draft and page at once. Each committed batch is broadcast to everyone in that draft. Presence shows who is on which page, block and field, so people can see each other and avoid overlap.
+- **Conflicts:** the server orders every batch. Clients send ops without a base revision, keep their own unconfirmed ops in a pending queue, and treat the server's broadcast as the truth. If two people change the same field, the later write wins and the earlier writer is told their change was replaced. An op on a block that was removed meanwhile is dropped, and its author is told.
+- **Rich text:** a rich text field is one value, like any other field, edited in Puck's rich text field. While someone types in it, presence marks the field as theirs for others and for the agent. The marker is a hint, not a lock. Two people typing in the same paragraph with shared cursors is on the Later list.
+- **History:** one revision per editing session or agent turn, stored as operations with a full checkpoint every so often. It never stores a revision per keystroke. Undo applies inverse ops to fields nobody else has changed since, and reports the rest.
+- **Authorization:** `SiteDoc` accepts connections and calls only through `studio-api`, which has verified the session and permission. Each connection carries its user, and every batch it sends is checked again, so a removed permission takes effect immediately.
+- **Restore:** Durable Object point-in-time recovery must be called from inside the object, so `SiteDoc` exposes an admin `restoreTo(time)` method.
 
 **Puck integration:**
 
 - **Adapter:** our schema stays canonical. `toPuck` and `fromPuck` convert between our flat document and Puck's tree. Property tests check that a round trip changes nothing ([Puck data model](https://puckeditor.com/docs/api-reference/data-model/data)).
-- **Generated config:** the Puck config for a site is generated from its lockfile and brand locks. Fields come from each block's schema; locked variants and surfaces are hidden.
+- **Generated config:** the Puck config for a draft is generated from its lockfile. Fields come from each block's schema.
 - **Rich text:** Puck's rich text field uses TipTap but saves HTML, so the adapter converts it to TipTap JSON with our extension set ([rich text field](https://puckeditor.com/docs/api-reference/fields/richtext)).
 - **Resolved data:** resolved values such as image URLs live under a reserved key that `fromPuck` drops, so they're never saved into the document.
 - **Same CSS:** the canvas iframe loads the same platform CSS and site theme CSS as the published site, with Studio's own styles kept out.
-- **Live updates in the canvas:** a sync module in `packages/editor` connects Puck to `SiteDoc` through Puck's public API. Local changes arrive through Puck's `onAction` callback and become our operations. Changes from others become Puck's small built-in actions (insert, move, remove, replace), dispatched without entering Puck's history, never a whole-page reload. Selection is restored by block ID. Rich text syncs through Yjs, not this path. Undo is per person: Yjs's undo for text, `SiteDoc`'s history for structure. Puck's own undo stores whole-page snapshots and has its keyboard shortcuts built in, so we replace it with a small patch applied through pnpm (as the starter already does for Alchemy) and offer the change upstream. We don't fork Puck (see [decision 013](/decision-log#decision-013)). This is still the riskiest integration, so it's the first Phase 0 spike.
+- **Live updates in the canvas:** a sync module in `packages/editor` connects Puck to `SiteDoc` through Puck's public API. Local changes arrive through Puck's `onAction` callback and become our operations; a prop edit arrives as a replace of the whole block and is diffed down to fields. Changes from others become Puck's small built-in actions (insert, move, remove, replace), dispatched without entering Puck's history, never a whole-page reload. Puck's actions address blocks by index and zone, so the module converts each remote op to an index against the local state at that moment, using Puck's lookup by ID. Selection is restored by block ID.
+- **Undo** is per person, through `SiteDoc`'s history. Puck's own undo restores whole-page snapshots, which would erase other people's changes, and has its keyboard shortcuts built in. We replace its history slice and shortcuts with a patch applied through pnpm (as the starter already does for Alchemy), re-check the patch on every Puck release, and offer the change upstream. We don't fork Puck (see [decision 013](/decision-log#decision-013)). This is still the riskiest integration, so it's the first Phase 0 spike.
 
 ## The agent
 
-The agent is a constrained editor. Its only way to change a site is the same validated `applyOps` that the visual editor uses, and it has no way to publish.
+The agent is a constrained editor. Its only way to change a site is the same validated `applyOps` that the visual editor uses, and it has no way to submit or publish.
 
 **Runtime:**
 
-- Each conversation is a `SiteAgent` Durable Object built on the Agents SDK's `AIChatAgent`, which gives persisted history and resumable streaming ([chat agents](https://developers.cloudflare.com/agents/communication-channels/chat/chat-agents/)).
-- A conversation belongs to one user. The agent always acts as that user, identified on the server, never from what the browser sends. It can do nothing the user couldn't.
-- Studio's chat panel uses the Agents SDK React hooks over a WebSocket through `studio-api`.
-- The agent is one more participant in the site's room. Its edits appear live for everyone, labelled as the agent acting for that user.
+- Each conversation is a `SiteAgent` Durable Object built on `AIChatAgent` from `@cloudflare/ai-chat`, which gives persisted history and resumable streaming ([chat agents](https://developers.cloudflare.com/agents/communication-channels/chat/chat-agents/)).
+- A conversation belongs to one user and works in one draft. The agent always acts as that user, identified on the server, never from what the browser sends. It can do nothing the user couldn't.
+- Studio's chat panel uses the Agents SDK React hooks over a WebSocket through `studio-api`. `studio-api` authenticates the connection in `onBeforeConnect` and passes the user to the agent. The hooks' `/get-messages` request takes the same route.
+- The agent writes to `SiteDoc` through Durable Object RPC, passing the user as the actor, and appears in presence as the agent acting for that user. It doesn't open a WebSocket to `SiteDoc`, because outgoing WebSockets can't hibernate ([Durable Object WebSockets](https://developers.cloudflare.com/durable-objects/best-practices/websockets/)).
 
 **Tools** (every input and output has an Effect schema):
 
-| Tool                  | Does                                                                         |
-| --------------------- | ---------------------------------------------------------------------------- |
-| `get_site_outline`    | Pages and the sections on each, one line per section                         |
-| `get_page`            | Full content of a page, or of chosen sections                                |
-| `get_block_contract`  | A block's schema, variants, limits and examples at the site's pinned version |
-| `get_recipe`          | Composition rules for a page type                                            |
-| `read_source`         | An uploaded source document, as Markdown                                     |
-| `apply_ops`           | Validated edit operations on a page                                          |
-| `insert_section`      | Adds a block after a given section (simpler than raw ops for common edits)   |
-| `create_page`         | New page or post from a recipe, with placeholders                            |
-| `create_preview`      | A preview link for the user                                                  |
-| `ask_user`            | A question with choices, shown as buttons in chat                            |
-| `submit_for_approval` | Submits, only after the user confirms in chat                                |
-| `request_block`       | Files a block request when nothing in the catalog fits                       |
+| Tool                 | Does                                                                         |
+| -------------------- | ---------------------------------------------------------------------------- |
+| `get_site_outline`   | Pages and the sections on each, one line per section                         |
+| `get_page`           | Full content of a page, or of chosen sections                                |
+| `get_block_contract` | A block's schema, variants, limits and examples at the site's pinned version |
+| `get_recipe`         | Composition rules for a page type                                            |
+| `read_source`        | An uploaded source document, as Markdown                                     |
+| `apply_ops`          | Validated edit operations on a page                                          |
+| `insert_section`     | Adds a block after a given section (simpler than raw ops for common edits)   |
+| `create_page`        | New page or post from a recipe, with placeholders                            |
+| `get_preview_link`   | The draft's preview link                                                     |
+| `fetch_url`          | A web page the user linked to, as Markdown                                   |
+| `ask_user`           | A question with choices, shown as buttons in chat                            |
+| `prepare_submission` | Runs pre-flight and opens the submit dialog; a person clicks Submit          |
+| `request_block`      | Files a block request when nothing in the catalog fits                       |
 
-There are no tools for publishing, approving, site settings, domains or form submissions.
+There are no tools for submitting, publishing, approving, site settings, domains or form submissions.
 
-**Context:** a short, cacheable prefix is generated from the block registry, filtered to the site's pinned versions and brand locks. This is json-render's catalog-to-prompt idea applied to whole blocks. The prefix holds a one-line index of blocks and recipes, the brand's voice guide, the site outline and the agent's working brief. Full block contracts and page content are fetched only when needed. If the user has a section selected on the canvas, its ID is included, so "make this shorter" works.
+**Context:** a short, cacheable prefix is generated from the block registry, filtered to the draft's pinned versions. This is json-render's catalog-to-prompt idea applied to whole blocks. The prefix holds a one-line index of blocks and recipes, the brand's voice guide, the site outline and the agent's working brief. Full block contracts and page content are fetched only when needed. If the user has a section selected on the canvas, its ID is included, so "make this shorter" works. Fields someone is typing in are marked, and the agent leaves them alone.
+
+**Merge suggestions:** when updating a draft leaves a conflict on a text field, a model proposes a merged value. A person accepts it or picks a side.
 
 **Building a site:** the agent proposes a plan (pages, recipe per page, sections), the user confirms it, then the agent builds one section per tool call. Each call is validated, committed and broadcast, so the user watches the page assemble. This takes json-render's streamed-patches idea at section granularity. Each turn can be undone in one step.
 
 **Validation errors** come back as structured messages the model can act on, for example `heading: max 80 characters, got 94`. The agent gets 2 repair attempts, then explains the problem to the user in plain language.
 
-**Source material:** uploads are stored in R2 and converted to Markdown with Workers AI `toMarkdown` ([docs](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)). The agent reads them through `read_source`, wrapped as untrusted content that can't give it instructions. It fetches only links the user provides. There is no vector search in the MVP. A vision model suggests image alt text, and a person confirms it.
+**Source material:** uploads are stored in R2 and converted to Markdown with Workers AI `toMarkdown` ([docs](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)). The agent reads them through `read_source`, marked as untrusted content. Marking doesn't stop prompt injection, so the real controls are structural: the agent can't submit or publish, and approvers review every change. `fetch_url` accepts only URLs that appear in the user's own messages: GET only, with size and time limits, no redirects to other hosts, and no requests to the platform's own domains. There is no vector search in the MVP. A vision model suggests image alt text, and a person confirms it.
 
 **Models:** any number of models, chosen per task in configuration and called through AI Gateway ([AI Gateway](https://developers.cloudflare.com/ai-gateway/)). The default for routine edits is Z.ai GLM-5.3 Flash on Workers AI: tool calling, a 1.3M-token context, and $0.15 input / $0.50 output per million tokens ([model page](https://developers.cloudflare.com/workers-ai/models/glm-5.3-flash/)). Other tasks, such as planning a new site, long copy or image descriptions, can point at other models, and any model can be swapped at any time without a code change. Every request is tagged with brand, site and user for cost tracking, with a monthly spend limit per brand. The platform team curates which models are used; users never choose them.
 
-**Evals:** about 25 scripted tasks with exact expected outcomes run whenever prompts, models or block contracts change. They cover a new site from a brief, routine edits, asking when a request is ambiguous, filing a block request for a catalog gap, refusing locked options, ignoring instructions inside uploaded documents, and writing content valid for a pinned older block version. Real pilot conversations become new tasks.
+**Evals:** about 25 scripted tasks with exact expected outcomes run whenever prompts, models or block contracts change. They cover a new site from a brief, routine edits, asking when a request is ambiguous, filing a block request for a catalog gap, ignoring instructions inside uploaded documents, suggesting merges for text conflicts, and writing content valid for a pinned older block version. Real pilot conversations become new tasks.
 
 ## Forms, submissions and email
 
-Form definitions live in the site document and ship in the snapshot. Submissions go straight from the public Worker to their own database.
+Form definitions live in the draft and ship in the snapshot. Submissions go straight from the public Worker to their own database.
 
 1. A visitor submits a form. `sites` forwards the request to `sites-api` over a service binding.
-2. `sites-api` checks the Turnstile token, the honeypot field and a rate limit per form and IP address, then validates the fields against the form definition in the live snapshot.
-3. The submission is inserted into D1 `submissions`.
-4. Notification and confirmation emails are sent through the Email Service binding ([Email Service](https://developers.cloudflare.com/email-service/)). Notifications link to the submission in Studio rather than repeating personal data.
+2. `sites-api` rejects posts from preview hosts, then validates the fields against the form definition in the live release.
+3. The submission is inserted into D1 `submissions`, with the field labels it was sent with.
+4. Notification emails are sent to the form's configured addresses through the Email Service binding ([Email Service](https://developers.cloudflare.com/email-service/)). Notifications link to the submission in Studio rather than repeating personal data.
 
 **Other details:**
 
-- **Turnstile** allows 10 hostnames per widget ([hostname management](https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/)), so each site gets its own widget, created when the site is set up.
+- **No spam protection in the MVP.** Forms send no email to submitters, so a form can't be used to send mail to addresses a visitor types in. Turnstile's limit of 20 widgets per non-Enterprise account ([plans](https://developers.cloudflare.com/turnstile/plans/)) shapes the design when spam protection is added: one widget for the sites domain, which covers its subdomains, and custom domains grouped 10 to a widget.
 - **Retention:** submissions are kept for the life of the site, as part of its data; nothing deletes them automatically. Deleting one submission, or all records for one email address, is available for privacy requests.
-- **Email Service** sends all email (sending is in public beta). No fallback provider is built.
+- **Email Service** sends all email (sending is in public beta), from domains that use Cloudflare DNS. No fallback provider is built. Each notification records when it was sent, and a scheduled job retries unsent ones.
 
 ## Domains
 
 All public hostnames point to the `sites` Worker through Cloudflare for SaaS, using the Worker as the origin ([Worker as origin](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/start/advanced-settings/worker-as-origin/)).
 
 - Every site gets `{site}.{sites-domain}` immediately.
-- A custom hostname is created through the Cloudflare API. Studio shows the DNS records to add, and a scheduled job checks until the certificate is active, then writes the KV route. A brand-new hostname can take about a minute to start serving.
+- A custom hostname is created through the Cloudflare API. Studio shows the DNS records to add, including a TXT record with an ownership token unique to that request, and a scheduled job checks until ownership is proven and the certificate is active, then writes the `host → site` entry. A hostname belongs to one site only. A brand-new hostname can take about a minute to start serving.
+- Worker as origin needs a fallback origin on the SaaS zone.
 - Pricing: 100 custom hostnames are included, then $0.10 each ([plans](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/plans/)).
 - Root domains (example.org) are not supported directly, because that needs Cloudflare's Enterprise-only apex proxying. Sites use a subdomain such as www.example.org, and the domain owner redirects the root to it at their DNS provider.
 
 ## Security and access
 
-- **Sign-in:** Better Auth runs in `studio-api`, behind Studio's sign-in pages, with its SSO plugin connected to the organization's identity provider over OIDC or SAML ([SSO plugin](https://better-auth.com/docs/plugins/sso)). Users, sessions and accounts are tables in D1 `core`. Previews are opened through Studio, which hands the preview host a short-lived signed token.
-- **Permissions:** one role-based system for everything. Permissions are named actions (`page.edit`, `site.publish`, `workflow.edit`, `brand.theme.edit`, `submissions.read`, `submissions.export`, `members.manage` and so on). Roles are sets of permissions: Pakshi ships default roles, and admins can create custom ones. Grants give a person a role on the organization, a brand or a site, and inherit downward. One `authorize(actor, permission, resource)` in `packages/domain` is called by every `studio-api` method, every agent tool and every `SiteDoc` connection, and Studio uses the same check to hide what a person can't do. Roles, permissions and grants live in D1 `core`.
-- **The agent** acts as the conversation's owner and has no tools for publishing, approving, settings, domains or submissions.
+- **Sign-in:** Better Auth runs in `studio-api`, behind Studio's sign-in pages, with its SSO plugin connected to the organization's identity provider over OIDC ([SSO plugin](https://better-auth.com/docs/plugins/sso)). SAML is left out: its libraries are Node-only and unproven on Workers. The identity provider is set in configuration, and the plugin's provider registration endpoints are turned off. Better Auth is pinned at or above its latest security release. Two optional SSO features, `resolveUser` and `guardProviderMutation`, need database transactions that D1 doesn't have, so they stay off. Users, sessions and accounts are tables in D1 `core`.
+- **Permissions:** one system for everything. Permissions are fine-grained named actions (`page.edit`, `draft.share`, `site.publish`, `site.approve`, `site.approve_own`, `workflow.edit`, `brand.theme.edit`, `submissions.read`, `submissions.export`, `members.manage` and so on), and they decide what a person can do. Roles are sets of permissions: Pakshi ships default roles, and admins can create custom ones. Grants give a person a role on the organization, a brand or a site, and inherit downward. An override switches one permission on or off for one person on one scope, and beats any role. A person can grant only permissions they hold, on scopes they control. Draft shares add view or edit access to one draft, and never grant submitting or publishing. One `authorize(actor, permission, resource)` in `packages/domain` is called by every `studio-api` method, every agent tool and every `SiteDoc` batch, and Studio uses the same check to hide what a person can't do. Roles, permissions, grants, overrides and shares live in D1 `core`.
+- **The agent** acts as the conversation's owner and has no tools for submitting, publishing, approving, settings, domains or submissions.
 - **Customer data:** only `sites-api` writes submissions and only authorized Studio users read them. Every view, export and deletion is logged. Submissions are never sent to a model.
-- **Public pages:** no raw HTML is stored or rendered, links are limited to safe protocols, each site sends a strict content security policy, and forms are protected against spam.
-- **Audit log:** every edit session, agent turn, submission for approval, approval decision, publish, rollback and submissions access is recorded with who, when and what.
+- **Public pages:** no raw HTML is stored or rendered, links are limited to safe protocols, and each site sends a strict content security policy. Media is served only through Cloudflare Images, which sanitizes SVG files.
+- **Audit log:** every edit session, agent turn, draft share, permission change, workflow change, submission for approval, approval decision, publish, rollback and submissions access is recorded with who, when and what.
 - **Secrets:** Worker secrets for credentials; model provider keys stored in AI Gateway.
 
 ## Operations
 
 - **Observability:** Workers Logs and tracing on all four Workers; AI Gateway for model cost, latency and errors per brand.
-- **Alerts:** error rate on `sites`, form intake failures, custom hostname certificate problems.
-- **Backups:** D1 Time Travel restores to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery. Every published snapshot in R2 is already a full copy of that release. We run one restore drill before the pilot.
+- **Alerts:** error rate on `sites`, form intake failures, publish failures and D1/KV mismatches, unsent emails, custom hostname certificate problems, and agent cost per brand per day.
+- **Backups:** D1 Time Travel restores to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery, through `SiteDoc.restoreTo`. Every published snapshot in R2 is already a full copy of that release. Before the pilot we run one restore drill in staging: restore one `SiteDoc` and the `core` database, then run the D1/KV reconcile.
 
 ## Deliberately not built
 
 These came up during design review and were cut to keep Pakshi simple. Each can be added later if a real need appears.
 
-| Not building                                                             | Instead                                                                                            |
-| ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------- |
-| Separate Workers for the agent, forms, rendering and jobs                | Four Workers: a web and API pair for sites and for Studio; the agent and jobs live in `studio-api` |
-| Pre-rendering every page to static HTML at publish                       | Server rendering from immutable snapshots, cached per release                                      |
-| Per-brand databases, projection queues, envelope encryption              | One `core` and one `submissions` database; the Durable Object writes the page index directly       |
-| Workflow engine for approvals                                            | Workflow definitions and progress as rows in D1; completing the last step publishes                |
-| Fallback chains (routing files, queue buffers, automatic email failover) | One path per job, with Cloudflare's own durability                                                 |
-| Major, minor and patch semantics, prebuilt frozen modules                | v1, v2, v3 for editors, opaque IDs underneath, frozen source per version                           |
-| Separate theme versioning                                                | Themes are frozen in each snapshot and ship with the next publish                                  |
-| Typed content collections                                                | Blog posts are pages with `type: "post"`                                                           |
-| Hard-coded model tiers and automatic escalation                          | Models chosen per task in configuration                                                            |
-| Vector search over uploads, AI judges for voice and visuals              | Source documents read directly; deterministic pre-flight checks                                    |
-| Speculative token-by-token streaming into the canvas                     | One validated section per tool call, broadcast as it commits                                       |
-| Page locks                                                               | Live field-level editing with presence; Yjs for rich text                                          |
+| Not building                                                             | Instead                                                                                               |
+| ------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Separate Workers for the agent, forms, rendering and jobs                | Four Workers: a web and API pair for sites and for Studio; the agent and jobs live in `studio-api`    |
+| Pre-rendering every page to static HTML at publish                       | Server rendering from immutable snapshots, cached per release                                         |
+| Per-brand databases, projection queues, envelope encryption              | One `core` and one `submissions` database; the Durable Object writes the page index through an outbox |
+| Workflow engine for approvals                                            | Workflow definitions and progress as rows in D1; completing the last step publishes                   |
+| Fallback chains (routing files, queue buffers, automatic email failover) | One path per job, with Cloudflare's own durability                                                    |
+| Major, minor and patch semantics, prebuilt frozen modules                | v1, v2, v3 for editors, opaque IDs underneath, frozen source per version                              |
+| Separate theme versioning                                                | Themes are frozen in each snapshot and reach sites through Brand update drafts                        |
+| Brand locks and site theme overrides                                     | Sites use their brand's theme as it is                                                                |
+| Media file versions                                                      | Files never change; the brand logo and favicon are brand settings                                     |
+| In-place fixes to released block versions                                | A new version, with upgrade drafts created on every affected site                                     |
+| Spam protection (Turnstile, honeypot, rate limits)                       | Deferred; forms send no email to submitters                                                           |
+| SAML sign-in                                                             | OIDC                                                                                                  |
+| Typed content collections                                                | Blog posts are pages with `type: "post"`                                                              |
+| Hard-coded model tiers and automatic escalation                          | Models chosen per task in configuration                                                               |
+| Vector search over uploads, AI judges for voice and visuals              | Source documents read directly; deterministic pre-flight checks                                       |
+| Speculative token-by-token streaming into the canvas                     | One validated section per tool call, broadcast as it commits                                          |
+| Page locks                                                               | Live field-level editing with presence                                                                |
+| Shared-cursor editing of one paragraph (Yjs)                             | A rich text field is one value; presence marks who is typing in it                                    |
+| Index-based JSON Patch                                                   | Ops addressed by block ID                                                                             |
 
 ## Phase 0 spikes and open technical questions
 
 These are the riskiest assumptions. Each spike should be proven before the pilot starts.
 
-- [ ] **Puck round trip:** our schema → Puck → our schema is lossless, including rich text, and the canvas stays usable while two people and the agent edit the same page live.
-- [ ] **Render parity:** the same block renders identically in the Puck canvas and on the Astro site, checked by screenshot.
-- [ ] **Two block versions** live on one site, with lazy loading keeping `sites` startup well under the 1-second limit.
-- [ ] **Agent loop:** GLM-5.3 Flash completes 8 of 10 scripted edits with valid operations through AI Gateway, including tool-call streaming.
-- [ ] **Chat layer:** Agents SDK chat hooks inside TanStack Start, connected to SiteAgent through studio-api.
+- [ ] **Puck round trip:** our schema → Puck → our schema is lossless, including rich text, and the canvas stays usable while two people and the agent edit the same draft live, with the history patch in place. Puck has no official TanStack Start recipe; if it fails under server rendering, the editor route renders on the client only.
+- [ ] **Three-way merge:** scripted merge cases over the page document, covering every conflict type and the site-level parts of a draft, produce the expected result.
+- [ ] **Render parity:** the same block renders identically in the Puck canvas and on the Astro site, checked by screenshot, with block imports awaited in Astro.
+- [ ] **Two block versions** live on one site, with dynamic imports keeping `sites` startup well under the 1-second limit.
+- [ ] **Agent loop:** GLM-5.3 Flash completes 8 of 10 scripted edits with the expected result through AI Gateway, including tool-call streaming.
+- [ ] **Chat layer:** Agents SDK chat hooks inside TanStack Start, connected to SiteAgent through studio-api. Cloudflare doesn't document WebSocket passthrough over a service binding, so this covers the upgrade and the `/get-messages` request.
 - [ ] **Publish and rollback** on a test custom hostname, live within about a minute.
-- [ ] **Better Auth SSO** signs in through the organization's identity provider inside TanStack Start on Workers. One past release broke the SSO plugin on Workers ([issue](https://github.com/better-auth/better-auth/issues/6635)), so pin the version.
-- [ ] **Astro in the starter's Alchemy graph:** the `sites` Astro app deploys through Alchemy alongside the other three Workers, with the same bindings and local emulation.
+- [ ] **Better Auth SSO** signs in over OIDC inside TanStack Start on Workers, with `nodejs_compat`. The SSO plugin loads its SAML libraries even when only OIDC is used, so check they load on Workers.
+- [ ] **Astro and the Durable Objects in the starter's Alchemy graph:** the `sites` Astro app deploys through Alchemy alongside the other three Workers, with the same bindings and local emulation. PartyServer and `AIChatAgent` are plain Durable Object classes, not the starter's Effect-based ones, so confirm Alchemy deploys them too.
 
 ## Sources
 
-Limits and product details were checked against these pages on 2026-09-27.
+Limits and product details were checked against these pages on 2026-09-28.
 
 - [Workers limits](https://developers.cloudflare.com/workers/platform/limits/) and the [64 MiB size increase](https://developers.cloudflare.com/changelog/post/2026-09-04-increased-worker-size-limit/)
 - [D1 limits](https://developers.cloudflare.com/d1/platform/limits/), [D1 Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/), [D1 data location](https://developers.cloudflare.com/d1/configuration/data-location/)
@@ -409,10 +432,11 @@ Limits and product details were checked against these pages on 2026-09-27.
 - [Cloudflare for SaaS plans](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/plans/), [Worker as origin](https://developers.cloudflare.com/cloudflare-for-platforms/cloudflare-for-saas/start/advanced-settings/worker-as-origin/)
 - [application-platform-starter](https://github.com/AdiRishi/application-platform-starter)
 - [Better Auth SSO plugin](https://better-auth.com/docs/plugins/sso)
-- [Turnstile hostname management](https://developers.cloudflare.com/turnstile/additional-configuration/hostname-management/)
+- [Turnstile plans](https://developers.cloudflare.com/turnstile/plans/)
 - [Email Service](https://developers.cloudflare.com/email-service/)
 - [Agents SDK chat agents](https://developers.cloudflare.com/agents/communication-channels/chat/chat-agents/), [AI Gateway](https://developers.cloudflare.com/ai-gateway/), [Workers AI Markdown conversion](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)
+- [Durable Object WebSockets](https://developers.cloudflare.com/durable-objects/best-practices/websockets/)
 - [Puck data model](https://puckeditor.com/docs/api-reference/data-model/data), [Puck rich text field](https://puckeditor.com/docs/api-reference/fields/richtext)
-- [Astro React integration](https://docs.astro.build/en/guides/integrations-guide/react/), [Astro Cloudflare adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/)
-- [json-render](https://github.com/vercel-labs/json-render), [TanStack AI RC](https://tanstack.com/blog/tanstack-ai-rc), [RFC 6902 JSON Patch](https://www.rfc-editor.org/rfc/rfc6902)
+- [Astro React integration](https://docs.astro.build/en/guides/integrations-guide/react/), [Astro Cloudflare adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/), [Astro directives](https://docs.astro.build/en/reference/directives-reference/)
+- [json-render](https://github.com/vercel-labs/json-render)
 - [shadcn/ui theming](https://ui.shadcn.com/docs/theming)

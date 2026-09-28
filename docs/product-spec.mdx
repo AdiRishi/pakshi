@@ -5,120 +5,138 @@ sidebar:
   order: 2
 ---
 
-**The MVP:** a non-technical team can launch and maintain a branded, multi-page site with a blog and a contact or registration form, on its own domain, with previews, approvals and rollback, without a developer.
+**The MVP:** a non-technical team can launch and maintain a branded, multi-page site with a blog and a contact or registration form, on its own domain, with drafts, approvals and rollback, without a developer.
 
-This doc defines what Pakshi does and for whom. It sits between the [vision](/vision) (why) and the [technical design](/technical-design) (how). **Guiding rule:** keep the product small and focused. Every feature must serve building or maintaining a good-looking branded site; anything else waits until a pilot asks for it.
+This doc defines what Pakshi does and for whom. It sits between the [vision](/vision) (why) and the [technical design](/technical-design) (how). **Guiding rule:** keep the product small and focused. Every feature must serve building or maintaining a good-looking branded site; anything else waits until real use asks for it.
 
 ## Scope at a glance
 
-| MVP                                                                   | Later                                   | Not doing                           |
-| --------------------------------------------------------------------- | --------------------------------------- | ----------------------------------- |
-| Brands with theme (light and dark), locks and voice guide             | Payments (Stripe Checkout)              | Custom code, CSS or HTML embeds     |
-| Sites, pages, and blog posts as pages                                 | Scheduled publishing                    | Tenant plugins or code              |
-| Agent builds and edits sites                                          | Visual, node-based workflow editor      | Public content API                  |
-| Visual editing in Puck, live with others                              | Comments on previews                    | E-commerce, site visitor logins     |
-| Draft view and shareable previews                                     | File uploads on forms                   | Marketing email or newsletters      |
-| Approval workflows defined per site, and rollback                     | Guideline import into Theme Studio      | Reviewers outside Pakshi            |
-| Pinned block versions, upgrade preview                                | Analytics dashboard                     | Page locks that block other editors |
-| Roles and permissions, including custom roles                         | Localization                            | Separate theme versioning           |
-| Forms, submissions, notification email                                | Redirect bulk import                    |                                     |
-| Custom domains (subdomains)                                           | Identity-provider group to role mapping |                                     |
-| Media library with alt text, SEO basics, pre-flight checks, audit log |                                         |                                     |
+| MVP                                                                     | Later                                   | Not doing                           |
+| ----------------------------------------------------------------------- | --------------------------------------- | ----------------------------------- |
+| Brands with theme (light and dark), identity and voice guide            | Payments (Stripe Checkout)              | Custom code, CSS or HTML embeds     |
+| Sites, pages, and blog posts as pages                                   | Scheduled publishing                    | Tenant plugins or code              |
+| Agent builds and edits sites                                            | Visual, node-based workflow editor      | Public content API                  |
+| Visual editing in Puck, live with others                                | Comments on previews                    | E-commerce, site visitor logins     |
+| Named drafts that merge like branches and are shared like documents     | File uploads on forms                   | Marketing email or newsletters      |
+| Approval workflows on the organization, a brand or a site, and rollback | Guideline import into Theme Studio      | Approvers outside Pakshi            |
+| Pinned block versions, upgrades through drafts                          | Analytics dashboard                     | Page locks that block other editors |
+| Roles, fine-grained permissions and custom roles                        | Localization                            | Separate theme versioning           |
+| Forms, submissions, notification email                                  | Redirect bulk import                    | Media file versions                 |
+| Custom domains (subdomains)                                             | Identity-provider group to role mapping |                                     |
+| Media library with alt text, SEO basics, pre-flight checks, audit log   | Spam protection on forms                |                                     |
+|                                                                         | Confirmation emails to form submitters  |                                     |
+|                                                                         | Two people typing in the same paragraph |                                     |
+|                                                                         | Brand locks on site settings            |                                     |
 
 ## Roles and permissions
 
 Pakshi has one permission system used everywhere. Studio, the API, the agent and live editing all ask the same question: may this person do this action on this thing?
 
-- **Permissions** are specific actions, such as edit pages, publish a site, approve, edit a workflow, edit a brand theme, read submissions, export submissions, and manage members.
-- **Roles** are named sets of permissions. Pakshi ships the default roles below, and admins can create custom roles.
+- **Permissions** are fine-grained actions, such as edit pages, share drafts, publish a site, approve, approve changes you edited, edit a workflow, edit a brand theme, read submissions, export submissions, and manage members. Permissions decide what a person can do.
+- **Roles** are named sets of permissions, for giving access quickly. Pakshi ships the default roles below, and admins can create custom roles.
 - **Grants** give a person a role on the whole organization, on a brand (and all its sites), or on one site. A person can hold several grants.
+- **Overrides** switch one permission on or off for one person on one scope. An override beats any role the person holds.
+- **Delegation:** a person can grant only permissions they hold, on scopes they control.
 - **Brands** are simply groupings of sites in Pakshi. What a brand represents is up to the organization.
 
 **Default roles:**
 
-| Can                                                        | Org admin | Brand admin | Editor | Approver | Submissions viewer |
-| ---------------------------------------------------------- | :-------: | :---------: | :----: | :------: | :----------------: |
-| Create brands, manage roles and org settings               |     ✔     |             |        |          |                    |
-| Edit brand theme, locks and voice guide                    |     ✔     |      ✔      |        |          |                    |
-| Create sites, set domains and approval workflows           |     ✔     |      ✔      |        |          |                    |
-| Edit pages and posts (agent and visual editor)             |     ✔     |      ✔      |   ✔    |          |                    |
-| Create previews                                            |     ✔     |      ✔      |   ✔    |    ✔     |                    |
-| Submit for approval, or publish when no approval is needed |     ✔     |      ✔      |   ✔    |          |                    |
-| Approve or request changes (when named in a workflow step) |           |             |        |    ✔     |                    |
-| Roll back, adopt block upgrades                            |     ✔     |      ✔      |   ✔    |          |                    |
-| Read and export form submissions                           |     ✔     |      ✔      |        |          |         ✔          |
-| Request a new block                                        |     ✔     |      ✔      |   ✔    |          |                    |
+| Can                                                        | Org admin | Brand admin | Site admin | Editor | Approver | Submissions viewer |
+| ---------------------------------------------------------- | :-------: | :---------: | :--------: | :----: | :------: | :----------------: |
+| Create brands, manage roles and org settings               |     ✔     |             |            |        |          |                    |
+| Edit brand theme, identity and voice guide                 |     ✔     |      ✔      |            |        |          |                    |
+| Create sites                                               |     ✔     |      ✔      |            |        |          |                    |
+| Manage site settings, domains, workflow and members        |     ✔     |      ✔      |     ✔      |        |          |                    |
+| Create, edit and share drafts (agent and visual editor)    |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
+| Submit for approval, or publish when no approval is needed |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
+| Approve or request changes (when named in a workflow step) |           |             |            |        |    ✔     |                    |
+| Roll back, adopt block upgrades                            |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
+| Read and export form submissions                           |     ✔     |      ✔      |     ✔      |        |          |         ✔          |
+| Request a new block                                        |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
 
 - Studio only shows people what they're allowed to do.
-- By default, a workflow doesn't let someone approve their own submission. Workflow owners can change this.
+- Approving a change you edited needs its own permission, which no default role includes. You edited a change if you changed anything in its draft.
+- The agent acts as its user and can do what they can, except submit and publish. A person always clicks Submit or Publish.
 - The platform team holds org admin and ships blocks through the code repository, not through the app.
 
 ## Studio: the admin app
 
 Studio is one app with a brand and site switcher. Its main areas:
 
-| Area      | What's there                                                                                                                                                                                                   |
-| --------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home      | My sites, my drafts, approvals waiting for me, sites with block upgrades available                                                                                                                             |
-| Brand     | Theme Studio (preset, brand color, fonts, density and other tokens, lock or flexible per token group, live preview of every block), identity (logos, favicon), voice guide, default approval workflow, members |
-| Site      | Pages and posts, editor, previews, submissions, media, blocks in use and available upgrades, release history, settings (domain, SEO defaults, forms notification addresses, approval workflow, members)        |
-| Editor    | Agent chat on the left, Puck canvas in the middle (click to select, edit text inline, swap images), block settings on the right with locked options shown and explained                                        |
-| Approvals | Everything waiting for my decision, with the preview and what changed                                                                                                                                          |
-| Blocks    | Catalog of every block with its variants and versions, and a form to request a new block                                                                                                                       |
+| Area      | What's there                                                                                                                                                                                          |
+| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home      | My sites, my drafts, drafts shared with me, approvals waiting for me, sites with block upgrades available                                                                                             |
+| Brand     | Theme Studio (preset, brand color, fonts, density and other tokens, live preview of every block), identity (logo, favicon), voice guide, brand approval workflow, members                             |
+| Site      | Drafts, pages and posts, editor, submissions, media, blocks in use and available upgrades, release history, settings (domain, SEO defaults, forms notification addresses, approval workflow, members) |
+| Editor    | Draft name and sharing at the top, agent chat on the left, Puck canvas in the middle (click to select, edit text inline, swap images), block settings on the right                                    |
+| Approvals | Everything waiting for my decision, with the preview and what changed                                                                                                                                 |
+| Blocks    | Catalog of every block with its variants and versions, and a form to request a new block                                                                                                              |
 
 The [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU) show every screen in these areas, with one canvas page per part of the product. They are the reference for building Studio's UI: colors, type, layout and copy.
 
 ## Key journeys
 
-Eight journeys cover the MVP. Each one reuses the same few building blocks: the draft, previews, approvals and releases.
+Nine journeys cover the MVP. Each one reuses the same few building blocks: drafts, approvals and releases.
 
 **1. Set up a brand** (org admin, brand admin)
 
 1. The org admin creates the brand and assigns a brand admin.
 2. The brand admin picks a theme preset and a brand color. Pakshi generates the full palette and blocks saving if text contrast fails WCAG AA.
-3. They set fonts, density and other tokens, then choose which token groups are locked for sites. Colors, fonts and logo are locked by default.
-4. They write the voice guide (tone, do and don't examples, words to avoid) and set a default approval workflow for the brand's sites.
+3. They set fonts, density and other tokens, and upload the logo and favicon. Sites use the brand's theme and identity as they are.
+4. They write the voice guide (tone, do and don't examples, words to avoid) and optionally set a brand approval workflow, which the brand's sites use unless they set their own.
+5. Later changes to the theme, logo or favicon arrive on every site in the brand as a Brand update draft (journey 7).
 
 **2. Launch a new site with the agent** (editor)
 
-1. The editor creates a site and describes it to the agent: purpose, audience, pages, key dates, whether it needs a form. They attach source documents or images.
-2. The agent proposes a site plan (pages, and the sections on each) based on the brand's recipes. The editor adjusts it in chat.
-3. Once the plan is confirmed, the agent builds the pages section by section. The editor watches them appear on the canvas.
-4. Where content is missing, the agent inserts a clearly marked placeholder rather than inventing facts. Pre-flight blocks submission while any remain.
-5. If the agent needs something no block can do, it says so, suggests the nearest block, and offers to file a block request.
-6. The editor previews, submits for approval (journey 4), and connects a domain.
+1. A brand admin creates the site and gives the editor access.
+2. The editor starts a draft and describes the site to the agent: purpose, audience, pages, key dates, whether it needs a form. They attach source documents or images.
+3. The agent proposes a site plan (pages, and the sections on each) based on the brand's recipes. The editor adjusts it in chat.
+4. Once the plan is confirmed, the agent builds the pages section by section. The editor watches them appear on the canvas.
+5. Where content is missing, the agent inserts a clearly marked placeholder rather than inventing facts. Pre-flight blocks submission while any remain.
+6. If the agent needs something no block can do, it says so, suggests the nearest block, and offers to file a block request.
+7. The editor shares the draft for feedback and submits it for approval (journey 4). A site admin connects a domain.
 
 **3. Edit a page or write a blog post** (editor)
 
-- **Quick fix:** open the page, click the text or image, change it. Changes save to the draft automatically; the live site is unchanged.
+- **Drafts:** every change happens in a named draft, such as "Summer event launch" or "Fix the date". A site can have any number of drafts, and several people can edit one draft at once. A quick fix is a small draft.
+- **Quick fix:** open a draft, click the text or image, change it. Changes save to the draft automatically; the live site is unchanged.
 - **Bigger change:** ask the agent ("add a speakers section", "make this shorter"). If a section is selected on the canvas, the agent knows what "this" means. Each agent turn can be undone in one click.
 - **Blog post:** create a post (title, excerpt, cover image, tags, author, body). The agent can draft it from notes.
+- **Pages and navigation:** create, rename, delete and unpublish pages, and edit navigation, header and footer, all in a draft.
 
-**4. Preview and approve** (editor, approver)
+**4. Share and approve** (editor, approver)
 
-1. The editor creates a preview of the current draft (one page or the whole site). It gets its own link, is visible to signed-in Pakshi users, and expires after 7 days by default.
-2. The editor submits for approval. This freezes exactly what will be published.
-3. The submission follows the site's approval workflow. Each step's approvers are notified, open the preview, and see what changed compared with the live site.
-4. When the last step approves, the site publishes and is live within about a minute. A site whose workflow has no steps publishes directly.
+1. Every draft has a preview link that shows its latest saved state. The editor shares the draft like a document: with named people, the whole organization, or anyone with the link, choosing view or edit access for each.
+2. The editor submits the draft for approval. This freezes exactly what will be published.
+3. The submission follows the applicable approval workflow. Each step's approvers are notified, open the preview, and see what changed compared with the live site.
+4. When the last step approves, the draft publishes and is live within about a minute. With no steps, submitting publishes directly. Every other draft on the site is now behind (journey 5).
 5. If an approver requests changes, the submission closes with their note and the editor resubmits when ready. Editing can continue during review; later edits aren't part of the submission under review.
+6. If another draft publishes while this one is under review, the submission is updated automatically. A clean merge keeps its approvals. A merge that needed a person to resolve conflicts restarts the workflow.
 
-**5. Roll back** (editor)
+**5. Update a draft that's behind** (editor)
 
-Release history lists every publish with who submitted, who approved and when. **Roll back** makes an earlier release live again within about a minute. It needs no approval, because that release was already approved. The draft is untouched.
+1. When a draft publishes, every other draft on the site is behind. The next person to open a draft that's behind updates it before they can keep editing or submit.
+2. Pakshi merges the published changes into the draft, field by field. Changes to different fields, blocks or pages merge automatically.
+3. A conflict remains only where both sides changed the same field, one side edited a block the other removed, or both reordered the same sections. For each conflict, the editor keeps one side, or accepts a merge the agent suggests for a text field.
 
-**6. Upgrade a block** (editor)
+**6. Roll back** (editor)
+
+Release history lists every publish with who submitted, who approved and when. **Roll back** makes an earlier release live again within about a minute. It needs no approval, because that release was already approved. Drafts are untouched, but they are now behind and update as in journey 5. Rollback reaches any release whose block versions and media are still kept.
+
+**7. Upgrade a block or take a brand update** (editor)
 
 1. The site shows "Hero v2 available" with a short description of what changed.
-2. **Preview upgrade** creates a preview with the new version, converting content automatically where the block needs it.
-3. The editor submits the upgrade like any other change. Nothing changes on the live site until it's approved.
+2. **Adopt upgrade** creates a draft with the new version, converting content automatically where the block needs it.
+3. The editor submits the draft like any other change. Nothing changes on the live site until it publishes.
+4. The platform team can create upgrade drafts on every site that uses a block at once, for example after a security fix. Brand theme and identity changes arrive the same way, as a Brand update draft on each site. Each follows that site's workflow.
 
-**7. Handle form submissions** (anyone with submissions access)
+**8. Handle form submissions** (anyone with submissions access)
 
 1. Open the site's submissions, pick a form, browse or search entries.
 2. Export to CSV (audited), or delete everything for one person by email address.
 3. Submissions are kept as part of the site's data for as long as the site exists.
 
-**8. Request a new block** (editor)
+**9. Request a new block** (editor)
 
 Started from the agent or the block catalog. It files a request, with the need and an example, in the platform team's existing tracker. When the block ships, it appears in the catalog and the agent can use it.
 
@@ -128,49 +146,65 @@ These are the acceptance-level rules for the MVP, grouped by area.
 
 **Editing**
 
-- The agent and the visual editor change the same page. There is one draft per site, and it saves automatically.
-- Several people can edit the same site and page at once. Everyone sees who else is there, which block they're on, and their changes as they happen, including the agent's. Two people can type in the same text at once and see each other's cursors. For other settings, if two people change the same one, the later change wins.
-- Every agent turn can be undone in one click. Each editing session and agent turn is kept in the page's history.
-- Every change is checked against the block's rules and the brand's locks before it's saved. Locked options aren't shown as editable, and the agent refuses them with an explanation.
+- All work happens in drafts. The agent and the visual editor change the same draft, and it saves automatically.
+- Several people can edit the same draft and page at once. Everyone sees who else is there, which block and field they're on, and their changes as they happen, including the agent's. If two people change the same field, the later change wins and the other person is told.
+- A text field someone is typing in shows as theirs to others and to the agent. This is a marker, not a lock.
+- Every agent turn can be undone in one click. Undo leaves alone any field someone else has changed since, and says so. Each editing session and agent turn is kept in the draft's history.
+- Every change is checked against the block's rules before it's saved.
 
-**Previews**
+**Drafts and merging**
 
-- A preview is a frozen copy of the draft (one page or the whole site) at its own link.
-- Visible to signed-in staff only. Default lifetime 7 days, maximum 30. Previews are never indexed by search engines, and forms in previews don't submit.
+- A site can have any number of named drafts. Each draft starts from a release. Publishing a draft closes it.
+- When a draft publishes, every other draft on the site is behind. A draft that's behind must be updated before it can be edited further or submitted.
+- Updating merges field by field against the release the draft started from. Only real conflicts need a person: the same field changed on both sides, a block edited on one side and removed on the other, or the same sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
+
+**Sharing and previews**
+
+- Drafts are shared like documents: with named people, the whole organization, or anyone with the link. The person sharing chooses view or edit access for each.
+- Editing always needs a signed-in Pakshi user. A link shared for editing gives signed-in users edit access and everyone else view access.
+- Edit access through a share covers that draft only. It never includes submitting or publishing.
+- Every draft has a preview link, at an address that can't be guessed, showing the draft's latest saved state. Who can open it follows the draft's sharing. Sharing can be revoked at any time.
+- Previews are never indexed by search engines, and forms in previews don't submit. A preview lives as long as its draft.
 
 **Approvals and publishing**
 
-- Each site has an approval workflow, defaulting to its brand's. A workflow is an ordered list of any number of steps. Each step names who can approve (roles or specific people) and how many approvals it needs.
-- Brand and site admins edit workflows in Studio. The MVP editor is a simple list of steps. A visual, node-based editor for drawing steps and arrows is on the Later list, and can be pulled forward cheaply with an off-the-shelf flow library.
-- Submitting freezes exactly what will be published. Approvals apply to that frozen version only. Submitting again replaces the pending submission and restarts the workflow.
+- Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none. Each step names who can approve (roles or specific people) and how many approvals it needs.
+- Editing a workflow is a permission. The MVP editor is a simple list of steps. A visual, node-based editor for drawing steps and arrows is on the Later list, and can be pulled forward cheaply with an off-the-shelf flow library.
+- An approver needs the approve permission on that site. Approving a change you edited needs the separate permission for it.
+- Submitting freezes the draft exactly as it will be published. Approvals apply to that frozen version only. Submitting the same draft again replaces its pending submission and restarts the workflow.
+- If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals; a merge that needed conflict resolution restarts the workflow.
 - Pre-flight must pass before submitting: no placeholders left, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
-- A publish is live worldwide within about a minute. Every release is kept, and rolling back to any of them also takes about a minute.
+- A publish is live worldwide within about a minute. Every release is kept. Rolling back to one takes about a minute, as long as its block versions and media are still kept.
 
 **Blocks and versions**
 
-- Each site stays on the block versions it uses until an editor adopts an upgrade, through preview and approval.
+- Each site stays on the block versions it uses until an editor adopts an upgrade, through a draft and the site's workflow.
 - Any change that alters how a block looks creates a new version, shown to editors as v1, v2, v3 and so on. Any number of versions can be live at once. Sites on an older version see a banner encouraging them to upgrade, but are never forced.
-- The only exception to "no surprises" is an urgent security or accessibility fix, which the platform team may apply to an existing version. This is audited and site admins are notified.
+- An urgent fix is a new version like any other. The platform team can create upgrade drafts on every affected site at once.
+- A block version is kept while any draft or live release uses it, and for 3 months after the last one stops. The latest version of every block is always kept.
 
 **Brands and themes**
 
 - Theme tokens: brand color (full palette generated from it), neutral tone, fonts, type scale, corner radius, density, shadow style, section backgrounds, image corners, motion on or off. Every theme has a light and a dark mode, both contrast-checked. Sites follow the visitor's system setting, with an optional toggle.
-- Theme changes appear in every site's draft right away and reach each live site with its next approved publish.
+- Sites use their brand's theme and identity as they are. There are no site theme overrides and no brand locks in the MVP.
+- Changing the brand theme, logo or favicon creates a Brand update draft on every site in the brand, which follows that site's workflow.
 
 **Forms and submissions**
 
 - Field types: short text, long text, email, phone, select, checkbox (for consent), hidden (for tracking codes).
-- Spam protection on every form: Turnstile, a hidden honeypot field and rate limits. A consent checkbox and privacy link are required when a form collects personal data.
-- Each form sends a notification email to its configured addresses and can send the submitter a branded confirmation.
+- Editors create and edit forms in a draft. Notification addresses are site settings. Each submission keeps the field labels it was sent with, so exports still read correctly after a form changes.
+- A consent checkbox and privacy link are required when a form collects personal data.
+- Each form sends a notification email to its configured addresses. Forms send no email to submitters.
+- Spam protection isn't in the MVP.
 - Submissions are kept for as long as the site exists, as part of its data. A single submission, or everything for one person, can be deleted on request. Every view, export and deletion is logged. The agent never has access to submissions.
 
 **Email**
 
-Transactional only: form notifications, confirmations and Studio notifications. Sent from a verified brand or site sender domain, or from a shared default sender.
+Transactional only: form notifications and Studio notifications. Sent from a shared default sender, or from a brand or site sender domain that uses Cloudflare DNS.
 
 **Media**
 
-Each brand has a library (logos, approved images) that its sites can use; each site has its own. Images are resized and optimized automatically. Alt text is required: the agent suggests it and a person confirms. Replacing a file updates it everywhere it's used.
+Each brand has a library (logos, approved images) that its sites can use; each site has its own. Images are resized and optimized automatically. Alt text is required: the agent suggests it and a person confirms. Files never change: each upload is a new file with its own ID, so a new image replaces an old one only where someone swaps it in. The brand's logo and favicon are brand settings, so changing them reaches every site through a Brand update draft. A file is kept while any draft or live release uses it, and for 3 months after the last one stops.
 
 **SEO and domains**
 
@@ -189,35 +223,36 @@ Every block version meets WCAG 2.2 AA before release. Pre-flight checks heading 
 - No e-commerce, memberships or site visitor logins.
 - No marketing email, newsletters or CRM.
 - Not a digital asset management system: the media library serves websites only.
-- The agent never writes code, never publishes, and never sees form submissions.
+- The agent never writes code, never submits or publishes, and never sees form submissions.
 
 ## Phased plan
 
-Three phases, each ending with clear exit criteria. Durations depend on team size and are set at kickoff.
+Three phases, each ending with clear exit criteria. Durations depend on team size and are set at kickoff. The Pakshi team is the first user: it builds real sites with Pakshi from Phase 1, and the block library grows from what those sites need.
 
-| Phase          | Scope                                                                                                                                                                                                                                                                                                                                                   | Exit criteria                                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0. Foundations | Page schema; 8 core blocks (hero, rich text, split, feature grid, call to action, gallery, form, blog list), one with two versions; one theme preset in light and dark; Puck and the published site rendering identically; live editing by two people at once; agent editing one page; draft → preview → approval → publish → rollback on a test domain | Editor and published page match on every core block; two versions of one block live on one site; two people and the agent edit one page without losing changes; agent completes 8 of 10 scripted edits with valid results |
-| 1. Pilot       | Full MVP scope; about 20 blocks and 4 recipes (landing, event, information site, blog); first real sites                                                                                                                                                                                                                                                | Sites live on custom domains; 80% or more of changes over 4 weeks made without a developer; new site launched in 10 business days or less including approvals; no surprise changes to live sites; security review passed  |
-| 2. Rollout     | More brands and sites; features from the Later list as they're needed                                                                                                                                                                                                                                                                                   | New brand onboarded in a day or less of platform time; 90% or more of changes made without a developer                                                                                                                    |
+| Phase          | Scope                                                                                                                                                                                                                                                                                                                                                                                     | Exit criteria                                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0. Foundations | Page schema; 8 core blocks (hero, rich text, split, feature grid, call to action, gallery, form, blog list), one with two versions; one theme preset in light and dark; Puck and the published site rendering identically; live editing of one draft by two people and the agent; merging a draft after another publishes; draft → share → approval → publish → rollback on a test domain | Screenshots of every core block fixture match between editor and published page; two versions of one block live on one site; in a scripted session with two people and the agent on one draft, every change is applied or its author is told; scripted merge cases, covering every conflict type, produce the expected document; the agent completes 8 of 10 scripted edits with the expected result; a publish and a rollback are each live on a test custom hostname within 60 seconds |
+| 1. Pilot       | Full MVP scope; about 20 blocks and 4 recipes (landing, event, information site, blog), chosen from the sites the Pakshi team builds; first real sites                                                                                                                                                                                                                                    | Sites live on custom domains; 80% or more of published changes over 4 weeks needed no code change; new site launched in 10 business days or less including approvals; every live change traceable to a publish or rollback; security review passed                                                                                                                                                                                                                                       |
+| 2. Rollout     | More brands and sites; features from the Later list as they're needed                                                                                                                                                                                                                                                                                                                     | New brand onboarded in a day or less of platform time; 90% or more of published changes needed no code change                                                                                                                                                                                                                                                                                                                                                                            |
 
 ## Success metrics
 
-| Metric                 | Definition                                           | Pilot target             |
-| ---------------------- | ---------------------------------------------------- | ------------------------ |
-| Time to launch         | Site created → first publish (median)                | 10 business days or less |
-| Time to change         | Change requested → ready for approval (median)       | 15 minutes or less       |
-| Developer-free changes | Share of publishes with no platform team involvement | 80% or more              |
-| Approval turnaround    | Submit → final decision (median)                     | 1 business day or less   |
-| Agent success          | Agent turns kept without undo or manual rework       | 75% or more              |
-| Surprise changes       | Live sites changed without an approved publish       | 0                        |
+| Metric              | Definition                                                           | Pilot target             |
+| ------------------- | -------------------------------------------------------------------- | ------------------------ |
+| Time to launch      | Site created → first publish (median)                                | 10 business days or less |
+| Time to change      | Draft created → submitted (median)                                   | 15 minutes or less       |
+| No-code changes     | Share of publishes that needed no code change (new block or fix)     | 80% or more              |
+| Approval turnaround | Submit → final decision (median)                                     | 1 business day or less   |
+| Agent success       | Agent turns not undone                                               | 75% or more              |
+| Untracked changes   | Live changes not traceable to a publish or rollback in the audit log | 0                        |
 
 ## Settled context
 
+- Pakshi is open source. The team building it is its first user.
 - Data residency is not a constraint.
 - The platform team curates which AI models are used, and all providers are approved. Users never choose models.
 - Brands are groupings of sites; access is controlled entirely by roles and permissions.
-- Approval requirements are whatever each site's workflow defines.
-- All reviewers are Pakshi users; there are no outside reviewers.
+- Approval requirements are whatever the applicable workflow defines, and a workflow can have no steps.
+- All approvers are Pakshi users. Drafts can be shared for viewing with anyone through a link.
 - Blocks are designed and built by the platform team.
 - Cloudflare Email Service sends all email.

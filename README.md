@@ -12,10 +12,10 @@ Every website project rebuilds the same things: a content system, forms, email, 
 Pakshi takes a different bet. The hard design work happens once, as a library of blocks, themes, and composition rules. After that, editors and the agent only arrange pieces that already look good.
 
 - **Sites look designed, not generated.** The agent picks from well-designed blocks and a brand's theme. It never starts from a blank canvas, so even a cheap model produces a good page.
-- **Nothing reaches production unseen.** Every change starts as a draft and can be previewed. Each site sets its own approval workflow, and any release rolls back in about a minute.
+- **Production changes only through a publish.** Every change starts in a draft that can be previewed and shared. Each publish follows the approval workflow its owners set, and a release rolls back in about a minute.
 - **The agent edits content, never code.** Pages are structured data. Every agent change is validated and can be undone in one click, and the agent can't publish.
-- **Improvements reach every site without surprises.** Sites pin their block versions and upgrade deliberately, through a preview.
-- **Brands stay in control.** Each brand owns its theme, its voice, and which settings its sites are allowed to change.
+- **Improvements reach every site without surprises.** Sites pin their block versions and upgrade deliberately, through a draft.
+- **Brands stay in control.** Each brand owns its theme and voice, and every site in the brand follows them.
 - **No per-seat pricing.** Pakshi runs on your own Cloudflare account, on the Workers Paid plan.
 
 Pakshi is built for large organizations that run many brands and many sites, where teams need to own their websites without waiting on a developer.

@@ -9,7 +9,7 @@ Related docs: [product spec](/product-spec) (what it does) and [technical design
 
 ## The problem and the vision
 
-Pakshi is an internal platform that lets non-technical teams across the organization build, launch and maintain websites without a developer in the loop. People describe what they want to an AI agent, which assembles pages from a curated library of well-designed blocks. Editors fix small things directly on the live page.
+Pakshi is an internal platform that lets non-technical teams across the organization build, launch and maintain websites without a developer in the loop. People describe what they want to an AI agent, which assembles pages from a curated library of well-designed blocks. Editors fix small things directly on the page in a visual editor.
 
 Every website project repeats the same work: a content system, publishing to a domain, and handing editorial control to non-technical people. Most sites also need the same parts:
 
@@ -41,7 +41,7 @@ Pakshi is an internal accelerator for many groups across one large organization,
 1. **Constraint creates quality.** Editors and agents choose from well-designed options. They never start from a blank canvas.
 2. **The agent edits content, not code.** Pages are structured data, which every change is checked against, and which can be previewed and undone.
 3. **Design once, improve everywhere.** All sites render from one central block library. Each site depends on specific block versions and is prompted to upgrade, so improvements spread without surprise breakage.
-4. **Nothing reaches production unseen.** Every change can be previewed, and production can be gated behind approvals.
+4. **Production changes only through a publish.** Every change is made in a draft that can be previewed, and each publish follows the approval workflow its owners set.
 5. **No per-seat economics.** Anyone who needs access gets it.
 
 ## How it works
@@ -52,7 +52,7 @@ A site goes from request to live in one conversation, and it stays maintainable 
 flowchart LR
   A[Requester describes<br/>site + content] --> B[Agent picks recipe,<br/>blocks and theme]
   B --> C[Draft site as<br/>structured data]
-  C --> D[Ephemeral preview]
+  C --> D[Shareable preview]
   D -->|feedback| B
   D --> E[Approval]
   E --> F[Live site]
@@ -83,7 +83,7 @@ Block contracts, theme tokens and how shadcn/ui is used are covered in the [tech
 
 ## Brands and theming
 
-Pakshi supports multiple brands, each with its own sites. Settings flow down a four-level hierarchy, and each brand decides what its sites may change.
+Pakshi supports multiple brands, each with its own sites. Settings flow down a four-level hierarchy, and sites use their brand's theme as it is.
 
 ```mermaid
 flowchart TD
@@ -95,7 +95,7 @@ flowchart TD
   S1 --> P[Pages + sections]
 ```
 
-Brands own their identity, including voice and tone, since the agent writes copy, not just layouts. Teams start from curated theme presets and adjust within safe ranges, so sites can look distinct without anyone designing from scratch. User-facing settings are in the [product spec](/product-spec); token details are in the [technical design](/technical-design#themes-and-brand-locks).
+Brands own their identity, including voice and tone, since the agent writes copy, not just layouts. Brand owners start from curated theme presets and adjust within safe ranges, so brands can look distinct without anyone designing from scratch. User-facing settings are in the [product spec](/product-spec); token details are in the [technical design](/technical-design#themes).
 
 ## Editing experience
 
@@ -105,15 +105,17 @@ The **agent** handles new sites, new pages and bigger changes through conversati
 
 Because both write to the same structured data, a change made one way is immediately visible to the other. The agent always knows the current state of the page.
 
+All work happens in named drafts, which work like branches. A site can have any number of them, and several people can work in one draft at once. When a draft publishes, the others merge in its changes. Pakshi merges most changes automatically and asks a person only about real conflicts.
+
 ## Safety rails
 
 Experimentation never touches production. Production can require one or more levels of approval before a change goes live.
 
-- **Drafts:** every change starts as a draft, separate from the live site.
-- **Ephemeral previews:** anyone can spin up a temporary, shareable version of a page or a whole site to try an idea, such as a new layout or new pages. Previews are torn down when no longer needed.
-- **Approvals:** each site defines its own approval workflow, from none to any number of steps before production.
+- **Drafts:** every change starts in a named draft, separate from the live site.
+- **Shareable previews:** every draft has a preview link, shared like a document with named people, the whole organization, or anyone with the link.
+- **Approvals:** workflows are set on the organization, a brand or a site, from none to any number of steps before production.
 - **Version history and rollback:** every published version is kept, with one-click rollback.
-- **Validation:** agent and editor changes are checked against block contracts and brand locks before they can be saved.
+- **Validation:** agent and editor changes are checked against block contracts before they can be saved.
 
 ## Shared platform services
 
@@ -138,7 +140,7 @@ flowchart LR
 
 The agent should recognize a gap and raise a request, rather than forcing an existing block into a job it wasn't built for. Recipes grow the same way as new page types come up.
 
-**Block versioning.** Blocks are versioned, and sites upgrade deliberately, with a warning and a preview, so a live site never changes by surprise. See [decision 001](/decision-log#decision-001) in the decision log.
+**Block versioning.** Blocks are versioned, and sites upgrade deliberately, through a draft they can preview, so a live site never changes by surprise. See [decision 001](/decision-log#decision-001) in the decision log.
 
 ## Risks
 
