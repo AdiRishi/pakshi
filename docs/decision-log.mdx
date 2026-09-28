@@ -26,7 +26,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 007 | One live, collaborative Durable Object per site, with edits by block ID      | 2026-09-28 | Accepted |
 | 006 | Block versions: v1, v2, v3 for editors, any number live                      | 2026-09-28 | Accepted |
 | 005 | Own the page schema; Puck edits it through an adapter                        | 2026-09-27 | Accepted |
-| 004 | Publish immutable snapshots, render on request, cache per release            | 2026-09-27 | Accepted |
+| 004 | Publish immutable snapshots, render on request, cache per release            | 2026-09-28 | Accepted |
 | 003 | Four Workers: a web and API pair for sites and for Studio                    | 2026-09-27 | Accepted |
 | 002 | Host on Cloudflare                                                           | 2026-09-27 | Accepted |
 | 001 | Sites pin block versions                                                     | 2026-09-27 | Accepted |
@@ -43,7 +43,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** People need to show drafts to colleagues and to people outside the organization, and to invite others to edit.
 
-**Decision.** Drafts are shared like documents: with named people, the whole organization, or anyone with the link, and the person sharing chooses view or edit access for each. Every draft has a preview link at an address that can't be guessed. Editing always needs a signed-in Pakshi user, so a link shared for editing gives everyone else view access. Edit access through a share covers one draft and never includes submitting or publishing.
+**Decision.** Drafts are shared like documents: with named people, the whole organization, or anyone with the link, and the person sharing chooses view or edit access for each. Every draft has a preview link at an address that can't be guessed, served from a fixed R2 key that each save overwrites; KV is too slow to show the latest save. Editing always needs a signed-in Pakshi user, so a link shared for editing gives everyone else view access. Edit access through a share covers one draft and never includes submitting or publishing.
 
 **Rejected.** Previews visible to signed-in staff only; frozen previews with fixed expiry times.
 
@@ -53,7 +53,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** A brand theme change would otherwise ship with whatever unrelated change a site publishes next. Brand locks, which limit what sites may change, add a validator, hidden controls and agent rules.
 
-**Decision.** Sites use their brand's theme and identity as they are, with no overrides and no locks. Saving a brand's theme, logo or favicon creates a Brand update draft on every site in the brand, which follows that site's workflow. The same mechanism creates block upgrade drafts on every affected site.
+**Decision.** Sites use their brand's theme and identity as they are, with no overrides and no locks. Each save of a brand's theme, logo or favicon is an immutable brand revision, and each draft pins one, the way its lockfile pins block versions. A new revision creates a Brand update draft on every site in the brand, or moves an unpublished one forward, and it follows that site's workflow. Other drafts keep their pinned revision until they merge after the update is live. The same mechanism creates block upgrade drafts on every affected site.
 
 **Rejected.** Brand locks and site theme overrides in the MVP; theme changes that ride along with the next publish.
 
@@ -72,6 +72,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 **Context.** With one shared draft per site, one person's unfinished page blocks another person's urgent fix or ships with it, and a second submission replaces the first.
 
 **Decision.** A site has one live release and any number of named drafts, each starting from a release. Publishing a draft makes it live, and every other draft is then behind. A draft that's behind must be updated before it can be edited further or submitted. Updating is a three-way merge by block ID and field. Different fields, blocks or pages merge automatically; conflicts (same field on both sides, edit against removal, the same list reordered on both sides) need a person, and a model may suggest a merge for text. A submission under review that merges cleanly keeps its approvals; one that needed a person restarts its workflow.
+
+Four rules keep merges safe. All sides are migrated to the newest block version any of them uses before diffing. The merged draft is validated like a submission, and a failure is a conflict. A submission publishes only if it's based on the current live release. And publishing closes a draft only if nobody edited it after it was submitted.
 
 **Rejected.** One draft per site; publishing chosen pages from a shared draft; a draft per page.
 
@@ -109,7 +111,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Options.** (a) Fork Puck. (b) A sync module on Puck's public API, plus patches where the API falls short. (c) Build our own editor.
 
-**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The one gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts; a pnpm patch replaces its history slice and shortcuts, and we offer the change upstream.
+**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The biggest gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts; a pnpm patch replaces its history slice and shortcuts, and we offer the change upstream. Smaller gaps, such as fresh IDs on replayed inserts, index-based selection and focused fields that ignore remote changes, are handled in the sync module and covered by the Phase 0 spike.
 
 **Rejected.** A fork: we would own drag and drop, the canvas iframe and every field type, and fall behind an actively developed 0.x library. Our own editor: much larger, for no gain in the MVP.
 
@@ -177,7 +179,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Rejected.** A cap on live versions; major, minor and patch semantics with auto-applied patches; in-place fixes to released versions; keeping every version for as long as any retained release uses it.
 
-**Consequences.** Upgrades are always a deliberate change through a draft and the site's workflow. Bundle size and visual-test time grow with the number of live versions, so CI tracks both. Rollback can't reach a release whose versions have been removed.
+**Consequences.** Upgrades are always a deliberate change through a draft and the site's workflow. Bundle size and visual-test time grow with the number of live versions, so CI tracks both. Rollback can't reach a release whose versions have been removed. Frozen versions still share primitives, Tailwind and React, so a dependency upgrade can change an old version's output; an intended change is accepted through a reviewed, audited screenshot update.
 
 ## 005 — Own the page schema; Puck edits it through an adapter [#decision-005]
 
@@ -193,7 +195,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Options.** (a) Pre-render every page to static HTML at publish. (b) Freeze content, theme and block versions in a snapshot and render on request, caching by release.
 
-**Decision.** (b). Publishing and rollback are pointer changes in KV.
+**Decision.** (b). A snapshot is a manifest plus one object per page, stored by content hash, so snapshots share unchanged pages and a render reads only the page it needs. Publishing and rollback are pointer changes: the site's Durable Object records the live release, and KV and D1 hold copies of it.
 
 **Consequences.** No build pipeline and no archive of old assets. Shared code outside blocks can still affect live pages, so the visual regression gate covers it.
 
