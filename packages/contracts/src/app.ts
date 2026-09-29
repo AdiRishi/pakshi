@@ -1,6 +1,12 @@
 import { Schema } from "effect";
 
-const AppErrorCode = Schema.Literals(["invalid_request", "not_found", "unavailable", "internal"]);
+const AppErrorCode = Schema.Literals([
+  "invalid_request",
+  "unauthenticated",
+  "not_found",
+  "unavailable",
+  "internal",
+]);
 const SerializedAppRequestError = Schema.Struct({ code: AppErrorCode, message: Schema.String });
 
 export class AppRequestError extends Error {

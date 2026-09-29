@@ -3,18 +3,14 @@ import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
 import { Effect } from "effect";
 
-import { runApiRequest } from "@/server/api-request";
+import { callStudio } from "@/server/studio-rpc";
 
 /** The signed-in person, or null when nobody is signed in. */
-export const getViewer = createServerFn({ method: "GET" }).handler(() => {
-  const request = getRequest();
-  return runApiRequest(
-    Effect.tryPromise(() =>
-      env.STUDIO_API.viewer(new URL(request.url).origin, request.headers.get("cookie") ?? ""),
-    ),
-    request.signal,
-  );
-});
+export const getViewer = createServerFn({ method: "GET" }).handler(() =>
+  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, (studio) =>
+    studio.viewer().pipe(Effect.catchTag("Unauthenticated", () => Effect.succeed(null))),
+  ),
+);
 
 export const getOrganizationName = createServerFn({ method: "GET" }).handler(
   () => env.ORGANIZATION_NAME,

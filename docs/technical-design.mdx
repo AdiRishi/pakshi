@@ -35,6 +35,7 @@ flowchart LR
 - **`sites`** renders published sites and previews from snapshots. It is read-only and forwards form posts to `sites-api`.
 - **`sites-api`** is the public-facing API for form intake. It hosts the `SiteSubmissions` Durable Objects, one per site, and is the only writer of submissions.
 - **`studio`** is the TanStack Start UI, with Pakshi's own visual [editor](/editor). It has no data bindings of its own: it calls `studio-api` over RPC and reaches site documents and the agent over WebSockets through it.
+- **Studio's RPC** is one Effect RPC contract, `StudioRpcs` in `packages/contracts`, sent over the service binding to a named `StudioRpc` entrypoint ([decision 029](/decision-log#decision-029)). Its schemas check every call on both sides, and a session middleware turns the forwarded session cookie into the signed-in person, so no method takes the person as an argument. Sign-in itself is forwarded as plain HTTP, because OAuth needs real redirects and cookies.
 - **`studio-api`** holds domain logic and permissions, the `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs, and authorized reads of submissions.
 - All four import the same packages (page schema, blocks, themes, permission rules), so the editor and the public site render with the same code.
 

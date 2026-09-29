@@ -1,4 +1,5 @@
 import { BrandId, SiteId } from "@repo/contracts/ids";
+import type { Person, Viewer } from "@repo/contracts/studio";
 import { type Access, authorize, defaultRoles, Grant, Override, Scope } from "@repo/domain/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Schema } from "effect";
@@ -89,10 +90,7 @@ const reachableSites = (env: StudioApiEnv, access: Access) => {
 };
 
 /** Who is signed in, what they hold, and the sites whose pages they can edit. */
-export const describeViewer = async (
-  env: StudioApiEnv,
-  user: { readonly id: string; readonly name: string; readonly email: string },
-) => {
+export const describeViewer = async (env: StudioApiEnv, user: Person): Promise<Viewer> => {
   const { access, grants } = await loadAccess(env, user.id);
   const sites = await rows(reachableSites(env, access), SiteRow);
   return {
@@ -108,5 +106,3 @@ export const describeViewer = async (
       .map((site) => ({ id: site.id, name: site.name, brand: site.brand_name })),
   };
 };
-
-export type Viewer = Awaited<ReturnType<typeof describeViewer>>;

@@ -5,7 +5,6 @@ import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 
 import type { SiteSubmissions } from "../../workers/sites-api/src/index.ts";
-import type StudioApiEntrypoint from "../../workers/studio-api/src/index.ts";
 import type { SiteAgent, SiteDoc } from "../../workers/studio-api/src/index.ts";
 import type { DataPlane } from "./data-plane.ts";
 import type { DeploymentConfig } from "./deployment-config.ts";
@@ -65,17 +64,14 @@ export const studioBindings = (
   studioApi: Effect.Success<typeof StudioApi>,
   identity: IdentityProvider,
 ) => ({
+  /** Sign-in, forwarded as plain HTTP. */
   STUDIO_API: studioApi,
+  /** Everything else, as the StudioRpcs contract in @repo/contracts/studio. */
+  STUDIO_RPC: Cloudflare.WorkerEntrypoint(studioApi, "StudioRpc"),
   ENVIRONMENT: environment,
   ORGANIZATION_NAME: identity.organizationName,
 });
-export interface StudioEnv extends Omit<
-  Cloudflare.InferEnv<ReturnType<typeof studioBindings>>,
-  "STUDIO_API"
-> {
-  /** Alchemy can't see a plain Worker's RPC methods, so the entrypoint's type names them. */
-  readonly STUDIO_API: Service<StudioApiEntrypoint>;
-}
+export interface StudioEnv extends Cloudflare.InferEnv<ReturnType<typeof studioBindings>> {}
 
 export const sitesBindings = (data: DataPlane, sitesApi: Effect.Success<typeof SitesApi>) => ({
   ROUTING: data.routing,

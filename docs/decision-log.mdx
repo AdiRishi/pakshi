@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                         | Date       | Status            |
 | --- | -------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 029 | Studio calls studio-api through an Effect RPC contract                           | 2026-09-29 | Accepted          |
 | 028 | Two stacks, dev and prod, and destroying one deletes everything                  | 2026-09-29 | Accepted          |
 | 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware | 2026-09-29 | Accepted          |
 | 026 | Drafts may be incomplete; completeness is checked at submission                  | 2026-09-29 | Accepted          |
@@ -37,6 +38,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                        | 2026-09-27 | Accepted          |
 | 002 | Host on Cloudflare                                                               | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                         | 2026-09-27 | Accepted          |
+
+## 029 — Studio calls studio-api through an Effect RPC contract [#decision-029]
+
+**Context.** Studio called a method on `studio-api`'s entrypoint class over native Workers RPC. The contract was that class's TypeScript type, so nothing checked calls at runtime, failures reached Studio untyped with no timeout, and every method took the session cookie as an argument. `studio-api` must stay a plain Worker, because PartyServer and `AIChatAgent` need plain Durable Object classes, so Alchemy's Effect Worker RPC doesn't apply.
+
+**Decision.** Each API boundary is an Effect `RpcGroup` in `packages/contracts`, with payload, success and error schemas for every method. `studio-api` serves `StudioRpcs` from a named `StudioRpc` entrypoint, over Effect RPC's HTTP protocol. Studio calls it through one helper that sends the session cookie and Studio's origin as headers, applies a timeout, stops when the browser request is cancelled, and turns every failure into a user-safe error in one place. A `StudioSession` middleware on the contract checks the session and provides the signed-in person to handlers; a missing session is the typed `Unauthenticated` error. Sign-in stays plain HTTP over the default entrypoint.
+
+**Rejected.** Native Workers RPC with a TypeScript interface, which has no runtime checks or typed errors; Alchemy's Effect Worker class, which can't host PartyServer's Durable Objects.
+
+**Consequences.** A new Studio feature adds one `Rpc.make` to the contract and one handler, and gets validation, the session check, the timeout and error mapping with it. Each call pays for JSON encoding and an internal HTTP hop, and the transport uses `effect/unstable/rpc`, which may change before Effect 4 is released.
 
 ## 028 — Two stacks, dev and prod, and destroying one deletes everything [#decision-028]
 

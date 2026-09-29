@@ -38,7 +38,6 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@repo/infra": "workspace:*",
-    "@repo/studio-api": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@tanstack/devtools-vite": "catalog:",
     "@types/node": "catalog:",

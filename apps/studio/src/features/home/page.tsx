@@ -1,4 +1,4 @@
-import type { Viewer } from "@repo/studio-api";
+import type { Viewer } from "@repo/contracts/studio";
 import { useNavigate } from "@tanstack/react-router";
 
 import { Logo } from "@/components/logo";

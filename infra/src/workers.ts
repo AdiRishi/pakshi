@@ -29,6 +29,7 @@ export const SitesApi = Effect.gen(function* () {
   return yield* Cloudflare.Worker("SitesApi", {
     ...workerDefaults,
     name: sitesApiName(config.stage),
+    workersDev: false,
     main: "../workers/sites-api/src/index.ts",
     env: sitesApiBindings(config.environment),
   });
@@ -47,6 +48,7 @@ export const StudioApi = Effect.gen(function* () {
   return yield* Cloudflare.Worker("StudioApi", {
     ...workerDefaults,
     main: "../workers/studio-api/src/index.ts",
+    workersDev: false,
     env,
   });
 });

@@ -27,6 +27,18 @@
     "./snapshot": {
       "types": "./src/snapshot.ts",
       "default": "./src/snapshot.ts"
+    },
+    "./studio": {
+      "types": "./src/studio.ts",
+      "default": "./src/studio.ts"
+    },
+    "./rpc/client": {
+      "types": "./src/rpc/client.ts",
+      "default": "./src/rpc/client.ts"
+    },
+    "./rpc/server": {
+      "types": "./src/rpc/server.ts",
+      "default": "./src/rpc/server.ts"
     }
   },
   "scripts": {

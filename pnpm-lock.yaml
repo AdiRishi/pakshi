@@ -528,9 +528,6 @@ importers:
       '@repo/infra':
         specifier: workspace:*
         version: link:../../infra
-      '@repo/studio-api':
-        specifier: workspace:*
-        version: link:../../workers/studio-api
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
