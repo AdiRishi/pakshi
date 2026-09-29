@@ -1,5 +1,4 @@
 import type { Field, FieldKind } from "@repo/blocks";
-import { MediaId } from "@repo/contracts/ids";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import { ExternalUrl } from "@repo/contracts/references";
 import { Button } from "@repo/ui/components/button";
@@ -14,7 +13,7 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
 import { Textarea } from "@repo/ui/components/textarea";
-import { Option, Predicate, Schema } from "effect";
+import { Predicate, Schema } from "effect";
 import { type ComponentType, type ReactNode, useRef, useState } from "react";
 
 import {
@@ -60,19 +59,22 @@ const setProp = (field: FieldTarget, value: Json | undefined): Op =>
     ? { op: "setProp", target: field.target, block: field.block, path: field.path }
     : { op: "setProp", target: field.target, block: field.block, path: field.path, value };
 
+/** A field's value, as its draft schema describes it. */
+type ValueOf<F extends Field> = F["draft"]["Type"];
+
 interface ControlProps<F extends Field> {
   readonly field: FieldTarget;
   readonly definition: F;
-  readonly value: Json | undefined;
+  readonly value: ValueOf<F> | undefined;
 }
 
 type KindOf<K extends FieldKind> = Extract<Field, { readonly kind: K }>;
 
 /** A labelled row with the field's errors, and a remove button for an optional field that's set. */
-function ControlRow(props: {
+function ControlRow<F extends Field>(props: {
   readonly field: FieldTarget;
-  readonly definition: Field;
-  readonly value: Json | undefined;
+  readonly definition: F;
+  readonly value: ValueOf<F> | undefined;
   readonly errors: ReadonlyArray<{ readonly message: string }>;
   readonly description?: ReactNode;
   readonly children: ReactNode;
@@ -119,11 +121,10 @@ function AddField(props: { readonly title: string; readonly onAdd: () => void })
 function TextControl(props: ControlProps<KindOf<"text">>) {
   const store = useStore();
   const { run, errors } = useRun();
-  const text = Predicate.isString(props.value) ? props.value : undefined;
-  const { definition, field } = props;
+  const { definition, field, value: text } = props;
   if (text === undefined && props.definition.optional)
     return (
-      <ControlRow field={field} definition={definition} value={props.value} errors={errors}>
+      <ControlRow field={field} definition={definition} value={text} errors={errors}>
         <AddField title={definition.title} onAdd={() => run([setProp(field, "")])} />
       </ControlRow>
     );
@@ -138,7 +139,7 @@ function TextControl(props: ControlProps<KindOf<"text">>) {
     <ControlRow
       field={field}
       definition={definition}
-      value={props.value}
+      value={text}
       errors={errors}
       description={`${(text ?? "").length} of ${definition.max} characters`}
     >
@@ -201,22 +202,19 @@ function RichTextControl(props: ControlProps<KindOf<"richText">>) {
 
 /** Picks a page on the site or types an external address. An address is saved once it's valid. */
 function LinkControl(props: ControlProps<KindOf<"link">>) {
+  // A link changed elsewhere, such as by undo, starts the control afresh.
+  return <LinkChooser key={JSON.stringify(props.value)} {...props} />;
+}
+
+function LinkChooser(props: ControlProps<KindOf<"link">>) {
   const pages = useEditorState((state) => state.view.pages);
   const { run, errors } = useRun();
   const current = props.value;
   const external = Predicate.isString(current) ? current : null;
-  const pageId = isRecord(current) && Predicate.isString(current["id"]) ? current["id"] : null;
+  const pageId = current === undefined || Predicate.isString(current) ? null : current.id;
   const [typed, setTyped] = useState(external ?? "https://");
   const [choosingAddress, setChoosingAddress] = useState(false);
   const [invalid, setInvalid] = useState<string | null>(null);
-  // A new saved link, such as one undo brings back, replaces an address still being typed.
-  const saved = external ?? pageId;
-  const [shown, setShown] = useState(saved);
-  if (saved !== shown) {
-    setShown(saved);
-    setTyped(external ?? "https://");
-    setChoosingAddress(false);
-  }
   const saveTyped = () => {
     if (!Schema.is(ExternalUrl)(typed)) {
       setInvalid("Enter a full address that starts with https://, http://, mailto: or tel:");
@@ -284,8 +282,7 @@ function LinkControl(props: ControlProps<KindOf<"link">>) {
 function FormControl(props: ControlProps<KindOf<"form">>) {
   const forms = useEditorState((state) => state.view.forms);
   const { run, errors } = useRun();
-  const current =
-    isRecord(props.value) && Predicate.isString(props.value["id"]) ? props.value["id"] : "";
+  const current = props.value?.id ?? "";
   return (
     <ControlRow
       field={props.field}
@@ -314,10 +311,7 @@ function MediaControl(props: ControlProps<KindOf<"media">>) {
   const { mediaSrc } = useServices();
   const { errors } = useRun();
   const change = useRef<HTMLButtonElement>(null);
-  const id = isRecord(props.value)
-    ? Option.getOrNull(Schema.decodeUnknownOption(MediaId)(props.value["id"]))
-    : null;
-  const alt = isRecord(props.value) ? props.value["alt"] : undefined;
+  const id = props.value?.id ?? null;
   return (
     <ControlRow
       field={props.field}
@@ -346,7 +340,7 @@ function MediaControl(props: ControlProps<KindOf<"media">>) {
         <TextControl
           field={{ ...props.field, path: [...props.field.path, "alt"] }}
           definition={props.definition.parts.alt}
-          value={Predicate.isString(alt) ? alt : ""}
+          value={props.value?.alt ?? ""}
         />
       )}
     </ControlRow>
@@ -370,9 +364,9 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
         />
       </ControlRow>
     );
-  const part = (name: "label" | "link") => ({
-    field: { ...props.field, path: [...props.field.path, name] },
-    value: isRecord(props.value) ? props.value[name] : undefined,
+  const partField = (name: "label" | "link") => ({
+    ...props.field,
+    path: [...props.field.path, name],
   });
   return (
     <FieldSet id={controlId(props.field)}>
@@ -384,24 +378,27 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
           </Button>
         )}
       </div>
-      <TextControl {...part("label")} definition={props.definition.parts.label} />
+      <TextControl
+        field={partField("label")}
+        definition={props.definition.parts.label}
+        value={props.value.label}
+      />
       <LinkControl
-        // A link changed elsewhere, such as by undo, starts the control afresh.
-        key={JSON.stringify(part("link").value)}
-        {...part("link")}
+        field={partField("link")}
         definition={props.definition.parts.link}
+        value={props.value.link}
       />
     </FieldSet>
   );
 }
 
 function ListControl(props: ControlProps<KindOf<"list">>) {
-  const items = Array.isArray(props.value) ? props.value.filter(isRecord) : [];
+  const items = props.value ?? [];
   return (
     <FieldSet>
       <FieldLegend variant="label">{props.definition.title}</FieldLegend>
       {items.map((item, index) => {
-        const id = Predicate.isString(item["id"]) ? item["id"] : String(index);
+        const { id } = item;
         return (
           <FieldSet key={id} className="rounded-md border p-4">
             <FieldLegend variant="label">
@@ -437,11 +434,16 @@ const controls = {
 } satisfies { readonly [K in FieldKind]: ComponentType<ControlProps<KindOf<K>>> };
 
 /** A field's control, chosen by its kind. Each reads the draft and emits setProp; none keeps its own copy. */
-export function FieldControl(props: ControlProps<Field>) {
+export function FieldControl(props: {
+  readonly field: FieldTarget;
+  readonly definition: Field;
+  readonly value: Json | undefined;
+}) {
   // SAFETY: `controls` pairs each kind with the control for fields of that kind,
   // and this looks it up by the definition's own kind.
   const Control = controls[props.definition.kind] as ComponentType<ControlProps<Field>>;
-  // A link changed elsewhere, such as by undo, starts its control afresh.
-  const key = props.definition.kind === "link" ? JSON.stringify(props.value) : undefined;
-  return <Control key={key} {...props} />;
+  // Every op is checked against the field's draft schema, so a stored value always decodes.
+  const value =
+    props.value === undefined ? undefined : Schema.decodeSync(props.definition.draft)(props.value);
+  return <Control field={props.field} definition={props.definition} value={value} />;
 }
