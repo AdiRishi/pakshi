@@ -8,7 +8,7 @@ import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 
-import { EditorCanvas, EditorProvider, EditorSettings } from "../src/index.ts";
+import { EditorCanvas, EditorOutline, EditorProvider, EditorSettings } from "../src/index.ts";
 import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
 
 import siteCss from "@repo/blocks/site.css?url";
@@ -59,6 +59,9 @@ const open = async (
       onNotice={() => undefined}
     >
       <div style={{ display: "flex", height: 700 }}>
+        <aside aria-label="Structure" style={{ width: 320, flexShrink: 0, overflowY: "auto" }}>
+          <EditorOutline />
+        </aside>
         <div style={{ flex: 1 }}>
           <EditorCanvas width={1024} accent="blue" />
         </div>
@@ -355,5 +358,125 @@ describe("performance budgets, on a page with 150 blocks", () => {
     );
     expect(new Set(rendered)).toEqual(new Set(["b_grid10"]));
     expect(painted - typed).toBeLessThan(100);
+  });
+});
+
+/** The fixture draft with nothing on its home page, as a new page starts. */
+const emptyDraft = (): Draft => {
+  const base = fixtureDraft.pages[home];
+  if (base === undefined) throw new Error("The fixture draft has no home page.");
+  return { ...fixtureDraft, pages: { [home]: { ...base, root: [], blocks: {} } } };
+};
+
+/** What the editor last told a screen reader. */
+const announced = () => document.querySelector(".sr-only[aria-live]")?.textContent ?? "";
+
+/** Presses a key until focus lands on an element that matches, as a keyboard user would. */
+const pressUntil = async (key: string, reached: (element: Element) => boolean) => {
+  for (let step = 0; step < 20; step += 1) {
+    const active = document.activeElement;
+    if (active !== null && reached(active)) return;
+    await userEvent.keyboard(key);
+  }
+  throw new Error(`Pressing ${key} never reached the element.`);
+};
+
+const outlineRow = (block: string) =>
+  document.querySelector<HTMLElement>(`[data-pakshi-outline-block="${block}"]`);
+
+describe("editing structure", () => {
+  test("builds a page from an empty draft with the keyboard alone, announcing each change", async () => {
+    const { siteDoc } = await open({ draft: emptyDraft() });
+    const draftPage = () => siteDoc.draft().pages[home];
+    const types = () => (draftPage()?.root ?? []).map((id) => draftPage()?.blocks[id]?.type);
+    const items = () => {
+      const grid = draftPage()?.root.find((id) => draftPage()?.blocks[id]?.type === "feature-grid");
+      return grid === undefined ? [] : (draftPage()?.blocks[grid]?.slots?.["items"] ?? []);
+    };
+
+    await pressUntil("{Tab}", (element) => element.textContent === "Add a section");
+    await userEvent.keyboard("{Enter}");
+    await expect.element(page.getByPlaceholder("Search blocks")).toHaveFocus();
+    await userEvent.keyboard("Hero{Enter}");
+    await expect.poll(types).toEqual(["hero"]);
+    await expect.poll(announced).toBe("Added Hero, 1 of 1 on the page.");
+
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await pressUntil("{ArrowDown}", (element) => element.textContent === "Add after");
+    await userEvent.keyboard("{Enter}");
+    await expect.element(page.getByPlaceholder("Search blocks")).toHaveFocus();
+    await userEvent.keyboard("Feature grid{Enter}");
+    await expect.poll(types).toEqual(["hero", "feature-grid"]);
+    await expect.poll(announced).toBe("Added Feature grid, 2 of 2 on the page.");
+
+    await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
+    await expect.poll(types).toEqual(["feature-grid", "hero"]);
+    await expect.poll(announced).toBe("Moved Why people come back up, 1 of 2 on the page.");
+
+    await userEvent.keyboard("{ArrowRight}");
+    const [first] = items();
+    await expect.poll(() => document.activeElement === outlineRow(first ?? "")).toBe(true);
+    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await expect.poll(() => items().indexOf(first ?? BlockId.make("b_none"))).toBe(1);
+    await expect
+      .poll(announced)
+      .toBe("Moved Made for beginners down, 2 of 3 in Why people come back.");
+
+    await userEvent.keyboard("{Control>}d{/Control}");
+    await expect.poll(() => items().length).toBe(4);
+    await expect.poll(announced).toMatch(/^Duplicated Made for beginners\. The copy is 3 of 4/);
+
+    await userEvent.keyboard("{Delete}");
+    await expect.poll(() => items().length).toBe(3);
+    await expect.poll(announced).toBe("Removed Made for beginners.");
+  });
+
+  test("a drag and the matching move command produce the same ops", async () => {
+    const dragged = await open();
+    const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
+    const target = outlineRow("b_calltoactioncentered")?.firstElementChild;
+    if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement))
+      throw new Error("The outline has no rows for the calls to action.");
+    await userEvent.dragAndDrop(page.elementLocator(source), page.elementLocator(target), {
+      targetPosition: { x: 40, y: target.offsetHeight - 6 },
+      steps: 12,
+    });
+    await expect.poll(() => dragged.siteDoc.received.length).toBe(1);
+    const dragOps = dragged.siteDoc.received[0]?.ops;
+    await cleanup();
+
+    const moved = await open();
+    outlineRow("b_calltoactionbanner")?.focus();
+    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    await expect.poll(() => moved.siteDoc.received.length).toBe(1);
+    expect(moved.siteDoc.received[0]?.ops).toEqual(dragOps);
+    expect(dragOps).toEqual([
+      {
+        op: "moveBlock",
+        page: home,
+        block: "b_calltoactionbanner",
+        list: "root",
+        after: "b_calltoactioncentered",
+      },
+    ]);
+  });
+
+  test("the picker offers only the blocks a spot allows", async () => {
+    await open();
+    const options = async () => {
+      await expect.element(page.getByRole("option").first()).toBeVisible();
+      return page
+        .getByRole("option")
+        .elements()
+        .map((option) => option.textContent);
+    };
+    await userEvent.click(page.getByRole("button", { name: "Add to Features" }).first());
+    expect(await options()).toEqual(["Feature"]);
+    await userEvent.keyboard("{Escape}");
+    await userEvent.click(page.getByRole("button", { name: "Add a section" }));
+    const sections = await options();
+    expect(sections).toContain("Hero");
+    for (const excluded of ["Feature", "Header", "Footer"])
+      expect(sections).not.toContain(excluded);
   });
 });
