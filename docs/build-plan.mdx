@@ -20,7 +20,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 ## Status
 
 - [x] [1. Skeleton](#1-skeleton)
-- [ ] [2. Editing content](#2-editing-content)
+- [x] [2. Editing content](#2-editing-content)
 - [ ] [3. Editing structure](#3-editing-structure)
 - [ ] [4. Live co-editing](#4-live-co-editing)
 - [ ] [5. Publishing and merging](#5-publishing-and-merging)
@@ -92,6 +92,7 @@ One person adds, moves and removes sections and items, with a pointer or with th
 - Moving blocks by drag in the canvas and in the outline panel, and the move commands, with screen reader announcements.
 - Duplicating and removing blocks, and choosing variants and surfaces from previews.
 - The outline panel.
+- [Commands](/editor#extension-points) as one definition each, with their shortcut, menu and toolbar entries, and availability check. Undo, redo and the block navigation from checkpoint 2 move onto them.
 
 **Demo:** build a page from an empty draft by adding, reordering and removing sections and items, once with a mouse and once with the keyboard only.
 
@@ -230,7 +231,7 @@ Everything else a real site needs.
 **Build:**
 
 - [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap and preview rejection, notification emails with retry, the submissions screen, CSV export and deletion by email.
-- The [media library](/product-spec#media): brand and site libraries, Cloudflare Images, alt text, and retention.
+- The [media library](/product-spec#media): brand and site libraries, uploads from the library and from the editor's media popover, Cloudflare Images, alt text, and retention.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
 - [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check. Serving from a custom domain is also what turns on the page cache ([decision 027](/decision-log#decision-027)).

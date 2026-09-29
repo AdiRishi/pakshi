@@ -9,6 +9,13 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                         | Date       | Status            |
 | --- | -------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 036 | The canvas fixes the theme's color scheme instead of following the system        | 2026-09-29 | Accepted          |
+| 035 | Tailwind's spacing scale counts as a theme token in blocks                       | 2026-09-29 | Accepted          |
+| 034 | Islands and media upload wait for the checkpoints that need them                 | 2026-09-29 | Accepted          |
+| 033 | A draft's history is its batch log until something reads more                    | 2026-09-29 | Accepted          |
+| 032 | The editor sends batches over RPC until live co-editing                          | 2026-09-29 | Accepted          |
+| 031 | Ops name their page, and cover variants, surfaces and addresses                  | 2026-09-29 | Accepted          |
+| 030 | Alt text belongs to where an image is placed                                     | 2026-09-29 | Accepted          |
 | 029 | Studio calls studio-api through an Effect RPC contract                           | 2026-09-29 | Accepted          |
 | 028 | Two stacks, dev and prod, and destroying one deletes everything                  | 2026-09-29 | Accepted          |
 | 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware | 2026-09-29 | Accepted          |
@@ -38,6 +45,62 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                        | 2026-09-27 | Accepted          |
 | 002 | Host on Cloudflare                                                               | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                         | 2026-09-27 | Accepted          |
+
+## 036 — The canvas fixes the theme's color scheme instead of following the system [#decision-036]
+
+**Context.** Sites follow the visitor's color scheme through `prefers-color-scheme`, and the editor lets a person switch the canvas between light and dark. The editor spec asked for the frame's `color-scheme` to do this, but a frame's `prefers-color-scheme` follows the operating system in Chromium, not the frame element's `color-scheme`.
+
+**Decision.** `themeCss` takes an optional scheme. Without one it writes both schemes behind the media query, as sites need; with one it writes only that scheme's variables. The canvas passes the scheme the person chose.
+
+**Consequences.** Both schemes of a theme render from the same variables in both places, and the canvas-versus-sites screenshot checks compare them in each scheme.
+
+## 035 — Tailwind's spacing scale counts as a theme token in blocks [#decision-035]
+
+**Context.** Blocks may use theme tokens only, and a lint rule rejects "literal colors, fonts or spacing". Read strictly, that forbids `gap-6`, and blocks couldn't lay themselves out. But `--spacing` comes from the theme's density, so every step of Tailwind's spacing scale already moves with the theme.
+
+**Decision.** `pakshi/no-literal-styles` rejects arbitrary values for colors, fonts and spacing, Tailwind's own palette colors, font families other than the theme's, and inline styles. It allows the spacing scale and layout utilities such as aspect ratios. Which classes bypass the theme is decided in `@repo/tokens`.
+
+**Consequences.** A block can't hard-code a look, and a density change still respaces every block.
+
+## 034 — Islands and media upload wait for the checkpoints that need them [#decision-034]
+
+**Context.** Checkpoint 2 adds a gallery and a form block, and the editor spec's media popover offers uploads. No checkpoint builds Astro's island map, a form posts as plain HTML without it, and uploads belong with the media library and Cloudflare Images in checkpoint 9.
+
+**Decision.** Gallery v1 is a static grid with no lightbox, and the form block renders a plain HTML form through a shared `FormView` component, so how forms post can change without a new block version. The media popover chooses from the site's and brand's libraries and edits alt text; uploading arrives with the media library.
+
+**Consequences.** Nothing hydrates on sites yet. The first interactive block builds the island map, and a lightbox arrives as a new gallery version.
+
+## 033 — A draft's history is its batch log until something reads more [#decision-033]
+
+**Context.** The technical design records one revision per editing session or agent turn, with a full checkpoint every so often. Nothing reads them before the audit log, restore and agent-turn undo, and SiteDoc needs a record of committed batches anyway, to apply a batch sent twice only once.
+
+**Decision.** SiteDoc stores every committed batch with its actor, time, revision, ops and inverse ops. Grouping into sessions and full checkpoints wait until a feature reads them. Undo sends a command's inverse ops as an ordinary batch; the rule that skips fields someone else changed since arrives with live co-editing, which has the test for it.
+
+**Consequences.** Sessions and turns can be derived from the log later without a migration.
+
+## 032 — The editor sends batches over RPC until live co-editing [#decision-032]
+
+**Context.** Checkpoint 4 connects Studio to SiteDoc over PartySocket. Checkpoint 2 has one person editing, so the WebSocket's broadcast and presence have nothing to do yet.
+
+**Decision.** The editor sends batches through a `Connection` with one method, `send`. Studio implements it with the `applyBatch` server function, which calls `StudioRpcs.applyBatch`, and studio-api calls the site's SiteDoc. The editor sends one batch at a time and resends one that didn't arrive with the same ID.
+
+**Consequences.** Each batch checks the session and reads the person's grants from D1, which the WebSocket's per-connection permission cache replaces in checkpoint 4. Only the `Connection` implementation changes then.
+
+## 031 — Ops name their page, and cover variants, surfaces and addresses [#decision-031]
+
+**Context.** The op vocabulary addressed a block by ID alone, but each draft page is its own SQLite row, so SiteDoc would need an index from block to page. The editor also needs to change a block's variant and surface, and renaming a page can change its address, and no op did either.
+
+**Decision.** Block ops name their target: a page, or `site` for the header and footer. Structure ops name their page. `setVariant`, `setSurface` and `setPath` join the vocabulary, and `setPath` refuses an address another page has.
+
+**Consequences.** An op touches exactly one row, and merging, undo and the agent use the same ops.
+
+## 030 — Alt text belongs to where an image is placed [#decision-030]
+
+**Context.** The snapshot manifest stored alt text on the media file, and the media popover edits it. Editing a shared library record would change every draft at once, outside any draft or approval. Alt text also depends on context: the same photo can say something in one place and be decoration in another, which pre-flight's check for alt text on every meaningful image needs to know.
+
+**Decision.** A media reference in props carries its own `alt`. An empty alt marks an image as decorative; a missing one is incomplete, which freezing checks. The library keeps an alt text per image only as the suggestion for new placements.
+
+**Consequences.** Alt text changes through drafts and approvals like any other content, and merges field by field.
 
 ## 029 — Studio calls studio-api through an Effect RPC contract [#decision-029]
 
