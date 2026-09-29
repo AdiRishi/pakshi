@@ -45,8 +45,11 @@ const schemeRules = (scheme: SchemeColors, colorScheme: "light" | "dark") =>
  * The CSS variables a site's pages read, for one resolved theme. Every site
  * shares one Tailwind build that maps these variables to utilities, so sites
  * differ only in this file.
+ *
+ * Pages follow the visitor's color scheme. Pass `scheme` to fix one instead,
+ * as the editor's canvas does when someone switches between light and dark.
  */
-export const themeCss = (theme: ResolvedTheme) => {
+export const themeCss = (theme: ResolvedTheme, scheme?: "light" | "dark") => {
   const ratio = typeRatios[theme.typeScale];
   const density = densities[theme.density];
   const shared = declarations([
@@ -66,6 +69,8 @@ export const themeCss = (theme: ResolvedTheme) => {
     ["theme-section-space", density.section],
     ["theme-motion-duration", theme.motion ? "180ms" : "0ms"],
   ]);
+  if (scheme !== undefined)
+    return [`:root {\n${shared}\n}`, schemeRules(theme.colors[scheme], scheme)].join("\n");
   return [
     `:root {\n${shared}\n}`,
     schemeRules(theme.colors.light, "light"),
