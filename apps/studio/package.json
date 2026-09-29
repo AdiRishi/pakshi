@@ -10,7 +10,9 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
+    "@repo/editor": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-devtools": "catalog:",

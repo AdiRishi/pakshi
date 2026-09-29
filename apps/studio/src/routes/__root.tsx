@@ -1,6 +1,14 @@
+import { buttonVariants } from "@repo/ui/components/button";
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@repo/ui/components/empty";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient } from "@tanstack/react-query";
-import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
 import appCss from "@repo/ui/globals.css?url";
@@ -15,6 +23,21 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [{ rel: "stylesheet", href: appCss }],
   }),
   shellComponent: RootDocument,
+  notFoundComponent: function NotFound() {
+    return (
+      <Empty className="min-h-screen">
+        <EmptyHeader>
+          <EmptyTitle>Nothing here</EmptyTitle>
+          <EmptyDescription>There's nothing at this address.</EmptyDescription>
+        </EmptyHeader>
+        <EmptyContent>
+          <Link to="/" className={buttonVariants({ variant: "outline" })}>
+            Go to Studio
+          </Link>
+        </EmptyContent>
+      </Empty>
+    );
+  },
 });
 
 function RootDocument({ children }: { readonly children: React.ReactNode }) {

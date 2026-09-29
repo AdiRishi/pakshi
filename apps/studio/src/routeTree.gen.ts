@@ -13,6 +13,7 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
+import { Route as MediaMediaIdRouteImport } from './routes/media/$mediaId'
 import { Route as SignInStartRouteImport } from './routes/sign-in_.start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedSitesSiteIdIndexRouteImport } from './routes/_authed/sites/$siteId/index'
@@ -36,6 +37,11 @@ const AuthedIndexRoute = AuthedIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AuthedRoute,
+} as any)
+const MediaMediaIdRoute = MediaMediaIdRouteImport.update({
+  id: '/media/$mediaId',
+  path: '/media/$mediaId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const SignInStartRoute = SignInStartRouteImport.update({
   id: '/sign-in_/start',
@@ -63,6 +69,7 @@ export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
+  '/media/$mediaId': typeof MediaMediaIdRoute
   '/sign-in/start': typeof SignInStartRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
@@ -71,6 +78,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
+  '/media/$mediaId': typeof MediaMediaIdRoute
   '/sign-in/start': typeof SignInStartRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -82,6 +90,7 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
+  '/media/$mediaId': typeof MediaMediaIdRoute
   '/sign-in_/start': typeof SignInStartRoute
   '/_authed/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -94,6 +103,7 @@ export interface FileRouteTypes {
     | '/'
     | '/sign-in'
     | '/sign-out'
+    | '/media/$mediaId'
     | '/sign-in/start'
     | '/api/auth/$'
     | '/sites/$siteId/'
@@ -102,6 +112,7 @@ export interface FileRouteTypes {
   to:
     | '/sign-in'
     | '/sign-out'
+    | '/media/$mediaId'
     | '/sign-in/start'
     | '/'
     | '/api/auth/$'
@@ -112,6 +123,7 @@ export interface FileRouteTypes {
     | '/_authed'
     | '/sign-in'
     | '/sign-out'
+    | '/media/$mediaId'
     | '/sign-in_/start'
     | '/_authed/'
     | '/api/auth/$'
@@ -123,6 +135,7 @@ export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   SignInRoute: typeof SignInRoute
   SignOutRoute: typeof SignOutRoute
+  MediaMediaIdRoute: typeof MediaMediaIdRoute
   SignInStartRoute: typeof SignInStartRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -156,6 +169,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof AuthedIndexRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/media/$mediaId': {
+      id: '/media/$mediaId'
+      path: '/media/$mediaId'
+      fullPath: '/media/$mediaId'
+      preLoaderRoute: typeof MediaMediaIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/sign-in_/start': {
       id: '/sign-in_/start'
@@ -207,6 +227,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   SignInRoute: SignInRoute,
   SignOutRoute: SignOutRoute,
+  MediaMediaIdRoute: MediaMediaIdRoute,
   SignInStartRoute: SignInStartRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
