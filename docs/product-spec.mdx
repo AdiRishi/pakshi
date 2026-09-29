@@ -168,6 +168,31 @@ These are the acceptance-level rules for the product, grouped by area.
 
 ### Drafts and merging
 
+Drafts work like branches of the live site. In this example, "Fix the date" publishes first, so "Summer launch" falls behind and merges in Release 2 before it's submitted.
+
+```mermaid
+---
+config:
+  gitGraph:
+    mainBranchName: Live
+    rotateCommitLabel: false
+---
+gitGraph
+  commit id: "Release 1"
+  branch "Summer launch"
+  commit id: "New page"
+  checkout Live
+  branch "Fix the date"
+  commit id: "Date fixed"
+  checkout Live
+  merge "Fix the date" id: "Release 2"
+  checkout "Summer launch"
+  merge Live id: "Update"
+  commit id: "Speakers"
+  checkout Live
+  merge "Summer launch" id: "Release 3"
+```
+
 - A site can have any number of named drafts. Each draft starts from a release. Publishing a draft closes it, unless someone edited it after it was submitted. Then it stays open with those edits, based on the release it just published.
 - When a draft publishes, every other draft on the site is behind. People already working in a draft keep going. A draft that's behind must be updated the next time someone opens it, and before it's submitted.
 - Updating merges field by field against the release the draft started from. Identical changes on both sides aren't conflicts, and sections added on both sides are all kept. Only real conflicts need a person: the same field changed differently on both sides, a block edited on one side and removed on the other, or the same existing sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
@@ -190,6 +215,25 @@ These are the acceptance-level rules for the product, grouped by area.
 - Previews are never indexed by search engines, and forms in previews don't submit. A preview lives as long as its draft.
 
 ### Approvals and publishing
+
+A submission goes through the workflow's steps and publishes when the last one approves. Editing can continue during review, but later edits aren't part of the submission.
+
+```mermaid
+stateDiagram-v2
+  state "Draft" as draft
+  state "In review" as review
+  state "Updating" as merging
+  state "Live" as live
+  [*] --> draft
+  draft --> review: Submit
+  draft --> live: Submit, no steps
+  review --> draft: Changes requested
+  review --> merging: Another draft publishes
+  merging --> review: Clean keeps approvals, else restart
+  review --> live: Last step approves
+  live --> draft: Edited after submitting
+  live --> [*]: Draft closes
+```
 
 - Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none. Each step names who can approve (roles or specific people) and how many approvals it needs.
 - Editing a workflow is a permission. The workflow editor is a simple list of steps.

@@ -264,6 +264,24 @@ flowchart LR
 
 **Publishing** runs inside the site's `SiteDoc`, so publishes and rollbacks for one site happen one at a time. A submission publishes only if it's based on the current live release; otherwise it's merged first. `SiteDoc` writes the release's snapshot objects to R2 first. A Durable Object serves other requests while it waits on R2, so after that I/O it checks again that the submission is still fully approved and still based on the current live release, and only then records the new live release in its own storage. If the check fails, nothing goes live. `SiteDoc` is the source of truth for the live release and the only writer of `site → release` in KV. It writes the release row and audit entry to D1 through its outbox. The `host → site` entries are written once, when a domain is set up, so a publish is a single KV write. A scheduled job compares KV with D1, and where they differ it asks that site's `SiteDoc` to write both again. The job never writes KV itself, so it can't put back a stale release. KV changes can take up to 60 seconds to reach every location ([KV](https://developers.cloudflare.com/kv/concepts/how-kv-works/)), which is why the product promises "live within about a minute".
 
+```mermaid
+sequenceDiagram
+  participant P as Final approver
+  participant SD as SiteDoc
+  participant R2
+  participant KV
+  participant D1
+  P->>SD: Approve (through studio-api)
+  SD->>SD: Reject if the submission changed since it was loaded
+  SD->>R2: Write the release's snapshot objects
+  Note over SD: Serves other requests while it waits
+  SD->>SD: Check again: fully approved and based on the live release
+  SD->>SD: Record the live release and outbox rows in one transaction
+  SD->>KV: site → release
+  Note over KV: Reaches every location within 60 seconds
+  SD->>D1: Outbox alarm writes the release row and audit entry
+```
+
 **Approvals** follow the applicable workflow: the site's, else the brand's, else the organization's. A workflow is an ordered list of any number of steps, each naming who can approve (roles or people) and how many approvals it needs. Workflow definitions are rows in D1. Submissions and their approval progress live in `SiteDoc`, next to the snapshot they approve and the live release, so approvals, workflow restarts after a merge, and the final publish happen in one order. D1 holds a copy for dashboards and the Approvals screen. An approval decision goes to `SiteDoc`, which rejects it if the submission has changed since the approver loaded it. Completing the last step calls publish. No workflow engine is needed. A visual, node-based workflow editor can be added later on the same definitions with an off-the-shelf flow library such as React Flow.
 
 **Merging:** when a release publishes, every other draft on the site is behind. People already editing a draft when it falls behind keep working. The update is required the next time someone opens the draft, and before it's submitted. Updating a draft is a three-way merge of the release it started from, the draft, and the new live release, done by block ID and field across pages and the site-level parts (navigation, header and footer, lockfile, brand revision). Before diffing, all three sides are migrated to the newest version of each block that any side uses, through each version's `migrate` function, so edits are always compared in the same shape. Different fields, blocks or pages merge automatically. The same change made on both sides isn't a conflict, and blocks added to the same list on both sides are all kept, with live's additions first. Conflicts are limited to three cases: the same field changed to different values on both sides, a block edited on one side and removed on the other, and existing blocks in the same list (`root` or a slot) reordered on both sides. The editor picks a side for each, or accepts a merged value that a model suggests for a text field. The merged draft is then checked for structure only: block schemas, document integrity and references. Anything that fails is shown as a conflict. Pre-flight checks, such as no placeholders left, run at submission, not at merge. A submission under review is merged the same way when another draft publishes: if the merge is clean its approvals stand, and if it needed a person the workflow restarts.
@@ -282,6 +300,24 @@ flowchart LR
 - The preview's R2 object carries an access counter that goes up whenever the draft's sharing changes. `sites` rejects a cookie whose counter doesn't match, so revoking access takes effect on the next request.
 - Preview snapshots are deleted when their draft publishes or is deleted.
 - Previews carry no-index and `Referrer-Policy: no-referrer` headers and a "Preview" ribbon, and their forms don't submit.
+
+Opening a preview that isn't shared with anyone who has the link:
+
+```mermaid
+sequenceDiagram
+  participant B as Browser
+  participant ST as Studio
+  participant S as sites (preview host)
+  participant R2
+  B->>ST: Open the preview
+  ST->>ST: May this person view the draft?
+  ST-->>B: Redirect with a token for this preview, valid for 60 seconds
+  B->>S: Request with the token
+  S-->>B: Set a cookie (preview, user, expiry, access counter), redirect to the clean URL
+  B->>S: Request with the cookie
+  S->>R2: Read the preview snapshot and its access counter
+  S-->>B: The page, or a refusal if the counter changed
+```
 
 **Trade-off we accept:** pages render on request with the current `sites` code. Everything editors control (content, theme, block versions) is frozen in the snapshot. Shared code, such as page layout, the field components, the rich-text renderer or the primitives blocks use, could still change a live page. The visual regression gate over every live block version is the control for that, and an intended difference goes through a reviewed, audited screenshot update. The alternative, pre-rendering every page to static HTML at publish, needs a build pipeline and an archive of old assets, and doesn't pay for itself (see [decision 004](/decision-log#decision-004)).
 

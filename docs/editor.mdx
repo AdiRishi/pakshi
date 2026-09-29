@@ -153,6 +153,30 @@ The editor gives Studio:
 
 The editor shows its pending batches replayed over the latest confirmed document. When a broadcast arrives, the editor advances the confirmed document, removes its own batch if the broadcast confirms one, and replays the rest. An op that fails on replay, for example because its block was removed, is dropped and its author is told. A batch `SiteDoc` rejects is removed, and its error is shown.
 
+Two people edit at once. `SiteDoc` commits A's batch first, so B's editor replays its pending batch over A's:
+
+```mermaid
+sequenceDiagram
+  participant A as Editor A
+  participant SD as SiteDoc
+  participant B as Editor B
+  A->>A: Show batch a1 at once (pending)
+  B->>B: Show batch b1 at once (pending)
+  A->>SD: a1
+  B->>SD: b1
+  SD->>SD: Commit a1, then b1
+  SD-->>A: Broadcast a1
+  A->>A: a1 confirmed, no longer pending
+  SD-->>B: Broadcast a1
+  B->>B: Apply a1 to the confirmed document, replay b1 over it
+  SD-->>A: Broadcast b1
+  A->>A: Apply b1 to the confirmed document
+  SD-->>B: Broadcast b1
+  B->>B: b1 confirmed, no longer pending
+```
+
+If a1 and b1 both changed the same field, both editors end with b1's value, and A is told its edit was replaced.
+
 These rules must each hold, and each has a test:
 
 1. **Pending edits stay.** A field with this person's unconfirmed edit keeps showing their value until the edit is confirmed.
