@@ -1,7 +1,7 @@
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { type Person, SiteNotFound } from "@repo/contracts/studio";
-import { authorize, type Permission } from "@repo/domain/access";
+import { authorize, type Permission, permissionsOn } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -28,7 +28,12 @@ export const siteFor = Effect.fn("StudioApi.siteFor")(function* (
   const { access } = yield* loadAccess(person.id);
   const resource = { kind: "site", id: found.value.id, brand: found.value.brand_id } as const;
   if (!authorize(access, permission, resource)) return yield* new SiteNotFound({ site });
-  return { id: found.value.id, name: found.value.name, brand: found.value.brand_id };
+  return {
+    id: found.value.id,
+    name: found.value.name,
+    brand: found.value.brand_id,
+    permissions: permissionsOn(access, resource),
+  };
 });
 
 const MediaRow = Schema.Struct({

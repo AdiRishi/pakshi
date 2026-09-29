@@ -1,13 +1,22 @@
 import { loadBlocks } from "@repo/blocks";
 import { Draft } from "@repo/contracts/draft";
 import { FormDefinition } from "@repo/contracts/form";
-import { DraftId, FormId, randomId, ReleaseId, type SiteId, SnapshotId } from "@repo/contracts/ids";
-import { type Batch, Op } from "@repo/contracts/ops";
+import {
+  BatchId,
+  DraftId,
+  FormId,
+  randomId,
+  ReleaseId,
+  type SiteId,
+  SnapshotId,
+} from "@repo/contracts/ids";
+import { CatchUp, type Collaborator, type Commit } from "@repo/contracts/live";
+import { type Batch, type BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { SiteParts, SiteSettings } from "@repo/contracts/site";
 import { type LiveRelease, Lockfile, type SnapshotManifest } from "@repo/contracts/snapshot";
-import type { BatchOutcome } from "@repo/contracts/studio";
-import { applyOps, type BlockContracts } from "@repo/domain/document";
+import { type CommitResult, commitBatch, type Writes } from "@repo/domain/commit";
+import type { BlockContracts } from "@repo/domain/document";
 import { ResolvedTheme } from "@repo/tokens";
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
@@ -53,6 +62,20 @@ export const migrations = Migrator.fromRecord({
       inverse text not null
     )`;
   }),
+  "0002_live_editing": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // The name the actor had, so people who catch up later see who made a change.
+    yield* sql`alter table batches add column actor_name text not null default ''`;
+    yield* sql`create index batches_by_revision on batches (draft_id, revision)`;
+    // Who last wrote each part of a draft, keyed as the document module keys parts.
+    yield* sql`create table writes (
+      draft_id text not null references drafts (id),
+      key text not null,
+      actor text not null,
+      revision integer not null,
+      primary key (draft_id, key)
+    )`;
+  }),
 });
 
 const json = Schema.fromJsonString;
@@ -75,6 +98,19 @@ const PageRow = Schema.Struct({ document: json(PageDocument) });
 
 const Ops = Schema.Array(Op);
 
+const WriteRow = Schema.Struct({ key: Schema.String, actor: Schema.String, revision: Schema.Int });
+
+const BatchRow = Schema.Struct({
+  id: BatchId,
+  revision: Schema.Int,
+  actor: Schema.String,
+  actor_name: Schema.String,
+  ops: json(Ops),
+});
+
+/** How many batches an editor may be behind before it's sent the whole draft instead. */
+const catchUpLimit = 500;
+
 /** A value as the JSON text its column stores. Values here are already typed, so encoding can't fail. */
 const encode = <S extends Schema.Top & { readonly EncodingServices: never }>(
   schema: S,
@@ -94,6 +130,15 @@ export class SiteSource extends Context.Service<
   { readonly site: SiteId; readonly liveSnapshot: Effect.Effect<LiveSnapshot> }
 >()("Pakshi/StudioApi/SiteSource") {}
 
+/** What became of a batch SiteDoc was sent. */
+export type BatchResult =
+  | { readonly status: "committed"; readonly commit: Commit }
+  /** The batch was committed before, when it first arrived, at this revision. */
+  | { readonly status: "duplicate"; readonly revision: number }
+  | { readonly status: "rejected"; readonly errors: ReadonlyArray<BatchError> };
+
+type StorageError = SqlError.SqlError | Schema.SchemaError;
+
 /**
  * One site's drafts. Batches commit one at a time: each one is applied to the
  * draft held in memory, and only the rows it changed are written.
@@ -102,15 +147,17 @@ export class SiteDrafts extends Context.Service<
   SiteDrafts,
   {
     /** The site's draft, as the editor opens it. */
-    readonly draft: Effect.Effect<Draft, SqlError.SqlError | Schema.SchemaError>;
+    readonly draft: Effect.Effect<Draft, StorageError>;
+    /** What an editor at `revision` is missing: the batches since, or the whole draft. */
+    readonly catchUp: (revision: number) => Effect.Effect<CatchUp, StorageError>;
     /**
      * Commits a batch for `actor`, or reports why it can't. A batch whose ID
-     * was already committed reports its first commit and changes nothing.
+     * was already committed changes nothing.
      */
     readonly applyBatch: (
-      actor: string,
+      actor: Collaborator,
       batch: Batch,
-    ) => Effect.Effect<BatchOutcome, SqlError.SqlError | Schema.SchemaError>;
+    ) => Effect.Effect<BatchResult, StorageError>;
   }
 >()("Pakshi/StudioApi/SiteDrafts") {
   static readonly layer = Layer.effect(
@@ -119,7 +166,13 @@ export class SiteDrafts extends Context.Service<
       const sql = yield* SqlClient.SqlClient;
       const { site, liveSnapshot } = yield* SiteSource;
       const lock = yield* Semaphore.make(1);
-      let loaded: { readonly draft: Draft; readonly contracts: BlockContracts } | undefined;
+      let loaded:
+        | {
+            readonly draft: Draft;
+            readonly writes: Writes;
+            readonly contracts: BlockContracts;
+          }
+        | undefined;
 
       const findDraft = SqlSchema.findOneOption({
         Request: Schema.Void,
@@ -131,10 +184,23 @@ export class SiteDrafts extends Context.Service<
         Result: PageRow,
         execute: (draft) => sql`select document from draft_pages where draft_id = ${draft}`,
       });
+      const findWrites = SqlSchema.findAll({
+        Request: DraftId,
+        Result: WriteRow,
+        execute: (draft) => sql`select key, actor, revision from writes where draft_id = ${draft}`,
+      });
       const findBatch = SqlSchema.findOneOption({
         Request: Schema.String,
         Result: Schema.Struct({ revision: Schema.Int }),
         execute: (batch) => sql`select revision from batches where id = ${batch}`,
+      });
+      const findBatchesSince = SqlSchema.findAll({
+        Request: Schema.Struct({ draft: DraftId, revision: Schema.Int }),
+        Result: BatchRow,
+        execute: ({ draft, revision }) => sql`
+          select id, revision, actor, actor_name, ops from batches
+          where draft_id = ${draft} and revision > ${revision}
+          order by revision limit ${catchUpLimit + 1}`,
       });
 
       const writePage = (draft: DraftId, page: PageDocument) =>
@@ -193,22 +259,26 @@ export class SiteDrafts extends Context.Service<
         if (loaded !== undefined) return loaded;
         const existing = yield* readDraft;
         const draft = Option.isSome(existing) ? existing.value : yield* createDraft;
+        const writes = new Map(
+          (yield* findWrites(draft.id)).map((row) => [
+            row.key,
+            { actor: row.actor, revision: row.revision },
+          ]),
+        );
         const contracts = yield* Effect.promise(() => loadBlocks(draft.lockfile));
-        loaded = { draft, contracts };
+        loaded = { draft, writes, contracts };
         return loaded;
       });
 
-      const commit = (
+      const store = (
         previous: Draft,
-        next: Draft,
-        record: {
-          readonly actor: string;
-          readonly batch: Batch;
-          readonly inverse: ReadonlyArray<Op>;
-        },
+        committed: Extract<CommitResult, { ok: true }>,
+        actor: Collaborator,
+        batch: Batch,
       ) =>
         sql.withTransaction(
           Effect.gen(function* () {
+            const next = committed.draft;
             yield* sql`update drafts set
               revision = ${next.revision},
               settings = ${encode(SiteSettings, next.settings)},
@@ -220,27 +290,64 @@ export class SiteDrafts extends Context.Service<
             for (const id of Object.keys(previous.pages))
               if (!(id in next.pages))
                 yield* sql`delete from draft_pages where draft_id = ${next.id} and page_id = ${id}`;
-            yield* sql`insert into batches (id, draft_id, actor, committed_at, revision, ops, inverse)
-              values (${record.batch.id}, ${next.id}, ${record.actor}, ${new Date().toISOString()},
-                ${next.revision}, ${encode(Ops, record.batch.ops)}, ${encode(Ops, record.inverse)})`;
+            for (const [key, write] of committed.writesChange.set)
+              yield* sql`insert into writes (draft_id, key, actor, revision)
+                values (${next.id}, ${key}, ${write.actor}, ${write.revision})
+                on conflict (draft_id, key) do update
+                set actor = excluded.actor, revision = excluded.revision`;
+            for (const key of committed.writesChange.removed)
+              yield* sql`delete from writes where draft_id = ${next.id} and key = ${key}`;
+            yield* sql`insert into batches
+              (id, draft_id, actor, actor_name, committed_at, revision, ops, inverse)
+              values (${batch.id}, ${next.id}, ${actor.id}, ${actor.name},
+                ${new Date().toISOString()}, ${next.revision},
+                ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)})`;
           }),
         );
 
       return SiteDrafts.of({
         draft: lock.withPermit(Effect.map(current, ({ draft }) => draft)),
-        applyBatch: (actor, batch) =>
+        catchUp: (revision) =>
           lock.withPermit(
             Effect.gen(function* () {
-              const { draft, contracts } = yield* current;
-              const committed = yield* findBatch(batch.id);
-              if (Option.isSome(committed))
-                return { status: "committed", revision: committed.value.revision } as const;
-              const result = applyOps(draft, batch.ops, contracts);
-              if (!result.ok) return { status: "rejected", errors: result.errors } as const;
-              const next: Draft = { ...result.draft, revision: draft.revision + 1 };
-              yield* commit(draft, next, { actor, batch, inverse: result.inverse });
-              loaded = { draft: next, contracts };
-              return { status: "committed", revision: next.revision } as const;
+              const { draft } = yield* current;
+              if (revision > draft.revision) return CatchUp.cases.Draft.make({ draft });
+              const rows = yield* findBatchesSince({ draft: draft.id, revision });
+              if (rows.length > catchUpLimit) return CatchUp.cases.Draft.make({ draft });
+              return CatchUp.cases.Batches.make({
+                batches: rows.map((row) => ({
+                  id: row.id,
+                  revision: row.revision,
+                  actor: { id: row.actor, name: row.actor_name },
+                  ops: row.ops,
+                })),
+              });
+            }),
+          ),
+        applyBatch: (actor, batch) =>
+          lock.withPermit(
+            Effect.gen(function* (): Effect.fn.Return<BatchResult, StorageError> {
+              const { draft, writes, contracts } = yield* current;
+              const earlier = yield* findBatch(batch.id);
+              if (Option.isSome(earlier))
+                return { status: "duplicate", revision: earlier.value.revision };
+              const committed = commitBatch(draft, writes, actor.id, batch, contracts);
+              if (!committed.ok) return { status: "rejected", errors: committed.errors };
+              yield* store(draft, committed, actor, batch);
+              loaded = { draft: committed.draft, writes: committed.writes, contracts };
+              return {
+                status: "committed",
+                commit: {
+                  batch: {
+                    id: batch.id,
+                    revision: committed.draft.revision,
+                    actor,
+                    ops: committed.ops,
+                  },
+                  skipped: committed.skipped,
+                  replaced: committed.replaced.map(({ actor: person, op }) => ({ person, op })),
+                },
+              };
             }),
           ),
       });

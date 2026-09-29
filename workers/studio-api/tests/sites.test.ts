@@ -7,10 +7,22 @@ import { core } from "./support/core.ts";
 
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
 
-it.effect("an editor reaches the site they edit", () =>
+it.effect("an editor reaches the site they edit, with what they may do there", () =>
   Effect.gen(function* () {
     const site = yield* siteFor(person("user_editor"), SiteId.make("site_a2"), "page.edit");
-    expect(site).toEqual({ id: "site_a2", name: "Library Events", brand: "brand_a" });
+    expect(site).toEqual({
+      id: "site_a2",
+      name: "Library Events",
+      brand: "brand_a",
+      permissions: [
+        "page.edit",
+        "draft.share",
+        "site.publish",
+        "site.rollback",
+        "blocks.upgrade",
+        "blocks.request",
+      ],
+    });
   }).pipe(Effect.provide(core)),
 );
 
