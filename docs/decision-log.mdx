@@ -2,37 +2,66 @@
 title: Decision log
 description: One short entry per significant technical decision in the technical design.
 sidebar:
-  order: 5
+  order: 6
 ---
 
 One short entry per significant decision: the context, what we chose, and why. Newest first.
 
-| #   | Decision                                                                     | Date       | Status   |
-| --- | ---------------------------------------------------------------------------- | ---------- | -------- |
-| 024 | The site's Durable Object owns approvals and publishing                      | 2026-09-29 | Accepted |
-| 023 | One-click rollback undoes only the latest publish                            | 2026-09-29 | Accepted |
-| 022 | Each site's submissions in their own Durable Object                          | 2026-09-29 | Accepted |
-| 021 | No spam protection on forms                                                  | 2026-09-29 | Accepted |
-| 020 | Share drafts like documents                                                  | 2026-09-28 | Accepted |
-| 019 | Brand changes reach sites as drafts; no brand locks                          | 2026-09-28 | Accepted |
-| 018 | Media files never change                                                     | 2026-09-28 | Accepted |
-| 017 | Named drafts that merge like branches                                        | 2026-09-28 | Accepted |
-| 016 | Keep all site data: submissions and releases are never deleted automatically | 2026-09-29 | Accepted |
-| 015 | Approval workflows on the organization, a brand or a site                    | 2026-09-29 | Accepted |
-| 014 | Fine-grained permissions, with roles as bundles and per-person overrides     | 2026-09-28 | Accepted |
-| 013 | Integrate Puck through a sync module; don't fork                             | 2026-09-29 | Accepted |
-| 012 | Effect Schema instead of Zod                                                 | 2026-09-27 | Accepted |
-| 011 | Build on application-platform-starter                                        | 2026-09-27 | Accepted |
-| 010 | Workers Paid plan; no Enterprise features, no root domains                   | 2026-09-27 | Accepted |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access              | 2026-09-29 | Accepted |
-| 008 | Agent on the Agents SDK, validated edits only, models chosen per task        | 2026-09-27 | Accepted |
-| 007 | One live, collaborative Durable Object per site, with edits by block ID      | 2026-09-28 | Accepted |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                      | 2026-09-28 | Accepted |
-| 005 | Own the page schema; Puck edits it through an adapter                        | 2026-09-27 | Accepted |
-| 004 | Publish immutable snapshots, render on request, cache per release            | 2026-09-28 | Accepted |
-| 003 | Four Workers: a web and API pair for sites and for Studio                    | 2026-09-27 | Accepted |
-| 002 | Host on Cloudflare                                                           | 2026-09-27 | Accepted |
-| 001 | Sites pin block versions                                                     | 2026-09-27 | Accepted |
+| #   | Decision                                                                     | Date       | Status            |
+| --- | ---------------------------------------------------------------------------- | ---------- | ----------------- |
+| 026 | Drafts may be incomplete; completeness is checked at submission              | 2026-09-29 | Accepted          |
+| 025 | Build our own visual editor on the page document, instead of Puck            | 2026-09-29 | Accepted          |
+| 024 | The site's Durable Object owns approvals and publishing                      | 2026-09-29 | Accepted          |
+| 023 | One-click rollback undoes only the latest publish                            | 2026-09-29 | Accepted          |
+| 022 | Each site's submissions in their own Durable Object                          | 2026-09-29 | Accepted          |
+| 021 | No spam protection on forms                                                  | 2026-09-29 | Accepted          |
+| 020 | Share drafts like documents                                                  | 2026-09-28 | Accepted          |
+| 019 | Brand changes reach sites as drafts; no brand locks                          | 2026-09-28 | Accepted          |
+| 018 | Media files never change                                                     | 2026-09-28 | Accepted          |
+| 017 | Named drafts that merge like branches                                        | 2026-09-28 | Accepted          |
+| 016 | Keep all site data: submissions and releases are never deleted automatically | 2026-09-29 | Accepted          |
+| 015 | Approval workflows on the organization, a brand or a site                    | 2026-09-29 | Accepted          |
+| 014 | Fine-grained permissions, with roles as bundles and per-person overrides     | 2026-09-28 | Accepted          |
+| 013 | Integrate Puck through a sync module; don't fork                             | 2026-09-29 | Superseded by 025 |
+| 012 | Effect Schema instead of Zod                                                 | 2026-09-27 | Accepted          |
+| 011 | Build on application-platform-starter                                        | 2026-09-27 | Accepted          |
+| 010 | Workers Paid plan; no Enterprise features, no root domains                   | 2026-09-27 | Accepted          |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access              | 2026-09-29 | Accepted          |
+| 008 | Agent on the Agents SDK, validated edits only, models chosen per task        | 2026-09-27 | Accepted          |
+| 007 | One live, collaborative Durable Object per site, with edits by block ID      | 2026-09-28 | Accepted          |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                      | 2026-09-28 | Accepted          |
+| 005 | Own the page schema; Puck edits it through an adapter                        | 2026-09-27 | Amended by 025    |
+| 004 | Publish immutable snapshots, render on request, cache per release            | 2026-09-28 | Accepted          |
+| 003 | Four Workers: a web and API pair for sites and for Studio                    | 2026-09-27 | Accepted          |
+| 002 | Host on Cloudflare                                                           | 2026-09-27 | Accepted          |
+| 001 | Sites pin block versions                                                     | 2026-09-27 | Accepted          |
+
+## 026 — Drafts may be incomplete; completeness is checked at submission [#decision-026]
+
+**Context.** `SiteDoc` validated every batch against the full block schema. A heading with a 3-character minimum could then never be cleared to retype it, and a person couldn't leave a required field empty while working on the rest of a page.
+
+**Decision.** People's batches are checked for types, integrity, link rules and the limits the editor enforces while typing: maximum lengths, allowed marks and nodes, variants and surfaces. Completeness (required fields and minimum lengths) is checked when a draft is frozen, and pre-flight lists what's missing. The agent's batches are also checked for completeness, so it gets a structured error instead of leaving a field empty; where it lacks content it writes a placeholder, which pre-flight also blocks.
+
+**Rejected.** Full validation on every batch, which blocks ordinary editing; keeping a separate unsaved value in the editor until a field is valid, which is a second copy of the page that other people and the agent can't see.
+
+**Consequences.** A draft can hold incomplete blocks, and the editor marks them. Nothing incomplete can be submitted or published, because freezing checks the full contract.
+
+## 025 — Build our own visual editor on the page document, instead of Puck [#decision-025]
+
+**Context.** [Decision 013](#decision-013) kept Puck and added a sync module. That meant a two-way adapter to Puck's tree, converting Puck's HTML rich text to TipTap JSON, translating our ID-based ops into Puck's index-based actions, taking over its undo, and working around seven known gaps, with a full reload when a client fell out of step. All of it existed because Puck keeps its own copy of the page. A source review of Puck 0.23 found 23,769 lines of TypeScript, about 5,400 of them for drag and drop into arbitrarily nested zones, which Pakshi's two-level documents don't need. It also found no collaboration support, and focused fields that overwrite remote changes. EmDash and Payload have no on-page structure editing or live collaboration to adopt instead.
+
+**Options.** (a) Puck with a sync module ([013](#decision-013)). (b) A fork of Puck. (c) Our own editor on our page document, using TipTap for rich text fields, dnd-kit for drag and drop, and shadcn/ui for controls. (d) A ProseMirror document for the whole page, with sections as nodes.
+
+**Decision.** (c). `@repo/editor` in `packages/editor`, specified on the [Editor](/editor) page. It renders the page into a same-origin iframe with the same components and CSS as `sites`, and it keeps a local copy of the draft in step with `SiteDoc` by running the same document module. Blocks render their fields through field components from `packages/blocks`, which output plain markup on the site and editable markup in the editor. The editor also needs four changes elsewhere:
+
+- `applyOps`, validation and inverse ops form a document module in `packages/domain` that imports no server code, so the browser can run it.
+- Batches, new blocks and new list items carry IDs their sender creates, so a batch sent twice has no extra effect.
+- Lists inside props carry item IDs, and paths address items by ID.
+- Undo is per command: an undo batch applies only to fields where its author's write is still the latest.
+
+**Rejected.** (a), because the sync module and its gap handling were the riskiest work in Pakshi and would remain a second copy of the page to reconcile. (b), because we would own a 24,000-line codebase built around index addressing. (d), because ProseMirror addresses content by position and its collaboration model needs a server that rejects stale versions, so we'd need the adapter again, and `SiteDoc` orders batches with last-write-wins per field instead. Dragging blocks from a palette into the canvas, because a "+" at each insertion point does the same job without cross-frame dragging.
+
+**Consequences.** No adapter, no rich text conversion and no reload to recover from drift. We own the canvas, overlays, drag-and-drop behaviour and keyboard support, and the [build plan](/build-plan#2-editing-content) gives the editor two checkpoints before live co-editing. The field components become part of every frozen block version, so their contract must stay small and stable.
 
 ## 024 — The site's Durable Object owns approvals and publishing [#decision-024]
 
@@ -108,7 +137,7 @@ Five rules keep merges safe. All sides are migrated to the newest block version 
 
 **Rejected.** One draft per site; publishing chosen pages from a shared draft; a draft per page.
 
-**Consequences.** More to build: a drafts list, the merge engine and a conflict screen. The [build plan](/build-plan#4-publishing-and-merging) proves the merge engine early. Several people can still edit one draft live together ([007](#decision-007)).
+**Consequences.** More to build: a drafts list, the merge engine and a conflict screen. The [build plan](/build-plan#5-publishing-and-merging) proves the merge engine early. Several people can still edit one draft live together ([007](#decision-007)).
 
 ## 016 — Keep all site data [#decision-016]
 
@@ -138,21 +167,23 @@ Five rules keep merges safe. All sides are migrated to the newest block version 
 
 ## 013 — Integrate Puck through a sync module; don't fork [#decision-013]
 
+**Superseded** by [decision 025](#decision-025): Pakshi builds its own editor.
+
 **Context.** Live collaboration needs Puck to accept changes from others without losing the user's place or undo. Puck has no collaboration support. Its core is about 24,000 lines of TypeScript under the MIT license, built on a zustand store with a reducer of small actions ([source](https://github.com/puckeditor/puck)).
 
 **Options.** (a) Fork Puck. (b) A sync module on Puck's public API, plus patches where the API falls short. (c) Build our own editor.
 
-**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The biggest gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts. We take the undo shortcuts in capture-phase key listeners and hide Puck's undo buttons, so no patch should be needed; if that proves not to be enough, a pnpm patch replaces its history slice. Smaller gaps, such as fresh IDs on replayed inserts, index-based selection and focused fields that ignore remote changes, are handled in the sync module and proven in the [build plan](/build-plan#3-live-co-editing).
+**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The biggest gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts. We take the undo shortcuts in capture-phase key listeners and hide Puck's undo buttons, so no patch should be needed; if that proves not to be enough, a pnpm patch replaces its history slice. Smaller gaps, such as fresh IDs on replayed inserts, index-based selection and focused fields that ignore remote changes, are handled in the sync module and proven in the [build plan](/build-plan#4-live-co-editing).
 
 **Rejected.** A fork: we would own drag and drop, the canvas iframe and every field type, and fall behind an actively developed 0.x library. Our own editor: much larger, for no gain.
 
-**Consequences.** We keep Puck's upgrades, and re-check the patch on each one. If the [live co-editing checkpoint](/build-plan#3-live-co-editing) shows the public API can't support live editing well, we revisit a fork with evidence.
+**Consequences.** We keep Puck's upgrades, and re-check the patch on each one. If the [live co-editing checkpoint](/build-plan#4-live-co-editing) shows the public API can't support live editing well, we revisit a fork with evidence.
 
 ## 012 — Effect Schema instead of Zod [#decision-012]
 
 **Context.** The starter defines shared schemas with Effect Schema (Effect v4). The earlier design assumed Zod 4.
 
-**Decision.** Use Effect Schema as the one schema library for pages, blocks, edit operations and agent tools. It produces Standard Schema and JSON Schema, which cover Puck field generation and agent tool definitions.
+**Decision.** Use Effect Schema as the one schema library for pages, blocks, edit operations and agent tools. It produces Standard Schema and JSON Schema, which cover editor control generation and agent tool definitions.
 
 **Consequences.** One schema library and one style across the repo. Libraries that expect Zod specifically (for example some json-render helpers) are used only through JSON Schema, or not at all.
 
@@ -198,9 +229,9 @@ Five rules keep merges safe. All sides are migrated to the newest block version 
 
 **Decision.** A site's drafts live in one `SiteDoc` Durable Object built on PartyServer, Cloudflare's library from the PartyKit team for rooms, broadcast and hibernatable WebSockets ([cloudflare/partykit](https://github.com/cloudflare/partykit)). Every change goes through validated `applyOps`, with ops that address blocks by ID and field, never by position, and is broadcast live, with presence showing who is on which page, block and field. The server orders every batch. When two people change the same field, the later write wins and the other person is told. A rich text field is one value; presence marks who is typing in it.
 
-**Rejected.** Page locks (too restrictive); drafts in D1 (no live ordering point); a CRDT for the whole document (it makes server-side validation hard); RFC 6902 JSON Patch (its array paths are positional, so a concurrent insert makes an op hit the wrong block); Yjs for rich text (a second sync system beside the ops, with its own undo, validation and history, and Puck's rich text field would fight it).
+**Rejected.** Page locks (too restrictive); drafts in D1 (no live ordering point); a CRDT for the whole document (it makes server-side validation hard); RFC 6902 JSON Patch (its array paths are positional, so a concurrent insert makes an op hit the wrong block); Yjs for rich text (a second sync system beside the ops, with its own undo, validation and history).
 
-**Consequences.** Live collaboration with one rule. Two people can't type in the same paragraph with shared cursors; that isn't in this version. The same op vocabulary drives Puck sync, agent tools, undo and merging ([017](#decision-017)). Puck's behaviour under live remote changes is proven early in the [build plan](/build-plan#3-live-co-editing) (see [013](#decision-013)).
+**Consequences.** Live collaboration with one rule. Two people can't type in the same paragraph with shared cursors; that isn't in this version. The same op vocabulary drives the editor, agent tools, undo and merging ([017](#decision-017)). The editor's behaviour under live remote changes is proven early in the [build plan](/build-plan#4-live-co-editing) (see [025](#decision-025)).
 
 ## 006 — Block versions: v1, v2, v3 for editors, any number live [#decision-006]
 
@@ -218,7 +249,7 @@ Five rules keep merges safe. All sides are migrated to the newest block version 
 
 **Decision.** Our own schema (see [012](#decision-012)), with a flat block map in json-render's style, is canonical. Puck reads and writes it through a tested adapter. From json-render we borrow the catalog-to-prompt and streamed-patch ideas, not its renderer.
 
-**Consequences.** One adapter to maintain. Content never depends on Puck, so the editor could be replaced.
+**Consequences.** One adapter to maintain. Content never depends on Puck, so the editor could be replaced. [Decision 025](#decision-025) did replace it: our own editor edits this schema directly, with no adapter.
 
 ## 004 — Publish immutable snapshots, render on request, cache per release [#decision-004]
 
@@ -234,7 +265,7 @@ Five rules keep merges safe. All sides are migrated to the newest block version 
 
 **Context.** Public sites need to be fast and mostly static. Studio is a rich app. Separating web layers from API layers gives clean boundaries, matching the starter's pattern.
 
-**Decision.** `sites` (Astro) renders public sites and previews, and forwards form posts to `sites-api`, which owns form intake and later payment webhooks. `studio` (TanStack Start with Puck) is the UI, and calls `studio-api` over RPC. `studio-api` owns domain logic, permissions, the Durable Objects and scheduled jobs. All four share packages.
+**Decision.** `sites` (Astro) renders public sites and previews, and forwards form posts to `sites-api`, which owns form intake and later payment webhooks. `studio` (TanStack Start with our [editor](/editor)) is the UI, and calls `studio-api` over RPC. `studio-api` owns domain logic, permissions, the Durable Objects and scheduled jobs. All four share packages.
 
 **Rejected.** A single Worker per side (mixes UI and data access); separate Workers for rendering, the agent, forms and jobs (too many moving parts).
 

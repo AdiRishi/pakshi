@@ -20,7 +20,7 @@ flowchart LR
   S --> KV[(KV<br/>host to site to release)]
   S --> R2[(R2<br/>snapshots, media)]
   SA --> SUB[(SiteSubmissions<br/>per site)]
-  U[Staff] --> ST[studio<br/>TanStack Start + Puck]
+  U[Staff] --> ST[studio<br/>TanStack Start + editor]
   ST -->|RPC + WebSocket| API[studio-api]
   API --> DO[(SiteDoc<br/>per site)]
   API --> AG[SiteAgent<br/>per conversation]
@@ -34,34 +34,35 @@ flowchart LR
 
 - **`sites`** renders published sites and previews from snapshots. It is read-only and forwards form posts to `sites-api`.
 - **`sites-api`** is the public-facing API for form intake. It hosts the `SiteSubmissions` Durable Objects, one per site, and is the only writer of submissions.
-- **`studio`** is the TanStack Start UI with Puck. It has no data bindings of its own: it calls `studio-api` over RPC and reaches site documents and the agent over WebSockets through it.
+- **`studio`** is the TanStack Start UI, with Pakshi's own visual [editor](/editor). It has no data bindings of its own: it calls `studio-api` over RPC and reaches site documents and the agent over WebSockets through it.
 - **`studio-api`** holds domain logic and permissions, the `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs, and authorized reads of submissions.
 - All four import the same packages (page schema, blocks, themes, permission rules), so the editor and the public site render with the same code.
 
 ## Stack
 
-| Concern                   | Choice                                                 | Notes                                                                                                                                                |
-| ------------------------- | ------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Hosting and runtime       | Cloudflare Workers                                     | Four Workers: `sites`, `sites-api`, `studio`, `studio-api`                                                                                           |
-| Public site rendering     | Astro 7 with React, `@astrojs/cloudflare`              | Server-rendered from snapshots; interactive blocks hydrate as islands. Bindings come from `cloudflare:workers`, not `Astro.locals.runtime`           |
-| Admin app                 | TanStack Start, Router, Query, Form, Table             | Studio UI; calls studio-api over RPC                                                                                                                 |
-| Visual editor             | Puck                                                   | Fed from our schema through an adapter                                                                                                               |
-| UI primitives and styling | shadcn/ui, Tailwind v4                                 | Theme tokens as CSS variables                                                                                                                        |
-| Schema and validation     | Effect Schema (Effect v4)                              | Same library as the starter. One schema drives validation, Puck fields and agent tool definitions through its Standard Schema and JSON Schema output |
-| Rich text                 | TipTap (ProseMirror JSON)                              | Chosen over Lexical because Puck's rich text field is built on TipTap. A rich text field is one value; no shared-cursor editing                      |
-| Site drafts               | Durable Objects (SQLite)                               | One `SiteDoc` per site, built on PartyServer for live editing and presence                                                                           |
-| Form submissions          | Durable Objects (SQLite)                               | One `SiteSubmissions` per site, so each site's customer data is its own database                                                                     |
-| Relational data           | D1                                                     | One `core` database                                                                                                                                  |
-| Files and snapshots       | R2                                                     | Media, published and preview snapshots, source documents                                                                                             |
-| Routing                   | KV                                                     | Hostname → site → current release                                                                                                                    |
-| Images                    | Cloudflare Images                                      | Resizing and format conversion                                                                                                                       |
-| Agent runtime             | Cloudflare Agents SDK, `@cloudflare/ai-chat`           | One `SiteAgent` Durable Object per conversation                                                                                                      |
-| Model access              | AI Gateway                                             | Logging, cost tracking, per-brand spend limits                                                                                                       |
-| Document conversion       | Workers AI `toMarkdown`                                | For uploaded source documents                                                                                                                        |
-| Staff sign-in             | Better Auth                                            | Runs in studio-api; the `genericOAuth` plugin connects to the organization's identity provider over OIDC; sessions in D1                             |
-| Custom domains            | Cloudflare for SaaS                                    | Custom hostnames with automatic certificates                                                                                                         |
-| Email                     | Cloudflare Email Service                               | Sending is in public beta; sender domains must use Cloudflare DNS                                                                                    |
-| Monorepo                  | application-platform-starter: pnpm, Turborepo, Alchemy | Effect for services, Alchemy for infrastructure as code, oxlint and oxfmt, Vitest, Playwright for visual regression                                  |
+| Concern                   | Choice                                                 | Notes                                                                                                                                                                                                                 |
+| ------------------------- | ------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Hosting and runtime       | Cloudflare Workers                                     | Four Workers: `sites`, `sites-api`, `studio`, `studio-api`                                                                                                                                                            |
+| Public site rendering     | Astro 7 with React, `@astrojs/cloudflare`              | Server-rendered from snapshots; interactive blocks hydrate as islands. Bindings come from `cloudflare:workers`, not `Astro.locals.runtime`                                                                            |
+| Admin app                 | TanStack Start, Router, Query, Form, Table             | Studio UI; calls studio-api over RPC                                                                                                                                                                                  |
+| Visual editor             | `@repo/editor`, our own                                | Edits the page document directly on a live render of the page, with others; see [Editor](/editor)                                                                                                                     |
+| Drag and drop             | dnd-kit (`@dnd-kit/react`)                             | Reordering blocks in the editor, with keyboard dragging and screen reader announcements                                                                                                                               |
+| UI primitives and styling | shadcn/ui, Tailwind v4                                 | Theme tokens as CSS variables                                                                                                                                                                                         |
+| Schema and validation     | Effect Schema (Effect v4)                              | Same library as the starter. One schema drives validation, editor controls and agent tool definitions through its Standard Schema and JSON Schema output                                                              |
+| Rich text                 | TipTap (ProseMirror JSON)                              | Each field's extensions drive the editor, the site's static renderer (`@tiptap/static-renderer`) and Markdown conversion for the agent (`@tiptap/markdown`). A rich text field is one value; no shared-cursor editing |
+| Site drafts               | Durable Objects (SQLite)                               | One `SiteDoc` per site, built on PartyServer for live editing and presence                                                                                                                                            |
+| Form submissions          | Durable Objects (SQLite)                               | One `SiteSubmissions` per site, so each site's customer data is its own database                                                                                                                                      |
+| Relational data           | D1                                                     | One `core` database                                                                                                                                                                                                   |
+| Files and snapshots       | R2                                                     | Media, published and preview snapshots, source documents                                                                                                                                                              |
+| Routing                   | KV                                                     | Hostname → site → current release                                                                                                                                                                                     |
+| Images                    | Cloudflare Images                                      | Resizing and format conversion                                                                                                                                                                                        |
+| Agent runtime             | Cloudflare Agents SDK, `@cloudflare/ai-chat`           | One `SiteAgent` Durable Object per conversation                                                                                                                                                                       |
+| Model access              | AI Gateway                                             | Logging, cost tracking, per-brand spend limits                                                                                                                                                                        |
+| Document conversion       | Workers AI `toMarkdown`                                | For uploaded source documents                                                                                                                                                                                         |
+| Staff sign-in             | Better Auth                                            | Runs in studio-api; the `genericOAuth` plugin connects to the organization's identity provider over OIDC; sessions in D1                                                                                              |
+| Custom domains            | Cloudflare for SaaS                                    | Custom hostnames with automatic certificates                                                                                                                                                                          |
+| Email                     | Cloudflare Email Service                               | Sending is in public beta; sender domains must use Cloudflare DNS                                                                                                                                                     |
+| Monorepo                  | application-platform-starter: pnpm, Turborepo, Alchemy | Effect for services, Alchemy for infrastructure as code, oxlint and oxfmt, Vitest, Playwright for visual regression                                                                                                   |
 
 **Cloudflare plan: Workers Paid, no Enterprise features.** Production runs on Workers Paid (from $5 a month per account plus usage), which covers Workers, Durable Objects, D1, R2, KV, Email Service and everything else in this design ([pricing](https://developers.cloudflare.com/workers/platform/pricing/)). Cloudflare for SaaS includes 100 custom hostnames. The only Enterprise-only feature we'd considered, root-domain proxying, is left out (see Domains).
 
@@ -72,16 +73,16 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 | Path                 | Contents                                                                                                                                                                                                                              |
 | -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `infra/`             | Alchemy graph: all four Workers, Durable Objects, D1, R2, KV, bindings and domains. No per-app Wrangler config                                                                                                                        |
-| `apps/studio`        | TanStack Start app (the starter's `apps/web`): Studio UI with Puck                                                                                                                                                                    |
+| `apps/studio`        | TanStack Start app (the starter's `apps/web`): Studio UI                                                                                                                                                                              |
 | `apps/sites`         | Astro app: public sites and previews                                                                                                                                                                                                  |
 | `workers/studio-api` | Domain logic, `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs. A plain Worker with its own entry file, because PartyServer and `AIChatAgent` are plain Durable Object classes that a starter-style Effect Worker can't host |
 | `workers/sites-api`  | Form intake and the `SiteSubmissions` Durable Objects                                                                                                                                                                                 |
 | `packages/contracts` | Effect schemas for pages, sites, snapshots and edit operations, plus each API's RPC contract                                                                                                                                          |
-| `packages/domain`    | Permission checks, validation, three-way merge, database access, audit writes                                                                                                                                                         |
-| `packages/blocks`    | Block versions, each in its own frozen folder, plus the generated registry                                                                                                                                                            |
+| `packages/domain`    | Permission checks, three-way merge, database access, audit writes, and the document module: `applyOps`, validation and inverse ops. The document module imports no server code, because the editor runs it in the browser             |
+| `packages/blocks`    | Block versions, each in its own frozen folder, the generated registry, and the field builders and field components blocks are written with                                                                                            |
 | `packages/tokens`    | Theme schema, palette generation, contrast checks, CSS output                                                                                                                                                                         |
 | `packages/ui`        | shadcn/ui primitives bound to tokens                                                                                                                                                                                                  |
-| `packages/editor`    | Puck config generation and the schema ↔ Puck adapter                                                                                                                                                                                  |
+| `packages/editor`    | `@repo/editor`, the visual editor: canvas, field editing, structure editing, settings panel, undo and the local copy of the draft ([Editor](/editor))                                                                                 |
 | `packages/agent`     | Agent tools, prompts and the eval suite                                                                                                                                                                                               |
 | `tooling/`           | Shared TypeScript configs and the starter's oxlint rules                                                                                                                                                                              |
 | `docs/`              | Blume documentation site and repository ADRs                                                                                                                                                                                          |
@@ -150,6 +151,7 @@ A page is a flat map of block instances plus an ordered list of top-level IDs, i
 
 - **Nesting** goes through named slots, at most two levels (a section and its items).
 - **Integrity:** every block ID appears in exactly one list (`root` or one slot), and every listed ID exists in `blocks`. Validation rejects orphans and dangling IDs.
+- **Lists inside props**, such as a gallery's images, are arrays of items that each carry an `id`. A path steps into a list by item ID, never by index, for the same reason blocks are addressed by ID: a concurrent insert would shift an index onto the wrong item.
 - **Block versions** are not stored on instances. They come from the draft's lockfile, so an upgrade changes one place.
 - **Blog posts** are pages with `type: "post"` and extra meta fields (date, author, tags, excerpt, cover image). They reuse drafts, previews, approvals and history. A `post-list` block shows them.
 - **References** to media, forms and other pages are IDs, resolved at render time from the same snapshot. Media files never change, so a media ID always renders the same file.
@@ -165,7 +167,7 @@ A page is a flat map of block instances plus an ordered list of top-level IDs, i
 
 ## Blocks and versioning
 
-Each block version is one folder with one definition. Everything else (Puck fields, agent tool schemas, validation) is generated from that definition.
+Each block version is one folder with one definition. Everything else (editor controls, agent tool schemas, validation) is generated from that definition.
 
 ```ts
 // packages/blocks/hero/v2/index.ts
@@ -176,7 +178,7 @@ export default defineBlock({
   version: 2,
   title: "Hero",
   props: {
-    heading: text({ min: 3, max: 80, inline: true }),
+    heading: text({ min: 3, max: 80 }),
     body: richText({ marks: ["bold", "italic", "link"], optional: true }),
     image: media(),
     cta: cta({ optional: true }),
@@ -199,21 +201,22 @@ export default defineBlock({
 - Editors see versions as v1, v2, v3 and so on. Under the hood each released version has an opaque ID in the registry, and each site's lockfile records those IDs.
 - Any change that alters a block's output is a new version. Released versions are frozen; CI rejects edits to them, with no exceptions. An urgent fix is a new version, and the platform team can create upgrade drafts on every site that uses the block.
 - Frozen folders import field builders (`text`, `richText`, `media`, `cta`) from `packages/blocks`, which build Effect schemas; they never import Effect directly, so a dependency upgrade never forces an edit to frozen code. Golden tests pin each version's generated JSON Schema.
+- A block's component renders its fields through the field components in `packages/blocks` (text, rich text, media, link and slot). On the site they output plain markup. In Studio the [editor](/editor#with-blocks) makes the same markup editable, so a block needs no editor-specific code and the editor can improve without a new block version.
 - New sites start on the latest version of every block.
 - **Any number of versions can be live.** Studio encourages upgrades (a banner on the site, and a count of sites behind in the block catalog) but never forces them.
 - **Retention:** a version stays in the registry while any draft or live release uses it, and for 3 months after the last one stops. The latest version of every block always stays. Rollback is limited to releases whose versions are still in the registry.
 - **Upgrading** creates a draft, runs each version's `migrate` function in turn (v1 → v2 → v3) over it, and the draft follows the site's workflow. Nothing changes live until it's published.
 - Every live version adds code to the `sites` bundle and screenshots to the test run. Lazy loading keeps startup small, and CI tracks bundle size and test time as the library grows.
 
-**One registry, two renderers.** A generated registry maps `hero@2` to a dynamic import. Both Astro and Puck render from it, so they use the same component code. `sites` awaits the import and renders the component directly, not through `React.lazy`: inside Astro's React renderer, a suspending component streams its fallback and a swap script instead of finished HTML. Dynamic imports keep the `sites` Worker inside the 1-second startup limit ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/)); the bundle limit is 64 MiB uncompressed.
+**One registry, two renderers.** A generated registry maps `hero@2` to a dynamic import. Both `sites` and the editor canvas render from it, so they use the same component code. `sites` awaits the import and renders the component directly, not through `React.lazy`: inside Astro's React renderer, a suspending component streams its fallback and a swap script instead of finished HTML. Dynamic imports keep the `sites` Worker inside the 1-second startup limit ([Workers limits](https://developers.cloudflare.com/workers/platform/limits/)); the bundle limit is 64 MiB uncompressed.
 
 **shadcn/ui:** its primitives are the foundation and its blocks are design inspiration. Its registry, which copies code into projects, isn't used to deliver blocks: every site renders from our versioned registry instead.
 
-**Interactive blocks** (gallery lightbox, form, carousel) hydrate as Astro islands. Astro can't hydrate a component chosen at runtime ([directives](https://docs.astro.build/en/reference/directives-reference/)), so a generated island map imports them statically, and interactive blocks must be top-level sections.
+**Interactive blocks** (gallery lightbox, form, carousel) hydrate as Astro islands. Astro can't hydrate a component chosen at runtime ([directives](https://docs.astro.build/en/reference/directives-reference/)), so a generated island map imports them statically, and interactive blocks must be top-level sections. The editor canvas shows their server-rendered markup without running their island behaviour.
 
-**Quality gates on every block release and every shared dependency upgrade** (React, Tailwind, shadcn, Astro, Puck):
+**Quality gates on every block release and every shared dependency upgrade** (React, Tailwind, shadcn, Astro, TipTap):
 
-- A Playwright screenshot of every fixture of every live version, rendered in both the published site and the Puck canvas. Any unexpected difference fails the build. Frozen versions still share `packages/ui`, Tailwind and React, so a dependency upgrade can shift an old version's screenshots. When that difference is intended, a platform developer accepts the new screenshots in a reviewed change, which is recorded in the audit log and announced to site admins. It's the only way a released version's output changes.
+- A Playwright screenshot of every fixture of every live version, rendered in both the published site and the editor canvas. Any unexpected difference fails the build. Frozen versions still share `packages/ui`, Tailwind and React, so a dependency upgrade can shift an old version's screenshots. When that difference is intended, a platform developer accepts the new screenshots in a reviewed change, which is recorded in the audit log and announced to site admins. It's the only way a released version's output changes.
 - Automated accessibility checks (axe) on every fixture, plus a manual keyboard and screen-reader review before a new block's first release.
 - A lint rule that rejects literal colors, fonts or spacing in block code: blocks may use theme tokens only.
 
@@ -280,9 +283,9 @@ flowchart LR
 - Preview snapshots are deleted when their draft publishes or is deleted.
 - Previews carry no-index and `Referrer-Policy: no-referrer` headers and a "Preview" ribbon, and their forms don't submit.
 
-**Trade-off we accept:** pages render on request with the current `sites` code. Everything editors control (content, theme, block versions) is frozen in the snapshot. Shared code, such as page layout, the rich-text renderer or the primitives blocks use, could still change a live page. The visual regression gate over every live block version is the control for that, and an intended difference goes through a reviewed, audited screenshot update. The alternative, pre-rendering every page to static HTML at publish, needs a build pipeline and an archive of old assets, and doesn't pay for itself (see [decision 004](/decision-log#decision-004)).
+**Trade-off we accept:** pages render on request with the current `sites` code. Everything editors control (content, theme, block versions) is frozen in the snapshot. Shared code, such as page layout, the field components, the rich-text renderer or the primitives blocks use, could still change a live page. The visual regression gate over every live block version is the control for that, and an intended difference goes through a reviewed, audited screenshot update. The alternative, pre-rendering every page to static HTML at publish, needs a build pipeline and an archive of old assets, and doesn't pay for itself (see [decision 004](/decision-log#decision-004)).
 
-## Editing: the site document and Puck
+## Editing: the site document and the editor
 
 Every change, from a person or the agent, goes through one method on the site's Durable Object: `applyOps(actor, draftId, ops)`.
 
@@ -290,35 +293,18 @@ Every change, from a person or the agent, goes through one method on the site's 
 
 - **Built on PartyServer,** Cloudflare's library from the PartyKit team that adds rooms, broadcast, connection state and hibernation to Durable Objects ([cloudflare/partykit](https://github.com/cloudflare/partykit)). Each site is one room, with presence tracked per draft and page, and clients connect with PartySocket, which handles reconnects and buffering. Hibernation is off by default, so `SiteDoc` sets `hibernate: true`. Plain RPC calls skip PartyServer's `onStart`, so other code reaches `SiteDoc` through `getServerByName`, which waits for startup.
 - **Storage:** each draft page is its own SQLite row, because a row can hold at most 2 MB and a large draft saved as one value would exceed it.
-- **Ops** address blocks by ID, never by position: `setProp(blockId, path, value)`, `insertBlock(parent, slot, afterId, block)`, `moveBlock(blockId, parent, slot, afterId)`, `removeBlock(blockId)`, and page-level `setMeta`, `createPage` and `deletePage`. A concurrent insert can't make an op hit the wrong block. A batch is applied atomically, or rejected with structured errors (path, rule, message). The same vocabulary drives Puck sync, agent tools, undo and merging.
-- **Validation** on every batch: the block schema at the draft's pinned version, document integrity, link rules, and a path allowlist. The lockfile changes only through the block upgrade flow; form notification addresses only through site settings.
+- **Ops** address blocks by ID, never by position: `setProp(blockId, path, value)`, `insertBlock(parent, slot, afterId, block)`, `moveBlock(blockId, parent, slot, afterId)`, `removeBlock(blockId)`, and page-level `setMeta`, `createPage` and `deletePage`. A concurrent insert can't make an op hit the wrong block. A batch is applied atomically, or rejected with structured errors (path, rule, message). Each batch carries an ID its sender creates, and new blocks and list items carry IDs their sender creates, so a batch sent twice, for example after a reconnect, has no extra effect. The same vocabulary drives the editor, agent tools, undo and merging.
+- **Validation** on every batch: value types and limits from the block schema at the draft's pinned version (maximum lengths, allowed marks and nodes, variants, surfaces), document integrity, link rules, and a path allowlist. Completeness (required fields and minimum lengths) isn't checked on people's batches, so someone can clear a heading and retype it; freezing checks it, and pre-flight reports what's missing ([decision 026](/decision-log#decision-026)). The agent's batches are checked for completeness too, so it gets a structured error instead of leaving a field empty. The lockfile changes only through the block upgrade flow; form notification addresses only through site settings.
+- **One document module:** `applyOps`, validation and inverse ops are one pure module in `packages/domain` that imports no server code. `SiteDoc` runs it to commit batches, and the editor runs the same code to show a person's edits before the server confirms them.
 - **Live collaboration:** several people, and their agents, can edit the same draft and page at once. Each committed batch is broadcast to everyone in that draft. Presence shows who is on which page, block and field, so people can see each other and avoid overlap.
-- **Conflicts:** the server orders every batch. Clients send ops without a base revision, keep their own unconfirmed ops in a pending queue, and treat the server's broadcast as the truth. If two people change the same field, the later write wins and the earlier writer is told their change was replaced. An op on a block that was removed meanwhile is dropped, and its author is told.
-- **Rich text:** a rich text field is one value, like any other field, edited in Puck's rich text field. While someone types in it, presence marks the field as theirs for others and for the agent. The marker is a hint, not a lock. Two people typing in the same paragraph with shared cursors isn't in this version.
-- **History:** one revision per editing session or agent turn, stored as operations with a full checkpoint every so often. It never stores a revision per keystroke. Undo applies inverse ops to fields nobody else has changed since, and reports the rest.
+- **Conflicts:** the server orders every batch. Clients send ops without a base revision, keep their own unconfirmed batches in a pending queue, and treat the server's broadcast as the truth: the editor shows its pending batches replayed over the latest confirmed state ([Editor](/editor#remote-changes)). If two people change the same field, the later write wins and the earlier writer is told their change was replaced. An op on a block that was removed meanwhile is dropped, and its author is told.
+- **Rich text:** a rich text field is one value, like any other field, edited in place with TipTap. While someone types in it, presence marks the field as theirs for others and for the agent. The marker is a hint, not a lock. Two people typing in the same paragraph with shared cursors isn't in this version.
+- **History:** one revision per editing session or agent turn, stored as operations with a full checkpoint every so often, for the audit log, restore and agent-turn undo. It never stores a revision per keystroke.
+- **Undo** is per person. A person undoes one command at a time: the editor sends the command's inverse ops as a batch marked as an undo, which `SiteDoc` applies only to fields where that person's write is still the latest, and it reports the fields it skipped. An agent turn undoes as one step, from the history, with the same rule.
 - **Authorization:** `SiteDoc` accepts connections and calls only through `studio-api`, which has verified the session and permission. Each connection carries its user, and every batch it sends is checked again against permissions that `SiteDoc` caches per connection. A permission change clears the cache, so a removed permission takes effect on the next batch without a D1 read per keystroke.
 - **Restore:** Durable Object point-in-time recovery must be called from inside the object, so `SiteDoc` exposes an admin `restoreTo(time)` method. Every restore is recorded in the audit log. If a restore changes the live release, `SiteDoc` updates KV and D1 as it would for a rollback, so the live site never changes silently.
 
-**Puck integration:**
-
-- **Adapter:** our schema stays canonical. `toPuck` and `fromPuck` convert between our flat document and Puck's tree. Property tests check that a round trip changes nothing ([Puck data model](https://puckeditor.com/docs/api-reference/data-model/data)).
-- **Generated config:** the Puck config for a draft is generated from its lockfile. Fields come from each block's schema.
-- **Rich text:** Puck's rich text field uses TipTap but saves HTML, so the adapter converts it to TipTap JSON with our extension set ([rich text field](https://puckeditor.com/docs/api-reference/fields/richtext)).
-- **Resolved data:** resolved values such as image URLs live under a reserved key that `fromPuck` drops, so they're never saved into the document.
-- **Same CSS:** the canvas iframe loads the same platform CSS and site theme CSS as the published site, with Studio's own styles kept out.
-- **Live updates in the canvas:** a sync module in `packages/editor` connects Puck to `SiteDoc` through Puck's public API. Local changes arrive through Puck's `onAction` callback and become our operations; a prop edit arrives as a replace of the whole block and is diffed down to fields. Changes from others become Puck's small built-in actions (insert, move, remove, replace), dispatched without entering Puck's history, never a whole-page reload. Puck's actions address blocks by index and zone, so the module converts each remote op to an index against the local state at that moment, using Puck's lookup by ID. Selection is restored by block ID.
-- **Undo** is per person, through `SiteDoc`'s history. Puck's own undo restores whole-page snapshots, which would erase other people's changes, and has its keyboard shortcuts built in. We take the undo shortcuts in capture-phase key listeners before Puck sees them, and hide its undo buttons, so no patch is needed. If that proves not to be enough, a pnpm patch replaces its history slice instead. `setHistories([])` resets the document, so it's never used to clear history. The sync never dispatches from inside `onAction`; it defers to the next microtask. We don't fork Puck (see [decision 013](/decision-log#decision-013)).
-- **Known Puck gaps** the sync module handles, found in Puck 0.23's source:
-  - Replaying an insert gives the new block's children fresh random IDs, so the sync sends the IDs itself.
-  - Selection is stored as an index, so another person's insert moves it; the sync restores it by block ID.
-  - A focused sidebar field ignores remote changes, and overwrites a remote edit to the same field on its next keystroke.
-  - A remote rich text change replaces the whole field and makes the local cursor jump.
-  - Interleaved moves and removes can leave a client out of step with no notice, so the sync detects that and reloads the draft.
-  - The undo hotkeys are attached to the whole page with no check for text fields.
-  - The npm package ships as hashed, bundled chunks, which makes any patch fragile across releases.
-- **Server rendering:** Puck has no official TanStack Start recipe. If it fails under server rendering, the editor route renders on the client only.
-
-This is the riskiest integration in Pakshi.
+**The editor:** Studio edits drafts with `@repo/editor`, Pakshi's own visual editor in `packages/editor` ([decision 025](/decision-log#decision-025)). It renders the page into a same-origin iframe with the same block components and CSS as `sites`, edits fields in place, and keeps a local copy of the draft in step with `SiteDoc` through the shared document module. It uses TipTap for rich text fields and dnd-kit for drag and drop, and no library in Studio keeps its own copy of the page. Its specification, including how remote changes reach a person without costing them their caret or selection, is on the [Editor](/editor) page.
 
 ## The agent
 
@@ -435,14 +421,17 @@ These came up during design review and were cut to keep Pakshi simple. Each can 
 | Page locks                                                               | Live field-level editing with presence                                                                    |
 | Shared-cursor editing of one paragraph (Yjs)                             | A rich text field is one value; presence marks who is typing in it                                        |
 | Index-based JSON Patch                                                   | Ops addressed by block ID                                                                                 |
+| A third-party page builder with its own copy of the page                 | `@repo/editor`, which edits the page document directly                                                    |
+| Dragging blocks from a palette into the canvas                           | A "+" at each insertion point opens the block picker                                                      |
+| Validating completeness on every keystroke                               | Completeness checked at freezing and reported by pre-flight                                               |
 
 ## Unproven assumptions
 
 These parts of the design rest on behaviour nobody has shown working yet. The [build plan](/build-plan) orders its checkpoints so each one is proven early, before much else depends on it.
 
-- **Live co-editing in Puck:** the sync module keeps Puck usable while two people and the agent edit one draft, despite the [known Puck gaps](#editing-the-site-document-and-puck).
+- **Live co-editing in the editor:** while two people and the agent edit one draft, a remote change never costs anyone their caret, selection or unsent input ([rules](/editor#remote-changes)).
 - **Three-way merge:** merging by block ID and field gives the expected, valid result for every conflict type, for site-level parts, and for sides on different block versions or brand revisions.
-- **Render parity:** a block renders the same in the Puck canvas and on the Astro site.
+- **Render parity:** a block renders the same in the editor canvas and on the Astro site.
 - **Block versions at runtime:** several versions of one block live on one site while `sites` stays well inside the 1-second startup limit.
 - **The agent on a cheap model:** GLM-5.3 Flash completes routine edits through AI Gateway with streamed tool calls.
 - **The chat path:** the Agents SDK hooks work inside TanStack Start through `studio-api`. Cloudflare doesn't document WebSocket passthrough over a service binding.
@@ -463,7 +452,6 @@ Limits and product details were checked against these pages on 2026-09-29.
 - [Email Service](https://developers.cloudflare.com/email-service/)
 - [Agents SDK chat agents](https://developers.cloudflare.com/agents/communication-channels/chat/chat-agents/), [AI Gateway](https://developers.cloudflare.com/ai-gateway/), [Workers AI Markdown conversion](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)
 - [Durable Object WebSockets](https://developers.cloudflare.com/durable-objects/best-practices/websockets/)
-- [Puck data model](https://puckeditor.com/docs/api-reference/data-model/data), [Puck rich text field](https://puckeditor.com/docs/api-reference/fields/richtext)
 - [Astro React integration](https://docs.astro.build/en/guides/integrations-guide/react/), [Astro Cloudflare adapter](https://docs.astro.build/en/guides/integrations-guide/cloudflare/), [Astro directives](https://docs.astro.build/en/reference/directives-reference/)
 - [json-render](https://github.com/vercel-labs/json-render)
 - [shadcn/ui theming](https://ui.shadcn.com/docs/theming)

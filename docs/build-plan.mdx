@@ -2,7 +2,7 @@
 title: Build plan
 description: The order Pakshi is built in, as checkpoints that each end in something you can run and test.
 sidebar:
-  order: 4
+  order: 5
 ---
 
 This plan builds the product described in the [product spec](/product-spec) and the [technical design](/technical-design), one checkpoint at a time. When every checkpoint is done, Pakshi is complete.
@@ -13,21 +13,22 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
 - **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
 - **Every checkpoint deploys to staging** and ends in a demo someone can run there.
-- **The riskiest work comes first.** Checkpoints 1 to 4 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
+- **The riskiest work comes first.** Checkpoints 1 to 5 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
 - **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
 - **This doc changes as we learn.** Tick checkpoints off, and split or reorder them when that makes the work clearer.
 
 ## Status
 
 - [ ] [1. Skeleton](#1-skeleton)
-- [ ] [2. Editing a draft](#2-editing-a-draft)
-- [ ] [3. Live co-editing](#3-live-co-editing)
-- [ ] [4. Publishing and merging](#4-publishing-and-merging)
-- [ ] [5. Approvals, sharing and previews](#5-approvals-sharing-and-previews)
-- [ ] [6. The agent](#6-the-agent)
-- [ ] [7. Brands, themes and block versions](#7-brands-themes-and-block-versions)
-- [ ] [8. Site essentials](#8-site-essentials)
-- [ ] [9. Ready for real sites](#9-ready-for-real-sites)
+- [ ] [2. Editing content](#2-editing-content)
+- [ ] [3. Editing structure](#3-editing-structure)
+- [ ] [4. Live co-editing](#4-live-co-editing)
+- [ ] [5. Publishing and merging](#5-publishing-and-merging)
+- [ ] [6. Approvals, sharing and previews](#6-approvals-sharing-and-previews)
+- [ ] [7. The agent](#7-the-agent)
+- [ ] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
+- [ ] [9. Site essentials](#9-site-essentials)
+- [ ] [10. Ready for real sites](#10-ready-for-real-sites)
 
 ## 1. Skeleton
 
@@ -40,7 +41,7 @@ Turn the starter into Pakshi's four Workers and prove that everything deploys to
 - D1 `core` with users and sessions, and [staff sign-in](/technical-design#security-and-access) through Better Auth's `genericOAuth` against a test OIDC provider.
 - `authorize` with the permission catalogue and the [default roles](/product-spec#roles-and-permissions), seeded for test users. There's no permissions UI yet.
 - The [page document](/technical-design#the-page-document) schema and the snapshot manifest format in `packages/contracts`.
-- `packages/blocks` with the field builders, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme preset in light and dark.
+- `packages/blocks` with the field builders, the [field components](/editor#with-blocks) blocks render their fields through, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme preset in light and dark.
 - `sites` [serving](/technical-design#publishing-serving-and-previews) a hand-written snapshot from R2 through the KV `host → site → release` lookup, with the release and Worker version in the cache key.
 
 **Demo:** sign in to Studio on staging, then open a platform subdomain that serves a page from the hand-written snapshot, in light and dark.
@@ -55,55 +56,79 @@ Turn the starter into Pakshi's four Workers and prove that everything deploys to
 
 **Proves:** hosting in Alchemy.
 
-## 2. Editing a draft
+## 2. Editing content
 
-One person edits a site in Studio, and the editor and the published site render the same.
+One person edits the content of a page in Studio, and the editor and the published site render the same.
 
 **Build:**
 
-- [`SiteDoc`](/technical-design#editing-the-site-document-and-puck), stored one row per page, with one draft per site until checkpoint 4 adds named drafts: `applyOps` with ops addressed by block ID, validation, history, and undo per editing session.
-- The site-level parts of the [page document](/technical-design#the-page-document): header and footer blocks, and the menus data. Menus get their editing screen in checkpoint 8.
-- The [Puck integration](/technical-design#editing-the-site-document-and-puck) for one person: the adapter, generated config, rich text conversion, resolved data, the same CSS in the canvas, local changes through `onAction`, and undo shortcuts taken over from Puck.
-- The Studio editor screen (canvas and block settings) and the page list: create, rename and open pages and posts.
+- [`SiteDoc`](/technical-design#editing-the-site-document-and-the-editor), stored one row per page, with one draft per site until checkpoint 5 adds named drafts: `applyOps` with ops addressed by block ID, batch IDs, validation with completeness left to freezing, and history.
+- The document module in `packages/domain` (`applyOps`, validation and inverse ops), importable in the browser.
+- The site-level parts of the [page document](/technical-design#the-page-document): header and footer blocks, and the menus data. Menus get their editing screen in checkpoint 9.
+- [`@repo/editor`](/editor) for one person: the canvas, the local copy of the draft with its pending batches, selection and overlays, plain text and rich text edited in place, the media popover, the settings panel, undo per command, and the field kinds and commands they're built from.
+- The Studio editor screen (canvas and settings panel) and the page list: create, rename and open pages and posts.
 - The rest of the core blocks: split, feature grid, gallery, form (display only), blog list, header and footer, each with fixtures.
-- The [quality gates](/technical-design#blocks-and-versioning): screenshots of every fixture in both renderers, axe checks, and the lint rule against literal colors, fonts and spacing.
+- The [quality gates](/technical-design#blocks-and-versioning): screenshots of every fixture in the editor canvas and in `sites`, axe checks, and the lint rule against literal colors, fonts and spacing.
 
-**Demo:** edit text and images on a page in Studio, add and move sections, reload, and undo.
+**Demo:** edit text, rich text and images on a page in Studio, reload, and undo.
 
 **Done when:**
 
-- The adapter round trip changes nothing, checked by property tests over every core block fixture.
-- Every fixture's screenshot matches between the Puck canvas and `sites`, in light and dark.
-- An edit survives a reload, and undo reverses one editing session.
+- Every fixture's screenshot matches between the editor canvas and `sites`, in light and dark.
+- An edit survives a reload, and undo reverses one action at a time.
+- A required heading can be cleared and retyped, and a heading over its maximum length is refused while typing.
 - `applyOps` rejects invalid batches with structured errors, with a test for each validation rule.
+- Every field in the core blocks can be reached and edited with the keyboard alone.
+- The editor meets its [performance budgets](/editor#performance-budgets).
 
 **Proves:** render parity.
 
-## 3. Live co-editing
+## 3. Editing structure
 
-Several people and their presence in one draft, with Puck staying usable.
+One person adds, moves and removes sections and items, with a pointer or with the keyboard alone.
+
+**Build:**
+
+- [Insert points and the block picker](/editor#structure), offering only the blocks each spot allows, with placeholder content for new blocks.
+- Moving blocks by drag in the canvas and in the outline panel, and the move commands, with screen reader announcements.
+- Duplicating and removing blocks, and choosing variants and surfaces from previews.
+- The outline panel.
+
+**Demo:** build a page from an empty draft by adding, reordering and removing sections and items, once with a mouse and once with the keyboard only.
+
+**Done when:**
+
+- Every structural change can be made with the keyboard alone, and each one is announced.
+- A drag and the matching move command produce the same ops.
+- The picker never offers a block the spot doesn't allow, such as an interactive block inside a section.
+- Undo reverses an insert, a move, a duplicate and a removal.
+- axe finds no violations on the editor screen.
+
+## 4. Live co-editing
+
+Several people and their presence in one draft, and no one loses their place when someone else edits.
 
 **Build:**
 
 - PartySocket connections from Studio to `SiteDoc` through `studio-api`, with the WebSocket passed over the service binding.
-- [Live collaboration](/technical-design#editing-the-site-document-and-puck): broadcast, presence per draft, page, block and field, the pending queue, later write wins with a notice, dropped ops on removed blocks with a notice, the typing marker, and the per-connection permission cache.
-- Remote changes into Puck, handling every one of the [known Puck gaps](/technical-design#editing-the-site-document-and-puck).
+- [Live collaboration](/technical-design#editing-the-site-document-and-the-editor): broadcast, presence per draft, page, block and field, confirmation by batch ID and resending after a reconnect, later write wins with a notice, dropped ops on removed blocks with a notice, the typing marker, and the per-connection permission cache.
+- In the editor: pending batches replayed over each broadcast, other people's presence on the canvas, and the [rules for remote changes](/editor#remote-changes).
 
 **Demo:** two browsers edit the same page on staging, each seeing the other's presence and changes live.
 
 **Done when:**
 
+- A convergence test, with simulated clients making random concurrent edits against the real document module, ends with every client showing the server's document.
 - In a scripted two-browser session on one draft, every change is either applied or its author is told.
-- Each known Puck gap has a test that fails without the sync module's handling.
-- Nothing reloads the whole page except recovery from a detected divergence.
+- Each rule for remote changes has a browser test that fails without it.
 - Undo in one browser never removes the other person's edits.
 - Removing a person's permission stops their next batch.
 
-**Proves:** live co-editing in Puck.
+**Proves:** live co-editing in the editor.
 
-## 4. Publishing and merging
+## 5. Publishing and merging
 
-Named drafts that publish, roll back, and merge like branches. Every workflow has no steps until checkpoint 5, so submitting publishes directly.
+Named drafts that publish, roll back, and merge like branches. Every workflow has no steps until checkpoint 6, so submitting publishes directly.
 
 **Build:**
 
@@ -111,7 +136,7 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 - [Snapshots](/technical-design#publishing-serving-and-previews): the manifest and content-addressed page objects, and freezing with structure checks.
 - Publishing through `SiteDoc`: the release recorded as the source of truth, the KV write, the outbox to D1, and the reconcile job.
 - Rollback of the latest publish, and restoring an older release as a draft.
-- The [three-way merge](/technical-design#publishing-serving-and-previews), with block versions migrated before diffing, and the conflict screen with pick-a-side. Model suggestions for text conflicts come in checkpoint 6.
+- The [three-way merge](/technical-design#publishing-serving-and-previews), with block versions migrated before diffing, and the conflict screen with pick-a-side. Model suggestions for text conflicts come in checkpoint 7.
 
 **Demo:** two people work in two drafts; one publishes; the other opens their draft, updates it, resolves a conflict, and publishes; then someone rolls back.
 
@@ -126,7 +151,7 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 
 **Proves:** the three-way merge.
 
-## 5. Approvals, sharing and previews
+## 6. Approvals, sharing and previews
 
 Changes reach production through the workflows owners set, and drafts are shared like documents.
 
@@ -150,7 +175,7 @@ Changes reach production through the workflows owners set, and drafts are shared
 - A preview opens for someone it's shared with and not for anyone else, and revoking access blocks the next request.
 - Previews send no-index headers, and their forms don't submit.
 
-## 6. The agent
+## 7. The agent
 
 The agent builds and edits sites through the same path as people.
 
@@ -158,6 +183,7 @@ The agent builds and edits sites through the same path as people.
 
 - [`SiteAgent`](/technical-design#the-agent) on `AIChatAgent`, with routing limited to `SiteAgent`, the trusted user header, and the acting user stored per turn.
 - The chat panel through `studio-api`, including `/get-messages`.
+- In the editor: [the agent's changes highlighted](/editor#with-the-agent) as they land, the selected block passed to the agent, and undo of an agent turn from the chat panel.
 - Every agent tool, the cacheable context prefix, structured validation errors with two repair attempts, and presence as the agent acting for its user.
 - Source uploads with `toMarkdown`, `fetch_url` with its limits, alt text suggestions, and merge suggestions for text conflicts.
 - AI Gateway with cost tags and per-brand spend limits.
@@ -175,7 +201,7 @@ The agent builds and edits sites through the same path as people.
 
 **Proves:** the agent on a cheap model, and the chat path.
 
-## 7. Brands, themes and block versions
+## 8. Brands, themes and block versions
 
 Brands own their look, and blocks improve without surprising live sites.
 
@@ -198,7 +224,7 @@ Brands own their look, and blocks improve without surprising live sites.
 
 **Proves:** block versions at runtime.
 
-## 8. Site essentials
+## 9. Site essentials
 
 Everything else a real site needs.
 
@@ -221,7 +247,7 @@ Everything else a real site needs.
 - An unpublished page returns 410 and leaves the sitemap and menus.
 - A deleted site stops serving at once, and an org admin can restore it within 30 days.
 
-## 9. Ready for real sites
+## 10. Ready for real sites
 
 Finish access control, safety and operations, then run real sites on Pakshi.
 

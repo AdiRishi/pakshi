@@ -16,7 +16,7 @@ This doc defines what Pakshi does and for whom. It sits between the [vision](/vi
 | Brands with theme (light and dark), identity and voice guide            | Payments (Stripe Checkout)              |
 | Sites, pages, and blog posts as pages                                   | Scheduled publishing                    |
 | Agent builds and edits sites                                            | Visual, node-based workflow editor      |
-| Visual editing in Puck, live with others                                | Comments on previews                    |
+| Visual editing on the page, live with others                            | Comments on previews                    |
 | Named drafts that merge like branches and are shared like documents     | File uploads on forms                   |
 | Approval workflows on the organization, a brand or a site, and rollback | Guideline import into Theme Studio      |
 | Pinned block versions, upgrades through drafts                          | Analytics dashboard                     |
@@ -72,7 +72,7 @@ Studio is one app with a brand and site switcher. Its main areas:
 | Home      | My sites, my drafts, drafts shared with me, approvals waiting for me, sites with block upgrades available                                                                                             |
 | Brand     | Theme Studio (preset, brand color, fonts, density and other tokens, live preview of every block), identity (logo, favicon), voice guide, brand approval workflow, members                             |
 | Site      | Drafts, pages and posts, editor, submissions, media, blocks in use and available upgrades, release history, settings (domain, SEO defaults, forms notification addresses, approval workflow, members) |
-| Editor    | Draft name and sharing at the top, agent chat on the left, Puck canvas in the middle (click to select, edit text inline, swap images), block settings on the right                                    |
+| Editor    | Draft name and sharing at the top, agent chat on the left, the page canvas in the middle (click to select, edit text in place, swap images, add and move sections), block settings on the right       |
 | Approvals | Everything waiting for my decision, with the preview and what changed                                                                                                                                 |
 | Blocks    | Catalog of every block with its variants and versions, and a form to request a new block                                                                                                              |
 
@@ -162,8 +162,9 @@ These are the acceptance-level rules for the product, grouped by area.
 - All work happens in drafts. The agent and the visual editor change the same draft, and it saves automatically.
 - Several people can edit the same draft and page at once. Everyone sees who else is there, which block and field they're on, and their changes as they happen, including the agent's. If two people change the same field, the later change wins and the other person is told.
 - A text field someone is typing in shows as theirs to others and to the agent. This is a marker, not a lock.
-- Every agent turn can be undone in one click. Undo leaves alone any field someone else has changed since, and says so. Each editing session and agent turn is kept in the draft's history.
-- Every change is checked against the block's rules before it's saved.
+- Undo reverses a person's own changes one action at a time, such as a text edit, a move or an insert. Every agent turn can be undone in one click. Undo leaves alone any field someone else has changed since, and says so. Each editing session and agent turn is kept in the draft's history.
+- Every change is checked against the block's rules before it's saved. A field can be left empty or too short while someone is working on it; it must be complete before the draft is submitted.
+- Everything in the editor can be done with the keyboard, including adding, moving and removing sections.
 
 ### Drafts and merging
 
@@ -196,7 +197,7 @@ These are the acceptance-level rules for the product, grouped by area.
 - Submitting freezes the draft exactly as it will be published. Approvals apply to that frozen version only. Submitting the same draft again replaces its pending submission and restarts the workflow.
 - If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals; a merge that needed conflict resolution restarts the workflow.
 - A submission publishes only if it's based on the current live release, so a final approval can never overwrite a release that went live during review.
-- Pre-flight must pass before submitting: no placeholders left, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
+- Pre-flight must pass before submitting: no placeholders left, every required field filled and at its minimum length, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
 - A publish is live worldwide within about a minute. Every release is kept.
 - Rollback without approval undoes only the most recent publish, and takes about a minute. An older release comes back only as a draft, through the site's workflow, and only while its block versions and media are still kept.
 
