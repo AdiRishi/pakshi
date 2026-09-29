@@ -1,7 +1,7 @@
 import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
-import { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
+import { type BlockInstance, PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
 import { Menus, SiteSettings } from "@repo/contracts/site";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { Surface } from "@repo/tokens";
@@ -76,4 +76,20 @@ export const fixtureTree = (entry: (typeof blockFixtures)[number]): BlockTree =>
       ]),
     ),
   };
+};
+
+/** A block tree as the flat instances a page stores: the block, then each of its items. */
+export const flattenTree = (tree: BlockTree): ReadonlyArray<readonly [BlockId, BlockInstance]> => {
+  const { id, slots, ...block } = tree;
+  const items = Object.values(slots ?? {}).flat();
+  const root: BlockInstance =
+    slots === undefined
+      ? block
+      : {
+          ...block,
+          slots: Object.fromEntries(
+            Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
+          ),
+        };
+  return [[id, root], ...items.map(({ id: itemId, ...item }) => [itemId, item] as const)];
 };

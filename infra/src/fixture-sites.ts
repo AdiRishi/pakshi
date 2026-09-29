@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import { blockFixtures, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
+import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
 import {
   BlockId,
   type BlockType,
@@ -8,8 +8,7 @@ import {
   SiteId,
   SnapshotId,
 } from "@repo/contracts/ids";
-import type { BlockTree } from "@repo/contracts/ops";
-import { type BlockInstance, PageDocument } from "@repo/contracts/page";
+import { PageDocument } from "@repo/contracts/page";
 import { contentHash, SnapshotManifest } from "@repo/contracts/snapshot";
 import { harbour } from "@repo/tokens";
 import { Schema } from "effect";
@@ -18,22 +17,6 @@ import { Schema } from "effect";
 export const fixturesPath = "/";
 
 const alphanumeric = (value: string) => value.replace(/[^A-Za-z0-9]/g, "");
-
-/** A block tree as the flat instances a page stores. */
-const flatten = (tree: BlockTree): ReadonlyArray<readonly [BlockId, BlockInstance]> => {
-  const { id, slots, ...block } = tree;
-  const items = Object.values(slots ?? {}).flat();
-  const root: BlockInstance =
-    slots === undefined
-      ? block
-      : {
-          ...block,
-          slots: Object.fromEntries(
-            Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
-          ),
-        };
-  return [[id, root], ...items.map(({ id: itemId, ...item }) => [itemId, item] as const)];
-};
 
 /**
  * The sites that show every block fixture, for the checks that the editor's
@@ -107,7 +90,7 @@ export const fixtureSites = async () => {
                     : "This site's header and footer fixtures, which the first fixture site can't show.",
               },
               root: shown.map((tree) => tree.id),
-              blocks: Object.fromEntries(shown.flatMap(flatten)),
+              blocks: Object.fromEntries(shown.flatMap(flattenTree)),
             }
           : { ...entry, schema: "pakshi.page/1", root: [], blocks: {} },
       );
@@ -121,7 +104,7 @@ export const fixtureSites = async () => {
       const parts = {
         header: header.id,
         footer: footer.id,
-        blocks: Object.fromEntries([...flatten(header), ...flatten(footer)]),
+        blocks: Object.fromEntries([header, footer].flatMap(flattenTree)),
         menus: fixtureSite.menus,
       };
       // The IDs follow the content, so a changed fixture is a new release, as a publish
