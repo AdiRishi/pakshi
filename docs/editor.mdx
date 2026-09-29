@@ -242,6 +242,8 @@ Use existing packages where the job has clear edges, and pin exact versions:
 
 **No dependency holds its own copy of page state.** The one exception is a rich text field's value inside its TipTap editor. That is allowed because a field is one value with one editor, and remote changes reach it only through the minimal-transaction path. Puck broke this rule, and most of its integration problems followed from it.
 
+To read a dependency's code at the version in use, such as TipTap or dnd-kit, clone it into a temporary directory outside the repository. Only Effect is vendored under `.repos/`.
+
 ## Testing
 
 - **The local copy** is tested through the editor's public interface against an in-process fake `SiteDoc` that runs the real document module. The fake stands in for the connection only.

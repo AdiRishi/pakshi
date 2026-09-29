@@ -31,6 +31,11 @@ Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing.
 `.repos/effect/LLMS.md` and inspect the matching version there before choosing
 an API or project idiom.
 
+Only Effect is vendored, because its patterns are hard to get right without
+the source. To read another dependency's source, clone it at the version in
+use into a temporary directory outside the repository. Don't add it to
+`.repos/` or `scripts/lib/reference-repos.ts`.
+
 <!-- BEGIN:turborepo-agent-rules -->
 
 # This is NOT the Turborepo you know
