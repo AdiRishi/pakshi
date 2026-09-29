@@ -1,7 +1,7 @@
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId } from "@repo/contracts/ids";
 import type { BatchError, MetaField, Op, Target } from "@repo/contracts/ops";
-import { PagePath } from "@repo/contracts/page";
+import { PagePath, type PostMeta } from "@repo/contracts/page";
 import type { Surface } from "@repo/tokens";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -179,6 +179,143 @@ function MetaText(props: {
   );
 }
 
+/** Sets a meta field of the page being edited, keeping the errors that come back. */
+const useSetMeta = (field: MetaField) => {
+  const store = useStore();
+  const page = useEditorState((state) => state.page);
+  const [errors, setErrors] = useState<ReadonlyArray<{ readonly message: string }>>([]);
+  const set = (value: Schema.Json | undefined, burst: string | null = null) => {
+    const found = store.run(
+      [
+        value === undefined
+          ? { op: "setMeta", page, field }
+          : { op: "setMeta", page, field, value },
+      ],
+      burst,
+    );
+    setErrors(found.map((error) => ({ message: error.message })));
+  };
+  return { set, errors, burst: `meta:${page}:${field}`, endBurst: () => store.endBurst() };
+};
+
+function PostDate(props: { readonly value: string }) {
+  const id = useId();
+  const { set, errors } = useSetMeta("date");
+  return (
+    <Field data-invalid={errors.length > 0 || undefined}>
+      <FieldLabel htmlFor={id}>Date</FieldLabel>
+      <Input
+        id={id}
+        type="date"
+        value={props.value}
+        required
+        onChange={(event) => {
+          // Clearing a date input gives an empty value, and a post always has a date.
+          if (event.target.value !== "") set(event.target.value);
+        }}
+      />
+      <FieldDescription>Blog lists show posts newest first.</FieldDescription>
+      <FieldError errors={[...errors]} />
+    </Field>
+  );
+}
+
+/** A post's tags, typed separated by commas and saved when the field is left. */
+function PostTags(props: { readonly value: ReadonlyArray<string> }) {
+  const id = useId();
+  const { set, errors } = useSetMeta("tags");
+  const [typed, setTyped] = useState(props.value.join(", "));
+  const save = () => {
+    const tags = [
+      ...new Set(
+        typed
+          .split(",")
+          .map((tag) => tag.trim())
+          .filter((tag) => tag !== ""),
+      ),
+    ];
+    if (tags.join(", ") !== props.value.join(", ")) set(tags);
+  };
+  return (
+    <Field data-invalid={errors.length > 0 || undefined}>
+      <FieldLabel htmlFor={id}>Tags</FieldLabel>
+      <Input
+        id={id}
+        value={typed}
+        onChange={(event) => setTyped(event.target.value)}
+        onBlur={save}
+        onKeyDown={(event) => {
+          if (event.key === "Enter") save();
+        }}
+      />
+      <FieldDescription>Separate tags with commas.</FieldDescription>
+      <FieldError errors={[...errors]} />
+    </Field>
+  );
+}
+
+/** A post's cover image, chosen from the library, with alt text for where it's shown. */
+function PostCover(props: { readonly value: PostMeta["cover"] }) {
+  const { media, mediaSrc } = useServices();
+  const { set, errors, burst, endBurst } = useSetMeta("cover");
+  const altId = useId();
+  const cover = props.value;
+  return (
+    <FieldSet>
+      <div className="flex items-center justify-between gap-2">
+        <FieldLegend variant="label">
+          Cover image <span className="font-normal text-muted-foreground">Optional</span>
+        </FieldLegend>
+        {cover !== undefined && (
+          <Button variant="ghost" size="xs" onClick={() => set(undefined)}>
+            Remove
+          </Button>
+        )}
+      </div>
+      <FieldDescription>Shown with the post in blog lists and when it's shared.</FieldDescription>
+      <ul className="grid grid-cols-4 gap-2" aria-label="Library">
+        {media.map((file) => (
+          <li key={file.id}>
+            <button
+              type="button"
+              aria-pressed={cover?.id === file.id}
+              aria-label={file.alt === "" ? file.id : file.alt}
+              className="block aspect-square w-full overflow-hidden rounded-md border-2 border-transparent focus-visible:border-ring focus-visible:outline-none aria-pressed:border-ring"
+              onClick={() => {
+                if (cover?.id !== file.id)
+                  set(
+                    file.alt === ""
+                      ? { $ref: "media", id: file.id }
+                      : { $ref: "media", id: file.id, alt: file.alt },
+                  );
+              }}
+            >
+              <img src={mediaSrc(file.id)} alt="" className="size-full object-cover" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      {cover !== undefined && (
+        <Field>
+          <FieldLabel htmlFor={altId}>Alt text</FieldLabel>
+          <Input
+            id={altId}
+            value={cover.alt ?? ""}
+            maxLength={250}
+            onChange={(event) => set({ ...cover, alt: event.target.value }, burst)}
+            onBlur={endBurst}
+          />
+          <FieldDescription>
+            Say what the image shows for people who can't see it. Leave it empty if it's only
+            decoration.
+          </FieldDescription>
+        </Field>
+      )}
+      <FieldError errors={[...errors]} />
+    </FieldSet>
+  );
+}
+
 const isPagePath = Schema.is(PagePath);
 
 /** The page's address, saved once it's a valid address that no other page has. */
@@ -256,6 +393,7 @@ function PageSettings() {
       </Section>
       {page.type === "post" && (
         <Section title="Post">
+          <PostDate value={page.meta.date} />
           <MetaText
             field="author"
             label="Author"
@@ -271,6 +409,8 @@ function PageSettings() {
             multiline
             description="Shown in blog lists."
           />
+          <PostTags key={page.meta.tags.join(",")} value={page.meta.tags} />
+          <PostCover value={page.meta.cover} />
         </Section>
       )}
       <p className="border-t px-5 py-4 text-sm text-muted-foreground">
