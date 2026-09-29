@@ -22,7 +22,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [1. Skeleton](#1-skeleton)
 - [x] [2. Editing content](#2-editing-content)
 - [x] [3. Editing structure](#3-editing-structure)
-- [ ] [4. Live co-editing](#4-live-co-editing)
+- [x] [4. Live co-editing](#4-live-co-editing)
 - [ ] [5. Publishing and merging](#5-publishing-and-merging)
 - [ ] [6. Approvals, sharing and previews](#6-approvals-sharing-and-previews)
 - [ ] [7. The agent](#7-the-agent)
@@ -122,7 +122,8 @@ Several people and their presence in one draft, and no one loses their place whe
 - In a scripted two-browser session on one draft, every change is either applied or its author is told.
 - Each rule for remote changes has a browser test that fails without it.
 - Undo in one browser never removes the other person's edits.
-- Removing a person's permission stops their next batch.
+
+The check that removing a person's permission stops their next batch moved to checkpoint 10, which adds the grant changes that cause it ([decision 041](/decision-log#decision-041)).
 
 **Proves:** live co-editing in the editor.
 
@@ -253,7 +254,7 @@ Finish access control, safety and operations, then run real sites on Pakshi.
 
 **Build:**
 
-- The [permissions](/product-spec#roles-and-permissions) screens: members, grants, custom roles, overrides and the delegation rule.
+- The [permissions](/product-spec#roles-and-permissions) screens: members, grants, custom roles, overrides and the delegation rule. Each change tells the `SiteDoc`s it affects to reload the permissions their live connections hold ([decision 041](/decision-log#decision-041)).
 - The audit log's viewer, with every audited action recorded.
 - Pre-flight's [accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
 - The content security policy on every site.
@@ -266,6 +267,7 @@ Finish access control, safety and operations, then run real sites on Pakshi.
 **Done when:**
 
 - Delegation tests show no one can grant a permission they don't hold or a scope they don't control.
+- Removing a person's permission stops their next batch.
 - The restore drill has been run, and its steps are written down.
 - A security review has passed.
 - Every success metric is being recorded.

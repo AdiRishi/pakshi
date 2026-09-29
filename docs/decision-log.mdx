@@ -9,6 +9,12 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status            |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 046 | Someone typing in a replaced field is told when they stop                          | 2026-09-30 | Accepted          |
+| 045 | Remote changes wait for composition, and the canvas keeps the view in place        | 2026-09-30 | Accepted          |
+| 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted          |
+| 043 | Live connections catch up from the batch log                                       | 2026-09-30 | Accepted          |
+| 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted          |
+| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Accepted          |
 | 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted          |
 | 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted          |
 | 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted          |
@@ -16,8 +22,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted          |
 | 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted          |
 | 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Accepted          |
-| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Accepted          |
-| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Accepted          |
+| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Amended by 042    |
+| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Superseded by 043 |
 | 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted          |
 | 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted          |
 | 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted          |
@@ -49,6 +55,56 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Accepted          |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted          |
+
+## 046 — Someone typing in a replaced field is told when they stop [#decision-046]
+
+**Context.** The later write to a field wins, and its earlier writer is told. When two people type in one field, each batch replaces the other person's, several times a second. A notice for each would be noise, but staying quiet while someone types left whoever stopped second never knowing they'd lost.
+
+**Decision.** A person whose write is replaced is told at once, unless they have an unconfirmed write to that field, which will replace it in turn. If they're still typing in the field, the notice waits until they stop, and is dropped if they type over the replacement, because then the other person is told.
+
+**Consequences.** Whoever ends up replaced hears it once. The typing marker in presence remains the way people avoid typing in one field together.
+
+## 045 — Remote changes wait for composition, and the canvas keeps the view in place [#decision-045]
+
+**Context.** The editor spec's rules say nothing is written into a field while an input method composes, and the change applies when composition ends. A field's value is replaced whole, so applying the stored value then would drop what was composed, and saving the composed value would drop the change. The rules also say the view stays put when content grows above it. Chrome anchors scrolling on its own and Safari doesn't, so a test in Chrome passed without the editor doing anything.
+
+**Decision.** During composition a field saves nothing and takes no remote change. When it ends, a change that arrived meanwhile is made again around what was composed: in plain text by moving the composed splice onto the new value, in rich text by mapping the change's steps through the composition's own. The result is saved as the person's edit. The canvas turns the browser's scroll anchoring off, and before each remote change notes the focused element or the first field or block in view, then scrolls by however far it moved. Settings panel text inputs are uncontrolled, like the canvas's fields, so a remote change keeps their caret too.
+
+**Consequences.** Every browser behaves the same, and each rule has a browser test that fails without it.
+
+## 044 — Studio forwards live connections before TanStack Start [#decision-044]
+
+**Context.** The design passes Studio's WebSocket to `studio-api` over the service binding, which Cloudflare doesn't document. TanStack Start's request handling serves pages and server functions, and runs its responses through its own middleware.
+
+**Decision.** Studio's server entry, `apps/studio/src/server.ts`, sends `/api/live/{site}` to `studio-api` unchanged, before TanStack Start sees it. `studio-api` refuses a connection from another origin, checks the session and `page.edit`, and passes the socket to the site's `SiteDoc` with the person and their permissions in a header it sets itself, replacing any the browser sent.
+
+**Consequences.** The passthrough works in the dev stack's local runtime, from the browser through both Workers to `SiteDoc`. The agent's chat panel in checkpoint 7 can take the same route.
+
+## 043 — Live connections catch up from the batch log [#decision-043]
+
+**Context.** [Decision 032](#decision-032) sent one batch at a time over RPC until live co-editing. A live connection drops and comes back, and the editor must neither miss a batch nor apply one twice.
+
+**Decision.** The editor still opens a draft from Studio RPC. Every connection then starts with Sync and the editor's revision, and `SiteDoc` answers with the batches committed since, from its batch log, or with the whole draft when the editor is more than 500 batches behind. The editor sends every batch `SiteDoc` hasn't confirmed, in order, without waiting on each, and sends them again on each new connection; `SiteDoc` answers a batch it already committed with Known. Broadcasts carry revisions, so the editor skips one it has and asks for a sync after a gap. `SiteDoc` handles live messages and commits one at a time, so each commit's broadcast leaves before the next commit. Studio's page list still commits over RPC, and `SiteDoc` broadcasts those commits too.
+
+**Rejected.** Sending the whole draft on every connection, which grows with the site; letting PartySocket buffer messages while closed, which would send them a second time after the editor's own resend.
+
+**Consequences.** A property test with three editors making random edits, undos and reconnects ends with every editor showing `SiteDoc`'s draft.
+
+## 042 — Undo passes over parts someone else wrote since [#decision-042]
+
+**Context.** [Decision 033](#decision-033) left the undo rule for live co-editing: an undo applies only where its author's write is still the latest. `SiteDoc` has to know that for every field and block an undo touches, including after it restarts.
+
+**Decision.** `SiteDoc` keeps the latest writer of each part of a draft in a `writes` table, written in the same transaction as the batch. A part is a field or a part of one, a block's variant, surface or place, a whole block with its items, or a page's meta field, address or whole page. A write replaces the records below its part. An undo batch is marked as one, and `SiteDoc` applies each of its ops whose part is still its author's latest and still exists, and passes over the rest. Redo goes the same way. The broadcast carries the ops that applied, the positions of those passed over, and the people whose writes a value change replaced, who are told. The rule is the document module's `commitBatch`, which the editor's tests run too.
+
+**Consequences.** Undo never erases someone else's change, and says what it left. The table grows with the parts of a draft, not with its history.
+
+## 041 — Permission changes reach live connections with the permissions screens [#decision-041]
+
+**Context.** Checkpoint 4 asked that removing a person's permission stop their next batch. Nothing changes a grant until the permissions screens in checkpoint 10, so the code that tells `SiteDoc` about a change would have no caller.
+
+**Decision.** `studio-api` finds the person's permissions on the site when it opens their live connection. `SiteDoc` keeps them on the connection and checks every batch against them, with no D1 read. Checkpoint 10's grant and override changes tell the `SiteDoc`s they affect to reload them, and its checks include a removed permission stopping the next batch.
+
+**Consequences.** Until checkpoint 10, a permission removed while someone is connected lasts until their connection reopens.
 
 ## 040 — Dragging is for pointers; the keyboard moves blocks with commands [#decision-040]
 
