@@ -1,0 +1,10 @@
+{
+  "name": "@repo/brand",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Pakshi's own logos, marks and icons, for Studio, the docs and Pakshi's emails. Sites carry their brand's identity instead.",
+  "type": "module",
+  "exports": {
+    "./*": "./assets/*"
+  }
+}
