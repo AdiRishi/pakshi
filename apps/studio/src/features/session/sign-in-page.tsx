@@ -19,7 +19,7 @@ export function SignInPage(props: { readonly organizationName: string; readonly 
         aria-label="About Pakshi"
         className="hidden flex-col bg-linear-to-b from-primary/70 via-primary/40 to-accent px-14 pt-10 pb-32 lg:flex lg:w-1/2"
       >
-        <Logo inverse />
+        <Logo />
         <p className="mt-auto max-w-xl text-4xl leading-tight font-semibold tracking-tight">
           Pakshi is where {props.organizationName} teams build and update their websites.
         </p>

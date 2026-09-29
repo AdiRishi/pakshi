@@ -446,6 +446,9 @@ importers:
       '@repo/blocks':
         specifier: workspace:*
         version: link:../../packages/blocks
+      '@repo/brand':
+        specifier: workspace:*
+        version: link:../../packages/brand
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
@@ -665,6 +668,8 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/brand: {}
 
   packages/contracts:
     dependencies:

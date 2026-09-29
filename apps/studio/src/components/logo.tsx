@@ -1,19 +1,26 @@
+import logo from "@repo/brand/logo.svg?url";
+import mark from "@repo/brand/mark.svg?url";
 import { cn } from "cn";
 
-/** Pakshi's bird mark and wordmark. `inverse` puts the mark on a card-colored tile. */
-export const Logo = ({ inverse = false }: { readonly inverse?: boolean }) => (
-  <span className="flex items-center gap-2.5">
-    <svg viewBox="0 0 30 30" aria-hidden="true" className="size-8">
-      <rect width="30" height="30" rx="9" className={cn(inverse ? "fill-card" : "fill-primary")} />
-      <path
-        d="M7 18C10 12.5 12.5 12 15 16C17.5 12 20 12.5 23 18"
-        className="stroke-foreground"
-        strokeWidth="2.4"
-        fill="none"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-    <span className="text-lg font-bold tracking-tight">pakshi</span>
-  </span>
-);
+/**
+ * Pakshi's logo: the bird and the wordmark, or the bird alone where space is
+ * short. Both are drawn for light backgrounds.
+ */
+export const Logo = ({
+  variant = "full",
+  className,
+}: {
+  readonly variant?: "full" | "mark";
+  readonly className?: string;
+}) =>
+  variant === "full" ? (
+    <img
+      src={logo}
+      alt="Pakshi"
+      width={1200}
+      height={360}
+      className={cn("h-8 w-auto", className)}
+    />
+  ) : (
+    <img src={mark} alt="Pakshi" width={1024} height={1024} className={cn("size-8", className)} />
+  );
