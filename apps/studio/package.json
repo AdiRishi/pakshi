@@ -10,9 +10,8 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests"
   },
   "dependencies": {
-    "@base-ui/react": "catalog:",
-    "@fontsource-variable/onest": "catalog:",
     "@repo/contracts": "workspace:*",
+    "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-devtools": "catalog:",
     "@tanstack/react-query": "catalog:",
@@ -20,14 +19,12 @@
     "@tanstack/react-router-devtools": "catalog:",
     "@tanstack/react-router-ssr-query": "catalog:",
     "@tanstack/react-start": "catalog:",
-    "class-variance-authority": "catalog:",
     "cn": "catalog:",
     "effect": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
-    "tailwindcss": "catalog:",
-    "tw-animate-css": "catalog:"
+    "tailwindcss": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",

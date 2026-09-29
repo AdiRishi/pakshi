@@ -1,1 +1,1 @@
-import "../src/global-styles/tailwind.css";
+import "@repo/ui/globals.css";

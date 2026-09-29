@@ -3,7 +3,7 @@ import { type QueryClient } from "@tanstack/react-query";
 import { HeadContent, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 
-import appCss from "@/global-styles/tailwind.css?url";
+import appCss from "@repo/ui/globals.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({

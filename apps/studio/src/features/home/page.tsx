@@ -1,19 +1,15 @@
 import type { Viewer } from "@repo/contracts/studio";
-import { Link } from "@tanstack/react-router";
-import { GlobeIcon, HouseIcon, LogOutIcon } from "lucide-react";
-
-import { Logo } from "@/components/logo";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
+import { Button } from "@repo/ui/components/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import {
   Empty,
   EmptyDescription,
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@/components/ui/empty";
-import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
+} from "@repo/ui/components/empty";
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@repo/ui/components/item";
 import {
   Sidebar,
   SidebarContent,
@@ -25,7 +21,11 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-} from "@/components/ui/sidebar";
+} from "@repo/ui/components/sidebar";
+import { Link } from "@tanstack/react-router";
+import { GlobeIcon, HouseIcon, LogOutIcon } from "lucide-react";
+
+import { Logo } from "@/components/logo";
 
 const initials = (name: string) =>
   name
