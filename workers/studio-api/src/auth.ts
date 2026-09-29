@@ -1,9 +1,7 @@
+import { identityProviderId } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { betterAuth } from "better-auth";
 import { genericOAuth } from "better-auth/plugins/generic-oauth";
-
-/** Better Auth's ID for the organization's identity provider. */
-export const identityProviderId = "organization";
 
 export const authBasePath = "/api/auth";
 

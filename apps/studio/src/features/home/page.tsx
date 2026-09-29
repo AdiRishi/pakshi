@@ -1,5 +1,5 @@
 import type { Viewer } from "@repo/contracts/studio";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 
 import { Logo } from "@/components/logo";
 import { authClient } from "@/features/session/auth-client";
@@ -13,8 +13,10 @@ const initials = (name: string) =>
 
 export function HomePage({ viewer }: { readonly viewer: Viewer }) {
   const navigate = useNavigate();
+  const router = useRouter();
   const signOut = async () => {
     await authClient.signOut();
+    await router.invalidate();
     await navigate({ to: "/sign-in" });
   };
   const [primaryRole] = viewer.roles;

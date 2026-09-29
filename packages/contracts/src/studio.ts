@@ -3,6 +3,9 @@ import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
 import { SiteId } from "./ids.ts";
 
+/** Better Auth's ID for the organization's identity provider, used by sign-in on both sides. */
+export const identityProviderId = "organization";
+
 /** The person a Studio request is made for. */
 export const Person = Schema.Struct({
   id: Schema.String,
