@@ -12,4 +12,8 @@ export default defineConfig({
     accent: { light: "#0f766e", dark: "#2dd4bf" },
     mode: "system",
   },
+  deployment: {
+    site: "https://adirishi.github.io",
+    base: "/pakshi",
+  },
 });
