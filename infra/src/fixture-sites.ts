@@ -14,8 +14,8 @@ import { contentHash, SnapshotManifest } from "@repo/contracts/snapshot";
 import { harbour } from "@repo/tokens";
 import { Schema } from "effect";
 
-/** The page on each fixture site that shows its block fixtures. */
-export const fixturesPath = "/fixtures";
+/** Each fixture site shows its block fixtures on its home page. */
+export const fixturesPath = "/";
 
 const alphanumeric = (value: string) => value.replace(/[^A-Za-z0-9]/g, "");
 
@@ -92,26 +92,25 @@ export const fixtureSites = async () => {
       if (header === undefined || footer === undefined)
         throw new Error("Blocks need a header and a footer fixture.");
       const shown = index === 0 ? [...sections, ...items] : [];
-      const documents = [
-        ...fixtureSite.pages.map((entry) => ({
-          ...entry,
-          schema: "pakshi.page/1",
-          root: [],
-          blocks: {},
-        })),
-        {
-          schema: "pakshi.page/1",
-          id: "pg_fixtures",
-          type: "page",
-          path: fixturesPath,
-          meta: {
-            title: "Block fixtures",
-            description: "Every block fixture, as sites renders it.",
-          },
-          root: shown.map((tree) => tree.id),
-          blocks: Object.fromEntries(shown.flatMap(flatten)),
-        },
-      ];
+      const site = { id: SiteId.make(`site_fixtures${number}`), name: `Block fixtures ${number}` };
+      // The fixtures' other pages are empty and exist so their links and blog lists resolve.
+      const documents = fixtureSite.pages.map((entry) =>
+        entry.path === fixturesPath
+          ? {
+              ...entry,
+              schema: "pakshi.page/1",
+              meta: {
+                title: site.name,
+                description:
+                  index === 0
+                    ? "Every block fixture, for the checks that the editor renders as sites does."
+                    : "This site's header and footer fixtures, which the first fixture site can't show.",
+              },
+              root: shown.map((tree) => tree.id),
+              blocks: Object.fromEntries(shown.flatMap(flatten)),
+            }
+          : { ...entry, schema: "pakshi.page/1", root: [], blocks: {} },
+      );
       const pages = await Promise.all(
         documents.map(async (document) => {
           const page = Schema.decodeUnknownSync(PageDocument)(document);
@@ -119,19 +118,24 @@ export const fixtureSites = async () => {
           return { page, json, hash: await contentHash(json) };
         }),
       );
-      const site = { id: SiteId.make(`site_fixtures${number}`), name: `Block fixtures ${number}` };
-      const snapshot = SnapshotId.make(`snap_fixtures${number}`);
+      const parts = {
+        header: header.id,
+        footer: footer.id,
+        blocks: Object.fromEntries([...flatten(header), ...flatten(footer)]),
+        menus: fixtureSite.menus,
+      };
+      // The IDs follow the content, so a changed fixture is a new release, as a publish
+      // would be, and sites' page cache, keyed by release, serves it at once.
+      const version = (
+        await contentHash({ pages: pages.map(({ hash }) => hash), parts, name: site.name })
+      ).slice(0, 12);
+      const snapshot = SnapshotId.make(`snap_fixtures${number}${version}`);
       const manifest = Schema.decodeUnknownSync(SnapshotManifest)({
         schema: "pakshi.snapshot/1",
         id: snapshot,
         site: site.id,
-        settings: fixtureSite.settings,
-        parts: {
-          header: header.id,
-          footer: footer.id,
-          blocks: Object.fromEntries([...flatten(header), ...flatten(footer)]),
-          menus: fixtureSite.menus,
-        },
+        settings: { name: site.name },
+        parts,
         forms: fixtureSite.forms,
         lockfile,
         theme: harbour,
@@ -150,10 +154,10 @@ export const fixtureSites = async () => {
         /** The host the site answers at, beside the Sites Worker's own. */
         host: (sitesHost: string) => `fixtures-${number}.${sitesHost}`,
         snapshot,
-        release: ReleaseId.make(`rel_fixtures${number}`),
+        release: ReleaseId.make(`rel_fixtures${number}${version}`),
         manifest,
         pages,
-        page: PageId.make("pg_fixtures"),
+        page: PageId.make("pg_home"),
       };
     }),
   );
