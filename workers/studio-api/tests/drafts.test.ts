@@ -67,7 +67,11 @@ const drafts = Effect.provide(
   Layer.fresh(SiteDrafts.layer),
 );
 
-const batch = (id: string, ops: typeof Batch.Encoded.ops) => Schema.decodeSync(Batch)({ id, ops });
+const batch = (id: string, ops: typeof Batch.Encoded.ops, undo = false) =>
+  Schema.decodeSync(Batch)({ id, ops, undo });
+
+const sam = { id: "user_sam", name: "Sam Okafor" };
+const meera = { id: "user_meera", name: "Meera Kapoor" };
 
 const setHeading = (id: string, heading: string) =>
   batch(id, [
@@ -90,9 +94,9 @@ it.effect("a site's first draft starts from its live release", () =>
 it.effect("a committed batch survives the object restarting", () =>
   Effect.gen(function* () {
     const first = yield* drafts;
-    expect(yield* first.applyBatch("user_sam", setHeading("bat_one", "Build and sail"))).toEqual({
+    expect(yield* first.applyBatch(sam, setHeading("bat_one", "Build and sail"))).toMatchObject({
       status: "committed",
-      revision: 1,
+      commit: { batch: { id: "bat_one", revision: 1, actor: sam } },
     });
     const restarted = yield* (yield* drafts).draft;
     expect(restarted.revision).toBe(1);
@@ -103,10 +107,10 @@ it.effect("a committed batch survives the object restarting", () =>
 it.effect("a batch sent twice applies once", () =>
   Effect.gen(function* () {
     const store = yield* drafts;
-    yield* store.applyBatch("user_sam", setHeading("bat_one", "Build and sail"));
-    yield* store.applyBatch("user_sam", setHeading("bat_two", "Sail"));
-    expect(yield* store.applyBatch("user_sam", setHeading("bat_one", "Build and sail"))).toEqual({
-      status: "committed",
+    yield* store.applyBatch(sam, setHeading("bat_one", "Build and sail"));
+    yield* store.applyBatch(sam, setHeading("bat_two", "Sail"));
+    expect(yield* store.applyBatch(sam, setHeading("bat_one", "Build and sail"))).toEqual({
+      status: "duplicate",
       revision: 1,
     });
     expect(heading(yield* store.draft)).toBe("Sail");
@@ -116,7 +120,7 @@ it.effect("a batch sent twice applies once", () =>
 it.effect("a rejected batch changes nothing and says why", () =>
   Effect.gen(function* () {
     const store = yield* drafts;
-    const outcome = yield* store.applyBatch("user_sam", setHeading("bat_long", "x".repeat(81)));
+    const outcome = yield* store.applyBatch(sam, setHeading("bat_long", "x".repeat(81)));
     expect(outcome).toMatchObject({
       status: "rejected",
       errors: [{ rule: "value", path: ["heading"] }],
@@ -131,7 +135,7 @@ it.effect("created and deleted pages are stored as their own rows", () =>
   Effect.gen(function* () {
     const store = yield* drafts;
     yield* store.applyBatch(
-      "user_sam",
+      sam,
       batch("bat_create", [
         {
           op: "createPage",
@@ -151,10 +155,65 @@ it.effect("created and deleted pages are stored as their own rows", () =>
       "pg_home",
       "pg_visit",
     ]);
-    yield* store.applyBatch(
-      "user_sam",
-      batch("bat_delete", [{ op: "deletePage", page: "pg_home" }]),
-    );
+    yield* store.applyBatch(sam, batch("bat_delete", [{ op: "deletePage", page: "pg_home" }]));
     expect(Object.keys((yield* (yield* drafts).draft).pages)).toEqual(["pg_visit"]);
+  }).pipe(Effect.provide(storage)),
+);
+
+it.effect("an editor behind the draft catches up on the batches it missed, in order", () =>
+  Effect.gen(function* () {
+    const store = yield* drafts;
+    yield* store.applyBatch(sam, setHeading("bat_one", "Build"));
+    yield* store.applyBatch(meera, setHeading("bat_two", "Sail"));
+    const restarted = yield* drafts;
+    expect(yield* restarted.catchUp(1)).toEqual({
+      _tag: "Batches",
+      batches: [
+        {
+          id: "bat_two",
+          revision: 2,
+          actor: meera,
+          ops: setHeading("bat_two", "Sail").ops,
+        },
+      ],
+    });
+    expect(yield* restarted.catchUp(2)).toEqual({ _tag: "Batches", batches: [] });
+  }).pipe(Effect.provide(storage)),
+);
+
+it.effect("an editor ahead of the draft gets the whole draft", () =>
+  Effect.gen(function* () {
+    const store = yield* drafts;
+    const catchUp = yield* store.catchUp(7);
+    expect(catchUp._tag).toBe("Draft");
+  }).pipe(Effect.provide(storage)),
+);
+
+it.effect("undo leaves a field someone else wrote to since, after the object restarts", () =>
+  Effect.gen(function* () {
+    const store = yield* drafts;
+    yield* store.applyBatch(sam, setHeading("bat_sam", "Build"));
+    yield* store.applyBatch(meera, setHeading("bat_meera", "Sail"));
+    const restarted = yield* drafts;
+    const undone = yield* restarted.applyBatch(
+      sam,
+      batch("bat_undo", setHeading("bat_x", "Learn by building").ops, true),
+    );
+    expect(undone).toMatchObject({
+      status: "committed",
+      commit: { skipped: [0], batch: { ops: [] } },
+    });
+    expect(heading(yield* restarted.draft)).toBe("Sail");
+  }).pipe(Effect.provide(storage)),
+);
+
+it.effect("a commit names whose write it replaced", () =>
+  Effect.gen(function* () {
+    const store = yield* drafts;
+    yield* store.applyBatch(sam, setHeading("bat_sam", "Build"));
+    expect(yield* store.applyBatch(meera, setHeading("bat_meera", "Sail"))).toMatchObject({
+      status: "committed",
+      commit: { replaced: [{ person: sam.id, op: 0 }] },
+    });
   }).pipe(Effect.provide(storage)),
 );

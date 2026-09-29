@@ -20,6 +20,10 @@
       "types": "./src/ids.ts",
       "default": "./src/ids.ts"
     },
+    "./live": {
+      "types": "./src/live.ts",
+      "default": "./src/live.ts"
+    },
     "./ops": {
       "types": "./src/ops.ts",
       "default": "./src/ops.ts"

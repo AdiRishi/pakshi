@@ -123,7 +123,7 @@ const handlers = (env: StudioApiEnv) =>
                 yield* siteFor(person, site, "page.edit");
                 const doc = yield* siteDoc(env, site);
                 return yield* Effect.tryPromise(async (): Promise<BatchOutcome> =>
-                  doc.applyBatch(person.id, batch),
+                  doc.applyBatch({ id: person.id, name: person.name }, batch),
                 );
               }),
             ),
