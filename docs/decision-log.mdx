@@ -9,19 +9,22 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                     | Date       | Status   |
 | --- | ---------------------------------------------------------------------------- | ---------- | -------- |
-| 021 | No spam protection on forms in the MVP                                       | 2026-09-28 | Accepted |
+| 024 | The site's Durable Object owns approvals and publishing                      | 2026-09-29 | Accepted |
+| 023 | One-click rollback undoes only the latest publish                            | 2026-09-29 | Accepted |
+| 022 | Each site's submissions in their own Durable Object                          | 2026-09-29 | Accepted |
+| 021 | No spam protection on forms in the MVP                                       | 2026-09-29 | Accepted |
 | 020 | Share drafts like documents                                                  | 2026-09-28 | Accepted |
 | 019 | Brand changes reach sites as drafts; no brand locks                          | 2026-09-28 | Accepted |
 | 018 | Media files never change                                                     | 2026-09-28 | Accepted |
 | 017 | Named drafts that merge like branches                                        | 2026-09-28 | Accepted |
-| 016 | Keep all site data: submissions and releases are never deleted automatically | 2026-09-27 | Accepted |
-| 015 | Approval workflows on the organization, a brand or a site                    | 2026-09-28 | Accepted |
+| 016 | Keep all site data: submissions and releases are never deleted automatically | 2026-09-29 | Accepted |
+| 015 | Approval workflows on the organization, a brand or a site                    | 2026-09-29 | Accepted |
 | 014 | Fine-grained permissions, with roles as bundles and per-person overrides     | 2026-09-28 | Accepted |
-| 013 | Integrate Puck through a sync module and a patch; don't fork                 | 2026-09-28 | Accepted |
+| 013 | Integrate Puck through a sync module; don't fork                             | 2026-09-29 | Accepted |
 | 012 | Effect Schema instead of Zod                                                 | 2026-09-27 | Accepted |
 | 011 | Build on application-platform-starter                                        | 2026-09-27 | Accepted |
 | 010 | Workers Paid plan; no Enterprise features, no root domains                   | 2026-09-27 | Accepted |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access              | 2026-09-28 | Accepted |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access              | 2026-09-29 | Accepted |
 | 008 | Agent on the Agents SDK, validated edits only, models chosen per task        | 2026-09-27 | Accepted |
 | 007 | One live, collaborative Durable Object per site, with edits by block ID      | 2026-09-28 | Accepted |
 | 006 | Block versions: v1, v2, v3 for editors, any number live                      | 2026-09-28 | Accepted |
@@ -31,13 +34,41 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 002 | Host on Cloudflare                                                           | 2026-09-27 | Accepted |
 | 001 | Sites pin block versions                                                     | 2026-09-27 | Accepted |
 
+## 024 — The site's Durable Object owns approvals and publishing [#decision-024]
+
+**Context.** Approval progress lived in D1 while the snapshot being approved, merges and the live release lived in `SiteDoc`. An approver could act on a stale D1 view after a merge had restarted the workflow, and two final approvals could both pass the "based on the current live release" check while `SiteDoc` waited on R2.
+
+**Decision.** `SiteDoc` owns submissions and their approval progress, and D1 keeps a copy for dashboards. An approval decision goes to `SiteDoc`, which rejects it if the submission changed since the approver loaded it. Publishing checks approval and the live release again after its last R2 write, then records the new live release. `SiteDoc` is the only writer of the live release to KV; the reconcile job asks it to rewrite and never writes KV itself.
+
+**Consequences.** Approvals, restarts, publishes and rollbacks for a site happen in one order, in one place. The Approvals screen reads a copy that can lag by seconds, but a decision based on it can't take effect if it's stale.
+
+## 023 — One-click rollback undoes only the latest publish [#decision-023]
+
+**Context.** Rolling back to any past release without approval could bring back content that was removed on purpose, such as a page pulled for legal reasons.
+
+**Decision.** One-click rollback, with no approval, undoes the most recent publish and can't be repeated to walk further back. Any older release is restored as a draft, which goes through the site's workflow like any other change.
+
+**Rejected.** Rollback to any release without approval.
+
+**Consequences.** A bad publish is still undone in about a minute. Older content returns only with approval.
+
+## 022 — Each site's submissions in their own Durable Object [#decision-022]
+
+**Context.** One shared D1 `submissions` database, capped at 10 GB, would let a flood on one site's form fill it and break forms on every site. D1 databases can be created through the API, but a Worker reaches D1 only through bindings fixed at deploy time, about 5,000 per Worker, so a database per site would mean a redeploy for every new site or querying through the account API and its rate limit ([D1 limits](https://developers.cloudflare.com/d1/platform/limits/)).
+
+**Decision.** Each site's submissions live in a `SiteSubmissions` Durable Object with SQLite storage, hosted by `sites-api` and bound from `studio-api` for authorized reads. The site's first form post creates it. Form posts over 64 KB are rejected.
+
+**Rejected.** One shared D1 database; a D1 database per site.
+
+**Consequences.** Each site's customer data is isolated, with up to 10 GB and 30-day point-in-time recovery per site, and no provisioning. Nothing can query submissions across sites, which the product doesn't need.
+
 ## 021 — No spam protection on forms in the MVP [#decision-021]
 
 **Context.** The design gave every site its own Turnstile widget, but non-Enterprise accounts are limited to 20 widgets ([plans](https://developers.cloudflare.com/turnstile/plans/)). Honeypots and rate limits add setup and edge cases for little early value.
 
 **Decision.** Forms ship without spam protection. To keep an unprotected form from sending mail to any address a visitor types, forms send no email to submitters; notifications go only to the form's configured addresses.
 
-**Consequences.** Spam can reach the submissions database until protection is added. When it is, one widget covers the sites domain and its subdomains, and custom domains are grouped 10 to a widget.
+**Consequences.** Spam can reach a site's submissions until protection is added, but only that site's ([022](#decision-022)). When it is, one widget covers the sites domain and its subdomains, and custom domains are grouped 10 to a widget.
 
 ## 020 — Share drafts like documents [#decision-020]
 
@@ -71,9 +102,9 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** With one shared draft per site, one person's unfinished page blocks another person's urgent fix or ships with it, and a second submission replaces the first.
 
-**Decision.** A site has one live release and any number of named drafts, each starting from a release. Publishing a draft makes it live, and every other draft is then behind. A draft that's behind must be updated before it can be edited further or submitted. Updating is a three-way merge by block ID and field. Different fields, blocks or pages merge automatically; conflicts (same field on both sides, edit against removal, the same list reordered on both sides) need a person, and a model may suggest a merge for text. A submission under review that merges cleanly keeps its approvals; one that needed a person restarts its workflow.
+**Decision.** A site has one live release and any number of named drafts, each starting from a release. Publishing a draft makes it live, and every other draft is then behind. A draft that's behind must be updated the next time it's opened and before it's submitted. Updating is a three-way merge by block ID and field. Different fields, blocks or pages merge automatically; conflicts (same field on both sides, edit against removal, the same list reordered on both sides) need a person, and a model may suggest a merge for text. A submission under review that merges cleanly keeps its approvals; one that needed a person restarts its workflow.
 
-Four rules keep merges safe. All sides are migrated to the newest block version any of them uses before diffing. The merged draft is validated like a submission, and a failure is a conflict. A submission publishes only if it's based on the current live release. And publishing closes a draft only if nobody edited it after it was submitted.
+Five rules keep merges safe. All sides are migrated to the newest block version any of them uses before diffing. The merged draft is checked for structure, and a failure is a conflict; pre-flight runs only at submission. A submission publishes only if it's based on the current live release. Publishing closes a draft only if nobody edited it after it was submitted. And people already in a draft that falls behind keep working; the update is required the next time it's opened and before it's submitted.
 
 **Rejected.** One draft per site; publishing chosen pages from a shared draft; a draft per page.
 
@@ -85,13 +116,13 @@ Four rules keep merges safe. All sides are migrated to the newest block version 
 
 **Decision.** Nothing deletes submissions or releases automatically. They are kept for as long as the site exists. A single submission, or everything for one person, can be deleted on request.
 
-**Consequences.** Storage grows over time, which D1 and R2 handle comfortably. Rollback can target any earlier release whose block versions and media are still retained ([006](#decision-006), [018](#decision-018)).
+**Consequences.** Storage grows over time, which Durable Objects and R2 handle comfortably. An earlier release can come back while its block versions and media are still retained ([006](#decision-006), [018](#decision-018), [023](#decision-023)).
 
 ## 015 — Approval workflows on the organization, a brand or a site [#decision-015]
 
 **Context.** Review requirements differ between sites and brands, and the people who own a site know them best.
 
-**Decision.** Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none, each naming who can approve (roles or people) and how many approvals it needs. Definitions and each submission's progress are rows in D1; completing the last step publishes. The MVP editor is a list of steps. A visual, node-based editor built with an off-the-shelf flow library can follow, on the same definitions.
+**Decision.** Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none, each naming who can approve (roles or people) and how many approvals it needs. Definitions are rows in D1, and each submission's progress lives in the site's `SiteDoc` ([024](#decision-024)); completing the last step publishes. The MVP editor is a list of steps. A visual, node-based editor built with an off-the-shelf flow library can follow, on the same definitions.
 
 **Rejected.** A fixed cap on approval steps; a general-purpose workflow engine.
 
@@ -105,13 +136,13 @@ Four rules keep merges safe. All sides are migrated to the newest block version 
 
 **Consequences.** One place to reason about access. New features add permissions rather than new checks. Rules such as self-approval are permissions, so admins decide them.
 
-## 013 — Integrate Puck through a sync module and a patch; don't fork [#decision-013]
+## 013 — Integrate Puck through a sync module; don't fork [#decision-013]
 
 **Context.** Live collaboration needs Puck to accept changes from others without losing the user's place or undo. Puck has no collaboration support. Its core is about 24,000 lines of TypeScript under the MIT license, built on a zustand store with a reducer of small actions ([source](https://github.com/puckeditor/puck)).
 
 **Options.** (a) Fork Puck. (b) A sync module on Puck's public API, plus patches where the API falls short. (c) Build our own editor.
 
-**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The biggest gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts; a pnpm patch replaces its history slice and shortcuts, and we offer the change upstream. Smaller gaps, such as fresh IDs on replayed inserts, index-based selection and focused fields that ignore remote changes, are handled in the sync module and covered by the Phase 0 spike.
+**Decision.** (b). Puck already exposes what the sync needs: an `onAction` callback for every local change, small actions (insert, move, remove, replace) we can dispatch for remote changes, a flag to keep them out of its history, and lookup by block ID. Puck's actions address blocks by index, so the sync module converts our ID-based ops using that lookup. The biggest gap is undo, which restores whole-page snapshots, erasing other people's changes, and has hard-wired shortcuts. We take the undo shortcuts in capture-phase key listeners and hide Puck's undo buttons, so no patch should be needed; if the spike shows otherwise, a pnpm patch replaces its history slice. Smaller gaps, such as fresh IDs on replayed inserts, index-based selection and focused fields that ignore remote changes, are handled in the sync module and covered by the Phase 0 spike.
 
 **Rejected.** A fork: we would own drag and drop, the canvas iframe and every field type, and fall behind an actively developed 0.x library. Our own editor: much larger, for no gain in the MVP.
 
@@ -131,7 +162,7 @@ Four rules keep merges safe. All sides are migrated to the newest block version 
 
 **Decision.** Pakshi starts from it: pnpm and Turborepo, Alchemy for all infrastructure and bindings (instead of Wrangler configs), Effect for application services, oxlint and oxfmt with its lint rules, TypeScript 7, Vitest, Playwright, and Blume docs with repository ADRs. Its `apps/web` becomes `apps/studio`, and `apps/sites` is added for Astro.
 
-**Consequences.** A working foundation from day one. Alchemy is a beta dependency pinned (with a patch) by the starter, so upgrades are deliberate. PartyServer and `AIChatAgent` Durable Objects are plain classes, outside the starter's Effect-based Durable Object pattern, which Phase 0 checks.
+**Consequences.** A working foundation from day one. Alchemy is a beta dependency pinned (with a patch) by the starter, so upgrades are deliberate. PartyServer and `AIChatAgent` Durable Objects are plain classes, which a starter-style Effect Worker can't host, so `studio-api` is a plain Worker with its own entry file. Alchemy deletes a Durable Object class's data when the class leaves a Worker, so CI fails if a production plan removes one.
 
 ## 010 — Workers Paid plan; no Enterprise features, no root domains [#decision-010]
 
@@ -145,11 +176,11 @@ Four rules keep merges safe. All sides are migrated to the newest block version 
 
 **Context.** Staff need SSO with the organization's identity provider. Cloudflare Access works at the network edge, which limits how much control Studio has over the sign-in experience and sessions.
 
-**Decision.** Run our own auth with Better Auth in `studio-api`. Its SSO plugin connects to the organization's identity provider over OIDC ([SSO plugin](https://better-auth.com/docs/plugins/sso)). Users, sessions and accounts live in D1 `core`. Previews open through Studio, which gives the preview host a short-lived signed token.
+**Decision.** Run our own auth with Better Auth in `studio-api`. Its `genericOAuth` plugin connects to the organization's one identity provider over OIDC, set in configuration ([Generic OAuth](https://better-auth.com/docs/plugins/generic-oauth)). Users, sessions and accounts live in D1 `core`. Previews open through Studio, which gives the preview host a short-lived signed token.
 
-**Rejected.** SAML: its libraries are Node-only and unproven on Workers.
+**Rejected.** SAML: its libraries are Node-only and unproven on Workers. Better Auth's SSO plugin: it loads those SAML libraries even for OIDC, and some of its features need transactions that D1 doesn't have.
 
-**Consequences.** Full control over the sign-in experience and sessions, but we own the auth code path and its upgrades. The version is pinned at or above the latest security release. The plugin's `resolveUser` and `guardProviderMutation` need transactions that D1 doesn't have, so they stay off.
+**Consequences.** Full control over the sign-in experience and sessions, but we own the auth code path and its upgrades. The version is pinned at 1.7.6 or later, which includes the fixes for its 2026 security advisories.
 
 ## 008 — Agent on the Agents SDK, validated edits only, models chosen per task [#decision-008]
 

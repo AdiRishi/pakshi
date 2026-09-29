@@ -56,6 +56,7 @@ Pakshi has one permission system used everywhere. Studio, the API, the agent and
 | Request a new block                                        |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
 
 - Studio only shows people what they're allowed to do.
+- Org admins hold every permission, so they can grant any role, including Approver.
 - Approving a change you edited needs its own permission, which no default role includes. You edited a change if you changed anything in its draft.
 - The agent acts as its user and can do what they can, except submit and publish. A person always clicks Submit or Publish.
 - The platform team holds org admin and ships blocks through the code repository, not through the app.
@@ -116,13 +117,13 @@ Nine journeys cover the MVP. Each one reuses the same few building blocks: draft
 
 **5. Update a draft that's behind** (editor)
 
-1. When a draft publishes, every other draft on the site is behind. The next person to open a draft that's behind updates it before they can keep editing or submit.
-2. Pakshi merges the published changes into the draft, field by field. Changes to different fields, blocks or pages merge automatically.
-3. A conflict remains only where both sides changed the same field, one side edited a block the other removed, or both reordered the same sections. For each conflict, the editor keeps one side, or accepts a merge the agent suggests for a text field.
+1. When a draft publishes, every other draft on the site is behind. People already working in a draft can keep going. The next person to open it updates it, and it must be updated before it's submitted.
+2. Pakshi merges the published changes into the draft, field by field. Changes to different fields, blocks or pages merge automatically, and so do identical changes made on both sides.
+3. A conflict remains only where both sides changed the same field differently, one side edited a block the other removed, or both reordered the same existing sections. For each conflict, the editor keeps one side, or accepts a merge the agent suggests for a text field.
 
 **6. Roll back** (editor)
 
-Release history lists every publish with who submitted, who approved and when. **Roll back** makes an earlier release live again within about a minute. It needs no approval, because that release was already approved. Drafts are untouched, but they are now behind and update as in journey 5. Rollback reaches any release whose block versions and media are still kept.
+Release history lists every publish with who submitted, who approved and when. **Roll back** undoes the most recent publish: the release that was live before it is live again within about a minute. It needs no approval, because that release was already approved and live. To bring back any older release, the editor restores it as a draft, which goes through the site's workflow like any other change. Drafts are untouched by a rollback, but they are now behind and update as in journey 5.
 
 **7. Upgrade a block or take a brand update** (editor)
 
@@ -156,9 +157,9 @@ These are the acceptance-level rules for the MVP, grouped by area.
 **Drafts and merging**
 
 - A site can have any number of named drafts. Each draft starts from a release. Publishing a draft closes it, unless someone edited it after it was submitted. Then it stays open with those edits, based on the release it just published.
-- When a draft publishes, every other draft on the site is behind. A draft that's behind must be updated before it can be edited further or submitted.
-- Updating merges field by field against the release the draft started from. Only real conflicts need a person: the same field changed on both sides, a block edited on one side and removed on the other, or the same sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
-- If the two sides use different versions of a block, both are brought to the newer version before merging. The merged draft is then checked like a submission, and anything that fails is shown as a conflict, so a merge never produces an invalid page.
+- When a draft publishes, every other draft on the site is behind. People already working in a draft keep going. A draft that's behind must be updated the next time someone opens it, and before it's submitted.
+- Updating merges field by field against the release the draft started from. Identical changes on both sides aren't conflicts, and sections added on both sides are all kept. Only real conflicts need a person: the same field changed differently on both sides, a block edited on one side and removed on the other, or the same existing sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
+- If the two sides use different versions of a block, both are brought to the newer version before merging. The merged draft is then checked for structure (block rules and references), and anything that fails is shown as a conflict, so a merge never produces a broken page. Pre-flight checks, such as no placeholders left, run only at submission.
 
 **Sharing and previews**
 
@@ -177,7 +178,8 @@ These are the acceptance-level rules for the MVP, grouped by area.
 - If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals; a merge that needed conflict resolution restarts the workflow.
 - A submission publishes only if it's based on the current live release, so a final approval can never overwrite a release that went live during review.
 - Pre-flight must pass before submitting: no placeholders left, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
-- A publish is live worldwide within about a minute. Every release is kept. Rolling back to one takes about a minute, as long as its block versions and media are still kept.
+- A publish is live worldwide within about a minute. Every release is kept.
+- Rollback without approval undoes only the most recent publish, and takes about a minute. An older release comes back only as a draft, through the site's workflow, and only while its block versions and media are still kept.
 
 **Blocks and versions**
 
@@ -199,7 +201,8 @@ These are the acceptance-level rules for the MVP, grouped by area.
 - Editors create and edit forms in a draft. Notification addresses are site settings. Each submission keeps the field labels it was sent with, so exports still read correctly after a form changes.
 - A consent checkbox and privacy link are required when a form collects personal data.
 - Each form sends a notification email to its configured addresses. Forms send no email to submitters.
-- Spam protection isn't in the MVP.
+- Spam protection isn't in the MVP. Form posts over 64 KB are rejected.
+- Each site's submissions are stored in their own database, separate from every other site's, so a flood of submissions on one site can't affect another.
 - Submissions are kept for as long as the site exists, as part of its data. A single submission, or everything for one person, can be deleted on request. Every view, export and deletion is logged. The agent never has access to submissions.
 
 **Email**
@@ -241,14 +244,21 @@ Three phases, each ending with clear exit criteria. Durations depend on team siz
 
 ## Success metrics
 
-| Metric              | Definition                                                           | Pilot target             |
-| ------------------- | -------------------------------------------------------------------- | ------------------------ |
-| Time to launch      | Site created → first publish (median)                                | 10 business days or less |
-| Time to change      | Draft created → submitted (median)                                   | 15 minutes or less       |
-| Block requests      | Block requests filed per active site per month                       | Falling month over month |
-| Approval turnaround | Submit → final decision (median)                                     | 1 business day or less   |
-| Agent success       | Agent turns not undone                                               | 75% or more              |
-| Untracked changes   | Live changes not traceable to a publish or rollback in the audit log | 0                        |
+| Metric                | Definition                                                           | Pilot target                |
+| --------------------- | -------------------------------------------------------------------- | --------------------------- |
+| Time to launch        | Site created → first publish (median)                                | 10 business days or less    |
+| Time to change        | Draft created → submitted (median)                                   | 15 minutes or less          |
+| Block requests        | Block requests filed per active site per month                       | Falling month over month    |
+| Approval turnaround   | Submit → final decision (median)                                     | 1 business day or less      |
+| Agent success         | Agent turns not undone                                               | 75% or more                 |
+| Untracked changes     | Live changes not traceable to a publish or rollback in the audit log | 0                           |
+| Agent cost per launch | Model cost from site created → first publish (median)                | Tracked from the first site |
+
+## Open questions for Phase 0
+
+- What header, footer and navigation look like as data: fixed blocks, a menu structure, or both.
+- What unpublishing a page means: removed on the next publish, and whether its address redirects or returns "gone".
+- What deleting a site or a brand does to its releases, submissions, domains and drafts.
 
 ## Settled context
 
