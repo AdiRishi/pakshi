@@ -82,11 +82,14 @@ allowBuilds:
 minimumReleaseAge: 1440
 
 # Effect's release candidates break between versions, but its packages depend on
-# each other with caret ranges, so a fresh resolve can mix them. Keep every
-# Effect package these pull in on the catalog's version.
+# each other with caret ranges, so a fresh resolve can mix them. Hold every
+# Effect package, direct or transitive, to the catalog's version.
 overrides:
+  "@effect/platform-node": "catalog:"
   "@effect/platform-node-shared": "catalog:"
   "@effect/sql-sqlite-do": "catalog:"
+  "@effect/vitest": "catalog:"
+  effect: "catalog:"
 
 peerDependencyRules:
   allowedVersions:
