@@ -142,3 +142,7 @@ export const authorize = (access: Access, permission: Permission, resource: Reso
       defaultRoles[grant.role].permissions.some((held) => held === permission),
   );
 };
+
+/** Every permission a person holds on this thing. */
+export const permissionsOn = (access: Access, resource: Resource) =>
+  Permission.literals.filter((permission) => authorize(access, permission, resource));
