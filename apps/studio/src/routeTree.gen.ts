@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as SignInStartRouteImport } from './routes/sign-in_.start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
@@ -22,6 +23,11 @@ const AuthedRoute = AuthedRouteImport.update({
 const SignInRoute = SignInRouteImport.update({
   id: '/sign-in',
   path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignOutRoute = SignOutRouteImport.update({
+  id: '/sign-out',
+  path: '/sign-out',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedIndexRoute = AuthedIndexRouteImport.update({
@@ -43,11 +49,13 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
   '/sign-in': typeof SignInRoute
+  '/sign-out': typeof SignOutRoute
   '/sign-in/start': typeof SignInStartRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
+  '/sign-out': typeof SignOutRoute
   '/sign-in/start': typeof SignInStartRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -56,19 +64,21 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
+  '/sign-out': typeof SignOutRoute
   '/sign-in_/start': typeof SignInStartRoute
   '/_authed/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-in/start' | '/api/auth/$'
+  fullPaths: '/' | '/sign-in' | '/sign-out' | '/sign-in/start' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/sign-in' | '/sign-in/start' | '/' | '/api/auth/$'
+  to: '/sign-in' | '/sign-out' | '/sign-in/start' | '/' | '/api/auth/$'
   id:
     | '__root__'
     | '/_authed'
     | '/sign-in'
+    | '/sign-out'
     | '/sign-in_/start'
     | '/_authed/'
     | '/api/auth/$'
@@ -77,6 +87,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
   SignInRoute: typeof SignInRoute
+  SignOutRoute: typeof SignOutRoute
   SignInStartRoute: typeof SignInStartRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
@@ -95,6 +106,13 @@ declare module '@tanstack/react-router' {
       path: '/sign-in'
       fullPath: '/sign-in'
       preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-out': {
+      id: '/sign-out'
+      path: '/sign-out'
+      fullPath: '/sign-out'
+      preLoaderRoute: typeof SignOutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/': {
@@ -135,6 +153,7 @@ const AuthedRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
   SignInRoute: SignInRoute,
+  SignOutRoute: SignOutRoute,
   SignInStartRoute: SignInStartRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
 }

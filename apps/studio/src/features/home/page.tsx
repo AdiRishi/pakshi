@@ -1,5 +1,5 @@
 import type { Viewer } from "@repo/contracts/studio";
-import { Link, useNavigate, useRouter } from "@tanstack/react-router";
+import { Link } from "@tanstack/react-router";
 import { GlobeIcon, HouseIcon, LogOutIcon } from "lucide-react";
 
 import { Logo } from "@/components/logo";
@@ -26,7 +26,6 @@ import {
   SidebarMenuItem,
   SidebarProvider,
 } from "@/components/ui/sidebar";
-import { authClient } from "@/features/session/auth-client";
 
 const initials = (name: string) =>
   name
@@ -36,13 +35,6 @@ const initials = (name: string) =>
     .join("");
 
 export function HomePage({ viewer }: { readonly viewer: Viewer }) {
-  const navigate = useNavigate();
-  const router = useRouter();
-  const signOut = async () => {
-    await authClient.signOut();
-    await router.invalidate();
-    await navigate({ to: "/sign-in" });
-  };
   const [primaryRole] = viewer.roles;
   return (
     <SidebarProvider>
@@ -82,10 +74,12 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
               </span>
             </div>
           </div>
-          <Button variant="outline" onClick={() => void signOut()}>
-            <LogOutIcon />
-            Sign out
-          </Button>
+          <form method="post" action="/sign-out" className="flex flex-col">
+            <Button type="submit" variant="outline">
+              <LogOutIcon />
+              Sign out
+            </Button>
+          </form>
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
