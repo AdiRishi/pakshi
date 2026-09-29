@@ -1,0 +1,93 @@
+import * as Alchemy from "alchemy";
+import * as Cloudflare from "alchemy/Cloudflare";
+import * as Effect from "effect/Effect";
+
+import { workerCompatibility, workerObservability } from "./cloudflare-config.ts";
+import { dataPlane } from "./data-plane.ts";
+import { deploymentConfig } from "./deployment-config.ts";
+import { identityProvider } from "./identity.ts";
+import {
+  sitesApiBindings,
+  sitesBindings,
+  studioApiBindings,
+  studioBindings,
+} from "./worker-bindings.ts";
+
+const workerDefaults = {
+  compatibility: workerCompatibility,
+  observability: workerObservability,
+};
+
+/**
+ * Form intake, and the SiteSubmissions Durable Objects. Production retains it
+ * with their data. studio-api binds those objects by this Worker's name, so the
+ * name is fixed per stage rather than generated at deploy time.
+ */
+export const sitesApiName = (stage: string) => `pakshi-sites-api-${stage}`;
+
+export const SitesApi = Effect.gen(function* () {
+  const config = yield* deploymentConfig();
+  return yield* Cloudflare.Worker("SitesApi", {
+    ...workerDefaults,
+    name: sitesApiName(config.stage),
+    main: "../workers/sites-api/src/index.ts",
+    env: sitesApiBindings(config.environment),
+  }).pipe(Alchemy.RemovalPolicy.retain(config.production));
+});
+
+/** Domain logic, sign-in, and the SiteDoc and SiteAgent Durable Objects. */
+export const StudioApi = Effect.gen(function* () {
+  const config = yield* deploymentConfig();
+  yield* SitesApi;
+  const env = yield* studioApiBindings(
+    config.environment,
+    yield* dataPlane,
+    sitesApiName(config.stage),
+    yield* identityProvider,
+  );
+  return yield* Cloudflare.Worker("StudioApi", {
+    ...workerDefaults,
+    main: "../workers/studio-api/src/index.ts",
+    env,
+  }).pipe(Alchemy.RemovalPolicy.retain(config.production));
+});
+
+const memo = (...paths: ReadonlyArray<string>) => ({
+  include: [
+    "**/*",
+    "../../packages/*/src/**",
+    "../../packages/*/package.json",
+    "../../tooling/tsconfig/**",
+    ...paths,
+  ],
+  lockfile: true,
+});
+
+/** Studio, the admin app. */
+export const Studio = Effect.gen(function* () {
+  const config = yield* deploymentConfig();
+  return yield* Cloudflare.Website.Vite("Studio", {
+    ...workerDefaults,
+    rootDir: "../apps/studio",
+    main: "src/worker.ts",
+    workersDev: true,
+    memo: memo(),
+    env: studioBindings(config.environment, yield* StudioApi, yield* identityProvider),
+  });
+});
+
+/**
+ * Every published site and preview, rendered from snapshots. Astro's dev
+ * server resolves a relative root from its own working directory, so the
+ * stack passes an absolute one.
+ */
+export const Sites = Effect.fn("Pakshi.Sites")(function* (rootDir: string) {
+  return yield* Cloudflare.Website.Astro("Sites", {
+    ...workerDefaults,
+    rootDir,
+    workersDev: true,
+    sessionKVBindingName: false,
+    memo: memo(),
+    env: sitesBindings(yield* dataPlane, yield* SitesApi),
+  });
+});

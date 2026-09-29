@@ -1,0 +1,31 @@
+{
+  "name": "@repo/sites",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm --dir ../.. dev",
+    "typecheck": "astro sync && tsc --noEmit"
+  },
+  "dependencies": {
+    "@astrojs/react": "catalog:",
+    "@repo/blocks": "workspace:*",
+    "@repo/contracts": "workspace:*",
+    "@repo/tokens": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
+    "astro": "catalog:",
+    "effect": "catalog:",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "tailwindcss": "catalog:"
+  },
+  "devDependencies": {
+    "@alchemy.run/frontend-frameworks": "catalog:",
+    "@cloudflare/workers-types": "catalog:",
+    "@repo/infra": "workspace:*",
+    "@repo/tsconfig": "workspace:*",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "typescript": "catalog:"
+  }
+}

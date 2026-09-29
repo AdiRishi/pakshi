@@ -1,5 +1,5 @@
 {
-  "name": "@repo/web",
+  "name": "@repo/studio",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
   },
   "dependencies": {
     "@base-ui/react": "catalog:",
-    "@fontsource-variable/inter": "catalog:",
+    "@fontsource-variable/onest": "catalog:",
     "@repo/contracts": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-devtools": "catalog:",
@@ -24,6 +24,7 @@
     "@tanstack/react-start": "catalog:",
     "@tanstack/router-plugin": "catalog:",
     "alchemy": "catalog:",
+    "better-auth": "catalog:",
     "class-variance-authority": "catalog:",
     "clsx": "catalog:",
     "effect": "catalog:",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
     "@repo/infra": "workspace:*",
+    "@repo/studio-api": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@tanstack/devtools-vite": "catalog:",
     "@types/node": "catalog:",

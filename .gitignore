@@ -20,3 +20,4 @@ playwright-report/
 !.dev.vars.example
 .DS_Store
 .blume-verify/
+.astro/

@@ -5,16 +5,13 @@ import * as Function from "effect/Function";
 import * as Record from "effect/Record";
 import * as Schema from "effect/Schema";
 
-interface StagePolicy {
-  readonly environment: "local" | "staging" | "production" | "test";
-  readonly web: { readonly workersDev: boolean; readonly domain: string | null };
-}
+type Environment = "local" | "staging" | "production" | "test";
 
 const stages = {
-  dev: { environment: "local", web: { workersDev: true, domain: null } },
-  staging: { environment: "staging", web: { workersDev: true, domain: null } },
-  prod: { environment: "production", web: { workersDev: true, domain: null } },
-} as const;
+  dev: "local",
+  staging: "staging",
+  prod: "production",
+} as const satisfies Record<string, Environment>;
 
 const TestStage = Schema.TemplateLiteral([
   "test-",
@@ -28,16 +25,14 @@ export const decodeStage = Function.flow(
   Effect.mapError((error) => new Config.ConfigError(error)),
 );
 
-export const stagePolicy = (stage: Stage): StagePolicy =>
-  Object.entries(stages).find(([name]) => name === stage)?.[1] ?? {
-    environment: "test",
-    web: { workersDev: true, domain: null },
-  };
+export const stageEnvironment = (stage: Stage): Environment =>
+  Object.entries(stages).find(([name]) => name === stage)?.[1] ?? "test";
 
 export const deploymentConfig = Effect.fn("Pakshi.DeploymentConfig")(function* () {
   const stack = yield* Alchemy.Stack;
   const stage = yield* decodeStage(stack.stage);
-  return { ...stagePolicy(stage), stage };
+  const environment = stageEnvironment(stage);
+  return { stage, environment, production: environment === "production" };
 });
 
 export type DeploymentConfig = Effect.Success<ReturnType<typeof deploymentConfig>>;

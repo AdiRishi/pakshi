@@ -1,21 +1,15 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-import { CsvProfilerPage } from "@/features/artifacts/page";
-import { artifactQueryOptions, artifactsQueryOptions } from "@/features/artifacts/queries";
+import { HomePage } from "@/features/home/page";
+import { getViewer } from "@/features/session/functions";
 
 export const Route = createFileRoute("/")({
-  component: CsvProfilerPage,
-  loader: async ({ context }) => {
-    const artifacts = await context.queryClient.query({
-      ...artifactsQueryOptions(),
-      staleTime: "static",
-    });
-    const firstArtifact = artifacts[0];
-    if (firstArtifact !== undefined) {
-      await context.queryClient.query({
-        ...artifactQueryOptions(firstArtifact.id),
-        staleTime: "static",
-      });
-    }
+  loader: async () => {
+    const viewer = await getViewer();
+    if (viewer === null) throw redirect({ to: "/sign-in" });
+    return viewer;
+  },
+  component: function Home() {
+    return <HomePage viewer={Route.useLoaderData()} />;
   },
 });

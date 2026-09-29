@@ -1,11 +1,11 @@
 {
   "extends": "@repo/tsconfig/base.json",
-  "include": ["alchemy.run.ts", "src"],
+  "include": ["alchemy.run.ts", "src", "scripts"],
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "declaration": false,
     "declarationMap": false,
     "noEmit": true,
-    "types": ["node"]
+    "types": ["node", "@cloudflare/workers-types"]
   }
 }

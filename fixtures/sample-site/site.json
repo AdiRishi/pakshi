@@ -1,0 +1,26 @@
+{
+  "brand": {
+    "id": "brand_harbour",
+    "name": "Harbour Schools"
+  },
+  "site": {
+    "id": "site_harbour",
+    "name": "Harbour Summer School"
+  },
+  "snapshot": "snap_sample1",
+  "release": "rel_sample1",
+  "lockfile": {
+    "hero": 1,
+    "rich-text": 1,
+    "call-to-action": 1
+  },
+  "media": {
+    "med_harbour": {
+      "contentType": "image/jpeg",
+      "width": 1600,
+      "height": 1067,
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    }
+  },
+  "gone": ["/old-programme"]
+}

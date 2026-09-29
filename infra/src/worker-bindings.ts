@@ -1,30 +1,86 @@
+import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
-import * as SQL from "alchemy/SQL/D1";
-import { Effect } from "effect";
+import type * as Output from "alchemy/Output";
+import * as Effect from "effect/Effect";
+import type * as Redacted from "effect/Redacted";
 
-import { Api } from "./api.ts";
+import type { SiteSubmissions } from "../../workers/sites-api/src/index.ts";
+import type StudioApiEntrypoint from "../../workers/studio-api/src/index.ts";
+import type { SiteAgent, SiteDoc } from "../../workers/studio-api/src/index.ts";
 import type { DataPlane } from "./data-plane.ts";
 import type { DeploymentConfig } from "./deployment-config.ts";
-import { Processor } from "./processor.ts";
-import { CsvProfileSession } from "./profile-session.ts";
+import type { IdentityProvider } from "./identity.ts";
+import type { SitesApi, StudioApi } from "./workers.ts";
 
-export const processorBindings = Effect.fn("Pakshi.ProcessorBindings")(function* () {
-  const api = yield* Cloudflare.Workers.bindWorker(Api);
-  const sessions = yield* CsvProfileSession;
-  return { api, sessions };
+export const testIdentityProviderBindings = (keys: {
+  readonly signingKey: Output.Output<Redacted.Redacted<string>>;
+  readonly clientId: string;
+  readonly clientSecret: Output.Output<Redacted.Redacted<string>>;
+}) => ({
+  SIGNING_KEY: keys.signingKey,
+  CLIENT_ID: keys.clientId,
+  CLIENT_SECRET: keys.clientSecret,
 });
+export interface TestIdentityProviderEnv extends Cloudflare.InferEnv<
+  ReturnType<typeof testIdentityProviderBindings>
+> {}
 
-export const apiBindings = Effect.fn("Pakshi.ApiBindings")(function* (data: DataPlane) {
-  const artifacts = yield* Cloudflare.R2.ReadWriteBucket(data.artifacts);
-  const database = yield* Cloudflare.D1.QueryDatabase(data.database);
-  const jobs = yield* Cloudflare.Queues.WriteQueue(data.profileJobs);
-  const processor = yield* Cloudflare.Workers.bindWorker(Processor);
-  return { artifacts, database: SQL.D1Layer(database), jobs, processor };
+export const sitesApiBindings = (environment: DeploymentConfig["environment"]) => ({
+  SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions"),
+  ENVIRONMENT: environment,
 });
+export interface SitesApiEnv extends Cloudflare.InferEnv<ReturnType<typeof sitesApiBindings>> {}
 
-export const websiteBindings = (
+export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function* (
   environment: DeploymentConfig["environment"],
-  api: Effect.Success<typeof Api>,
-) => ({ API: api, ENVIRONMENT: environment });
+  data: DataPlane,
+  sitesApiName: string,
+  identity: IdentityProvider,
+) {
+  const authSecret = yield* Alchemy.makeRandom("AuthSecret");
+  return {
+    // A Durable Object's data is keyed by its binding name here. Renaming one
+    // deletes the class and everything it stored.
+    SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),
+    SITE_AGENT: Cloudflare.DurableObject<SiteAgent>("SiteAgent"),
+    SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions", {
+      scriptName: sitesApiName,
+    }),
+    CORE: data.core,
+    CONTENT: data.content,
+    ROUTING: data.routing,
+    ENVIRONMENT: environment,
+    AUTH_SECRET: authSecret,
+    OIDC_DISCOVERY_URL: identity.discoveryUrl,
+    OIDC_CLIENT_ID: identity.clientId,
+    OIDC_CLIENT_SECRET: identity.clientSecret,
+  };
+});
+export interface StudioApiEnv extends Cloudflare.InferEnv<
+  Effect.Success<ReturnType<typeof studioApiBindings>>
+> {}
 
-export type WebsiteEnv = Cloudflare.InferEnv<ReturnType<typeof websiteBindings>>;
+export const studioBindings = (
+  environment: DeploymentConfig["environment"],
+  studioApi: Effect.Success<typeof StudioApi>,
+  identity: IdentityProvider,
+) => ({
+  STUDIO_API: studioApi,
+  ENVIRONMENT: environment,
+  ORGANIZATION_NAME: identity.organizationName,
+});
+export interface StudioEnv extends Omit<
+  Cloudflare.InferEnv<ReturnType<typeof studioBindings>>,
+  "STUDIO_API"
+> {
+  /** Alchemy can't see a plain Worker's RPC methods, so the entrypoint's type names them. */
+  readonly STUDIO_API: Service<StudioApiEntrypoint>;
+}
+
+export const sitesBindings = (data: DataPlane, sitesApi: Effect.Success<typeof SitesApi>) => ({
+  ROUTING: data.routing,
+  CONTENT: data.content,
+  SITES_API: sitesApi,
+  CF_VERSION_METADATA: Cloudflare.Workers.VersionMetadata(),
+});
+export interface SitesEnv extends Cloudflare.InferEnv<ReturnType<typeof sitesBindings>> {}

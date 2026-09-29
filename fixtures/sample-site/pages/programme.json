@@ -1,0 +1,70 @@
+{
+  "schema": "pakshi.page/1",
+  "id": "pg_programme",
+  "type": "page",
+  "path": "/programme",
+  "meta": {
+    "title": "Programme",
+    "description": "What happens on each day of summer school."
+  },
+  "root": ["b_hero", "b_visit"],
+  "blocks": {
+    "b_hero": {
+      "type": "hero",
+      "variant": "centered",
+      "surface": "brand",
+      "props": {
+        "heading": "Summer school at the harbour",
+        "body": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Five days of "
+                },
+                {
+                  "type": "text",
+                  "text": "hands-on workshops",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " for anyone who wants to learn by building."
+                }
+              ]
+            }
+          ]
+        },
+        "cta": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    },
+    "b_visit": {
+      "type": "call-to-action",
+      "variant": "centered",
+      "surface": "inverse",
+      "props": {
+        "heading": "See you at the harbour",
+        "primary": {
+          "label": "Back to the home page",
+          "link": {
+            "$ref": "page",
+            "id": "pg_home"
+          }
+        }
+      }
+    }
+  }
+}

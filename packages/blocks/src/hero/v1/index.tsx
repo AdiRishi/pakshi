@@ -25,7 +25,7 @@ const Hero = ({
         field="heading"
         as="h1"
         value={hero.heading}
-        className="text-title text-balance md:text-display"
+        className="text-title md:text-display text-balance"
       />
       {hero.body && (
         <RichText
@@ -38,13 +38,13 @@ const Hero = ({
         <Cta
           field="cta"
           value={hero.cta}
-          className="mt-2 inline-flex items-center rounded-md bg-primary px-6 py-3 text-body text-primary-foreground shadow-card transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="text-body mt-2 inline-flex items-center rounded-md bg-primary px-6 py-3 text-primary-foreground shadow-card transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         />
       )}
     </div>
   );
   return (
-    <Root className="bg-background px-6 py-section text-foreground">
+    <Root className="py-section bg-background px-6 text-foreground">
       {variant === "centered" ? (
         <div className="mx-auto flex max-w-5xl flex-col gap-12">
           {copy}
@@ -54,7 +54,7 @@ const Hero = ({
               value={hero.image}
               priority
               sizes="(min-width: 64rem) 64rem, 100vw"
-              className="aspect-[16/9] w-full rounded-image object-cover"
+              className="rounded-image aspect-[16/9] w-full object-cover"
             />
           )}
         </div>
@@ -67,7 +67,7 @@ const Hero = ({
               value={hero.image}
               priority
               sizes="(min-width: 48rem) 50vw, 100vw"
-              className="aspect-[4/3] w-full rounded-image object-cover"
+              className="rounded-image aspect-[4/3] w-full object-cover"
             />
           )}
         </div>

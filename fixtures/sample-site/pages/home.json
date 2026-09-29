@@ -1,0 +1,165 @@
+{
+  "schema": "pakshi.page/1",
+  "id": "pg_home",
+  "type": "page",
+  "path": "/",
+  "meta": {
+    "title": "Harbour Summer School",
+    "description": "Five days of hands-on workshops at the harbour."
+  },
+  "root": ["b_hero", "b_about", "b_register"],
+  "blocks": {
+    "b_hero": {
+      "type": "hero",
+      "variant": "split-image",
+      "surface": "default",
+      "props": {
+        "heading": "Learn by building",
+        "body": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Mornings are for making. Afternoons are for trying what you made on the water."
+                }
+              ]
+            }
+          ]
+        },
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour"
+        },
+        "cta": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      }
+    },
+    "b_about": {
+      "type": "rich-text",
+      "variant": "narrow",
+      "surface": "default",
+      "props": {
+        "heading": "What you'll do",
+        "body": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Each day starts with a short talk, then moves to the workshop floor. You'll work in "
+                },
+                {
+                  "type": "text",
+                  "text": "small teams",
+                  "marks": [
+                    {
+                      "type": "italic"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " with a mentor who has built the thing before."
+                }
+              ]
+            },
+            {
+              "type": "heading",
+              "attrs": {
+                "level": 3
+              },
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Bring with you"
+                }
+              ]
+            },
+            {
+              "type": "bulletList",
+              "content": [
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "Clothes that can get wet"
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "type": "listItem",
+                  "content": [
+                    {
+                      "type": "paragraph",
+                      "content": [
+                        {
+                          "type": "text",
+                          "text": "A packed lunch"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Questions? Read the "
+                },
+                {
+                  "type": "text",
+                  "text": "frequently asked questions",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://example.org/faq"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": "."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    },
+    "b_register": {
+      "type": "call-to-action",
+      "variant": "banner",
+      "surface": "muted",
+      "props": {
+        "heading": "Places are limited",
+        "body": "Registration closes on 30 November.",
+        "primary": {
+          "label": "Register now",
+          "link": "https://example.org/register"
+        },
+        "secondary": {
+          "label": "Ask a question",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    }
+  }
+}

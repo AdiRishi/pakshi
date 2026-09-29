@@ -16,7 +16,7 @@ const CallToAction = ({
   props: action,
   variant,
 }: BlockComponentProps<typeof props, "banner" | "centered">) => (
-  <Root className="bg-background px-6 py-section text-foreground">
+  <Root className="py-section bg-background px-6 text-foreground">
     <div
       className={
         variant === "banner"

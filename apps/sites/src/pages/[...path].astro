@@ -1,0 +1,60 @@
+---
+import { renderPage, type References } from "@repo/blocks";
+import { themeCss } from "@repo/tokens";
+
+import { SitePage } from "../components/SitePage.tsx";
+import { loadManifest, loadPage } from "../lib/snapshot.ts";
+import "../styles/site.css";
+
+const { site } = Astro.locals;
+const manifest = await loadManifest(site.id, site.live.snapshot);
+const path = `/${Astro.params.path ?? ""}`;
+const entry = manifest.pages.find((candidate) => candidate.path === path);
+if (entry === undefined) {
+  Astro.response.status = manifest.gone.includes(path) ? 410 : 404;
+}
+const page = entry === undefined ? null : await loadPage(site.id, entry.object);
+const sections = page === null ? [] : await renderPage(page, manifest.lockfile);
+const references: References = {
+  media: (id) => {
+    const file = manifest.media[id];
+    return file === undefined
+      ? undefined
+      : { src: `/_media/${id}`, width: file.width, height: file.height, alt: file.alt };
+  },
+  pagePath: (id) => manifest.pages.find((candidate) => candidate.id === id)?.path,
+};
+const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed" : "Page not found");
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{title === manifest.settings.name ? title : `${title} · ${manifest.settings.name}`}</title>
+    {page && <meta name="description" content={page.meta.description} />}
+    <style is:inline set:html={themeCss(manifest.theme)}></style>
+  </head>
+  <body>
+    {
+      page ? (
+        <main>
+          <SitePage references={references} sections={sections} />
+        </main>
+      ) : (
+        <main class="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
+          <h1 class="text-title">{title}</h1>
+          <p class="text-lead text-muted-foreground">
+            {Astro.response.status === 410
+              ? "This page has been taken down."
+              : "There's no page at this address."}
+          </p>
+          <a class="text-primary underline" href="/">
+            Go to the home page
+          </a>
+        </main>
+      )
+    }
+  </body>
+</html>

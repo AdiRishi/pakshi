@@ -3,7 +3,7 @@
   "sortImports": true,
   "sortPackageJson": true,
   "sortTailwindcss": {
-    "stylesheet": "./apps/web/src/global-styles/tailwind.css"
+    "stylesheet": "./apps/studio/src/global-styles/tailwind.css"
   },
   "ignorePatterns": [
     ".agent/**",
@@ -20,6 +20,7 @@
     ".windsurf/**",
     "tooling/oxlint/anti-slop/**",
     "**/*.gen.ts",
+    "**/.astro/**",
     "**/worker-configuration.d.ts",
     "pnpm-lock.yaml"
   ]

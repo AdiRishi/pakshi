@@ -23,14 +23,14 @@ const RichTextBlock = ({
   props: section,
   variant,
 }: BlockComponentProps<typeof props, "narrow" | "wide">) => (
-  <Root className="bg-background px-6 py-section text-foreground">
+  <Root className="py-section bg-background px-6 text-foreground">
     <div className={variant === "narrow" ? "mx-auto max-w-2xl" : "mx-auto max-w-4xl"}>
       {section.heading && (
         <Text
           field="heading"
           as="h2"
           value={section.heading}
-          className="mb-6 text-title text-balance"
+          className="text-title mb-6 text-balance"
         />
       )}
       <RichText field="body" value={section.body} className={prose} />

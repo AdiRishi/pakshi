@@ -10,54 +10,62 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiArtifactsRouteImport } from './routes/api/artifacts'
-import { Route as ArtifactsArtifactIdSourceRouteImport } from './routes/artifacts/$artifactId/source'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SignInStartRouteImport } from './routes/sign-in/start'
+import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiArtifactsRoute = ApiArtifactsRouteImport.update({
-  id: '/api/artifacts',
-  path: '/api/artifacts',
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ArtifactsArtifactIdSourceRoute =
-  ArtifactsArtifactIdSourceRouteImport.update({
-    id: '/artifacts/$artifactId/source',
-    path: '/artifacts/$artifactId/source',
-    getParentRoute: () => rootRouteImport,
-  } as any)
+const SignInStartRoute = SignInStartRouteImport.update({
+  id: '/start',
+  path: '/start',
+  getParentRoute: () => SignInRoute,
+} as any)
+const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
+  id: '/api/auth/$',
+  path: '/api/auth/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/api/artifacts': typeof ApiArtifactsRoute
-  '/artifacts/$artifactId/source': typeof ArtifactsArtifactIdSourceRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-in/start': typeof SignInStartRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/api/artifacts': typeof ApiArtifactsRoute
-  '/artifacts/$artifactId/source': typeof ArtifactsArtifactIdSourceRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-in/start': typeof SignInStartRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
-  '/api/artifacts': typeof ApiArtifactsRoute
-  '/artifacts/$artifactId/source': typeof ArtifactsArtifactIdSourceRoute
+  '/sign-in': typeof SignInRouteWithChildren
+  '/sign-in/start': typeof SignInStartRoute
+  '/api/auth/$': typeof ApiAuthSplatRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/artifacts' | '/artifacts/$artifactId/source'
+  fullPaths: '/' | '/sign-in' | '/sign-in/start' | '/api/auth/$'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/artifacts' | '/artifacts/$artifactId/source'
-  id: '__root__' | '/' | '/api/artifacts' | '/artifacts/$artifactId/source'
+  to: '/' | '/sign-in' | '/sign-in/start' | '/api/auth/$'
+  id: '__root__' | '/' | '/sign-in' | '/sign-in/start' | '/api/auth/$'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
-  ApiArtifactsRoute: typeof ApiArtifactsRoute
-  ArtifactsArtifactIdSourceRoute: typeof ArtifactsArtifactIdSourceRoute
+  SignInRoute: typeof SignInRouteWithChildren
+  ApiAuthSplatRoute: typeof ApiAuthSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -69,27 +77,45 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/artifacts': {
-      id: '/api/artifacts'
-      path: '/api/artifacts'
-      fullPath: '/api/artifacts'
-      preLoaderRoute: typeof ApiArtifactsRouteImport
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/artifacts/$artifactId/source': {
-      id: '/artifacts/$artifactId/source'
-      path: '/artifacts/$artifactId/source'
-      fullPath: '/artifacts/$artifactId/source'
-      preLoaderRoute: typeof ArtifactsArtifactIdSourceRouteImport
+    '/sign-in/start': {
+      id: '/sign-in/start'
+      path: '/start'
+      fullPath: '/sign-in/start'
+      preLoaderRoute: typeof SignInStartRouteImport
+      parentRoute: typeof SignInRoute
+    }
+    '/api/auth/$': {
+      id: '/api/auth/$'
+      path: '/api/auth/$'
+      fullPath: '/api/auth/$'
+      preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
 }
 
+interface SignInRouteChildren {
+  SignInStartRoute: typeof SignInStartRoute
+}
+
+const SignInRouteChildren: SignInRouteChildren = {
+  SignInStartRoute: SignInStartRoute,
+}
+
+const SignInRouteWithChildren =
+  SignInRoute._addFileChildren(SignInRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
-  ApiArtifactsRoute: ApiArtifactsRoute,
-  ArtifactsArtifactIdSourceRoute: ArtifactsArtifactIdSourceRoute,
+  SignInRoute: SignInRouteWithChildren,
+  ApiAuthSplatRoute: ApiAuthSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

@@ -4,20 +4,21 @@ import * as Effect from "effect/Effect";
 
 import { deploymentConfig } from "./src/deployment-config.ts";
 import { project } from "./src/project.ts";
-import { webApplication } from "./src/web-application.ts";
-import { workerGraph } from "./src/workers.ts";
+import { seedTestData } from "./src/seed.ts";
+import { Sites, Studio } from "./src/workers.ts";
 
 export const Infrastructure = Effect.gen(function* () {
   const stack = yield* Alchemy.Stack;
   if (stack.stage === "placeholder") return {};
 
   const config = yield* deploymentConfig();
-  const workers = yield* workerGraph;
-  const web = yield* webApplication(config, workers);
+  const studio = yield* Studio;
+  const sites = yield* Sites(new URL("../apps/sites", import.meta.url).pathname);
+  if (!config.production) yield* seedTestData(sites);
 
   return {
-    websiteUrl: web.url.as<string>(),
-    apiUrl: workers.api.url,
+    studioUrl: studio.url.as<string>(),
+    sitesUrl: sites.url.as<string>(),
   };
 });
 
