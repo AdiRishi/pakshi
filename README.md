@@ -64,4 +64,6 @@ pnpm typecheck
 pnpm test
 ```
 
+Turbo shares task results through a signed remote cache. If you have the shared credentials, copy [`.env.turbo.example`](.env.turbo.example) to `.env.turbo.local` and fill it in; the root scripts load it before running Turbo. Without it, tasks run against your local cache only. CI reads the same two values from repository secrets, which you can set or rotate from that file with `gh secret set --repo AdiRishi/pakshi --env-file .env.turbo.local`.
+
 Read [`AGENTS.md`](AGENTS.md) for repository conventions, and [`docs/adr/`](docs/adr/index.mdx) before changing the repository layout or test setup.
