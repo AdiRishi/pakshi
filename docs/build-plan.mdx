@@ -233,7 +233,7 @@ Everything else a real site needs.
 - The [media library](/product-spec#media): brand and site libraries, Cloudflare Images, alt text, and retention.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
-- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check.
+- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check. Serving from a custom domain is also what turns on the page cache ([decision 027](/decision-log#decision-027)).
 - [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window.
 
 **Demo:** build a site with a registration form on a custom subdomain, submit the form, see the notification, and export the submission.

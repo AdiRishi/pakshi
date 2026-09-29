@@ -65,9 +65,9 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Decision.** `sites` uses Alchemy's Astro resource and adapter. The host → site → release lookup, the page cache and media serving run in Astro middleware, which sees every request after static assets. The cache key is the release ID, the Worker version and the path, as before.
 
-**Rejected.** Building with the upstream adapter and deploying the output as a plain Worker, which gives up Alchemy's local emulation and build memoization for `sites`; a separate front Worker for caching, which adds a fifth Worker.
+**Rejected.** Building with the upstream adapter and deploying the output as a plain Worker, which gives up Alchemy's local emulation and build memoization for `sites`; a separate front Worker for caching, which adds a fifth Worker; Cloudflare's newer Workers Caching and Astro 7's route cache built on it, whose cache key leaves out the hostname, so one Worker serving many sites would need a gateway Worker to tell them apart, and Alchemy's adapter turns Astro's cache provider off.
 
-**Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so deployed page caching needs a custom domain; the dev stack emulates the cache locally.
+**Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so deployed pages are cached only once `sites` serves a custom domain; the dev stack emulates the cache locally. The key starts with the site, and only GET and HEAD requests use the cache.
 
 ## 026 — Drafts may be incomplete; completeness is checked at submission [#decision-026]
 
