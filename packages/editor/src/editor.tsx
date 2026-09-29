@@ -131,7 +131,15 @@ export function EditorProvider(props: {
       },
       revealControl: (field) => {
         // The settings panel shows the field's control once the selection has rendered.
-        setTimeout(() => document.getElementById(controlId(field))?.focus());
+        setTimeout(() => {
+          // A field made of parts, such as a button, focuses its first part.
+          const control = document.getElementById(controlId(field));
+          const focusable = control?.matches("input, textarea, select, button")
+            ? control
+            : (control?.querySelector<HTMLElement>("input, textarea, select") ??
+              control?.querySelector<HTMLElement>("button"));
+          focusable?.focus();
+        });
       },
     }),
     [canvasDocument],
@@ -225,7 +233,12 @@ export function EditorCanvas(props: {
         case "ArrowUp":
           return move(index === -1 ? order.at(-1) : order[index - 1]);
         case "Enter": {
-          if (current === null) return;
+          // Enter on a field, such as a button, is the field's own; on a block it moves inside.
+          if (
+            current === null ||
+            elementOf(event.target, view)?.hasAttribute("data-pakshi-block") !== true
+          )
+            return;
           const root = canvasDocument.querySelector(`[data-pakshi-block="${current.block}"]`);
           const field = Array.from(
             root?.querySelectorAll<HTMLElement>("[data-pakshi-field]") ?? [],
