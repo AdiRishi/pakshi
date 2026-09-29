@@ -33,7 +33,7 @@ flowchart LR
 ```
 
 - **`sites`** renders published sites and previews from snapshots. It is read-only and forwards form posts to `sites-api`.
-- **`sites-api`** is the public-facing API: form intake now, payment webhooks later. It hosts the `SiteSubmissions` Durable Objects, one per site, and is the only writer of submissions.
+- **`sites-api`** is the public-facing API for form intake. It hosts the `SiteSubmissions` Durable Objects, one per site, and is the only writer of submissions.
 - **`studio`** is the TanStack Start UI with Puck. It has no data bindings of its own: it calls `studio-api` over RPC and reaches site documents and the agent over WebSockets through it.
 - **`studio-api`** holds domain logic and permissions, the `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs, and authorized reads of submissions.
 - All four import the same packages (page schema, blocks, themes, permission rules), so the editor and the public site render with the same code.
@@ -48,7 +48,7 @@ flowchart LR
 | Visual editor             | Puck                                                   | Fed from our schema through an adapter                                                                                                               |
 | UI primitives and styling | shadcn/ui, Tailwind v4                                 | Theme tokens as CSS variables                                                                                                                        |
 | Schema and validation     | Effect Schema (Effect v4)                              | Same library as the starter. One schema drives validation, Puck fields and agent tool definitions through its Standard Schema and JSON Schema output |
-| Rich text                 | TipTap (ProseMirror JSON)                              | Chosen over Lexical because Puck's rich text field is built on TipTap. A rich text field is one value; no shared-cursor editing in the MVP           |
+| Rich text                 | TipTap (ProseMirror JSON)                              | Chosen over Lexical because Puck's rich text field is built on TipTap. A rich text field is one value; no shared-cursor editing                      |
 | Site drafts               | Durable Objects (SQLite)                               | One `SiteDoc` per site, built on PartyServer for live editing and presence                                                                           |
 | Form submissions          | Durable Objects (SQLite)                               | One `SiteSubmissions` per site, so each site's customer data is its own database                                                                     |
 | Relational data           | D1                                                     | One `core` database                                                                                                                                  |
@@ -61,7 +61,6 @@ flowchart LR
 | Staff sign-in             | Better Auth                                            | Runs in studio-api; the `genericOAuth` plugin connects to the organization's identity provider over OIDC; sessions in D1                             |
 | Custom domains            | Cloudflare for SaaS                                    | Custom hostnames with automatic certificates                                                                                                         |
 | Email                     | Cloudflare Email Service                               | Sending is in public beta; sender domains must use Cloudflare DNS                                                                                    |
-| Payments (later)          | Stripe Checkout                                        | Not in the MVP                                                                                                                                       |
 | Monorepo                  | application-platform-starter: pnpm, Turborepo, Alchemy | Effect for services, Alchemy for infrastructure as code, oxlint and oxfmt, Vitest, Playwright for visual regression                                  |
 
 **Cloudflare plan: Workers Paid, no Enterprise features.** Production runs on Workers Paid (from $5 a month per account plus usage), which covers Workers, Durable Objects, D1, R2, KV, Email Service and everything else in this design ([pricing](https://developers.cloudflare.com/workers/platform/pricing/)). Cloudflare for SaaS includes 100 custom hostnames. The only Enterprise-only feature we'd considered, root-domain proxying, is left out (see Domains).
@@ -76,7 +75,7 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 | `apps/studio`        | TanStack Start app (the starter's `apps/web`): Studio UI with Puck                                                                                                                                                                    |
 | `apps/sites`         | Astro app: public sites and previews                                                                                                                                                                                                  |
 | `workers/studio-api` | Domain logic, `SiteDoc` and `SiteAgent` Durable Objects, scheduled jobs. A plain Worker with its own entry file, because PartyServer and `AIChatAgent` are plain Durable Object classes that a starter-style Effect Worker can't host |
-| `workers/sites-api`  | Form intake and the `SiteSubmissions` Durable Objects, later payment webhooks                                                                                                                                                         |
+| `workers/sites-api`  | Form intake and the `SiteSubmissions` Durable Objects                                                                                                                                                                                 |
 | `packages/contracts` | Effect schemas for pages, sites, snapshots and edit operations, plus each API's RPC contract                                                                                                                                          |
 | `packages/domain`    | Permission checks, validation, three-way merge, database access, audit writes                                                                                                                                                         |
 | `packages/blocks`    | Block versions, each in its own frozen folder, plus the generated registry                                                                                                                                                            |
@@ -89,7 +88,7 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 
 **Environments** are Alchemy stages: local development uses Alchemy's local emulation, per-branch and staging stages run in a non-production Cloudflare account, and production runs in its own account so customer data and limits stay separate. CI deploys with the starter's commands, and `test:infra-live` deploys, tests and removes an isolated stage. Only staging and production have custom hostnames and a preview domain; branch stages use `workers.dev`.
 
-**First change to the starter:** remove the sample CSV app and its disposable-data settings. That means the `prod:destroy` script and `forceDestroy` on buckets. Production D1 databases and R2 buckets are retained on removal. Durable Object data can't be retained that way: when a class leaves a Worker, Alchemy deploys a migration that deletes the class and all its data. So CI fails if a production plan deletes a D1 database, an R2 bucket or a Durable Object class. `AGENTS.md` is updated for the new layout in the same change.
+**Production data safety:** production has no destroy script, and no bucket is force-destroyed. Production D1 databases and R2 buckets are retained on removal. Durable Object data can't be retained that way: when a class leaves a Worker, Alchemy deploys a migration that deletes the class and all its data. So CI fails if a production plan deletes a D1 database, an R2 bucket or a Durable Object class.
 
 ## Where data lives
 
@@ -103,6 +102,8 @@ Each kind of data has exactly one home. Page bodies never go in D1, and customer
 | R2                                                | Media originals, release and submission snapshots, the latest preview of each draft, uploaded source documents                                                                                                                                                                                                    | Cheap and unlimited, and a new object is readable immediately after it's written                                                                                                                                                                                                         |
 | KV                                                | Hostname → site; site → current release (a copy of `SiteDoc`'s)                                                                                                                                                                                                                                                   | Read on every public request, fast everywhere                                                                                                                                                                                                                                            |
 | `SiteAgent` Durable Object (one per conversation) | Chat history and the agent's working brief                                                                                                                                                                                                                                                                        | Built into the Agents SDK                                                                                                                                                                                                                                                                |
+
+**Deleting a site** removes its `host → site` entries from KV and its custom hostnames from Cloudflare for SaaS at once, so it stops serving. `SiteDoc` then sets an alarm for 30 days. Until it fires, an org admin can restore the site. When it fires, `SiteDoc` and `SiteSubmissions` delete all their storage, and the site's R2 prefix and unused media are removed.
 
 `SiteDoc` keeps the page and draft index in D1, so dashboards never need to open every site's Durable Object. A Durable Object write and a D1 write can't share a transaction, so each change writes an outbox row in the same SQLite transaction, and an alarm drains the outbox to D1 with idempotent upserts keyed on ID and revision.
 
@@ -154,7 +155,13 @@ A page is a flat map of block instances plus an ordered list of top-level IDs, i
 - **References** to media, forms and other pages are IDs, resolved at render time from the same snapshot. Media files never change, so a media ID always renders the same file.
 - **Rich text** is stored as TipTap JSON, with allowed marks and nodes set per field. The agent writes restricted Markdown, which is converted and validated.
 - **Links** allow only `https`, `http`, `mailto` and `tel`, checked on save and again when rendering. There is no raw HTML anywhere.
+- **Unpublished pages** stay in the draft with `status: "unpublished"`. Freezing leaves them out of the snapshot and adds their addresses to the manifest's `gone` list, so `sites` answers them with 410 unless a redirect exists.
 - A reserved `locale` field keeps localization possible later without a migration.
+
+**Site-level parts** live in the draft beside its pages, and merge the same way:
+
+- **Header and footer** are one block instance each, from the header and footer block types, versioned through the lockfile like any block.
+- **Menus** (`main` and `footer`) are ordered lists of items. Each item has a label and a target, either a page ID or an external URL, and `main` items can have one level of children. Targeting pages by ID means a menu follows a page when its address changes. Unpublishing or deleting a page removes its menu items in the same batch.
 
 ## Blocks and versioning
 
@@ -287,7 +294,7 @@ Every change, from a person or the agent, goes through one method on the site's 
 - **Validation** on every batch: the block schema at the draft's pinned version, document integrity, link rules, and a path allowlist. The lockfile changes only through the block upgrade flow; form notification addresses only through site settings.
 - **Live collaboration:** several people, and their agents, can edit the same draft and page at once. Each committed batch is broadcast to everyone in that draft. Presence shows who is on which page, block and field, so people can see each other and avoid overlap.
 - **Conflicts:** the server orders every batch. Clients send ops without a base revision, keep their own unconfirmed ops in a pending queue, and treat the server's broadcast as the truth. If two people change the same field, the later write wins and the earlier writer is told their change was replaced. An op on a block that was removed meanwhile is dropped, and its author is told.
-- **Rich text:** a rich text field is one value, like any other field, edited in Puck's rich text field. While someone types in it, presence marks the field as theirs for others and for the agent. The marker is a hint, not a lock. Two people typing in the same paragraph with shared cursors is on the Later list.
+- **Rich text:** a rich text field is one value, like any other field, edited in Puck's rich text field. While someone types in it, presence marks the field as theirs for others and for the agent. The marker is a hint, not a lock. Two people typing in the same paragraph with shared cursors isn't in this version.
 - **History:** one revision per editing session or agent turn, stored as operations with a full checkpoint every so often. It never stores a revision per keystroke. Undo applies inverse ops to fields nobody else has changed since, and reports the rest.
 - **Authorization:** `SiteDoc` accepts connections and calls only through `studio-api`, which has verified the session and permission. Each connection carries its user, and every batch it sends is checked again against permissions that `SiteDoc` caches per connection. A permission change clears the cache, so a removed permission takes effect on the next batch without a D1 read per keystroke.
 - **Restore:** Durable Object point-in-time recovery must be called from inside the object, so `SiteDoc` exposes an admin `restoreTo(time)` method. Every restore is recorded in the audit log. If a restore changes the live release, `SiteDoc` updates KV and D1 as it would for a rollback, so the live site never changes silently.
@@ -300,7 +307,18 @@ Every change, from a person or the agent, goes through one method on the site's 
 - **Resolved data:** resolved values such as image URLs live under a reserved key that `fromPuck` drops, so they're never saved into the document.
 - **Same CSS:** the canvas iframe loads the same platform CSS and site theme CSS as the published site, with Studio's own styles kept out.
 - **Live updates in the canvas:** a sync module in `packages/editor` connects Puck to `SiteDoc` through Puck's public API. Local changes arrive through Puck's `onAction` callback and become our operations; a prop edit arrives as a replace of the whole block and is diffed down to fields. Changes from others become Puck's small built-in actions (insert, move, remove, replace), dispatched without entering Puck's history, never a whole-page reload. Puck's actions address blocks by index and zone, so the module converts each remote op to an index against the local state at that moment, using Puck's lookup by ID. Selection is restored by block ID.
-- **Undo** is per person, through `SiteDoc`'s history. Puck's own undo restores whole-page snapshots, which would erase other people's changes, and has its keyboard shortcuts built in. We take the undo shortcuts in capture-phase key listeners before Puck sees them, and hide its undo buttons, so no patch is needed. If the spike shows that isn't enough, a pnpm patch replaces its history slice instead. `setHistories([])` resets the document, so it's never used to clear history. The sync never dispatches from inside `onAction`; it defers to the next microtask. We don't fork Puck (see [decision 013](/decision-log#decision-013)). This is still the riskiest integration, so it's the first Phase 0 spike.
+- **Undo** is per person, through `SiteDoc`'s history. Puck's own undo restores whole-page snapshots, which would erase other people's changes, and has its keyboard shortcuts built in. We take the undo shortcuts in capture-phase key listeners before Puck sees them, and hide its undo buttons, so no patch is needed. If that proves not to be enough, a pnpm patch replaces its history slice instead. `setHistories([])` resets the document, so it's never used to clear history. The sync never dispatches from inside `onAction`; it defers to the next microtask. We don't fork Puck (see [decision 013](/decision-log#decision-013)).
+- **Known Puck gaps** the sync module handles, found in Puck 0.23's source:
+  - Replaying an insert gives the new block's children fresh random IDs, so the sync sends the IDs itself.
+  - Selection is stored as an index, so another person's insert moves it; the sync restores it by block ID.
+  - A focused sidebar field ignores remote changes, and overwrites a remote edit to the same field on its next keystroke.
+  - A remote rich text change replaces the whole field and makes the local cursor jump.
+  - Interleaved moves and removes can leave a client out of step with no notice, so the sync detects that and reloads the draft.
+  - The undo hotkeys are attached to the whole page with no check for text fields.
+  - The npm package ships as hashed, bundled chunks, which makes any patch fragile across releases.
+- **Server rendering:** Puck has no official TanStack Start recipe. If it fails under server rendering, the editor route renders on the client only.
+
+This is the riskiest integration in Pakshi.
 
 ## The agent
 
@@ -342,11 +360,11 @@ There are no tools for submitting, publishing, approving, site settings, domains
 
 **Validation errors** come back as structured messages the model can act on, for example `heading: max 80 characters, got 94`. The agent gets 2 repair attempts, then explains the problem to the user in plain language.
 
-**Source material:** uploads are stored in R2 and converted to Markdown with Workers AI `toMarkdown` ([docs](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)). It doesn't convert `.doc` or `.pptx` files, so Studio asks for PDF or `.docx` instead. The agent reads them through `read_source`, marked as untrusted content. Marking doesn't stop prompt injection, so the real controls are structural: the agent can't submit or publish, and approvers review every change. `fetch_url` accepts only URLs that appear in the user's own messages: GET only, with size and time limits, no redirects to other hosts, and no requests to the platform's own domains. There is no vector search in the MVP. A vision model suggests image alt text, and a person confirms it.
+**Source material:** uploads are stored in R2 and converted to Markdown with Workers AI `toMarkdown` ([docs](https://developers.cloudflare.com/workers-ai/features/markdown-conversion/)). It doesn't convert `.doc` or `.pptx` files, so Studio asks for PDF or `.docx` instead. The agent reads them through `read_source`, marked as untrusted content. Marking doesn't stop prompt injection, so the real controls are structural: the agent can't submit or publish, and approvers review every change. `fetch_url` accepts only URLs that appear in the user's own messages: GET only, with size and time limits, no redirects to other hosts, and no requests to the platform's own domains. There is no vector search. A vision model suggests image alt text, and a person confirms it.
 
 **Models:** any number of models, chosen per task in configuration and called through AI Gateway ([AI Gateway](https://developers.cloudflare.com/ai-gateway/)). The default for routine edits is Z.ai GLM-5.3 Flash on Workers AI: tool calling, a 1.3M-token context, and $0.15 input / $0.50 output per million tokens ([model page](https://developers.cloudflare.com/workers-ai/models/glm-5.3-flash/)). Other tasks, such as planning a new site, long copy or image descriptions, can point at other models, and any model can be swapped at any time without a code change. Every request is tagged with brand, site and user for cost tracking, with a monthly spend limit per brand. The platform team curates which models are used; users never choose them.
 
-**Evals:** about 25 scripted tasks with exact expected outcomes run whenever prompts, models or block contracts change. They cover a new site from a brief, routine edits, asking when a request is ambiguous, filing a block request for a catalog gap, ignoring instructions inside uploaded documents, suggesting merges for text conflicts, and writing content valid for a pinned older block version. Real pilot conversations become new tasks.
+**Evals:** about 25 scripted tasks with exact expected outcomes run whenever prompts, models or block contracts change. They cover a new site from a brief, routine edits, asking when a request is ambiguous, filing a block request for a catalog gap, ignoring instructions inside uploaded documents, suggesting merges for text conflicts, and writing content valid for a pinned older block version. Real conversations become new tasks.
 
 ## Forms, submissions and email
 
@@ -359,7 +377,7 @@ Form definitions live in the draft and ship in the snapshot. Submissions go stra
 
 **Other details:**
 
-- **No spam protection in the MVP.** Forms send no email to submitters, so a form can't be used to send mail to addresses a visitor types in. Each site's submissions are their own database, so a flood on one form fills only that site's 10 GB and every other site's forms keep working.
+- **No spam protection.** Forms send no email to submitters, so a form can't be used to send mail to addresses a visitor types in. Each site's submissions are their own database, so a flood on one form fills only that site's 10 GB and every other site's forms keep working.
 - **Reads:** `studio-api` binds the same `SiteSubmissions` namespace and calls it over RPC for authorized views, exports and deletions. Turnstile's limit of 20 widgets per non-Enterprise account ([plans](https://developers.cloudflare.com/turnstile/plans/)) shapes the design when spam protection is added: one widget for the sites domain, which covers its subdomains, and custom domains grouped 10 to a widget.
 - **Retention:** submissions are kept for the life of the site, as part of its data; nothing deletes them automatically. Deleting one submission, or all records for one email address, is available for privacy requests.
 - **Email Service** sends all email (sending is in public beta), from domains that use Cloudflare DNS. No fallback provider is built. Each notification records when it was sent, and a scheduled job retries unsent ones.
@@ -388,7 +406,7 @@ All public hostnames point to the `sites` Worker through Cloudflare for SaaS, us
 
 - **Observability:** Workers Logs and tracing on all four Workers; AI Gateway for model cost, latency and errors per brand.
 - **Alerts:** error rate on `sites`, form intake failures, publish failures and D1/KV mismatches, unsent emails, custom hostname certificate problems, and agent cost per brand per day.
-- **Backups:** D1 Time Travel restores `core` to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery, through `restoreTo` on `SiteDoc` and `SiteSubmissions`. Every published snapshot in R2 is already a full copy of that release. Before the pilot we run one restore drill in staging: restore one `SiteDoc` and the `core` database, then run the D1/KV reconcile.
+- **Backups:** D1 Time Travel restores `core` to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery, through `restoreTo` on `SiteDoc` and `SiteSubmissions`. Every published snapshot in R2 is already a full copy of that release. A restore drill in staging restores one `SiteDoc` and the `core` database, then runs the D1/KV reconcile.
 
 ## Deliberately not built
 
@@ -418,25 +436,17 @@ These came up during design review and were cut to keep Pakshi simple. Each can 
 | Shared-cursor editing of one paragraph (Yjs)                             | A rich text field is one value; presence marks who is typing in it                                        |
 | Index-based JSON Patch                                                   | Ops addressed by block ID                                                                                 |
 
-## Phase 0 spikes and open technical questions
+## Unproven assumptions
 
-These are the riskiest assumptions. Each spike should be proven before the pilot starts.
+These parts of the design rest on behaviour nobody has shown working yet. The [build plan](/build-plan) orders its checkpoints so each one is proven early, before much else depends on it.
 
-- [ ] **Puck round trip:** our schema → Puck → our schema is lossless, including rich text, and the canvas stays usable while two people and the agent edit the same draft live, with Puck's undo replaced. Puck has no official TanStack Start recipe; if it fails under server rendering, the editor route renders on the client only. The spike also covers the gaps found in Puck 0.23's source:
-  - Replaying an insert gives the new block's children fresh random IDs, so the sync sends the IDs itself.
-  - Selection is stored as an index, so another person's insert moves it; the sync restores it by block ID.
-  - A focused sidebar field ignores remote changes, and overwrites a remote edit to the same field on its next keystroke.
-  - A remote rich text change replaces the whole field and makes the local cursor jump.
-  - Interleaved moves and removes can leave a client out of step with no notice, so the sync detects that and reloads the draft.
-  - The undo hotkeys are attached to the whole page with no check for text fields.
-  - The npm package ships as hashed, bundled chunks, which makes any patch fragile across releases.
-- [ ] **Three-way merge:** scripted merge cases over the page document, covering every conflict type, the site-level parts of a draft, and sides on different block versions or brand revisions, produce the expected valid result.
-- [ ] **Render parity:** the same block renders identically in the Puck canvas and on the Astro site, checked by screenshot, with block imports awaited in Astro.
-- [ ] **Two block versions** live on one site, with dynamic imports keeping `sites` startup well under the 1-second limit.
-- [ ] **Agent loop:** GLM-5.3 Flash completes 8 of 10 scripted edits with the expected result through AI Gateway, including tool-call streaming.
-- [ ] **Chat layer:** Agents SDK chat hooks inside TanStack Start, connected to SiteAgent through studio-api. Cloudflare doesn't document WebSocket passthrough over a service binding, so this covers the upgrade and the `/get-messages` request.
-- [ ] **Publish and rollback** on a test custom hostname, live within about a minute.
-- [ ] **Astro and the Durable Objects in the starter's Alchemy graph:** the `sites` Astro app deploys through Alchemy alongside the other three Workers, with the same bindings and local emulation. `studio-api` deploys as a plain Worker with its own entry file hosting `SiteDoc` and `SiteAgent`, and `sites-api` hosts `SiteSubmissions`, bound from `studio-api` too.
+- **Live co-editing in Puck:** the sync module keeps Puck usable while two people and the agent edit one draft, despite the [known Puck gaps](#editing-the-site-document-and-puck).
+- **Three-way merge:** merging by block ID and field gives the expected, valid result for every conflict type, for site-level parts, and for sides on different block versions or brand revisions.
+- **Render parity:** a block renders the same in the Puck canvas and on the Astro site.
+- **Block versions at runtime:** several versions of one block live on one site while `sites` stays well inside the 1-second startup limit.
+- **The agent on a cheap model:** GLM-5.3 Flash completes routine edits through AI Gateway with streamed tool calls.
+- **The chat path:** the Agents SDK hooks work inside TanStack Start through `studio-api`. Cloudflare doesn't document WebSocket passthrough over a service binding.
+- **Hosting in Alchemy:** the Astro app, the plain `studio-api` Worker and all three Durable Object classes deploy through the starter's Alchemy graph with local emulation.
 
 ## Sources
 

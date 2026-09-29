@@ -7,7 +7,7 @@ export default defineConfig({
     .split("-")
     .map((part) => `${part.charAt(0).toUpperCase()}${part.slice(1)}`)
     .join(" "),
-  description: "Vision, product spec, and technical design for Pakshi.",
+  description: "Vision, product spec, technical design, and build plan for Pakshi.",
   theme: {
     accent: { light: "#0f766e", dark: "#2dd4bf" },
     mode: "system",

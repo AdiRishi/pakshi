@@ -1,0 +1,250 @@
+---
+title: Build plan
+description: The order Pakshi is built in, as checkpoints that each end in something you can run and test.
+sidebar:
+  order: 4
+---
+
+This plan builds the product described in the [product spec](/product-spec) and the [technical design](/technical-design), one checkpoint at a time. When every checkpoint is done, Pakshi is complete.
+
+## How to use this plan
+
+- **Build the checkpoints in order.** Each one starts from the finished state of the one before it.
+- **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
+- **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
+- **Every checkpoint deploys to staging** and ends in a demo someone can run there.
+- **The riskiest work comes first.** Checkpoints 1 to 4 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
+- **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
+- **This doc changes as we learn.** Tick checkpoints off, and split or reorder them when that makes the work clearer.
+
+## Status
+
+- [ ] [1. Skeleton](#1-skeleton)
+- [ ] [2. Editing a draft](#2-editing-a-draft)
+- [ ] [3. Live co-editing](#3-live-co-editing)
+- [ ] [4. Publishing and merging](#4-publishing-and-merging)
+- [ ] [5. Approvals, sharing and previews](#5-approvals-sharing-and-previews)
+- [ ] [6. The agent](#6-the-agent)
+- [ ] [7. Brands, themes and block versions](#7-brands-themes-and-block-versions)
+- [ ] [8. Site essentials](#8-site-essentials)
+- [ ] [9. Ready for real sites](#9-ready-for-real-sites)
+
+## 1. Skeleton
+
+Turn the starter into Pakshi's four Workers and prove that everything deploys together.
+
+**Build:**
+
+- Remove the starter's sample CSV app, its `prod:destroy` script and `forceDestroy` on buckets. Add the [production data safety](/technical-design#repository-and-environments) CI check. Update `AGENTS.md` and `apps/web/AGENTS.md`, and record the new layout in an ADR.
+- The [repository layout](/technical-design#repository-and-environments): `sites` (Astro 7), `sites-api`, `studio` (from `apps/web`) and `studio-api` as a plain Worker, all in the Alchemy graph. Declare the `SiteDoc`, `SiteAgent` and `SiteSubmissions` Durable Object classes, even if they do little yet.
+- D1 `core` with users and sessions, and [staff sign-in](/technical-design#security-and-access) through Better Auth's `genericOAuth` against a test OIDC provider.
+- `authorize` with the permission catalogue and the [default roles](/product-spec#roles-and-permissions), seeded for test users. There's no permissions UI yet.
+- The [page document](/technical-design#the-page-document) schema and the snapshot manifest format in `packages/contracts`.
+- `packages/blocks` with the field builders, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme preset in light and dark.
+- `sites` [serving](/technical-design#publishing-serving-and-previews) a hand-written snapshot from R2 through the KV `host → site → release` lookup, with the release and Worker version in the cache key.
+
+**Demo:** sign in to Studio on staging, then open a platform subdomain that serves a page from the hand-written snapshot, in light and dark.
+
+**Done when:**
+
+- `pnpm dev` runs all four Workers and the three Durable Object classes locally, and `test:infra-live` deploys them to an isolated stage and removes it.
+- A test user signs in through the test OIDC provider on staging.
+- The served page matches its fixture screenshot in light and dark, and a second request is a cache hit.
+- CI fails a production plan that deletes a Durable Object class, a D1 database or an R2 bucket.
+- `authorize` has tests for every default role on organization, brand and site scopes.
+
+**Proves:** hosting in Alchemy.
+
+## 2. Editing a draft
+
+One person edits a site in Studio, and the editor and the published site render the same.
+
+**Build:**
+
+- [`SiteDoc`](/technical-design#editing-the-site-document-and-puck), stored one row per page, with one draft per site until checkpoint 4 adds named drafts: `applyOps` with ops addressed by block ID, validation, history, and undo per editing session.
+- The site-level parts of the [page document](/technical-design#the-page-document): header and footer blocks, and the menus data. Menus get their editing screen in checkpoint 8.
+- The [Puck integration](/technical-design#editing-the-site-document-and-puck) for one person: the adapter, generated config, rich text conversion, resolved data, the same CSS in the canvas, local changes through `onAction`, and undo shortcuts taken over from Puck.
+- The Studio editor screen (canvas and block settings) and the page list: create, rename and open pages and posts.
+- The rest of the core blocks: split, feature grid, gallery, form (display only), blog list, header and footer, each with fixtures.
+- The [quality gates](/technical-design#blocks-and-versioning): screenshots of every fixture in both renderers, axe checks, and the lint rule against literal colors, fonts and spacing.
+
+**Demo:** edit text and images on a page in Studio, add and move sections, reload, and undo.
+
+**Done when:**
+
+- The adapter round trip changes nothing, checked by property tests over every core block fixture.
+- Every fixture's screenshot matches between the Puck canvas and `sites`, in light and dark.
+- An edit survives a reload, and undo reverses one editing session.
+- `applyOps` rejects invalid batches with structured errors, with a test for each validation rule.
+
+**Proves:** render parity.
+
+## 3. Live co-editing
+
+Several people and their presence in one draft, with Puck staying usable.
+
+**Build:**
+
+- PartySocket connections from Studio to `SiteDoc` through `studio-api`, with the WebSocket passed over the service binding.
+- [Live collaboration](/technical-design#editing-the-site-document-and-puck): broadcast, presence per draft, page, block and field, the pending queue, later write wins with a notice, dropped ops on removed blocks with a notice, the typing marker, and the per-connection permission cache.
+- Remote changes into Puck, handling every one of the [known Puck gaps](/technical-design#editing-the-site-document-and-puck).
+
+**Demo:** two browsers edit the same page on staging, each seeing the other's presence and changes live.
+
+**Done when:**
+
+- In a scripted two-browser session on one draft, every change is either applied or its author is told.
+- Each known Puck gap has a test that fails without the sync module's handling.
+- Nothing reloads the whole page except recovery from a detected divergence.
+- Undo in one browser never removes the other person's edits.
+- Removing a person's permission stops their next batch.
+
+**Proves:** live co-editing in Puck.
+
+## 4. Publishing and merging
+
+Named drafts that publish, roll back, and merge like branches. Every workflow has no steps until checkpoint 5, so submitting publishes directly.
+
+**Build:**
+
+- [Named drafts](/product-spec#drafts-and-merging): the drafts list, each draft's base release, the behind state, and closing drafts.
+- [Snapshots](/technical-design#publishing-serving-and-previews): the manifest and content-addressed page objects, and freezing with structure checks.
+- Publishing through `SiteDoc`: the release recorded as the source of truth, the KV write, the outbox to D1, and the reconcile job.
+- Rollback of the latest publish, and restoring an older release as a draft.
+- The [three-way merge](/technical-design#publishing-serving-and-previews), with block versions migrated before diffing, and the conflict screen with pick-a-side. Model suggestions for text conflicts come in checkpoint 6.
+
+**Demo:** two people work in two drafts; one publishes; the other opens their draft, updates it, resolves a conflict, and publishes; then someone rolls back.
+
+**Done when:**
+
+- Scripted merge cases produce the expected valid result for every conflict type, the non-conflicts (identical changes, additions on both sides), site-level parts, and sides on different block versions.
+- A publish and a rollback are each live on a staging platform subdomain within 60 seconds.
+- Two publishes started at once on one site happen one after the other.
+- The reconcile job restores a KV entry that was changed by hand.
+- After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
+- A draft edited after it was submitted stays open after publishing, and keeps only its later edits.
+
+**Proves:** the three-way merge.
+
+## 5. Approvals, sharing and previews
+
+Changes reach production through the workflows owners set, and drafts are shared like documents.
+
+**Build:**
+
+- [Approval workflows](/product-spec#approvals-and-publishing) on the organization, a brand or a site, and the workflow editor as a list of steps.
+- Submissions and approval progress in `SiteDoc`, with the D1 copy, stale-approval rejection, and the re-check after publishing's R2 writes.
+- [Pre-flight](/product-spec#approvals-and-publishing) at submission.
+- The Approvals screen with the preview and what changed, and approval notifications through Email Service.
+- [Sharing](/product-spec#sharing-and-previews) with people, the organization or anyone with the link, with view or edit access.
+- [Previews](/technical-design#publishing-serving-and-previews): the fixed R2 key, the preview domain, the token-to-cookie exchange, and the access counter.
+
+**Demo:** an editor shares a draft by link, submits it, and it goes through a two-step workflow to live; meanwhile another draft publishes and the submission updates itself.
+
+**Done when:**
+
+- When two final approvals race, exactly one release goes live.
+- A decision made on a submission that changed since it was loaded is rejected.
+- A clean merge during review keeps the approvals, and a merge that needed a person restarts the workflow.
+- Pre-flight blocks a submission while a placeholder remains.
+- A preview opens for someone it's shared with and not for anyone else, and revoking access blocks the next request.
+- Previews send no-index headers, and their forms don't submit.
+
+## 6. The agent
+
+The agent builds and edits sites through the same path as people.
+
+**Build:**
+
+- [`SiteAgent`](/technical-design#the-agent) on `AIChatAgent`, with routing limited to `SiteAgent`, the trusted user header, and the acting user stored per turn.
+- The chat panel through `studio-api`, including `/get-messages`.
+- Every agent tool, the cacheable context prefix, structured validation errors with two repair attempts, and presence as the agent acting for its user.
+- Source uploads with `toMarkdown`, `fetch_url` with its limits, alt text suggestions, and merge suggestions for text conflicts.
+- AI Gateway with cost tags and per-brand spend limits.
+- The eval suite, run in CI whenever prompts, models or block contracts change.
+
+**Demo:** describe a small site in chat, confirm the plan, and watch the agent build it section by section while another person watches the same draft.
+
+**Done when:**
+
+- GLM-5.3 Flash completes 8 of 10 scripted edits with the expected result, with tool calls streamed through AI Gateway.
+- The eval suite passes, with no successful prompt injection.
+- A request routed at `SiteDoc` through the agent route is refused, and so is a client-sent trusted header.
+- The agent can't submit or publish, and can't reach submissions.
+- A brand past its spend limit gets a clear message instead of a model call.
+
+**Proves:** the agent on a cheap model, and the chat path.
+
+## 7. Brands, themes and block versions
+
+Brands own their look, and blocks improve without surprising live sites.
+
+**Build:**
+
+- [Theme Studio](/product-spec#brands-and-themes): presets, palette generation, contrast checks in light and dark, fonts from R2, identity and the voice guide.
+- [Brand revisions](/technical-design#themes) pinned per draft, and Brand update drafts.
+- [Block versioning](/technical-design#blocks-and-versioning): opaque IDs, the lockfile, `migrate` chains, adopting an upgrade, upgrade drafts on every affected site, retention, the frozen-folder CI check, golden JSON Schema tests, and the reviewed screenshot-update path.
+- The library grows to about 20 blocks and 4 recipes, chosen from the sites the Pakshi team plans to build.
+
+**Demo:** change a brand's color and watch Brand update drafts appear on its sites; release a block's v2 and upgrade one site to it through a draft.
+
+**Done when:**
+
+- Two versions of one block are live on one site, with `sites` startup measured well under 1 second.
+- A theme with a failing contrast pair can't be saved.
+- A brand change reaches a site's live pages only when its Brand update draft publishes.
+- An upgrade from v1 to v3 migrates content through both steps.
+- CI rejects an edit to a released block's folder.
+
+**Proves:** block versions at runtime.
+
+## 8. Site essentials
+
+Everything else a real site needs.
+
+**Build:**
+
+- [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap and preview rejection, notification emails with retry, the submissions screen, CSV export and deletion by email.
+- The [media library](/product-spec#media): brand and site libraries, Cloudflare Images, alt text, and retention.
+- [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
+- [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
+- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check.
+- [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window.
+
+**Demo:** build a site with a registration form on a custom subdomain, submit the form, see the notification, and export the submission.
+
+**Done when:**
+
+- A form post lands only in that site's `SiteSubmissions` and sends its notification.
+- Flooding one site's form leaves another site's forms working.
+- A custom hostname serves over HTTPS on staging.
+- An unpublished page returns 410 and leaves the sitemap and menus.
+- A deleted site stops serving at once, and an org admin can restore it within 30 days.
+
+## 9. Ready for real sites
+
+Finish access control, safety and operations, then run real sites on Pakshi.
+
+**Build:**
+
+- The [permissions](/product-spec#roles-and-permissions) screens: members, grants, custom roles, overrides and the delegation rule.
+- The audit log's viewer, with every audited action recorded.
+- Pre-flight's [accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
+- The content security policy on every site.
+- [Operations](/technical-design#operations): alerts, and the restore drill in staging.
+- Block requests filed into the platform team's tracker.
+- Recording for every [success metric](/product-spec#success-metrics).
+
+**Demo:** the Pakshi team launches its first real site on a custom domain, using only Studio and the agent.
+
+**Done when:**
+
+- Delegation tests show no one can grant a permission they don't hold or a scope they don't control.
+- The restore drill has been run, and its steps are written down.
+- A security review has passed.
+- Every success metric is being recorded.
+- The first real site is live, and every change to it went through Pakshi.
+
+## After the last checkpoint
+
+Pakshi is complete. The Pakshi team runs its sites on it and watches the [success metrics](/product-spec#success-metrics). Anything from the spec's "Not in this version" list is added only when real use asks for it, through the spec, the design and a new plan.

@@ -3,7 +3,7 @@
 Branded websites that non-technical teams build and run themselves. Describe the site you want, and an AI agent assembles it from a library of professionally designed blocks. You review it, approve it, and it goes live on your domain. No developer in the loop.
 
 > [!NOTE]
-> Pakshi is in early development. The design is complete and Phase 0 has not started, so this repository still runs the sample app from the [application platform starter](https://github.com/AdiRishi/application-platform-starter) it builds on. Follow along in the [product spec](docs/product-spec.mdx).
+> Pakshi is in early development. The design is complete and development hasn't started, so this repository still runs the sample app from the [application platform starter](https://github.com/AdiRishi/application-platform-starter) it builds on. Follow along in the [build plan](docs/build-plan.mdx).
 
 ## Why Pakshi
 
@@ -39,8 +39,9 @@ To read the documentation locally, run `pnpm docs:dev`. It needs no Cloudflare c
 ## Learn more
 
 - [Vision](docs/vision.mdx): the problem, who Pakshi is for, and its principles.
-- [Product spec](docs/product-spec.mdx): what the MVP does, and the plan to get there.
+- [Product spec](docs/product-spec.mdx): what Pakshi does, and for whom.
 - [Technical design](docs/technical-design.mdx): how Pakshi is built on Cloudflare.
+- [Build plan](docs/build-plan.mdx): the order Pakshi is built in, as checkpoints.
 - [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU): every Studio screen, as a design canvas.
 
 ## Contributing

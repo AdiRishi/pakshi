@@ -1,32 +1,34 @@
 ---
 title: Product spec
-description: What Pakshi does and for whom, from MVP scope to success metrics.
+description: What Pakshi does and for whom, from scope to success metrics.
 sidebar:
   order: 2
 ---
 
-**The MVP:** a non-technical team can launch and maintain a branded, multi-page site with a blog and a contact or registration form, on its own domain, with drafts, approvals and rollback, without a developer.
+**What Pakshi does:** a non-technical team can launch and maintain a branded, multi-page site with a blog and a contact or registration form, on its own domain, with drafts, approvals and rollback, without a developer.
 
-This doc defines what Pakshi does and for whom. It sits between the [vision](/vision) (why) and the [technical design](/technical-design) (how). **Guiding rule:** keep the product small and focused. Every feature must serve building or maintaining a good-looking branded site; anything else waits until real use asks for it.
+This doc defines what Pakshi does and for whom. It sits between the [vision](/vision) (why) and the [technical design](/technical-design) (how), and describes the product as it will be when the [build plan](/build-plan) is complete. **Guiding rule:** keep the product small and focused. Every feature must serve building or maintaining a good-looking branded site; anything else waits until real use asks for it.
 
 ## Scope at a glance
 
-| MVP                                                                     | Later                                   | Not doing                           |
-| ----------------------------------------------------------------------- | --------------------------------------- | ----------------------------------- |
-| Brands with theme (light and dark), identity and voice guide            | Payments (Stripe Checkout)              | Custom code, CSS or HTML embeds     |
-| Sites, pages, and blog posts as pages                                   | Scheduled publishing                    | Tenant plugins or code              |
-| Agent builds and edits sites                                            | Visual, node-based workflow editor      | Public content API                  |
-| Visual editing in Puck, live with others                                | Comments on previews                    | E-commerce, site visitor logins     |
-| Named drafts that merge like branches and are shared like documents     | File uploads on forms                   | Marketing email or newsletters      |
-| Approval workflows on the organization, a brand or a site, and rollback | Guideline import into Theme Studio      | Approvers outside Pakshi            |
-| Pinned block versions, upgrades through drafts                          | Analytics dashboard                     | Page locks that block other editors |
-| Roles, fine-grained permissions and custom roles                        | Localization                            | Choosing an older brand theme       |
-| Forms, submissions, notification email                                  | Redirect bulk import                    | Media file versions                 |
-| Custom domains (subdomains)                                             | Identity-provider group to role mapping |                                     |
-| Media library with alt text, SEO basics, pre-flight checks, audit log   | Spam protection on forms                |                                     |
-|                                                                         | Confirmation emails to form submitters  |                                     |
-|                                                                         | Two people typing in the same paragraph |                                     |
-|                                                                         | Brand locks on site settings            |                                     |
+| In this version                                                         | Not in this version                     |
+| ----------------------------------------------------------------------- | --------------------------------------- |
+| Brands with theme (light and dark), identity and voice guide            | Payments (Stripe Checkout)              |
+| Sites, pages, and blog posts as pages                                   | Scheduled publishing                    |
+| Agent builds and edits sites                                            | Visual, node-based workflow editor      |
+| Visual editing in Puck, live with others                                | Comments on previews                    |
+| Named drafts that merge like branches and are shared like documents     | File uploads on forms                   |
+| Approval workflows on the organization, a brand or a site, and rollback | Guideline import into Theme Studio      |
+| Pinned block versions, upgrades through drafts                          | Analytics dashboard                     |
+| Roles, fine-grained permissions and custom roles                        | Localization                            |
+| Forms, submissions, notification email                                  | Redirect bulk import                    |
+| Custom domains (subdomains)                                             | Identity-provider group to role mapping |
+| Media library with alt text, SEO basics, pre-flight checks, audit log   | Spam protection on forms                |
+|                                                                         | Confirmation emails to form submitters  |
+|                                                                         | Two people typing in the same paragraph |
+|                                                                         | Brand locks on site settings            |
+
+The [non-goals](#non-goals) list what Pakshi will not become in any version.
 
 ## Roles and permissions
 
@@ -45,7 +47,7 @@ Pakshi has one permission system used everywhere. Studio, the API, the agent and
 | ---------------------------------------------------------- | :-------: | :---------: | :--------: | :----: | :------: | :----------------: |
 | Create brands, manage roles and org settings               |     ✔     |             |            |        |          |                    |
 | Edit brand theme, identity and voice guide                 |     ✔     |      ✔      |            |        |          |                    |
-| Create sites                                               |     ✔     |      ✔      |            |        |          |                    |
+| Create and delete sites                                    |     ✔     |      ✔      |            |        |          |                    |
 | Manage site settings, domains and members                  |     ✔     |      ✔      |     ✔      |        |          |                    |
 | Edit approval workflows                                    |     ✔     |      ✔      |            |        |          |                    |
 | Create, edit and share drafts (agent and visual editor)    |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
@@ -78,7 +80,7 @@ The [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU) show eve
 
 ## Key journeys
 
-Nine journeys cover the MVP. Each one reuses the same few building blocks: drafts, approvals and releases.
+Nine journeys cover the product. Each one reuses the same few building blocks: drafts, approvals and releases.
 
 **1. Set up a brand** (org admin, brand admin)
 
@@ -104,7 +106,7 @@ Nine journeys cover the MVP. Each one reuses the same few building blocks: draft
 - **Quick fix:** open a draft, click the text or image, change it. Changes save to the draft automatically; the live site is unchanged.
 - **Bigger change:** ask the agent ("add a speakers section", "make this shorter"). If a section is selected on the canvas, the agent knows what "this" means. Each agent turn can be undone in one click.
 - **Blog post:** create a post (title, excerpt, cover image, tags, author, body). The agent can draft it from notes.
-- **Pages and navigation:** create, rename, delete and unpublish pages, and edit navigation, header and footer, all in a draft.
+- **Pages and navigation:** create, rename, unpublish and delete pages, and edit the menus, header and footer, all in a draft.
 
 **4. Share and approve** (editor, approver)
 
@@ -144,9 +146,9 @@ Started from the agent or the block catalog. It files a request, with the need a
 
 ## Feature requirements
 
-These are the acceptance-level rules for the MVP, grouped by area.
+These are the acceptance-level rules for the product, grouped by area.
 
-**Editing**
+### Editing
 
 - All work happens in drafts. The agent and the visual editor change the same draft, and it saves automatically.
 - Several people can edit the same draft and page at once. Everyone sees who else is there, which block and field they're on, and their changes as they happen, including the agent's. If two people change the same field, the later change wins and the other person is told.
@@ -154,14 +156,22 @@ These are the acceptance-level rules for the MVP, grouped by area.
 - Every agent turn can be undone in one click. Undo leaves alone any field someone else has changed since, and says so. Each editing session and agent turn is kept in the draft's history.
 - Every change is checked against the block's rules before it's saved.
 
-**Drafts and merging**
+### Drafts and merging
 
 - A site can have any number of named drafts. Each draft starts from a release. Publishing a draft closes it, unless someone edited it after it was submitted. Then it stays open with those edits, based on the release it just published.
 - When a draft publishes, every other draft on the site is behind. People already working in a draft keep going. A draft that's behind must be updated the next time someone opens it, and before it's submitted.
 - Updating merges field by field against the release the draft started from. Identical changes on both sides aren't conflicts, and sections added on both sides are all kept. Only real conflicts need a person: the same field changed differently on both sides, a block edited on one side and removed on the other, or the same existing sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
 - If the two sides use different versions of a block, both are brought to the newer version before merging. The merged draft is then checked for structure (block rules and references), and anything that fails is shown as a conflict, so a merge never produces a broken page. Pre-flight checks, such as no placeholders left, run only at submission.
 
-**Sharing and previews**
+### Pages, menus, header and footer
+
+- Each site has one header and one footer. Each is a block chosen from the header or footer block types, with variants, and is versioned like any other block.
+- Each site has two menus: main and footer. A menu is an ordered list of items, each a label and a link to a page on the site or to an external address. The main menu can nest one level deep. The header shows the main menu and the footer shows the footer menu.
+- A menu link to a page follows it when the page's address changes. Unpublishing or deleting a page removes it from the menus in the same draft, and Pakshi says so.
+- **Unpublishing** a page marks it as unpublished in the draft. When the draft publishes, the page leaves the live site, the sitemap and the menus, and its address returns "gone" (HTTP 410) unless the editor adds a redirect, which Pakshi offers when unpublishing. The page stays in the draft and can be published again.
+- **Deleting** a page has the same effect on the live site, and also removes the page from the draft.
+
+### Sharing and previews
 
 - Drafts are shared like documents: with named people, the whole organization, or anyone with the link. The person sharing chooses view or edit access for each.
 - Editing always needs a signed-in Pakshi user. A link shared for editing gives signed-in users edit access and everyone else view access.
@@ -169,10 +179,10 @@ These are the acceptance-level rules for the MVP, grouped by area.
 - Every draft has a preview link, at an address that can't be guessed, showing the draft's latest saved state. Who can open it follows the draft's sharing. Sharing can be revoked at any time.
 - Previews are never indexed by search engines, and forms in previews don't submit. A preview lives as long as its draft.
 
-**Approvals and publishing**
+### Approvals and publishing
 
 - Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none. Each step names who can approve (roles or specific people) and how many approvals it needs.
-- Editing a workflow is a permission. The MVP editor is a simple list of steps. A visual, node-based editor for drawing steps and arrows is on the Later list, and can be pulled forward cheaply with an off-the-shelf flow library.
+- Editing a workflow is a permission. The workflow editor is a simple list of steps.
 - An approver needs the approve permission on that site. Approving a change you edited needs the separate permission for it.
 - Submitting freezes the draft exactly as it will be published. Approvals apply to that frozen version only. Submitting the same draft again replaces its pending submission and restarts the workflow.
 - If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals; a merge that needed conflict resolution restarts the workflow.
@@ -181,44 +191,51 @@ These are the acceptance-level rules for the MVP, grouped by area.
 - A publish is live worldwide within about a minute. Every release is kept.
 - Rollback without approval undoes only the most recent publish, and takes about a minute. An older release comes back only as a draft, through the site's workflow, and only while its block versions and media are still kept.
 
-**Blocks and versions**
+### Blocks and versions
 
 - Each site stays on the block versions it uses until an editor adopts an upgrade, through a draft and the site's workflow.
 - Any change that alters how a block looks creates a new version, shown to editors as v1, v2, v3 and so on. Any number of versions can be live at once. Sites on an older version see a banner encouraging them to upgrade, but are never forced.
 - An urgent fix is a new version like any other. The platform team can create upgrade drafts on every affected site at once.
 - A block version is kept while any draft or live release uses it, and for 3 months after the last one stops. The latest version of every block is always kept.
+- The library covers at least these page sections: hero, rich text, split, feature grid, call to action, gallery, form, blog list, header and footer, and grows to about 20 blocks and 4 recipes (landing, event, information site, blog), chosen from the sites Pakshi's first users build.
 
-**Brands and themes**
+### Brands and themes
 
 - Theme tokens: brand color (full palette generated from it), neutral tone, fonts, type scale, corner radius, density, shadow style, section backgrounds, image corners, motion on or off. Every theme has a light and a dark mode, both contrast-checked. Sites follow the visitor's system setting, with an optional toggle.
-- Sites use their brand's theme and identity as they are. There are no site theme overrides and no brand locks in the MVP.
+- Sites use their brand's theme and identity as they are. There are no site theme overrides and no brand locks.
 - Each save of a brand's theme, logo or favicon is a new brand revision. Each draft records the brand revision it uses, the way it records block versions, so other drafts never pick up a brand change.
 - A new brand revision creates a Brand update draft on every site in the brand, which follows that site's workflow. If a site already has an unpublished Brand update draft, it moves to the newer revision instead of a second draft being created.
 
-**Forms and submissions**
+### Sites and brands
+
+- Org and brand admins create sites. Every site gets a platform subdomain immediately.
+- Deleting a site needs its name typed to confirm, and offers a submissions export first. The site stops serving at once and its custom domains are released. Its drafts, releases, submissions, media and history are kept for 30 days, during which an org admin can restore the site, and are then deleted for good. Every deletion and restore is audited.
+- A brand can be deleted only once it has no sites.
+
+### Forms and submissions
 
 - Field types: short text, long text, email, phone, select, checkbox (for consent), hidden (for tracking codes).
 - Editors create and edit forms in a draft. Notification addresses are site settings. Each submission keeps the field labels it was sent with, so exports still read correctly after a form changes.
 - A consent checkbox and privacy link are required when a form collects personal data.
 - Each form sends a notification email to its configured addresses. Forms send no email to submitters.
-- Spam protection isn't in the MVP. Form posts over 64 KB are rejected.
+- There is no spam protection. Form posts over 64 KB are rejected.
 - Each site's submissions are stored in their own database, separate from every other site's, so a flood of submissions on one site can't affect another.
 - Submissions are kept for as long as the site exists, as part of its data. A single submission, or everything for one person, can be deleted on request. Every view, export and deletion is logged. The agent never has access to submissions.
 
-**Email**
+### Email
 
 Transactional only: form notifications and Studio notifications. Sent from a shared default sender, or from a brand or site sender domain that uses Cloudflare DNS.
 
-**Media**
+### Media
 
 Each brand has a library (logos, approved images) that its sites can use; each site has its own. Images are resized and optimized automatically. Alt text is required: the agent suggests it and a person confirms. Files never change: each upload is a new file with its own ID, so a new image replaces an old one only where someone swaps it in. The brand's logo and favicon are brand settings, so changing them reaches every site through a Brand update draft. A file is kept while any draft or live release uses it, and for 3 months after the last one stops.
 
-**SEO and domains**
+### SEO and domains
 
 - Per page: title, description, social image (defaults to the page's hero image or the brand default), canonical URL and a no-index option. Automatic sitemap, robots.txt and blog RSS feed. Changing a page's address offers to add a redirect.
-- Every site gets a platform subdomain immediately. Custom subdomains are added with guided DNS steps and automatic HTTPS. Root domains (example.org without www) aren't supported directly: sites use a subdomain such as www, and the root redirects to it.
+- Custom subdomains are added with guided DNS steps and automatic HTTPS. Root domains (example.org without www) aren't supported directly: sites use a subdomain such as www, and the root redirects to it.
 
-**Accessibility**
+### Accessibility
 
 Every block version meets WCAG 2.2 AA before release. Pre-flight checks heading order, alt text, link text and form labels. Studio itself targets WCAG 2.2 AA.
 
@@ -231,34 +248,24 @@ Every block version meets WCAG 2.2 AA before release. Pre-flight checks heading 
 - No marketing email, newsletters or CRM.
 - Not a digital asset management system: the media library serves websites only.
 - The agent never writes code, never submits or publishes, and never sees form submissions.
-
-## Phased plan
-
-Three phases, each ending with clear exit criteria. Durations depend on team size and are set at kickoff. The Pakshi team is the first user: it builds real sites with Pakshi from Phase 1, and the block library grows from what those sites need.
-
-| Phase          | Scope                                                                                                                                                                                                                                                                                                                                                                                     | Exit criteria                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 0. Foundations | Page schema; 8 core blocks (hero, rich text, split, feature grid, call to action, gallery, form, blog list), one with two versions; one theme preset in light and dark; Puck and the published site rendering identically; live editing of one draft by two people and the agent; merging a draft after another publishes; draft → share → approval → publish → rollback on a test domain | Screenshots of every core block fixture match between editor and published page; two versions of one block live on one site; in a scripted session with two people and the agent on one draft, every change is applied or its author is told; scripted merge cases, covering every conflict type and sides on different block versions, produce the expected valid document; the agent completes 8 of 10 scripted edits with the expected result; a publish and a rollback are each live on a test custom hostname within 60 seconds |
-| 1. Pilot       | Full MVP scope; about 20 blocks and 4 recipes (landing, event, information site, blog), chosen from the sites the Pakshi team builds; first real sites                                                                                                                                                                                                                                    | Sites live on custom domains; block requests per site falling over the last 4 weeks; new site launched in 10 business days or less including approvals; every live change traceable to a publish or rollback; security review passed                                                                                                                                                                                                                                                                                                 |
-| 2. Rollout     | More brands and sites; features from the Later list as they're needed                                                                                                                                                                                                                                                                                                                     | New brand onboarded in a day or less of platform time                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+- No approvers outside Pakshi. Anyone can view a draft shared by link, but only Pakshi users approve.
+- No page locks. People edit together, with presence showing who is where.
+- No media file versions. Files never change; a new file is a new upload.
+- No choosing an older brand theme. Sites move forward through Brand update drafts.
 
 ## Success metrics
 
-| Metric                | Definition                                                           | Pilot target                |
-| --------------------- | -------------------------------------------------------------------- | --------------------------- |
-| Time to launch        | Site created → first publish (median)                                | 10 business days or less    |
-| Time to change        | Draft created → submitted (median)                                   | 15 minutes or less          |
-| Block requests        | Block requests filed per active site per month                       | Falling month over month    |
-| Approval turnaround   | Submit → final decision (median)                                     | 1 business day or less      |
-| Agent success         | Agent turns not undone                                               | 75% or more                 |
-| Untracked changes     | Live changes not traceable to a publish or rollback in the audit log | 0                           |
-| Agent cost per launch | Model cost from site created → first publish (median)                | Tracked from the first site |
+These measure whether Pakshi works once people use it for real sites.
 
-## Open questions for Phase 0
-
-- What header, footer and navigation look like as data: fixed blocks, a menu structure, or both.
-- What unpublishing a page means: removed on the next publish, and whether its address redirects or returns "gone".
-- What deleting a site or a brand does to its releases, submissions, domains and drafts.
+| Metric                | Definition                                                           | Target                   |
+| --------------------- | -------------------------------------------------------------------- | ------------------------ |
+| Time to launch        | Site created → first publish (median)                                | 10 business days or less |
+| Time to change        | Draft created → submitted (median)                                   | 15 minutes or less       |
+| Block requests        | Block requests filed per active site per month                       | Falling month over month |
+| Approval turnaround   | Submit → final decision (median)                                     | 1 business day or less   |
+| Agent success         | Agent turns not undone                                               | 75% or more              |
+| Untracked changes     | Live changes not traceable to a publish or rollback in the audit log | 0                        |
+| Agent cost per launch | Model cost from site created → first publish (median)                | Tracked; no target yet   |
 
 ## Settled context
 
