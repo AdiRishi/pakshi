@@ -1,0 +1,53 @@
+/*
+ * Maps the variables from themeCss to Tailwind utilities. Blocks use only
+ * these utilities, so a theme change restyles every block.
+ */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --font-heading: var(--theme-font-heading);
+  --font-body: var(--theme-font-body);
+  --font-weight-heading: var(--theme-heading-weight);
+
+  --text-small: var(--theme-text-small);
+  --text-small--line-height: 1.5;
+  --text-body: var(--theme-text-body);
+  --text-body--line-height: 1.6;
+  --text-lead: var(--theme-text-lead);
+  --text-lead--line-height: 1.5;
+  --text-heading: var(--theme-text-heading);
+  --text-heading--line-height: 1.25;
+  --text-title: var(--theme-text-title);
+  --text-title--line-height: 1.15;
+  --text-display: var(--theme-text-display);
+  --text-display--line-height: 1.05;
+
+  --radius-sm: calc(var(--theme-radius) * 0.5);
+  --radius-md: var(--theme-radius);
+  --radius-lg: calc(var(--theme-radius) * 1.5);
+  --radius-image: var(--theme-image-radius);
+
+  --shadow-card: var(--theme-shadow);
+
+  --spacing: var(--theme-spacing);
+  --spacing-section: var(--theme-section-space);
+
+  --default-transition-duration: var(--theme-motion-duration);
+}
