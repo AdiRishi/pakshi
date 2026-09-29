@@ -153,6 +153,26 @@ describe("the keyboard alone", () => {
   });
 });
 
+describe("a link's settings", () => {
+  test("switch a button from a page on the site to an external address", async () => {
+    const { siteDoc, canvas } = await open();
+    heroField(canvas(), "cta")?.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.selectOptions(
+      page.getByLabelText("Link: where it goes"),
+      "An external address",
+    );
+    await userEvent.fill(
+      page.getByRole("textbox", { name: "Link", exact: true }),
+      "https://example.org/apply",
+    );
+    await userEvent.keyboard("{Tab}");
+    await expect
+      .poll(() => siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"])
+      .toEqual({ label: "See the programme", link: "https://example.org/apply" });
+  });
+});
+
 describe("a post's settings", () => {
   test("edit its date, tags and cover image", async () => {
     const post = PageId.make("pg_launch");

@@ -205,8 +205,18 @@ function LinkControl(props: ControlProps<KindOf<"link">>) {
   const { run, errors } = useRun();
   const current = props.value;
   const external = Predicate.isString(current) ? current : null;
+  const pageId = isRecord(current) && Predicate.isString(current["id"]) ? current["id"] : null;
   const [typed, setTyped] = useState(external ?? "https://");
+  const [choosingAddress, setChoosingAddress] = useState(false);
   const [invalid, setInvalid] = useState<string | null>(null);
+  // A new saved link, such as one undo brings back, replaces an address still being typed.
+  const saved = external ?? pageId;
+  const [shown, setShown] = useState(saved);
+  if (saved !== shown) {
+    setShown(saved);
+    setTyped(external ?? "https://");
+    setChoosingAddress(false);
+  }
   const saveTyped = () => {
     if (!Schema.is(ExternalUrl)(typed)) {
       setInvalid("Enter a full address that starts with https://, http://, mailto: or tel:");
@@ -215,7 +225,7 @@ function LinkControl(props: ControlProps<KindOf<"link">>) {
     setInvalid(null);
     if (typed !== external) run([setProp(props.field, typed)]);
   };
-  const pageId = isRecord(current) && Predicate.isString(current["id"]) ? current["id"] : null;
+  const toPage = pageId !== null && !choosingAddress;
   return (
     <ControlRow
       field={props.field}
@@ -225,20 +235,20 @@ function LinkControl(props: ControlProps<KindOf<"link">>) {
     >
       <NativeSelect
         aria-label={`${props.definition.title}: where it goes`}
-        value={external === null ? "page" : "external"}
+        value={toPage ? "page" : "external"}
         onChange={(event) => {
-          if (event.target.value === "external") setTyped(external ?? "https://");
-          else {
-            const [first] = Object.values(pages);
-            if (first !== undefined) run([setProp(props.field, { $ref: "page", id: first.id })]);
-          }
+          const toAddress = event.target.value === "external";
+          setChoosingAddress(toAddress);
+          const [first] = Object.values(pages);
+          if (!toAddress && pageId === null && first !== undefined)
+            run([setProp(props.field, { $ref: "page", id: first.id })]);
         }}
         className="w-full"
       >
         <NativeSelectOption value="page">A page on this site</NativeSelectOption>
         <NativeSelectOption value="external">An external address</NativeSelectOption>
       </NativeSelect>
-      {external === null && pageId !== null ? (
+      {toPage ? (
         <NativeSelect
           id={controlId(props.field)}
           value={pageId}
