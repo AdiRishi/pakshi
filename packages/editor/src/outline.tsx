@@ -242,8 +242,9 @@ function AddButton(props: {
     <Button
       variant="ghost"
       size="sm"
-      tabIndex={-1}
-      className={cn("justify-start text-primary", props.inset ? "ml-7" : "ml-1")}
+      // Inside the tree, a section's menu adds items; the button after it is the way to add a section.
+      tabIndex={props.inset ? -1 : undefined}
+      className={cn("justify-start text-muted-foreground", props.inset ? "ml-7" : "ml-1")}
       onClick={(event) => props.onClick(event.currentTarget)}
     >
       <PlusIcon />
