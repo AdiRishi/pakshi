@@ -4,7 +4,7 @@ import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
 import { Toggle } from "@repo/ui/components/toggle";
-import { Predicate, Schema } from "effect";
+import { Schema } from "effect";
 import {
   BoldIcon,
   Heading2Icon,
@@ -65,7 +65,7 @@ function LinkButton(props: { readonly active: ActiveRichText }) {
       onOpenChange={(next) => {
         setOpen(next);
         if (next) {
-          setHref(Predicate.isString(current) ? current : "https://");
+          setHref(Schema.is(ExternalUrl)(current) ? current : "https://");
           setProblem(null);
         }
       }}

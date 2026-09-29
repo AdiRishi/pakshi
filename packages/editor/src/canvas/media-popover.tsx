@@ -9,7 +9,7 @@ import {
   PopoverTitle,
   PopoverTrigger,
 } from "@repo/ui/components/popover";
-import { Predicate } from "effect";
+import { Schema } from "effect";
 
 import { type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
 import { FieldControl, valueAt } from "../settings/controls.tsx";
@@ -38,8 +38,7 @@ export function MediaPopover(props: {
   const field = definition === undefined ? undefined : fieldAt(definition.fields, props.field.path);
   if (block === undefined || field?.kind !== "media") return null;
   const value = valueAt(block.props, props.field.path);
-  const current = Predicate.isObject(value) && !Array.isArray(value) ? value : undefined;
-  const chosen = current?.["id"];
+  const chosen = value === undefined ? undefined : Schema.decodeSync(field.draft)(value);
 
   return (
     <Popover
@@ -72,11 +71,11 @@ export function MediaPopover(props: {
             <li key={file.id}>
               <button
                 type="button"
-                aria-pressed={chosen === file.id}
+                aria-pressed={chosen?.id === file.id}
                 aria-label={file.alt === "" ? file.id : file.alt}
                 className="block aspect-square w-full overflow-hidden rounded-md border-2 border-transparent focus-visible:border-ring focus-visible:outline-none aria-pressed:border-ring"
                 onClick={() => {
-                  if (chosen === file.id) return;
+                  if (chosen?.id === file.id) return;
                   store.run([
                     {
                       op: "setProp",
@@ -94,7 +93,7 @@ export function MediaPopover(props: {
         <FieldControl
           field={{ ...props.field, path: [...props.field.path, "alt"] }}
           definition={field.parts.alt}
-          value={Predicate.isString(current?.["alt"]) ? current["alt"] : ""}
+          value={chosen?.alt ?? ""}
         />
         <p className="text-xs text-muted-foreground">
           Say what the image shows for people who can't see it. Leave it empty if the image is only
