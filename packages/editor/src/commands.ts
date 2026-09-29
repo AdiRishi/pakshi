@@ -19,6 +19,7 @@ import {
   allowedTypes,
   blockLabel,
   duplicateOp,
+  firstFieldInPlace,
   insertOp,
   listOf,
   moveByOne,
@@ -189,14 +190,13 @@ export const enterBlock: Command = {
     const holder = selection.target === "site" ? view.parts : view.pages[selection.target];
     const instance = holder?.blocks[selection.block];
     const contract = instance === undefined ? undefined : contracts.get(instance.type);
-    const name = Object.entries(contract?.fields ?? {}).find(
-      ([field, definition]) =>
-        instance?.props[field] !== undefined &&
-        ["text", "richText", "media", "cta"].includes(definition.kind),
-    )?.[0];
-    return name === undefined
+    const path =
+      instance === undefined || contract === undefined
+        ? undefined
+        : firstFieldInPlace(contract.fields, instance.props);
+    return path === undefined
       ? undefined
-      : { kind: "select", selection: { ...selection, kind: "field", path: [name] } };
+      : { kind: "select", selection: { ...selection, kind: "field", path } };
   },
 };
 

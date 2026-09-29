@@ -1,6 +1,12 @@
-import { type Field, placeholderTree, richTextLines, type SlotSpec } from "@repo/blocks";
-import { BlockId, type BlockType, type PageId, randomId } from "@repo/contracts/ids";
-import type { BlockList, InsertBlock, MoveBlock, Op } from "@repo/contracts/ops";
+import {
+  type Field,
+  type Fields,
+  placeholderTree,
+  richTextLines,
+  type SlotSpec,
+} from "@repo/blocks";
+import { BlockId, type BlockType, ItemId, type PageId, randomId } from "@repo/contracts/ids";
+import type { BlockList, InsertBlock, MoveBlock, Op, PropPath } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument } from "@repo/contracts/page";
 import { type BlockContracts, blockTree } from "@repo/domain/document";
 import { Option, Schema } from "effect";
@@ -198,6 +204,34 @@ export const removeOp = (page: PageId, block: BlockId): Op => ({
   page,
   block,
 });
+
+/** The kinds of field edited in place on the page, rather than in the settings panel. */
+const inPlace: ReadonlySet<Field["kind"]> = new Set(["text", "richText", "media", "cta"]);
+
+const isJsonList = Schema.is(Schema.Array(Schema.JsonObject));
+const isItemId = Schema.is(ItemId);
+
+/**
+ * The first field of a block that's edited in place and has a value, as a
+ * path: a field of the block itself, or of the first list item that has one.
+ */
+export const firstFieldInPlace = (
+  fields: Fields,
+  props: Readonly<Record<string, Json>>,
+): PropPath | undefined => {
+  for (const [name, field] of Object.entries(fields)) {
+    const value = props[name];
+    if (value === undefined) continue;
+    if (inPlace.has(field.kind)) return [name];
+    if (field.kind !== "list" || !isJsonList(value)) continue;
+    for (const item of value) {
+      const id = item["id"];
+      const path = isItemId(id) ? firstFieldInPlace(field.item, item) : undefined;
+      if (isItemId(id) && path !== undefined) return [name, id, ...path];
+    }
+  }
+  return undefined;
+};
 
 // Labels -------------------------------------------------------------------
 
