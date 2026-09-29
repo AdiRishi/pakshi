@@ -29,18 +29,18 @@ export type BlockInstance = typeof BlockInstance.Type;
  * Meta fields carry only the limits enforced while typing. A draft may leave
  * them empty; freezing checks that they're filled in.
  */
-export const PageMeta = Schema.Struct({
-  title: Schema.String.check(Schema.isMaxLength(70)),
-  description: Schema.String.check(Schema.isMaxLength(160)),
-});
+const atMost = (max: number) =>
+  Schema.String.check(Schema.isMaxLength(max, { message: `Use at most ${max} characters` }));
+
+export const PageMeta = Schema.Struct({ title: atMost(70), description: atMost(160) });
 export type PageMeta = typeof PageMeta.Type;
 
 export const PostMeta = Schema.Struct({
   ...PageMeta.fields,
   date: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
-  author: Schema.String.check(Schema.isMaxLength(80)),
+  author: atMost(80),
   tags: Schema.Array(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(40))),
-  excerpt: Schema.String.check(Schema.isMaxLength(300)),
+  excerpt: atMost(300),
   cover: Schema.optionalKey(MediaRef),
 });
 export type PostMeta = typeof PostMeta.Type;

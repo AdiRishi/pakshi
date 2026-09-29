@@ -95,7 +95,7 @@ export const text = (options: {
   const multiline = options.multiline ?? false;
   const min = options.min ?? 1;
   const draft = Schema.String.check(
-    Schema.isMaxLength(options.max),
+    Schema.isMaxLength(options.max, { message: `Use at most ${options.max} characters` }),
     Schema.makeFilter((value) =>
       multiline || !value.includes("\n") ? undefined : "Use a single line",
     ),

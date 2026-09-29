@@ -12,7 +12,15 @@
       "types": "./src/fixtures.ts",
       "default": "./src/fixtures.ts"
     },
-    "./site.css": "./src/site.css"
+    "./site.css": "./src/site.css",
+    "./fields": {
+      "types": "./src/fields.ts",
+      "default": "./src/fields.ts"
+    },
+    "./contract": {
+      "types": "./src/contract.ts",
+      "default": "./src/contract.ts"
+    }
   },
   "scripts": {
     "generate": "node scripts/generate-registry.ts",

@@ -8,7 +8,8 @@ import { type ComponentType, createContext, type ReactNode, useContext } from "r
 
 import { useBlockFrame } from "./block.tsx";
 import { type Field, fieldAt } from "./fields.ts";
-import { type RichTextDocument, richTextExtensions, toJsonContent } from "./rich-text.ts";
+import { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
+import type { RichTextDocument } from "./rich-text.ts";
 
 export interface ResolvedMedia {
   readonly src: string;
