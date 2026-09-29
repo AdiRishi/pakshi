@@ -112,7 +112,7 @@
       // hand, so a lint error here has no legal fix — it can only be silenced
       // or it blocks the next `shadcn add`. The components are changed through
       // theme tokens and composition instead.
-      "files": ["apps/studio/src/components/ui/**"],
+      "files": ["apps/studio/src/components/ui/**", "apps/studio/src/hooks/use-mobile.ts"],
       "rules": {
         "anti-slop/no-runtime-typeof": "off",
         "anti-slop/require-safety-comment-for-type-assertion": "off",
@@ -120,7 +120,8 @@
         // Base UI renders its own elements and sets the matching ARIA role on
         // them; the rule cannot see through the primitive to know the role is
         // already correct.
-        "jsx-a11y/prefer-tag-over-role": "off"
+        "jsx-a11y/prefer-tag-over-role": "off",
+        "react/set-state-in-effect": "off"
       }
     }
   ],

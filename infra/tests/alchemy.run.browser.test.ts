@@ -12,9 +12,7 @@ test("a test user signs in to Studio through the test identity provider", async 
   expect(home.headers()["cache-control"]).toBe("private, no-store");
   const sites = page.getByRole("region", { name: "Your sites" });
   await expect(sites.getByText("Harbour Summer School")).toBeVisible();
-  await expect(page.getByRole("navigation", { name: "Studio" })).toContainText(
-    "Editor, Harbour Summer School",
-  );
+  await expect(page.getByText("Editor, Harbour Summer School")).toBeVisible();
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
 });

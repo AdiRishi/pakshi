@@ -1,41 +1,59 @@
+import { CircleAlertIcon } from "lucide-react";
+
 import { Logo } from "@/components/logo";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { buttonVariants } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export function SignInPage(props: { readonly organizationName: string; readonly failed: boolean }) {
   return (
-    <div className="flex min-h-screen bg-white">
+    <div className="flex min-h-screen bg-card">
       <section
         aria-label="About Pakshi"
-        className="relative hidden w-[53%] shrink-0 flex-col overflow-hidden bg-linear-to-b from-[#7cc6f5] via-[#a6d9f8] to-[#ddf0fc] px-14 pt-10 pb-33 lg:flex"
+        className="hidden flex-col bg-linear-to-b from-primary/70 via-primary/40 to-accent px-14 pt-10 pb-32 lg:flex lg:w-1/2"
       >
         <Logo inverse />
-        <p className="relative mt-auto max-w-140 text-[38px] leading-[1.18] font-semibold tracking-[-0.02em]">
+        <p className="mt-auto max-w-xl text-4xl leading-tight font-semibold tracking-tight">
           Pakshi is where {props.organizationName} teams build and update their websites.
         </p>
       </section>
       <main className="flex grow flex-col items-center justify-center p-10">
-        <div className="flex w-full max-w-110 flex-col gap-6 rounded-[18px] border border-border bg-white px-9 pt-9 pb-7.5">
-          <div className="flex flex-col gap-2">
-            <h1 className="text-[26px] font-semibold tracking-[-0.015em]">Sign in to Pakshi</h1>
-            <p className="text-[15px] leading-normal text-muted-foreground">
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>
+              <h1 className="text-2xl font-semibold tracking-tight">Sign in to Pakshi</h1>
+            </CardTitle>
+            <CardDescription>
               Use your {props.organizationName} account. Pakshi has no separate password.
-            </p>
-          </div>
-          {props.failed && (
-            <p role="alert" className="rounded-md bg-[#fff0d4] px-4 py-3 text-sm text-[#7a4a00]">
-              Sign-in didn't finish. Try again, or contact your IT service desk.
-            </p>
-          )}
-          <a
-            href="/sign-in/start"
-            className="flex h-11.5 items-center justify-center gap-2.5 rounded-lg bg-primary text-[15px] font-bold text-primary-foreground"
-          >
-            Continue with {props.organizationName} account
-          </a>
-          <p className="border-t border-[#e8eef3] pt-5 text-[13px] leading-normal text-muted-foreground">
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {props.failed && (
+              <Alert variant="destructive">
+                <CircleAlertIcon />
+                <AlertTitle>Sign-in didn't finish</AlertTitle>
+                <AlertDescription>Try again, or contact your IT service desk.</AlertDescription>
+              </Alert>
+            )}
+            <a
+              href="/sign-in/start"
+              className={buttonVariants({ size: "lg", className: "h-11 w-full font-bold" })}
+            >
+              Continue with {props.organizationName} account
+            </a>
+          </CardContent>
+          <CardFooter className="border-t text-sm text-muted-foreground">
             Can't get in? Contact the IT service desk about your account. If you can sign in but
             can't see your site, ask your team's Pakshi admin for access.
-          </p>
-        </div>
+          </CardFooter>
+        </Card>
       </main>
     </div>
   );
