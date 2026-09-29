@@ -82,7 +82,7 @@ Blocks are frozen code: a released version never changes ([decision 006](/decisi
 - **Two implementations, one output.** Outside the editor, field components render exactly the markup a block would write by hand, with no attributes or wrappers added. Inside the editor, the editor supplies editing versions through React context. They keep the same element, classes and content, and may add attributes, event handlers and `contenteditable`. They never add wrappers that change layout. The screenshot parity gate enforces this.
 - **Why components.** A `contenteditable` element only works if the editor owns its children. If a block renders a value as React children, each re-render fights the caret. Owning the field components also lets the editor improve without a new block version.
 - **No globals.** Blocks never read `window`, `document` or other browser globals while rendering. In the canvas, React renders into the iframe from Studio's window, so those globals would point at Studio.
-- **Picker metadata.** Each block definition gives the picker what it needs: title, a thumbnail rendered from a fixture, where the block is allowed, and placeholder content for a newly inserted block. Pre-flight already blocks a submission while placeholders remain.
+- **Picker metadata.** Each block definition gives the picker what it needs: title, where the block is allowed, and the placeholder content a new instance starts with, which is also its preview. Sections and items keep that content in `fixtures/placeholder.json`, and it should look finished ([decision 037](/decision-log#decision-037)). Pre-flight blocks a submission while placeholders remain.
 - **Every field kind has an editor.** Each field builder in `packages/blocks` (`text`, `richText`, `media`, `cta` and the rest) has a matching field kind in the editor. Adding a field builder without one must fail typecheck.
 
 ### With Studio
@@ -143,10 +143,10 @@ The editor gives Studio:
 
 ### Structure
 
-- **Insert:** a "+" at the edges between blocks and at the end of each slot opens the block picker. The picker lists only blocks allowed at that spot: section types at the top level, item types in a slot, and interactive blocks only at the top level. It has thumbnails and search. A new block starts with its placeholder content.
+- **Insert:** a "+" at the edges between blocks and at the end of each slot opens the block picker, and so do the outline and the block menu. The picker lists only blocks allowed at that spot: section types at the top level, item types in a slot, and interactive blocks only at the top level. It has search, and previews the highlighted block in the draft's theme ([decision 039](/decision-log#decision-039)). A new block starts with its placeholder content, and the canvas and outline mark every block that still has some.
 - **Move:** blocks move by drag within and between lists, in the canvas and in the outline panel. A drop line shows where the block will land. A drag in progress never changes the document, and the drop emits one `moveBlock`.
-- **Move without dragging:** move up, move down, move into the previous section, and move out to the top level work from the keyboard and from menus, and are announced in a live region. Every drag has this alternative ([WCAG 2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html)).
-- **Duplicate and remove.** Duplicating gives the copy and its children new IDs.
+- **Move without dragging:** move up, move down and move to work from the keyboard and from menus, and are announced in a live region with where the block landed. An item at either end of its slot moves into the nearest slot that accepts it, and move to puts it at the end of any other ([decision 038](/decision-log#decision-038)). Every drag has this alternative ([WCAG 2.5.7](https://www.w3.org/WAI/WCAG22/Understanding/dragging-movements.html)), so drag handles are for pointers only ([decision 040](/decision-log#decision-040)).
+- **Duplicate and remove.** Duplicating gives the copy and its children new IDs. The header and footer belong to every page, so they can't be moved, duplicated or removed.
 - **Outline panel:** a tree of the page's sections and items, navigable by keyboard, with the same commands as the canvas.
 
 ### Local copy and remote changes [#remote-changes]
@@ -230,15 +230,15 @@ CI measures these with the thresholds recorded in the tests, as it does for bund
 
 Use existing packages where the job has clear edges, and pin exact versions:
 
-| Job                                                                                      | Package                                                                                             |
-| ---------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
-| Rich text editing in a field                                                             | TipTap (`@tiptap/core`, `@tiptap/react`), on ProseMirror                                            |
-| Rendering rich text on the site with the editor's extensions                             | `@tiptap/static-renderer`                                                                           |
-| Converting the agent's Markdown to rich text                                             | `@tiptap/markdown`, with a check that rejects syntax the field doesn't allow instead of dropping it |
-| Applying a remote rich text change without moving the cursor                             | `prosemirror-changeset`                                                                             |
-| Drag and drop, keyboard dragging, auto-scroll, announcements, dragging across the iframe | `@dnd-kit/react` and `@dnd-kit/dom` 0.5.x. Not the legacy `@dnd-kit/core`                           |
-| Popovers, menus, dialogs, the block picker, settings controls                            | shadcn/ui on Base UI                                                                                |
-| Generating settings controls                                                             | Effect Schema, through the field builders                                                           |
+| Job                                                                   | Package                                                                                             |
+| --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| Rich text editing in a field                                          | TipTap (`@tiptap/core`, `@tiptap/react`), on ProseMirror                                            |
+| Rendering rich text on the site with the editor's extensions          | `@tiptap/static-renderer`                                                                           |
+| Converting the agent's Markdown to rich text                          | `@tiptap/markdown`, with a check that rejects syntax the field doesn't allow instead of dropping it |
+| Applying a remote rich text change without moving the cursor          | `prosemirror-changeset`                                                                             |
+| Drag and drop with a pointer, auto-scroll, dragging across the iframe | `@dnd-kit/react` and `@dnd-kit/dom` 0.5.x. Not the legacy `@dnd-kit/core`                           |
+| Popovers, menus, dialogs, the block picker, settings controls         | shadcn/ui on Base UI                                                                                |
+| Generating settings controls                                          | Effect Schema, through the field builders                                                           |
 
 **No dependency holds its own copy of page state.** The one exception is a rich text field's value inside its TipTap editor. That is allowed because a field is one value with one editor, and remote changes reach it only through the minimal-transaction path. Puck broke this rule, and most of its integration problems followed from it.
 
@@ -265,7 +265,7 @@ Each of these caused real problems in an editor we studied:
 - **Snapshot undo and page-wide hotkeys.** Puck's undo restores whole-page snapshots, which erases other people's changes. Its undo hotkeys are page-wide and fire even inside text inputs ([`history.ts`](https://github.com/puckeditor/puck/blob/9be9a85d69c837d70308fd598e027638d81f247d/packages/core/store/slices/history.ts), [`use-hotkey.ts`](https://github.com/puckeditor/puck/blob/9be9a85d69c837d70308fd598e027638d81f247d/packages/core/lib/use-hotkey.ts#L83-L99)).
 - **Copying host styles into the frame.** Puck mirrors every Studio stylesheet into the iframe by default, which has frozen the main thread and broken strict CSP ([`AutoFrame`](https://github.com/puckeditor/puck/blob/9be9a85d69c837d70308fd598e027638d81f247d/packages/core/components/AutoFrame/index.tsx#L80-L374)).
 - **Changing the block's DOM.** Puck sets `position: relative` on block roots and adds wrapper elements, which breaks layouts.
-- **Dropping the keyboard.** Puck replaces dnd-kit's sensors with the pointer sensor only, so nothing can be dragged by keyboard ([`use-sensors.ts`](https://github.com/puckeditor/puck/blob/9be9a85d69c837d70308fd598e027638d81f247d/packages/core/lib/dnd/use-sensors.ts#L34-L53)).
+- **Dropping the keyboard.** Puck replaces dnd-kit's sensors with the pointer sensor only and offers no other way to move a block, so nothing can be moved by keyboard ([`use-sensors.ts`](https://github.com/puckeditor/puck/blob/9be9a85d69c837d70308fd598e027638d81f247d/packages/core/lib/dnd/use-sensors.ts#L34-L53)).
 - **Saving only on blur.** EmDash's in-place editing saves on blur and shows every failure as "Save failed" without reverting the text, so text that was never stored stays on screen ([EmDash `toolbar.ts`](https://github.com/emdash-cms/emdash/blob/584f1661e5a2c8533c593af27b0e1852d2a8c663/packages/core/src/visual-editing/toolbar.ts#L846-L872)).
 - **Sending the whole document per change.** Payload's live preview sends the whole document to the preview frame on every form change.
 
@@ -342,5 +342,4 @@ The implementer decides these:
 - Whether every rich text field mounts TipTap, or fields show static output until focused. Measure against the performance budgets first.
 - How often typing is sent, within the half-second target.
 - How the store is built, as long as components subscribe to the slices they read.
-- The full set of move commands for items between sections.
 - When a reconnect resends pending batches and when it asks for a fresh copy of the draft.
