@@ -4,20 +4,31 @@ import {
   richTextExtensions,
   toJsonContent,
 } from "@repo/blocks";
+import type { PageId } from "@repo/contracts/ids";
 import { Editor } from "@tiptap/core";
 import { UndoRedo } from "@tiptap/extensions";
 import { Option, Schema } from "effect";
-import { type KeyboardEvent, useEffect, useEffectEvent, useLayoutEffect, useRef } from "react";
+import {
+  type ComponentProps,
+  type KeyboardEvent,
+  useEffect,
+  useEffectEvent,
+  useLayoutEffect,
+  useRef,
+} from "react";
 
 import {
   burstKey,
   type FieldTarget,
   useEditorState,
   useEditorUi,
+  useServices,
   useStore,
   useTarget,
 } from "../context.tsx";
+import { useBlockDrop, useDropPlacement } from "../dnd.tsx";
 import type { Selection } from "../store.ts";
+import { allowedTypes } from "../structure.ts";
 
 const samePath = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
   a.length === b.length && a.every((step, index) => step === b[index]);
@@ -349,11 +360,16 @@ const EditableCta: FieldEditing["Cta"] = (props) => {
 
 // Blocks --------------------------------------------------------------------
 
+type RootProps = ComponentProps<FieldEditing["Root"]>;
+
 /**
  * A block's root element, which carries its identity. Clicking it selects the
  * block, unless the click lands on one of its fields or on an item inside it.
  */
-const EditableRoot: FieldEditing["Root"] = (props) => {
+function RootElement({
+  attach,
+  ...props
+}: RootProps & { readonly attach?: (element: Element | null) => void }) {
   const store = useStore();
   const target = useTarget();
   const selected = useEditorState(
@@ -362,6 +378,7 @@ const EditableRoot: FieldEditing["Root"] = (props) => {
   const Tag = props.element;
   return (
     <Tag
+      ref={attach}
       data-surface={props.surface}
       className={props.className}
       data-pakshi-block={props.block}
@@ -381,6 +398,55 @@ const EditableRoot: FieldEditing["Root"] = (props) => {
       {props.children}
     </Tag>
   );
+}
+
+/** A block on the page, which a dragged block can be dropped beside. */
+function PageBlockRoot(props: RootProps & { readonly page: PageId }) {
+  const { list, accepts } = useDropPlacement(props.page, props.block);
+  const { ref: attach } = useBlockDrop({
+    surface: "canvas",
+    list: list ?? "root",
+    block: props.block,
+    accepts,
+  });
+  return <RootElement {...props} attach={attach} />;
+}
+
+/** The header and footer belong to every page, so nothing is dropped beside them. */
+const EditableRoot: FieldEditing["Root"] = (props) => {
+  const target = useTarget();
+  return target === "site" ? (
+    <RootElement {...props} />
+  ) : (
+    <PageBlockRoot {...props} page={target} />
+  );
+};
+
+/** A section's slot. It takes a dropped item where no item is under the pointer, such as when it's empty. */
+const EditableSlot: FieldEditing["Slot"] = (props) => {
+  const page = useTarget();
+  const { definitions } = useServices();
+  const accepts = useEditorState(
+    (state) => {
+      const document = page === "site" ? undefined : state.view.pages[page];
+      return document === undefined
+        ? []
+        : allowedTypes(document, definitions, { block: props.block, slot: props.name });
+    },
+    (a, b) => a.join() === b.join(),
+  );
+  const { ref: attach } = useBlockDrop({
+    surface: "canvas",
+    list: { block: props.block, slot: props.name },
+    block: null,
+    accepts,
+  });
+  const Element = props.as ?? "div";
+  return (
+    <Element ref={attach} className={props.className} data-pakshi-slot={props.name}>
+      {props.children}
+    </Element>
+  );
 };
 
 /** The editing versions of the field components, which the canvas supplies to every block. */
@@ -390,4 +456,5 @@ export const fieldEditing: FieldEditing = {
   RichText: EditableRichText,
   Media: EditableMedia,
   Cta: EditableCta,
+  Slot: EditableSlot,
 };

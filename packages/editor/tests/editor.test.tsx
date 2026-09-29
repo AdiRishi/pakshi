@@ -345,6 +345,8 @@ describe("performance budgets, on a page with 150 blocks", () => {
       "[data-pakshi-block='b_grid10'] [data-pakshi-field='heading']",
     );
     heading?.focus();
+    // Choosing the block opens its settings, whose layout previews render as they load.
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     rendered.length = 0;
     const typed = performance.now();
     await userEvent.keyboard("x");

@@ -1,8 +1,9 @@
+import { fieldAt, placeholderPaths } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId } from "@repo/contracts/ids";
-import type { BatchError, MetaField, Op, Target } from "@repo/contracts/ops";
+import type { BatchError, MetaField, Target } from "@repo/contracts/ops";
 import { PagePath, type PostMeta } from "@repo/contracts/page";
-import type { Surface } from "@repo/tokens";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
 import {
   Field,
@@ -14,30 +15,20 @@ import {
   FieldLegend,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
 import { Textarea } from "@repo/ui/components/textarea";
 import { Schema } from "effect";
+import { CircleAlertIcon, EllipsisIcon } from "lucide-react";
 import { useId, useState } from "react";
 
+import { BlockMenu } from "../block-menu.tsx";
 import { useEditorState, useServices, useStore } from "../context.tsx";
 import { LibraryPicker } from "../library-picker.tsx";
+import { blockLabel } from "../structure.ts";
+import { Appearance } from "./appearance.tsx";
 import { FieldControl } from "./controls.tsx";
 
 const holderOf = (draft: Draft, target: Target) =>
   target === "site" ? draft.parts : draft.pages[target];
-
-/** "split-image" as "Split image". */
-const humanize = (name: string) => {
-  const words = name.replace(/-/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-};
-
-const surfaceNames: Readonly<Record<Surface, string>> = {
-  default: "Page background",
-  muted: "Muted",
-  brand: "Brand color",
-  inverse: "Inverse",
-};
 
 function Section(props: { readonly title: string; readonly children: React.ReactNode }) {
   return (
@@ -54,26 +45,57 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
   const instance = useEditorState(
     (state) => holderOf(state.view, props.target)?.blocks[props.block],
   );
-  const variantId = useId();
-  const surfaceId = useId();
+  const [menuOpen, setMenuOpen] = useState(false);
   if (instance === undefined) return null;
   const contract = definitions.get(instance.type);
   if (contract === undefined) return null;
-  const surfaces = contract.placement === "item" ? [] : contract.surfaces;
-  const run = (op: Op) => store.run([op]);
+  const label = blockLabel(definitions, instance);
+  const placeholders = placeholderPaths(definitions, instance);
+  const placeholderTitles = [
+    ...new Set(placeholders.map((path) => fieldAt(contract.fields, path)?.title ?? path.join(" "))),
+  ];
   return (
     <>
       <div className="flex items-start justify-between gap-3 px-5 py-4">
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
           <span className="text-xs text-muted-foreground">
-            {contract.placement === "item" ? "Selected item" : "Selected section"}
+            {contract.placement === "item"
+              ? "Selected item"
+              : contract.placement === "section"
+                ? "Selected section"
+                : `On every page`}
           </span>
           <h2 className="text-lg font-semibold">{contract.title}</h2>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => store.select(null)}>
-          Page settings
-        </Button>
+        <div className="flex items-center gap-1">
+          {props.target !== "site" && (
+            <BlockMenu
+              page={props.target}
+              block={props.block}
+              origin="elsewhere"
+              open={menuOpen}
+              onOpenChange={setMenuOpen}
+              trigger={
+                <Button variant="ghost" size="icon-sm" aria-label={`Actions for ${label}`}>
+                  <EllipsisIcon />
+                </Button>
+              }
+            />
+          )}
+          <Button variant="ghost" size="sm" onClick={() => store.select(null)}>
+            Page settings
+          </Button>
+        </div>
       </div>
+      {placeholderTitles.length > 0 && (
+        <Alert className="mx-5 mb-4 w-auto">
+          <CircleAlertIcon />
+          <AlertTitle>This block still has placeholder content</AlertTitle>
+          <AlertDescription>
+            You can keep working, but replace it before you submit: {placeholderTitles.join(", ")}.
+          </AlertDescription>
+        </Alert>
+      )}
       <Section title="Content">
         {Object.entries(contract.fields).map(([name, definition]) => (
           <FieldControl
@@ -84,53 +106,15 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
           />
         ))}
       </Section>
-      {(contract.variants.length > 1 || surfaces.length > 1) && (
+      {(contract.variants.length > 1 ||
+        (contract.placement !== "item" && contract.surfaces.length > 1)) && (
         <Section title="Layout and style">
-          {contract.variants.length > 1 && (
-            <Field>
-              <FieldLabel htmlFor={variantId}>Layout</FieldLabel>
-              <NativeSelect
-                id={variantId}
-                value={instance.variant}
-                onChange={(event) =>
-                  run({
-                    op: "setVariant",
-                    target: props.target,
-                    block: props.block,
-                    variant: event.target.value,
-                  })
-                }
-                className="w-full"
-              >
-                {contract.variants.map((variant) => (
-                  <NativeSelectOption key={variant} value={variant}>
-                    {humanize(variant)}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-          )}
-          {surfaces.length > 1 && instance.surface !== undefined && (
-            <Field>
-              <FieldLabel htmlFor={surfaceId}>Background</FieldLabel>
-              <NativeSelect
-                id={surfaceId}
-                value={instance.surface}
-                onChange={(event) => {
-                  const surface = surfaces.find((candidate) => candidate === event.target.value);
-                  if (surface !== undefined)
-                    run({ op: "setSurface", target: props.target, block: props.block, surface });
-                }}
-                className="w-full"
-              >
-                {surfaces.map((surface) => (
-                  <NativeSelectOption key={surface} value={surface}>
-                    {surfaceNames[surface]}
-                  </NativeSelectOption>
-                ))}
-              </NativeSelect>
-            </Field>
-          )}
+          <Appearance
+            target={props.target}
+            block={props.block}
+            instance={instance}
+            contract={contract}
+          />
         </Section>
       )}
     </>

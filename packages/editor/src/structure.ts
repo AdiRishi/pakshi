@@ -99,6 +99,30 @@ export const insertOp = (
 });
 
 /**
+ * Moves a block to follow `after` in a list, or to its start when `after` is
+ * null. Returns undefined when the list can't hold the block or the block is
+ * already there.
+ */
+export const moveOp = (
+  page: PageDocument,
+  contracts: BlockContracts,
+  block: BlockId,
+  list: BlockList,
+  after: BlockId | null,
+): MoveBlock | undefined => {
+  const type = page.blocks[block]?.type;
+  const current = listOf(page, block);
+  if (type === undefined || current === undefined || after === block) return undefined;
+  const target = listsFor(page, contracts, type).find((candidate) =>
+    sameList(candidate.list, list),
+  );
+  if (target === undefined || (after !== null && !target.ids.includes(after))) return undefined;
+  const index = current.ids.indexOf(block);
+  if (sameList(current.list, list) && (current.ids[index - 1] ?? null) === after) return undefined;
+  return { op: "moveBlock", page: page.id, block, list, after };
+};
+
+/**
  * Moves a block one place up or down. An item at either end of its slot
  * moves into the nearest slot before or after it that accepts it, which may
  * be in another section. Returns undefined at the ends of the page.
@@ -116,13 +140,8 @@ export const moveByOne = (
   const current = lists[at];
   if (current === undefined) return undefined;
   const index = current.ids.indexOf(block);
-  const move = (list: BlockList, after: BlockId | null): MoveBlock => ({
-    op: "moveBlock",
-    page: page.id,
-    block,
-    list,
-    after,
-  });
+  const move = (list: BlockList, after: BlockId | null) =>
+    moveOp(page, contracts, block, list, after);
   if (direction === "up") {
     if (index > 0) return move(current.list, current.ids[index - 2] ?? null);
     const previous = lists[at - 1];
