@@ -484,6 +484,10 @@ describe("editing structure", () => {
     const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
     outlineRow("b_featuregridtwocolumnsitems0")?.focus();
     await userEvent.keyboard("{Delete}");
+    // Focus moves to the next item once the removal has rendered.
+    await expect
+      .poll(() => document.activeElement === outlineRow("b_featuregridtwocolumnsitems1"))
+      .toBe(true);
     await userEvent.keyboard("{Delete}");
     await expect.poll(() => items().length).toBe(0);
     await expect.poll(() => document.activeElement === outlineRow(grid)).toBe(true);
@@ -506,7 +510,12 @@ describe("editing structure", () => {
     const moving = BlockId.make("b_featuregridthreecolumnsitems0");
     const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
     outlineRow("b_featuregridtwocolumnsitems0")?.focus();
-    await userEvent.keyboard("{Delete}{Delete}");
+    await userEvent.keyboard("{Delete}");
+    // Focus moves to the next item once the removal has rendered.
+    await expect
+      .poll(() => document.activeElement === outlineRow("b_featuregridtwocolumnsitems1"))
+      .toBe(true);
+    await userEvent.keyboard("{Delete}");
     await expect.poll(() => items().length).toBe(0);
 
     const block = (id: string) =>
