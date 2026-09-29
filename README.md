@@ -3,7 +3,7 @@
 Branded websites that non-technical teams build and run themselves. Describe the site you want, and an AI agent assembles it from a library of professionally designed blocks. You review it, approve it, and it goes live on your domain. No developer in the loop.
 
 > [!NOTE]
-> Pakshi is in early development. The design is complete and development hasn't started, so this repository still runs the sample app from the [application platform starter](https://github.com/AdiRishi/application-platform-starter) it builds on. Follow along in the [build plan](docs/build-plan.mdx).
+> Pakshi is in early development. Studio sign-in and serving a published site from a snapshot work; editing comes next. Follow along in the [build plan](docs/build-plan.mdx).
 
 ## Why Pakshi
 
@@ -32,7 +32,9 @@ pnpm install
 pnpm dev
 ```
 
-Alchemy runs the whole stack locally, with emulated databases, storage, and Durable Objects. On the first run, it may ask you to sign in to Cloudflare. Open the URL it prints.
+Alchemy runs the whole stack locally, with emulated databases, storage, and Durable Objects. It keeps the stack's state in your Cloudflare account, so it needs a Cloudflare profile: run `pnpm --filter @repo/infra exec alchemy profile edit --profile default --reconfigure Cloudflare` and give it an API token.
+
+`pnpm dev` prints two addresses. Studio signs you in through a test identity provider: choose any test user. The sites address serves a sample site.
 
 To read the documentation locally, run `pnpm docs:dev`. It needs no Cloudflare credentials.
 

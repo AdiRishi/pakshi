@@ -52,14 +52,14 @@ Pakshi has one permission system used everywhere. Studio, the API, the agent and
 | Edit approval workflows                                    |     ✔     |      ✔      |            |        |          |                    |
 | Create, edit and share drafts (agent and visual editor)    |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
 | Submit for approval, or publish when no approval is needed |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
-| Approve or request changes (when named in a workflow step) |           |             |            |        |    ✔     |                    |
+| Approve or request changes (when named in a workflow step) |     ✔     |             |            |        |    ✔     |                    |
 | Roll back, adopt block upgrades                            |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
 | Read and export form submissions                           |     ✔     |      ✔      |     ✔      |        |          |         ✔          |
 | Request a new block                                        |     ✔     |      ✔      |     ✔      |   ✔    |          |                    |
 
 - Studio only shows people what they're allowed to do.
 - Org admins hold every permission, so they can grant any role, including Approver.
-- Approving a change you edited needs its own permission, which no default role includes. You edited a change if you changed anything in its draft.
+- Approving a change you edited needs its own permission, which only org admins hold by default. You edited a change if you changed anything in its draft.
 - The agent acts as its user and can do what they can, except submit and publish. A person always clicks Submit or Publish.
 - The platform team holds org admin and ships blocks through the code repository, not through the app.
 

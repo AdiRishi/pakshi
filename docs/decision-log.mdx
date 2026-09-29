@@ -7,34 +7,45 @@ sidebar:
 
 One short entry per significant decision: the context, what we chose, and why. Newest first.
 
-| #   | Decision                                                                     | Date       | Status            |
-| --- | ---------------------------------------------------------------------------- | ---------- | ----------------- |
-| 026 | Drafts may be incomplete; completeness is checked at submission              | 2026-09-29 | Accepted          |
-| 025 | Build our own visual editor on the page document, instead of Puck            | 2026-09-29 | Accepted          |
-| 024 | The site's Durable Object owns approvals and publishing                      | 2026-09-29 | Accepted          |
-| 023 | One-click rollback undoes only the latest publish                            | 2026-09-29 | Accepted          |
-| 022 | Each site's submissions in their own Durable Object                          | 2026-09-29 | Accepted          |
-| 021 | No spam protection on forms                                                  | 2026-09-29 | Accepted          |
-| 020 | Share drafts like documents                                                  | 2026-09-28 | Accepted          |
-| 019 | Brand changes reach sites as drafts; no brand locks                          | 2026-09-28 | Accepted          |
-| 018 | Media files never change                                                     | 2026-09-28 | Accepted          |
-| 017 | Named drafts that merge like branches                                        | 2026-09-28 | Accepted          |
-| 016 | Keep all site data: submissions and releases are never deleted automatically | 2026-09-29 | Accepted          |
-| 015 | Approval workflows on the organization, a brand or a site                    | 2026-09-29 | Accepted          |
-| 014 | Fine-grained permissions, with roles as bundles and per-person overrides     | 2026-09-28 | Accepted          |
-| 013 | Integrate Puck through a sync module; don't fork                             | 2026-09-29 | Superseded by 025 |
-| 012 | Effect Schema instead of Zod                                                 | 2026-09-27 | Accepted          |
-| 011 | Build on application-platform-starter                                        | 2026-09-27 | Accepted          |
-| 010 | Workers Paid plan; no Enterprise features, no root domains                   | 2026-09-27 | Accepted          |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access              | 2026-09-29 | Accepted          |
-| 008 | Agent on the Agents SDK, validated edits only, models chosen per task        | 2026-09-27 | Accepted          |
-| 007 | One live, collaborative Durable Object per site, with edits by block ID      | 2026-09-28 | Accepted          |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                      | 2026-09-28 | Accepted          |
-| 005 | Own the page schema; Puck edits it through an adapter                        | 2026-09-27 | Amended by 025    |
-| 004 | Publish immutable snapshots, render on request, cache per release            | 2026-09-28 | Accepted          |
-| 003 | Four Workers: a web and API pair for sites and for Studio                    | 2026-09-27 | Accepted          |
-| 002 | Host on Cloudflare                                                           | 2026-09-27 | Accepted          |
-| 001 | Sites pin block versions                                                     | 2026-09-27 | Accepted          |
+| #   | Decision                                                                         | Date       | Status            |
+| --- | -------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware | 2026-09-29 | Accepted          |
+| 026 | Drafts may be incomplete; completeness is checked at submission                  | 2026-09-29 | Accepted          |
+| 025 | Build our own visual editor on the page document, instead of Puck                | 2026-09-29 | Accepted          |
+| 024 | The site's Durable Object owns approvals and publishing                          | 2026-09-29 | Accepted          |
+| 023 | One-click rollback undoes only the latest publish                                | 2026-09-29 | Accepted          |
+| 022 | Each site's submissions in their own Durable Object                              | 2026-09-29 | Accepted          |
+| 021 | No spam protection on forms                                                      | 2026-09-29 | Accepted          |
+| 020 | Share drafts like documents                                                      | 2026-09-28 | Accepted          |
+| 019 | Brand changes reach sites as drafts; no brand locks                              | 2026-09-28 | Accepted          |
+| 018 | Media files never change                                                         | 2026-09-28 | Accepted          |
+| 017 | Named drafts that merge like branches                                            | 2026-09-28 | Accepted          |
+| 016 | Keep all site data: submissions and releases are never deleted automatically     | 2026-09-29 | Accepted          |
+| 015 | Approval workflows on the organization, a brand or a site                        | 2026-09-29 | Accepted          |
+| 014 | Fine-grained permissions, with roles as bundles and per-person overrides         | 2026-09-28 | Accepted          |
+| 013 | Integrate Puck through a sync module; don't fork                                 | 2026-09-29 | Superseded by 025 |
+| 012 | Effect Schema instead of Zod                                                     | 2026-09-27 | Accepted          |
+| 011 | Build on application-platform-starter                                            | 2026-09-27 | Accepted          |
+| 010 | Workers Paid plan; no Enterprise features, no root domains                       | 2026-09-27 | Accepted          |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                  | 2026-09-29 | Accepted          |
+| 008 | Agent on the Agents SDK, validated edits only, models chosen per task            | 2026-09-27 | Accepted          |
+| 007 | One live, collaborative Durable Object per site, with edits by block ID          | 2026-09-28 | Accepted          |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                          | 2026-09-28 | Accepted          |
+| 005 | Own the page schema; Puck edits it through an adapter                            | 2026-09-27 | Amended by 025    |
+| 004 | Publish immutable snapshots, render on request, cache per release                | 2026-09-28 | Accepted          |
+| 003 | Four Workers: a web and API pair for sites and for Studio                        | 2026-09-27 | Accepted          |
+| 002 | Host on Cloudflare                                                               | 2026-09-27 | Accepted          |
+| 001 | Sites pin block versions                                                         | 2026-09-27 | Accepted          |
+
+## 027 — Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware [#decision-027]
+
+**Context.** The design named `@astrojs/cloudflare`. Alchemy's `Website.Astro` resource, which builds, emulates and deploys the `sites` Worker, adds its own fork of that adapter, fails the build if the app declares one, and owns the Worker's entry file. `sites` has to look up the host and release in KV and serve pages from the Workers Cache API before Astro renders.
+
+**Decision.** `sites` uses Alchemy's Astro resource and adapter. The host → site → release lookup, the page cache and media serving run in Astro middleware, which sees every request after static assets. The cache key is the release ID, the Worker version and the path, as before.
+
+**Rejected.** Building with the upstream adapter and deploying the output as a plain Worker, which gives up Alchemy's local emulation and build memoization for `sites`; a separate front Worker for caching, which adds a fifth Worker.
+
+**Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so page caching works only on custom domains; branch stages render every request.
 
 ## 026 — Drafts may be incomplete; completeness is checked at submission [#decision-026]
 
