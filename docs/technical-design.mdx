@@ -47,7 +47,7 @@ flowchart LR
 | Public site rendering     | Astro 7 with React, Alchemy's Cloudflare adapter       | Server-rendered from snapshots; interactive blocks hydrate as islands. Alchemy's Astro resource adds its fork of `@astrojs/cloudflare` and owns the Worker entry, so the host lookup and page cache run in Astro middleware ([decision 027](/decision-log#decision-027)). Bindings come from `cloudflare:workers`, not `Astro.locals.runtime` |
 | Admin app                 | TanStack Start, Router, Query, Form, Table             | Studio UI; calls studio-api over RPC                                                                                                                                                                                                                                                                                                          |
 | Visual editor             | `@repo/editor`, our own                                | Edits the page document directly on a live render of the page, with others; see [Editor](/editor)                                                                                                                                                                                                                                             |
-| Drag and drop             | dnd-kit (`@dnd-kit/react`)                             | Reordering blocks in the editor, with keyboard dragging and screen reader announcements                                                                                                                                                                                                                                                       |
+| Drag and drop             | dnd-kit (`@dnd-kit/react`)                             | Reordering blocks in the editor with a pointer; the keyboard moves blocks with the editor's move commands                                                                                                                                                                                                                                     |
 | UI primitives and styling | shadcn/ui, Tailwind v4                                 | Theme tokens as CSS variables                                                                                                                                                                                                                                                                                                                 |
 | Schema and validation     | Effect Schema (Effect v4)                              | Same library as the starter. One schema drives validation, editor controls and agent tool definitions through its Standard Schema and JSON Schema output                                                                                                                                                                                      |
 | Rich text                 | TipTap (ProseMirror JSON)                              | Each field's extensions drive the editor, the site's static renderer (`@tiptap/static-renderer`) and Markdown conversion for the agent (`@tiptap/markdown`). A rich text field is one value; no shared-cursor editing                                                                                                                         |
@@ -178,6 +178,7 @@ Each block version is one folder with one definition. Everything else (editor co
 // packages/blocks/src/hero/v2/index.tsx
 import { defineBlock } from "../../block.tsx";
 import { cta, media, optional, richText, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 export default defineBlock({
   type: "hero",
@@ -194,6 +195,7 @@ export default defineBlock({
   surfaces: ["default", "muted", "brand", "inverse"],
   slots: {},
   interactive: false,
+  placeholder,
   component: Hero,
   agent: {
     purpose: "Opening message of a page, one primary action",
@@ -203,7 +205,7 @@ export default defineBlock({
 });
 ```
 
-Fixtures sit beside the definition, in `fixtures/*.json`, and the registry generator lists them with the block versions.
+Fixtures sit beside the definition, in `fixtures/*.json`, and the registry generator lists them with the block versions. A section or item also imports its `fixtures/placeholder.json` as `placeholder`: the content a new instance starts with, which pre-flight treats as a placeholder until someone changes it ([decision 037](/decision-log#decision-037)).
 
 A block's placement says where it goes: a section at the top of a page, with a surface and optional slots of items; an item in a section's slot; or the site's header or footer. Each field has a title and two schemas: a draft schema with the limits enforced while typing, and a complete schema that adds minimum lengths and filled-in required values, which freezing checks ([decision 026](/decision-log#decision-026)).
 

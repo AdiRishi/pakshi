@@ -8,7 +8,7 @@
 Branded websites that non-technical teams build and run themselves. Describe the site you want, and an AI agent assembles it from a library of professionally designed blocks. You review it, approve it, and it goes live on your domain. No developer in the loop.
 
 > [!NOTE]
-> Pakshi is in early development. Studio sign-in and serving a published site from a snapshot work; editing comes next. Follow along in the [build plan](docs/build-plan.mdx).
+> Pakshi is in early development. Studio edits a page's content and structure, and sites serve a published snapshot; live co-editing comes next. Follow along in the [build plan](docs/build-plan.mdx).
 
 ## Why Pakshi
 

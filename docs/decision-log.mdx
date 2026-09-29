@@ -7,44 +7,84 @@ sidebar:
 
 One short entry per significant decision: the context, what we chose, and why. Newest first.
 
-| #   | Decision                                                                         | Date       | Status            |
-| --- | -------------------------------------------------------------------------------- | ---------- | ----------------- |
-| 036 | The canvas fixes the theme's color scheme instead of following the system        | 2026-09-29 | Accepted          |
-| 035 | Tailwind's spacing scale counts as a theme token in blocks                       | 2026-09-29 | Accepted          |
-| 034 | Islands and media upload wait for the checkpoints that need them                 | 2026-09-29 | Accepted          |
-| 033 | A draft's history is its batch log until something reads more                    | 2026-09-29 | Accepted          |
-| 032 | The editor sends batches over RPC until live co-editing                          | 2026-09-29 | Accepted          |
-| 031 | Ops name their page, and cover variants, surfaces and addresses                  | 2026-09-29 | Accepted          |
-| 030 | Alt text belongs to where an image is placed                                     | 2026-09-29 | Accepted          |
-| 029 | Studio calls studio-api through an Effect RPC contract                           | 2026-09-29 | Accepted          |
-| 028 | Two stacks, dev and prod, and destroying one deletes everything                  | 2026-09-29 | Accepted          |
-| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware | 2026-09-29 | Accepted          |
-| 026 | Drafts may be incomplete; completeness is checked at submission                  | 2026-09-29 | Accepted          |
-| 025 | Build our own visual editor on the page document, instead of Puck                | 2026-09-29 | Accepted          |
-| 024 | The site's Durable Object owns approvals and publishing                          | 2026-09-29 | Accepted          |
-| 023 | One-click rollback undoes only the latest publish                                | 2026-09-29 | Accepted          |
-| 022 | Each site's submissions in their own Durable Object                              | 2026-09-29 | Accepted          |
-| 021 | No spam protection on forms                                                      | 2026-09-29 | Accepted          |
-| 020 | Share drafts like documents                                                      | 2026-09-28 | Accepted          |
-| 019 | Brand changes reach sites as drafts; no brand locks                              | 2026-09-28 | Accepted          |
-| 018 | Media files never change                                                         | 2026-09-28 | Accepted          |
-| 017 | Named drafts that merge like branches                                            | 2026-09-28 | Accepted          |
-| 016 | Keep all site data: submissions and releases are never deleted automatically     | 2026-09-29 | Accepted          |
-| 015 | Approval workflows on the organization, a brand or a site                        | 2026-09-29 | Accepted          |
-| 014 | Fine-grained permissions, with roles as bundles and per-person overrides         | 2026-09-28 | Accepted          |
-| 013 | Integrate Puck through a sync module; don't fork                                 | 2026-09-29 | Superseded by 025 |
-| 012 | Effect Schema instead of Zod                                                     | 2026-09-27 | Accepted          |
-| 011 | Build on application-platform-starter                                            | 2026-09-27 | Accepted          |
-| 010 | Workers Paid plan; no Enterprise features, no root domains                       | 2026-09-27 | Accepted          |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                  | 2026-09-29 | Accepted          |
-| 008 | Agent on the Agents SDK, validated edits only, models chosen per task            | 2026-09-27 | Accepted          |
-| 007 | One live, collaborative Durable Object per site, with edits by block ID          | 2026-09-28 | Accepted          |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                          | 2026-09-28 | Accepted          |
-| 005 | Own the page schema; Puck edits it through an adapter                            | 2026-09-27 | Amended by 025    |
-| 004 | Publish immutable snapshots, render on request, cache per release                | 2026-09-28 | Accepted          |
-| 003 | Four Workers: a web and API pair for sites and for Studio                        | 2026-09-27 | Accepted          |
-| 002 | Host on Cloudflare                                                               | 2026-09-27 | Accepted          |
-| 001 | Sites pin block versions                                                         | 2026-09-27 | Accepted          |
+| #   | Decision                                                                           | Date       | Status            |
+| --- | ---------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted          |
+| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted          |
+| 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted          |
+| 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted          |
+| 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted          |
+| 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted          |
+| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Accepted          |
+| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Accepted          |
+| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Accepted          |
+| 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted          |
+| 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted          |
+| 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted          |
+| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Accepted          |
+| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted          |
+| 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted          |
+| 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted          |
+| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Accepted          |
+| 023 | One-click rollback undoes only the latest publish                                  | 2026-09-29 | Accepted          |
+| 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted          |
+| 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted          |
+| 020 | Share drafts like documents                                                        | 2026-09-28 | Accepted          |
+| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Accepted          |
+| 018 | Media files never change                                                           | 2026-09-28 | Accepted          |
+| 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted          |
+| 016 | Keep all site data: submissions and releases are never deleted automatically       | 2026-09-29 | Accepted          |
+| 015 | Approval workflows on the organization, a brand or a site                          | 2026-09-29 | Accepted          |
+| 014 | Fine-grained permissions, with roles as bundles and per-person overrides           | 2026-09-28 | Accepted          |
+| 013 | Integrate Puck through a sync module; don't fork                                   | 2026-09-29 | Superseded by 025 |
+| 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted          |
+| 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted          |
+| 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted          |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Accepted          |
+| 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Accepted          |
+| 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted          |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Accepted          |
+| 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025    |
+| 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted          |
+| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Accepted          |
+| 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted          |
+| 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted          |
+
+## 040 — Dragging is for pointers; the keyboard moves blocks with commands [#decision-040]
+
+**Context.** The editor spec lists keyboard dragging as dnd-kit's job and names "dropping the keyboard" as a mistake Puck made. dnd-kit 0.5's keyboard sensor moves a plain draggable 10 pixels per arrow press, and its accessibility plugin announces raw IDs and puts its description element in Studio's document, where a handle inside the canvas can't reference it. Meanwhile, move up, move down and move to already reach every spot a drag can, from the keyboard, the outline and the block menu.
+
+**Decision.** Drag handles take the pointer sensor only, with a 4-pixel distance so a click stays a click. They are hidden from assistive technology and left out of the tab order. The keyboard moves blocks with the move commands, and each move is announced with where the block landed. A drop runs the `place` command, whose moveBlock comes from the same `moveOp` the move commands use.
+
+**Rejected.** dnd-kit's keyboard sensor with a plugin that jumps between drop spots, which would be a second keyboard path to the same moves; dnd-kit's accessibility plugin.
+
+**Consequences.** Puck's mistake was offering no keyboard path at all. Here every drag has a command, as WCAG 2.5.7 asks, and a drag and the matching command produce the same ops.
+
+## 039 — The picker previews one block, and layouts are chosen from the block's own content [#decision-039]
+
+**Context.** The editor spec asked for a thumbnail per block in the picker, rendered from a fixture, and for variants and surfaces chosen from previews. A thumbnail small enough for a grid of a dozen blocks can't be read, and each rendered thumbnail is a frame of its own.
+
+**Decision.** The picker lists blocks by name, with search, and previews the highlighted one in the draft's theme with the placeholder content it will start with. The settings panel renders the selected block's own content in each of its layouts, and shows each background as a swatch of the theme's colors for that surface. Layout previews follow the block's content once typing pauses, so a keystroke never renders them.
+
+**Consequences.** A person sees exactly what they'll get before choosing. The picker renders one preview frame, and the settings panel one per layout.
+
+## 038 — Items move up and down across sections [#decision-038]
+
+**Context.** The editor spec listed four move commands: up, down, into the previous section, and out to the top level. Placement rules make the last two impossible: items go only in a slot that accepts them, and sections only at the top level.
+
+**Decision.** Move up and move down move a block one place in its list. An item at either end of its slot moves into the nearest slot before or after it that accepts it, even in another section. Move to puts an item at the end of any other slot that accepts it. The header and footer belong to every page, so they don't move.
+
+**Consequences.** A keyboard user can take an item anywhere it's allowed with two commands, and no command is ever offered that placement rules would refuse.
+
+## 037 — A placeholder is a block's own starting content, found by its value [#decision-037]
+
+**Context.** The editor spec gives every block placeholder content for a new instance, and pre-flight blocks a submission while any placeholder remains, but nothing defined what a placeholder is. An empty required field can't be one: a draft always holds required fields, and an image, a form or a link has no empty value. A new block should also look finished, not like a form waiting to be filled in.
+
+**Decision.** Every section and item version ships a `fixtures/placeholder.json`, which `defineBlock` decodes into its contract. It uses built-in images and a contact form that every site resolves through `siteData`. `placeholderPaths` finds the fields still holding placeholder content: a built-in image or form, a button whose link is unchanged, or text, rich text or a link equal to a placeholder of that block type, including the items in a section's placeholder. A button's label alone doesn't count, because short labels such as "Get started" are often real.
+
+**Rejected.** Empty required fields as placeholders, which would let drafts lack required values; a marker in the document, which every op, undo and merge would have to carry.
+
+**Consequences.** The document gains no field, and a placeholder stops being one the moment its value changes. The placeholder is a fixture, so the screenshot and axe gates cover it. When the agent lacks content ([decision 026](#decision-026)), it can leave a block's placeholder values in place, and pre-flight finds them the same way.
 
 ## 036 — The canvas fixes the theme's color scheme instead of following the system [#decision-036]
 
