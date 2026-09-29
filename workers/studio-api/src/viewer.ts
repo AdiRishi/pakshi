@@ -35,15 +35,17 @@ const SiteRow = Schema.Struct({
   brand_name: Schema.String,
 });
 
-const rows = async <S extends Schema.Top & { readonly DecodingServices: never }>(
-  statement: D1PreparedStatement,
-  row: S,
-) => Schema.decodeUnknownSync(Schema.Array(row))((await statement.all()).results);
+// D1 returns untyped rows, so each query's rows are decoded against their own schema.
+const decodeGrants = Schema.decodeUnknownSync(Schema.Array(GrantRow));
+const decodeOverrides = Schema.decodeUnknownSync(Schema.Array(OverrideRow));
+const decodeSites = Schema.decodeUnknownSync(Schema.Array(SiteRow));
+
+const results = async (statement: D1PreparedStatement) => (await statement.all()).results;
 
 /** A person's grants and overrides, as `authorize` reads them. */
 export const loadAccess = async (env: StudioApiEnv, userId: string) => {
-  const [grants, overrides] = await Promise.all([
-    rows(
+  const [grantRows, overrideRows] = await Promise.all([
+    results(
       env.CORE.prepare(
         `select g.role, g.scope_kind, g.scope_id, coalesce(b.name, s.name) as scope_name
          from grants g
@@ -51,15 +53,15 @@ export const loadAccess = async (env: StudioApiEnv, userId: string) => {
          left join sites s on g.scope_kind = 'site' and s.id = g.scope_id
          where g.user_id = ?`,
       ).bind(userId),
-      GrantRow,
     ),
-    rows(
+    results(
       env.CORE.prepare(
         "select permission, scope_kind, scope_id, allowed from permission_overrides where user_id = ?",
       ).bind(userId),
-      OverrideRow,
     ),
   ]);
+  const grants = decodeGrants(grantRows);
+  const overrides = decodeOverrides(overrideRows);
   const access: Access = {
     grants: grants.map((grant) => ({ role: grant.role, scope: scopeOf(grant) })),
     overrides: overrides.map((override) => ({
@@ -92,7 +94,7 @@ const reachableSites = (env: StudioApiEnv, access: Access) => {
 /** Who is signed in, what they hold, and the sites whose pages they can edit. */
 export const describeViewer = async (env: StudioApiEnv, user: Person): Promise<Viewer> => {
   const { access, grants } = await loadAccess(env, user.id);
-  const sites = await rows(reachableSites(env, access), SiteRow);
+  const sites = decodeSites(await results(reachableSites(env, access)));
   return {
     user: { id: user.id, name: user.name, email: user.email },
     roles: grants.map((grant) => ({
