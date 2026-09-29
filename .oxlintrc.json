@@ -25,6 +25,10 @@
     {
       "name": "anti-slop-effect",
       "specifier": "./tooling/oxlint/anti-slop/effect/index.ts"
+    },
+    {
+      "name": "pakshi",
+      "specifier": "./tooling/oxlint/pakshi/index.ts"
     }
   ],
   // `correctness` is the only category oxlint enables by default. The others,
@@ -98,6 +102,14 @@
     }
   },
   "overrides": [
+    {
+      // Blocks style themselves only through theme tokens, so a theme change
+      // restyles every block, and a live block never hard-codes a look.
+      "files": ["packages/blocks/src/**/*.tsx"],
+      "rules": {
+        "pakshi/no-literal-styles": "error"
+      }
+    },
     {
       "files": ["infra/tests/**/*.test.ts"],
       "rules": {
