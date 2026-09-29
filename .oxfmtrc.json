@@ -3,7 +3,7 @@
   "sortImports": true,
   "sortPackageJson": true,
   "sortTailwindcss": {
-    "stylesheet": "./apps/studio/src/global-styles/tailwind.css"
+    "stylesheet": "./packages/ui/src/styles/globals.css"
   },
   "ignorePatterns": [
     ".agent/**",
