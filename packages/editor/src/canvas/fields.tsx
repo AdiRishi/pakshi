@@ -11,6 +11,7 @@ import { Option, Schema } from "effect";
 import {
   type ComponentProps,
   type KeyboardEvent,
+  useCallback,
   useEffect,
   useEffectEvent,
   useLayoutEffect,
@@ -435,12 +436,19 @@ const EditableSlot: FieldEditing["Slot"] = (props) => {
     },
     (a, b) => a.join() === b.join(),
   );
-  const { ref: attach } = useBlockDrop({
+  const { ref: attachDrop } = useBlockDrop({
     surface: "canvas",
     list: { block: props.block, slot: props.name },
     block: null,
     accepts,
   });
+  const empty = props.children.length === 0;
+  // An empty slot has no height to drop on, so its section's area takes the drop instead.
+  const attach = useCallback(
+    (element: HTMLElement | null) =>
+      attachDrop(empty ? (element?.closest("[data-pakshi-block]") ?? element) : element),
+    [attachDrop, empty],
+  );
   const Element = props.as ?? "div";
   return (
     <Element ref={attach} className={props.className} data-pakshi-slot={props.name}>

@@ -172,18 +172,21 @@ export function EditorProvider(props: {
         requestAnimationFrame(() => setAnnouncement(message));
       },
       openPicker: (spot, anchor) => {
+        // The picker sits beside the block the spot follows, or the section whose empty slot it's in.
+        const beside = spot.after ?? (spot.list === "root" ? null : spot.list.block);
         const element =
           anchor instanceof Element
             ? anchor
-            : spot.after === null
+            : beside === null
               ? null
               : anchor === "outline"
-                ? outlineBlock(spot.after)
-                : canvasBlock(spot.after);
+                ? outlineBlock(beside)
+                : canvasBlock(beside);
         const shown = element ?? canvasDocument?.defaultView?.frameElement ?? null;
         if (shown === null) return;
-        const origin: Origin =
-          shown.ownerDocument === canvasDocument
+        const origin: Origin = !(anchor instanceof Element)
+          ? anchor
+          : shown.ownerDocument === canvasDocument
             ? "canvas"
             : shown.closest("[data-pakshi-outline]") !== null
               ? "outline"
@@ -306,7 +309,7 @@ export function EditorCanvas(props: {
   }, [canvasDocument]);
 
   return (
-    <div ref={setContainer} className="relative size-full">
+    <div ref={setContainer} className="relative size-full" data-pakshi-canvas-area>
       <CanvasFrame
         title={`Canvas: ${title || "Untitled page"}`}
         siteCss={siteCss}
