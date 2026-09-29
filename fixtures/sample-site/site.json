@@ -10,11 +10,17 @@
   "snapshot": "snap_sample1",
   "release": "rel_sample1",
   "lockfile": {
-    "hero": 1,
-    "rich-text": 1,
     "call-to-action": 1,
+    "feature-grid": 1,
+    "feature-item": 1,
+    "footer": 1,
+    "form-section": 1,
+    "gallery": 1,
     "header": 1,
-    "footer": 1
+    "hero": 1,
+    "post-list": 1,
+    "rich-text": 1,
+    "split": 1
   },
   "parts": {
     "header": "b_siteheader",
