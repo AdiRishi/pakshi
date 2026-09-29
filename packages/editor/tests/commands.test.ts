@@ -6,6 +6,7 @@ import {
   addAfter,
   type Command,
   duplicate,
+  enterBlock,
   insert,
   moveDown,
   moveTo,
@@ -233,5 +234,20 @@ describe("structure commands", () => {
       store.undo();
       expect(home()).toEqual(expected);
     }
+  });
+});
+
+describe("entering a block", () => {
+  test("reaches a field inside a list when the block has none of its own", () => {
+    const { store, choose, run } = open();
+    store.run([{ op: "setProp", target: page, block: id("b_gallerygrid"), path: ["heading"] }]);
+    choose("b_gallerygrid");
+    expect(run(enterBlock, undefined)).toBe(true);
+    expect(store.getState().selection).toEqual({
+      kind: "field",
+      target: page,
+      block: "b_gallerygrid",
+      path: ["images", "it_boats", "image"],
+    });
   });
 });
