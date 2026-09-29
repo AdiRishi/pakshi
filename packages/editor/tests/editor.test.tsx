@@ -7,7 +7,7 @@ import { cleanup } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 
 import { home, openEditor as open, pattern } from "./support/mount.tsx";
-import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
+import { definitions, fakeSiteDoc, fixtureDraft, sam } from "./support/site-doc.ts";
 
 const heroField = (canvas: Document, field: string) =>
   canvas.querySelector<HTMLElement>(
@@ -284,6 +284,42 @@ describe("performance budgets, on a page with 150 blocks", () => {
     );
     expect(new Set(rendered)).toEqual(new Set(["b_grid10"]));
     expect(painted - typed).toBeLessThan(100);
+  });
+
+  test("someone else's batch renders only the blocks it touches", async () => {
+    const rendered: Array<BlockId> = [];
+    const counting = new Map(
+      Array.from(definitions, ([type, definition]) => [
+        type,
+        {
+          ...definition,
+          render: (input: Parameters<BlockDefinition["render"]>[0]) => {
+            rendered.push(input.id);
+            return definition.render(input);
+          },
+        },
+      ]),
+    );
+    const { siteDoc, canvas } = await open({ draft: largeDraft(), definitions: counting });
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    rendered.length = 0;
+    siteDoc.commit(sam, [
+      {
+        op: "setProp",
+        target: home,
+        block: BlockId.make("b_grid20item2"),
+        path: ["title"],
+        value: "Mentors",
+      },
+    ]);
+    await expect
+      .poll(
+        () =>
+          canvas().querySelector("[data-pakshi-block='b_grid20item2'] [data-pakshi-field='title']")
+            ?.textContent,
+      )
+      .toBe("Mentors");
+    expect(new Set(rendered)).toEqual(new Set(["b_grid20item2"]));
   });
 });
 
