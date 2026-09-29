@@ -12,24 +12,28 @@ import type { Connection } from "../../src/store.ts";
 
 const lockfile = Object.fromEntries(blockFixtures.map((entry) => [entry.type, entry.version]));
 
-const sections = blockFixtures
-  .filter((entry) => ["hero", "feature-grid", "gallery"].includes(entry.type))
-  .map(fixtureTree);
+const definitionsOf = await loadBlocks(lockfile);
+const placed = (placement: string) =>
+  blockFixtures.filter((entry) => definitionsOf.get(entry.type)?.placement === placement);
 
-/** A draft whose home page holds a hero, feature grids and galleries from the block fixtures. */
-export const fixtureDraft = Schema.decodeSync(Draft)({
+const sections = placed("section").map(fixtureTree);
+const [header] = placed("header").map(fixtureTree);
+const [footer] = placed("footer").map(fixtureTree);
+if (header === undefined || footer === undefined)
+  throw new Error("Blocks need header and footer fixtures.");
+
+/** A draft whose home page holds every section fixture, under a header and footer from their fixtures. */
+export const fixtureDraft = Schema.decodeUnknownSync(Draft)({
   id: "dr_fixtures",
   site: "site_fixtures",
   base: { release: "rel_fixtures", snapshot: "snap_fixtures" },
   revision: 0,
   settings: fixtureSite.settings,
   parts: {
-    header: "b_header",
-    footer: "b_footer",
-    blocks: {
-      b_header: { type: "header", variant: "simple", surface: "default", props: {} },
-      b_footer: { type: "footer", variant: "simple", surface: "muted", props: {} },
-    },
+    header: header.id,
+    footer: footer.id,
+    // Decoding the draft drops the trees' own IDs from the instances.
+    blocks: Object.fromEntries([header, footer].map((part) => [part.id, part])),
     menus: fixtureSite.menus,
   },
   forms: fixtureSite.forms,
@@ -68,7 +72,7 @@ export const fixtureDraft = Schema.decodeSync(Draft)({
   },
 });
 
-export const definitions = await loadBlocks(fixtureDraft.lockfile);
+export const definitions = definitionsOf;
 
 /**
  * SiteDoc as the editor sees it through a connection: it commits batches with
