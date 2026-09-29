@@ -45,6 +45,12 @@ const openCanvas = async (
   await page.getByRole("button", { name: scheme === "dark" ? "Dark" : "Light" }).click();
   const frame = page.frameLocator("iframe[title^='Canvas']");
   await expect(frame.locator("[data-pakshi-block]").first()).toBeVisible();
+  // The editor draws its controls, such as a Needs content badge, over the page; this compares the page.
+  await frame.locator("head").evaluate((head) => {
+    const style = head.ownerDocument.createElement("style");
+    style.textContent = ".pakshi-overlay { display: none; }";
+    head.appendChild(style);
+  });
   // Every image loads now, however far down the page, so screenshots never catch one loading.
   await frame.locator("body").evaluate((body) =>
     Promise.all(
@@ -277,5 +283,38 @@ test("an edit survives a reload, and undo reverses one action at a time", async 
   await studio.keyboard.type(original.heading);
   await studio.mouse.click(5, 5);
   await expect(heading).toHaveText(original.heading);
+  await expect(studio.getByText("Saved to the draft")).toBeVisible();
+});
+
+test("a section dragged by its handle in the canvas moves, and undo puts it back", async ({
+  browser,
+}) => {
+  const studio = await signedIn(browser);
+  await studio.setViewportSize({ width: 1440, height: 2000 });
+  await studio.goto(`${studioUrl}/sites/site_harbour/pages/pg_home`);
+  const frame = studio.frameLocator("iframe[title^='Canvas']");
+  const sections = () =>
+    studio
+      .getByRole("tree", { name: "Page outline" })
+      .locator("[role=treeitem][aria-level='1']")
+      .evaluateAll((rows) => rows.map((row) => row.getAttribute("data-pakshi-outline-block")));
+  await expect.poll(async () => (await sections()).length).toBeGreaterThan(3);
+  const before = await sections();
+  // The header comes first and can't move, so the first two sections swap.
+  const [header, first, second, ...rest] = before;
+  await frame.locator(`[data-pakshi-block="${first}"]`).hover();
+  const handle = await frame.locator(".pakshi-handle").boundingBox();
+  const target = await frame.locator(`[data-pakshi-block="${second}"]`).boundingBox();
+  if (handle === null || target === null) throw new Error("The canvas shows no handle or target.");
+  await studio.mouse.move(handle.x + 6, handle.y + handle.height / 2);
+  await studio.mouse.down();
+  await studio.mouse.move(target.x + target.width / 2, target.y + target.height - 12, {
+    steps: 16,
+  });
+  await studio.mouse.up();
+  await expect.poll(sections).toEqual([header, second, first, ...rest]);
+
+  await studio.getByRole("button", { name: "Undo" }).click();
+  await expect.poll(sections).toEqual(before);
   await expect(studio.getByText("Saved to the draft")).toBeVisible();
 });
