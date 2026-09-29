@@ -804,12 +804,21 @@ importers:
       '@effect/sql-d1':
         specifier: 4.0.0-rc.117
         version: 4.0.0-rc.117(effect@4.0.0-rc.117)
+      '@effect/sql-sqlite-do':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)
+      '@repo/blocks':
+        specifier: workspace:*
+        version: link:../../packages/blocks
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
       '@repo/domain':
         specifier: workspace:*
         version: link:../../packages/domain
+      '@repo/tokens':
+        specifier: workspace:*
+        version: link:../../packages/tokens
       better-auth:
         specifier: 'catalog:'
         version: 1.7.6(@tanstack/react-start@1.168.59(esbuild@0.28.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(rolldown@1.2.11)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(solid-js@1.9.15)(vitest@5.0.2)
@@ -838,6 +847,9 @@ importers:
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
+      '@types/react':
+        specifier: 'catalog:'
+        version: 19.3.0
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

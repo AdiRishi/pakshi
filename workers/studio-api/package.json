@@ -15,8 +15,11 @@
   },
   "dependencies": {
     "@effect/sql-d1": "catalog:",
+    "@effect/sql-sqlite-do": "catalog:",
+    "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/domain": "workspace:*",
+    "@repo/tokens": "workspace:*",
     "better-auth": "catalog:",
     "effect": "catalog:",
     "partyserver": "catalog:"
@@ -28,6 +31,7 @@
     "@repo/infra": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@types/node": "catalog:",
+    "@types/react": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

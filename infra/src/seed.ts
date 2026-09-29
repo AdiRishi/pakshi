@@ -76,6 +76,14 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
               "insert into sites (id, brand_id, name) values (?, ?, ?) on conflict (id) do update set name = excluded.name",
             )
             .bind(sample.site.id, sample.brand.id, sample.site.name),
+          ...sample.media.map((file) =>
+            db
+              .prepare(
+                `insert into media (id, site_id, content_type, width, height, alt) values (?, ?, ?, ?, ?, ?)
+                 on conflict (id) do update set alt = excluded.alt`,
+              )
+              .bind(file.id, sample.site.id, file.contentType, file.width, file.height, file.alt),
+          ),
           ...testUsers.map((user) =>
             db
               .prepare(
