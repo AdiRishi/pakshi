@@ -1,12 +1,5 @@
-import { SiteId, type SnapshotId } from "@repo/contracts/ids";
-import { PageDocument } from "@repo/contracts/page";
-import {
-  ContentHash,
-  LiveRelease,
-  objectKeys,
-  routingKeys,
-  SnapshotManifest,
-} from "@repo/contracts/snapshot";
+import { SiteId } from "@repo/contracts/ids";
+import { LiveRelease, routingKeys, snapshotReader } from "@repo/contracts/snapshot";
 import { env } from "cloudflare:workers";
 import { Schema } from "effect";
 
@@ -25,18 +18,8 @@ export const liveSiteFor = async (host: string): Promise<LiveSite | null> => {
   return { id, live: Schema.decodeSync(Schema.fromJsonString(LiveRelease))(live) };
 };
 
-const readObject = async (key: string) => {
-  const object = await env.CONTENT.get(key);
-  if (object === null) throw new Error(`${key} is missing from R2.`);
-  return object.text();
-};
+const snapshots = snapshotReader(async (key) => (await env.CONTENT.get(key))?.text() ?? null);
 
-export const loadManifest = async (site: SiteId, snapshot: SnapshotId) =>
-  Schema.decodeSync(Schema.fromJsonString(SnapshotManifest))(
-    await readObject(objectKeys.manifest(site, snapshot)),
-  );
+export const loadManifest = snapshots.manifest;
 
-export const loadPage = async (site: SiteId, hash: ContentHash) =>
-  Schema.decodeSync(Schema.fromJsonString(PageDocument))(
-    await readObject(objectKeys.page(site, hash)),
-  );
+export const loadPage = snapshots.page;

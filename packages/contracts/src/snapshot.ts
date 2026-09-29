@@ -3,7 +3,7 @@ import { Predicate, Schema } from "effect";
 
 import { FormDefinition } from "./form.ts";
 import { BlockType, FormId, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
-import { PageMeta, PagePath, PostMeta } from "./page.ts";
+import { PageDocument, PageMeta, PagePath, PostMeta } from "./page.ts";
 import { SiteParts, SiteSettings } from "./site.ts";
 
 /** The SHA-256 of a page object's canonical JSON, in lowercase hex. */
@@ -87,4 +87,27 @@ export const contentHash = async (value: Schema.Json) => {
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json));
   const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"));
   return ContentHash.make(hex.join(""));
+};
+
+/**
+ * Reads a site's snapshots from storage through `read`, which returns an
+ * object's text or null when it's missing. A snapshot is complete once
+ * written, so a missing object is an error.
+ */
+export const snapshotReader = (read: (key: string) => Promise<string | null>) => {
+  const readObject = async (key: string) => {
+    const text = await read(key);
+    if (text === null) throw new Error(`${key} is missing from the content bucket.`);
+    return text;
+  };
+  return {
+    manifest: async (site: SiteId, snapshot: SnapshotId) =>
+      Schema.decodeSync(Schema.fromJsonString(SnapshotManifest))(
+        await readObject(objectKeys.manifest(site, snapshot)),
+      ),
+    page: async (site: SiteId, hash: ContentHash) =>
+      Schema.decodeSync(Schema.fromJsonString(PageDocument))(
+        await readObject(objectKeys.page(site, hash)),
+      ),
+  };
 };

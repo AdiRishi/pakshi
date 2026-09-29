@@ -3,7 +3,6 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "..",
-    "jsx": "react-jsx",
     "types": ["vitest/globals"]
   },
   "include": ["./**/*.ts", "../src/**/*.ts"]

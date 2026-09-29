@@ -55,6 +55,9 @@ const fakeStudioApi = (behaviour: Behaviour) => {
           return Effect.never;
       }
     },
+    sitePages: () => Effect.die(new Error("These tests call only viewer.")),
+    editorDraft: () => Effect.die(new Error("These tests call only viewer.")),
+    applyBatch: () => Effect.die(new Error("These tests call only viewer.")),
   });
   const server = rpcWebHandler(StudioRpcs, Layer.mergeAll(handlers, session));
   return { seen, binding: { fetch: (request: Request) => server.handler(request) } };

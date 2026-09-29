@@ -20,7 +20,8 @@ const SampleSite = Schema.Struct({
   lockfile: SnapshotManifest.fields.lockfile,
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
-  media: Schema.Record(MediaId, MediaFile),
+  /** The site's library, with the alt text it suggests for each image. */
+  media: Schema.Record(MediaId, Schema.Struct({ ...MediaFile.fields, alt: Schema.String })),
   gone: Schema.Array(PagePath),
 });
 
@@ -53,7 +54,12 @@ export const sampleSite = async () => {
     forms: site.forms,
     lockfile: site.lockfile,
     theme: harbour,
-    media: site.media,
+    media: Object.fromEntries(
+      Object.entries(site.media).map(([id, file]) => [
+        id,
+        { contentType: file.contentType, width: file.width, height: file.height },
+      ]),
+    ),
     pages: pages.map(({ page, hash }) => ({
       id: page.id,
       path: page.path,
@@ -66,7 +72,7 @@ export const sampleSite = async () => {
   const media = await Promise.all(
     Object.entries(site.media).map(async ([id, file]) => ({
       id: MediaId.make(id),
-      contentType: file.contentType,
+      ...file,
       bytes: await readFile(fixture(`media/${id}.jpg`)),
     })),
   );
