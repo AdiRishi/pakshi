@@ -4,6 +4,7 @@ import { Schema } from "effect";
 import type { Json } from "effect/Schema";
 import { type ComponentType, createContext, type ReactElement, useContext } from "react";
 
+import type { BlockContract, Placement } from "./contract.ts";
 import { type Fields, propsSchema, type PropsOf } from "./fields.ts";
 
 export interface BlockComponentProps<F extends Fields, Variant extends string> {
@@ -11,49 +12,14 @@ export interface BlockComponentProps<F extends Fields, Variant extends string> {
   readonly variant: Variant;
 }
 
-/** A named list of item blocks inside a section, and the item types it accepts. */
-export interface SlotSpec {
-  readonly title: string;
-  readonly accepts: readonly [BlockType, ...Array<BlockType>];
-}
-
-/**
- * Where a block goes. Sections sit at the top of a page, choose a surface and
- * may hold items in slots. Items sit in a section's slot and have neither. A
- * site's header and footer are one block each, shared by every page.
- */
-export type Placement =
-  | {
-      readonly placement: "section";
-      readonly surfaces: readonly [Surface, ...Array<Surface>];
-      readonly slots: Readonly<Record<string, SlotSpec>>;
-      /** Interactive blocks hydrate on the site, so they must be top-level sections. */
-      readonly interactive: boolean;
-    }
-  | { readonly placement: "item" }
-  | {
-      readonly placement: "header" | "footer";
-      readonly surfaces: readonly [Surface, ...Array<Surface>];
-    };
-
 type BlockSpec<F extends Fields, Variant extends string> = Placement & {
   readonly type: BlockType;
   readonly version: number;
   readonly title: string;
   readonly props: F;
   readonly variants: readonly [Variant, ...Array<Variant>];
-  readonly agent: { readonly purpose: string; readonly avoid?: ReadonlyArray<string> };
+  readonly agent: BlockContract["agent"];
   readonly component: ComponentType<BlockComponentProps<F, Variant>>;
-};
-
-/** What the editor, validation and the agent know about a block version, without its component. */
-export type BlockContract = Placement & {
-  readonly type: BlockType;
-  readonly version: number;
-  readonly title: string;
-  readonly fields: Fields;
-  readonly variants: ReadonlyArray<string>;
-  readonly agent: BlockSpec<Fields, string>["agent"];
 };
 
 /** A placed block, with its slots' items already rendered. */

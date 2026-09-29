@@ -1,0 +1,515 @@
+import { BlockId, PageId } from "@repo/contracts/ids";
+import { BatchError, Op } from "@repo/contracts/ops";
+import { PageDocument } from "@repo/contracts/page";
+import { Schema } from "effect";
+import { describe, expect, test } from "vitest";
+
+import { applyOps } from "../src/document.ts";
+import { contracts, harbourDraft } from "./support/draft.ts";
+
+/** An op as it arrives over the wire, before decoding brands its IDs. */
+type WireOp = typeof Op.Encoded;
+
+const decodeOps = (ops: ReadonlyArray<WireOp>) => ops.map((op) => Schema.decodeSync(Op)(op));
+
+const apply = (...ops: ReadonlyArray<WireOp>) => applyOps(harbourDraft, decodeOps(ops), contracts);
+
+const applied = (...ops: ReadonlyArray<WireOp>) => {
+  const result = apply(...ops);
+  if (!result.ok) throw new Error(JSON.stringify(result.errors));
+  return result;
+};
+
+const rejection = (...ops: ReadonlyArray<WireOp>) => {
+  const result = apply(...ops);
+  if (result.ok) throw new Error("The batch was accepted.");
+  return result.errors;
+};
+
+const home = (draft = harbourDraft) => {
+  const page = draft.pages[PageId.make("pg_home")];
+  if (page === undefined) throw new Error("The draft has no home page.");
+  return page;
+};
+
+const block = (draft: typeof harbourDraft, id: string) => home(draft).blocks[BlockId.make(id)];
+
+const item = (id: string, title: string) => ({
+  id: `b_${id}` as const,
+  type: "feature-item",
+  variant: "default",
+  props: { title, body: "Every day." },
+});
+
+// Every kind of op, each accepted on the Harbour draft.
+const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
+  [
+    "set a field",
+    [{ op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "Build" }],
+  ],
+  [
+    "remove an optional field",
+    [{ op: "setProp", target: "pg_home", block: "b_hero", path: ["cta"] }],
+  ],
+  [
+    "set a button's label",
+    [
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["cta", "label"],
+        value: "Sign up",
+      },
+    ],
+  ],
+  [
+    "set alt text on a list item's image",
+    [
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_gallery",
+        path: ["images", "it_quay", "image", "alt"],
+        value: "The quay at dawn",
+      },
+    ],
+  ],
+  [
+    "remove a list item's caption",
+    [
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_gallery",
+        path: ["images", "it_quay", "caption"],
+      },
+    ],
+  ],
+  [
+    "set a field on the site header",
+    [
+      {
+        op: "setProp",
+        target: "site",
+        block: "b_header",
+        path: ["cta"],
+        value: { label: "Register", link: "https://example.org" },
+      },
+    ],
+  ],
+  [
+    "change a variant",
+    [{ op: "setVariant", target: "pg_home", block: "b_hero", variant: "split-image" }],
+  ],
+  [
+    "change a surface",
+    [{ op: "setSurface", target: "site", block: "b_footer", surface: "inverse" }],
+  ],
+  [
+    "insert a section with items",
+    [
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: "b_hero",
+        block: {
+          id: "b_more",
+          type: "feature-grid",
+          variant: "two-columns",
+          surface: "muted",
+          props: { heading: "More" },
+          slots: { items: [item("lunch", "Lunch")] },
+        },
+      },
+    ],
+  ],
+  [
+    "insert an item first in a slot",
+    [
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: { block: "b_features", slot: "items" },
+        after: null,
+        block: item("lunch", "Lunch"),
+      },
+    ],
+  ],
+  [
+    "move a section",
+    [{ op: "moveBlock", page: "pg_home", block: "b_gallery", list: "root", after: null }],
+  ],
+  [
+    "move an item to another page's section",
+    [
+      {
+        op: "moveBlock",
+        page: "pg_home",
+        block: "b_mentors",
+        list: { block: "b_features", slot: "items" },
+        after: null,
+      },
+    ],
+  ],
+  [
+    "remove a section with its items",
+    [{ op: "removeBlock", page: "pg_home", block: "b_features" }],
+  ],
+  ["set a page's title", [{ op: "setMeta", page: "pg_home", field: "title", value: "Harbour" }]],
+  [
+    "set a post's tags",
+    [{ op: "setMeta", page: "pg_dates", field: "tags", value: ["dates", "july"] }],
+  ],
+  ["change a page's address", [{ op: "setPath", page: "pg_about", path: "/who-we-are" }]],
+  [
+    "create a page",
+    [
+      {
+        op: "createPage",
+        page: {
+          schema: "pakshi.page/1",
+          id: "pg_visit",
+          type: "page",
+          path: "/visit",
+          meta: { title: "", description: "" },
+          root: [],
+          blocks: {},
+        },
+      },
+    ],
+  ],
+  ["delete a page", [{ op: "deletePage", page: "pg_about" }]],
+];
+
+describe("every op's inverse restores the draft exactly", () => {
+  test.each(batches)("%s", (_name, ops) => {
+    const { draft, inverse } = applied(...ops);
+    expect(draft).not.toEqual(harbourDraft);
+    const undone = applyOps(draft, inverse, contracts);
+    expect(undone.ok && undone.draft).toEqual(harbourDraft);
+  });
+});
+
+describe("applying ops", () => {
+  test("a required heading can be cleared and typed again", () => {
+    const cleared = applied({
+      op: "setProp",
+      target: "pg_home",
+      block: "b_hero",
+      path: ["heading"],
+      value: "",
+    });
+    expect(block(cleared.draft, "b_hero")?.props["heading"]).toBe("");
+    const retyped = applyOps(
+      cleared.draft,
+      decodeOps([
+        { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "L" },
+      ]),
+      contracts,
+    );
+    expect(retyped.ok).toBe(true);
+  });
+
+  test("an inserted section lands after the named block, with its items in its slot", () => {
+    const { draft } = applied(batches[8]?.[1][0] ?? { op: "deletePage", page: "pg_about" });
+    expect(home(draft).root).toEqual(["b_hero", "b_more", "b_features", "b_gallery"]);
+    expect(block(draft, "b_more")?.slots).toEqual({ items: ["b_lunch"] });
+    expect(block(draft, "b_lunch")?.props["title"]).toBe("Lunch");
+  });
+
+  test("moving an item between sections takes it out of the first", () => {
+    const { draft } = applied(
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: {
+          id: "b_more",
+          type: "feature-grid",
+          variant: "two-columns",
+          surface: "muted",
+          props: { heading: "More" },
+        },
+      },
+      {
+        op: "moveBlock",
+        page: "pg_home",
+        block: "b_mentors",
+        list: { block: "b_more", slot: "items" },
+        after: null,
+      },
+    );
+    expect(block(draft, "b_features")?.slots).toEqual({ items: ["b_workshops"] });
+    expect(block(draft, "b_more")?.slots).toEqual({ items: ["b_mentors"] });
+  });
+
+  test("removing a section removes its items", () => {
+    const { draft } = applied({ op: "removeBlock", page: "pg_home", block: "b_features" });
+    expect(Object.keys(home(draft).blocks).toSorted()).toEqual(["b_gallery", "b_hero"]);
+  });
+
+  test("a batch applies all or nothing", () => {
+    const errors = rejection(
+      { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "Build" },
+      { op: "setProp", target: "pg_home", block: "b_nope", path: ["heading"], value: "Build" },
+    );
+    expect(errors).toEqual([expect.objectContaining({ op: 1, rule: "unknown-block" })]);
+  });
+
+  test("errors are structured, with the op, where in it, the rule and a message", () => {
+    const [error] = rejection({
+      op: "setProp",
+      target: "pg_home",
+      block: "b_hero",
+      path: ["heading"],
+      value: "x".repeat(81),
+    });
+    expect(Schema.is(BatchError)(error)).toBe(true);
+    expect(error).toMatchObject({ op: 0, path: ["heading"], rule: "value" });
+    expect(error?.message).toBe("Use at most 80 characters");
+  });
+});
+
+describe("each rule rejects the ops that break it", () => {
+  const cases: ReadonlyArray<readonly [string, WireOp, BatchError["rule"]]> = [
+    [
+      "a page that doesn't exist",
+      { op: "setMeta", page: "pg_nope", field: "title", value: "Hi" },
+      "unknown-page",
+    ],
+    [
+      "a page ID that's taken",
+      {
+        op: "createPage",
+        page: { ...Schema.encodeSync(PageDocument)(home()), path: "/elsewhere" },
+      },
+      "page-exists",
+    ],
+    ["an address that's taken", { op: "setPath", page: "pg_about", path: "/" }, "path-taken"],
+    [
+      "a new page at an address that's taken",
+      { op: "createPage", page: { ...Schema.encodeSync(PageDocument)(home()), id: "pg_again" } },
+      "path-taken",
+    ],
+    [
+      "a block that doesn't exist",
+      { op: "removeBlock", page: "pg_home", block: "b_nope" },
+      "unknown-block",
+    ],
+    [
+      "a block ID that's taken",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: { block: "b_features", slot: "items" },
+        after: null,
+        block: item("mentors", "Again"),
+      },
+      "block-exists",
+    ],
+    [
+      "a slot the section doesn't have",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: { block: "b_features", slot: "cards" },
+        after: null,
+        block: item("lunch", "Lunch"),
+      },
+      "unknown-list",
+    ],
+    [
+      "an `after` that isn't in the list",
+      { op: "moveBlock", page: "pg_home", block: "b_gallery", list: "root", after: "b_workshops" },
+      "unknown-list",
+    ],
+    [
+      "a block type the lockfile doesn't pin",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: { id: "b_map", type: "map", variant: "default", surface: "default", props: {} },
+      },
+      "block-type",
+    ],
+    [
+      "an item at the top of a page",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: item("lunch", "Lunch"),
+      },
+      "placement",
+    ],
+    [
+      "a section in a slot",
+      {
+        op: "moveBlock",
+        page: "pg_home",
+        block: "b_gallery",
+        list: { block: "b_features", slot: "items" },
+        after: null,
+      },
+      "placement",
+    ],
+    [
+      "a header on a page",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: { id: "b_top", type: "header", variant: "simple", surface: "default", props: {} },
+      },
+      "placement",
+    ],
+    [
+      "a variant the block doesn't have",
+      { op: "setVariant", target: "pg_home", block: "b_hero", variant: "sideways" },
+      "variant",
+    ],
+    [
+      "a surface on an item",
+      { op: "setSurface", target: "pg_home", block: "b_mentors", surface: "brand" },
+      "surface",
+    ],
+    [
+      "a section without a surface",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: {
+          id: "b_more",
+          type: "feature-grid",
+          variant: "two-columns",
+          props: { heading: "More" },
+        },
+      },
+      "surface",
+    ],
+    [
+      "a field the block doesn't have",
+      { op: "setProp", target: "pg_home", block: "b_hero", path: ["subtitle"], value: "Hi" },
+      "field",
+    ],
+    [
+      "a path into plain text",
+      { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading", "x"], value: "Hi" },
+      "field",
+    ],
+    [
+      "a list item that doesn't exist",
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_gallery",
+        path: ["images", "it_nope", "caption"],
+        value: "Hi",
+      },
+      "unknown-item",
+    ],
+    [
+      "text over its maximum length",
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["heading"],
+        value: "x".repeat(81),
+      },
+      "value",
+    ],
+    [
+      "a line break in single-line text",
+      { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "Two\nlines" },
+      "value",
+    ],
+    [
+      "a required field removed",
+      { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"] },
+      "value",
+    ],
+    [
+      "a link with an unsafe protocol",
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["cta", "link"],
+        value: "javascript:alert(1)",
+      },
+      "value",
+    ],
+    [
+      "a mark the rich text field doesn't allow",
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["body"],
+        value: {
+          type: "doc",
+          content: [
+            { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "Hi" }] },
+          ],
+        },
+      },
+      "value",
+    ],
+    [
+      "new props over their limits",
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: { block: "b_features", slot: "items" },
+        after: null,
+        block: { ...item("lunch", "x".repeat(61)) },
+      },
+      "value",
+    ],
+    [
+      "a post-only field on a page",
+      { op: "setMeta", page: "pg_home", field: "tags", value: ["x"] },
+      "meta",
+    ],
+    [
+      "a description over its limit",
+      { op: "setMeta", page: "pg_home", field: "description", value: "x".repeat(161) },
+      "meta",
+    ],
+  ];
+
+  test.each(cases)("%s", (_name, op, rule) => {
+    expect(rejection(op)).toEqual(expect.arrayContaining([expect.objectContaining({ rule })]));
+  });
+});
+
+test("a new page made in code, which skips decoding, is still held to the page rules", () => {
+  const result = applyOps(
+    harbourDraft,
+    [
+      {
+        op: "createPage",
+        page: {
+          ...home(),
+          id: PageId.make("pg_again"),
+          path: "/again",
+          root: [BlockId.make("b_hero")],
+        },
+      },
+    ],
+    contracts,
+  );
+  expect(result.ok ? [] : result.errors).toEqual(
+    expect.arrayContaining([expect.objectContaining({ rule: "page" })]),
+  );
+});

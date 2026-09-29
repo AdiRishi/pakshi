@@ -65,6 +65,7 @@ export const SetProp = Schema.Struct({
   path: PropPath,
   value: Schema.optionalKey(Schema.Json),
 });
+export type SetProp = typeof SetProp.Type;
 
 export const SetVariant = Schema.Struct({
   op: Schema.Literal("setVariant"),
@@ -72,6 +73,7 @@ export const SetVariant = Schema.Struct({
   block: BlockId,
   variant: Schema.String,
 });
+export type SetVariant = typeof SetVariant.Type;
 
 export const SetSurface = Schema.Struct({
   op: Schema.Literal("setSurface"),
@@ -79,6 +81,7 @@ export const SetSurface = Schema.Struct({
   block: BlockId,
   surface: Surface,
 });
+export type SetSurface = typeof SetSurface.Type;
 
 /** Inserts a block after `after` in a list, or first when `after` is null. */
 export const InsertBlock = Schema.Struct({
@@ -88,6 +91,7 @@ export const InsertBlock = Schema.Struct({
   after: Schema.NullOr(BlockId),
   block: BlockTree,
 });
+export type InsertBlock = typeof InsertBlock.Type;
 
 /** Moves a block, with its items, after `after` in a list, or first when `after` is null. */
 export const MoveBlock = Schema.Struct({
@@ -97,6 +101,7 @@ export const MoveBlock = Schema.Struct({
   list: BlockList,
   after: Schema.NullOr(BlockId),
 });
+export type MoveBlock = typeof MoveBlock.Type;
 
 /** Removes a block and the items in its slots. */
 export const RemoveBlock = Schema.Struct({
@@ -104,6 +109,7 @@ export const RemoveBlock = Schema.Struct({
   page: PageId,
   block: BlockId,
 });
+export type RemoveBlock = typeof RemoveBlock.Type;
 
 /** Sets one meta field of a page or post. Leaving out `value` removes an optional one. */
 export const SetMeta = Schema.Struct({
@@ -112,6 +118,7 @@ export const SetMeta = Schema.Struct({
   field: MetaField,
   value: Schema.optionalKey(Schema.Json),
 });
+export type SetMeta = typeof SetMeta.Type;
 
 /** Changes a page's address. Links to the page follow it, because they hold its ID. */
 export const SetPath = Schema.Struct({
@@ -119,10 +126,13 @@ export const SetPath = Schema.Struct({
   page: PageId,
   path: PagePath,
 });
+export type SetPath = typeof SetPath.Type;
 
 export const CreatePage = Schema.Struct({ op: Schema.Literal("createPage"), page: PageDocument });
+export type CreatePage = typeof CreatePage.Type;
 
 export const DeletePage = Schema.Struct({ op: Schema.Literal("deletePage"), page: PageId });
+export type DeletePage = typeof DeletePage.Type;
 
 /** One change to a draft. People, the agent, undo and merging all speak this vocabulary. */
 export const Op = Schema.Union([

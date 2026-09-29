@@ -7,6 +7,10 @@
     "./access": {
       "types": "./src/access.ts",
       "default": "./src/access.ts"
+    },
+    "./document": {
+      "types": "./src/document.ts",
+      "default": "./src/document.ts"
     }
   },
   "scripts": {
@@ -14,7 +18,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
+    "@repo/tokens": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
