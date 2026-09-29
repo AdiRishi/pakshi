@@ -381,6 +381,48 @@ const pressUntil = async (key: string, reached: (element: Element) => boolean) =
   throw new Error(`Pressing ${key} never reached the element.`);
 };
 
+const center = (element: Element) => {
+  const rect = element.getBoundingClientRect();
+  return { x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 };
+};
+
+/**
+ * Presses the pointer on an element, moves it through points in small steps,
+ * and releases it at the last one, as a person dragging would.
+ */
+const pointerPath = async (
+  element: Element,
+  points: ReadonlyArray<{ readonly x: number; readonly y: number }>,
+) => {
+  // Events are made in the element's own window, which for the canvas is its frame.
+  const Pointer = element.ownerDocument.defaultView?.PointerEvent ?? PointerEvent;
+  const pointer = { pointerId: 1, pointerType: "mouse", isPrimary: true, bubbles: true };
+  let at = center(element);
+  element.dispatchEvent(
+    new Pointer("pointerdown", {
+      ...pointer,
+      button: 0,
+      buttons: 1,
+      clientX: at.x,
+      clientY: at.y,
+    }),
+  );
+  for (const point of points) {
+    for (let step = 1; step <= 10; step += 1) {
+      const x = at.x + ((point.x - at.x) * step) / 10;
+      const y = at.y + ((point.y - at.y) * step) / 10;
+      element.ownerDocument.dispatchEvent(
+        new Pointer("pointermove", { ...pointer, buttons: 1, clientX: x, clientY: y }),
+      );
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+    }
+    at = point;
+  }
+  element.ownerDocument.dispatchEvent(
+    new Pointer("pointerup", { ...pointer, button: 0, buttons: 0, clientX: at.x, clientY: at.y }),
+  );
+};
+
 const outlineRow = (block: string) =>
   document.querySelector<HTMLElement>(`[data-pakshi-outline-block="${block}"]`);
 
@@ -459,6 +501,69 @@ describe("editing structure", () => {
         after: "b_calltoactioncentered",
       },
     ]);
+  });
+
+  test("releasing a drag outside the canvas and the outline moves nothing", async () => {
+    const { siteDoc } = await open();
+    const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
+    const over = outlineRow("b_featuregridplaceholder")?.firstElementChild;
+    const outside = document.querySelector("aside[aria-label='Settings']");
+    if (!(source instanceof HTMLElement) || !(over instanceof HTMLElement) || outside === null)
+      throw new Error("The editor is missing a row or the settings panel.");
+    // Over another row first, which chooses where the block would land, then out.
+    await pointerPath(source, [center(over), center(outside)]);
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(siteDoc.received).toEqual([]);
+  });
+
+  test("adding to an empty slot from the outline chooses the new item there", async () => {
+    const { siteDoc } = await open();
+    const grid = BlockId.make("b_featuregridtwocolumns");
+    const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
+    outlineRow("b_featuregridtwocolumnsitems0")?.focus();
+    await userEvent.keyboard("{Delete}");
+    await userEvent.keyboard("{Delete}");
+    await expect.poll(() => items().length).toBe(0);
+    await expect.poll(() => document.activeElement === outlineRow(grid)).toBe(true);
+
+    // An open section with no items keeps focus on the right arrow.
+    await userEvent.keyboard("{ArrowRight}");
+    expect(document.activeElement).toBe(outlineRow(grid));
+
+    await userEvent.keyboard("{Shift>}{F10}{/Shift}");
+    await pressUntil("{ArrowDown}", (element) => element.textContent === "Add to Features");
+    await userEvent.keyboard("{Enter}");
+    await userEvent.keyboard("Feature{Enter}");
+    await expect.poll(() => items().length).toBe(1);
+    await expect.poll(() => document.activeElement === outlineRow(items()[0] ?? "")).toBe(true);
+  });
+
+  test("an item dragged in the canvas onto an empty section lands in its slot", async () => {
+    const { siteDoc, canvas } = await open();
+    const grid = BlockId.make("b_featuregridtwocolumns");
+    const moving = BlockId.make("b_featuregridthreecolumnsitems0");
+    const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
+    outlineRow("b_featuregridtwocolumnsitems0")?.focus();
+    await userEvent.keyboard("{Delete}{Delete}");
+    await expect.poll(() => items().length).toBe(0);
+
+    const block = (id: string) =>
+      canvas().querySelector<HTMLElement>(`[data-pakshi-block="${id}"]`);
+    block(grid)?.scrollIntoView({ block: "center" });
+    const item = block(moving);
+    if (item === null) throw new Error("The canvas has no item to drag.");
+    const FramePointer = item.ownerDocument.defaultView?.PointerEvent ?? PointerEvent;
+    item.dispatchEvent(new FramePointer("pointermove", { bubbles: true }));
+    const featureHandle = () =>
+      Array.from(canvas().querySelectorAll(".pakshi-handle")).find(
+        (candidate) => candidate.textContent === "Feature",
+      );
+    await expect.poll(featureHandle).toBeDefined();
+    const handle = featureHandle();
+    const target = block(grid);
+    if (handle === undefined || target === null) throw new Error("No handle or empty section.");
+    await pointerPath(handle, [center(target)]);
+    await expect.poll(items).toEqual([moving]);
   });
 
   test("the picker offers only the blocks a spot allows", async () => {

@@ -207,6 +207,14 @@ export function BlockDragDrop(props: { readonly children: ReactNode }) {
         if (source?.kind === "block")
           store.select({ kind: "block", target: store.getState().page, block: source.block });
       }}
+      onDragMove={(event, manager) => {
+        // Released over neither the canvas nor the outline, a drag moves nothing.
+        const { x, y } = event.to ?? manager.dragOperation.position.current;
+        const over = document
+          .elementsFromPoint(x, y)
+          .some((element) => element.closest("[data-pakshi-outline], [data-pakshi-canvas-area]"));
+        if (!over) show(null);
+      }}
       onCollision={(event, manager) => {
         const [collision] = event.collisions;
         // Between blocks nothing collides, so the line stays where it was.

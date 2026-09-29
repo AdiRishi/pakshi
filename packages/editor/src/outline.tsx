@@ -350,7 +350,8 @@ export function Outline() {
         handled();
         if (!expandable) return;
         if (collapsed.has(row.block)) return toggle(row.block, true);
-        return focusRow(rows[index + 1]);
+        // An open section with no items keeps focus, rather than skipping to the next section.
+        return rows[index + 1]?.parent === row.block ? focusRow(rows[index + 1]) : undefined;
       case "ArrowLeft":
         handled();
         if (expandable && !collapsed.has(row.block)) return toggle(row.block, false);
