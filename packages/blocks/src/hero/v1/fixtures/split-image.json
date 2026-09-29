@@ -17,7 +17,11 @@
         }
       ]
     },
-    "image": { "$ref": "media", "id": "med_harbour" },
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
     "cta": { "label": "Register", "link": "https://example.org/register" }
   }
 }

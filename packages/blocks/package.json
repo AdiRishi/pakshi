@@ -7,7 +7,12 @@
     ".": {
       "types": "./src/index.ts",
       "default": "./src/index.ts"
-    }
+    },
+    "./fixtures": {
+      "types": "./src/fixtures.ts",
+      "default": "./src/fixtures.ts"
+    },
+    "./site.css": "./src/site.css"
   },
   "scripts": {
     "generate": "node scripts/generate-registry.ts",
@@ -30,7 +35,8 @@
     "@tiptap/pm": "catalog:",
     "@tiptap/static-renderer": "catalog:",
     "effect": "catalog:",
-    "react": "catalog:"
+    "react": "catalog:",
+    "tailwindcss": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",

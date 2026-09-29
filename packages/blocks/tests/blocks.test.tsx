@@ -1,16 +1,21 @@
 import { readFile } from "node:fs/promises";
 
+import { BlockId } from "@repo/contracts/ids";
+import type { BlockTree } from "@repo/contracts/ops";
+import type { BlockInstance } from "@repo/contracts/page";
+import { Schema } from "effect";
 import type { Json } from "effect/Schema";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { registrySource } from "../scripts/generate-registry.ts";
-import { ReferencesProvider } from "../src/components.tsx";
+import { fixturesSource, registrySource } from "../scripts/generate-registry.ts";
+import type { BlockDefinition } from "../src/block.tsx";
+import { SiteDataProvider } from "../src/components.tsx";
+import { propsSchema } from "../src/fields.ts";
+import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import { registry } from "../src/registry.gen.ts";
-import { blockKey } from "../src/render.tsx";
-import { blockFixtures, fixtureReferences } from "./support/fixtures.ts";
-
-const fixtures = await blockFixtures();
+import { blockKey, renderBlock } from "../src/render.tsx";
+import { siteData } from "../src/site-data.ts";
 
 const load = async (type: string, version: number) => {
   const entry = registry[blockKey(type, version)];
@@ -18,43 +23,95 @@ const load = async (type: string, version: number) => {
   return (await entry()).default;
 };
 
-const markup = (element: React.ReactElement) =>
-  renderToStaticMarkup(
-    <ReferencesProvider value={fixtureReferences}>{element}</ReferencesProvider>,
-  );
+const site = siteData({
+  ...fixtureSite,
+  media: (id) => {
+    const file = fixtureSite.media[id];
+    return file === undefined ? undefined : { src: `/_media/${id}`, ...file };
+  },
+});
 
-test("the generated registry lists every block version folder", async () => {
+const markup = (element: React.ReactElement) =>
+  renderToStaticMarkup(<SiteDataProvider value={site}>{element}</SiteDataProvider>);
+
+/** A block tree as the flat blocks a page stores. */
+const flatten = (tree: BlockTree): Record<BlockId, BlockInstance> => {
+  const { id, slots, ...block } = tree;
+  const items = Object.values(slots ?? {}).flat();
+  return {
+    [id]: {
+      ...block,
+      ...(slots && {
+        slots: Object.fromEntries(
+          Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
+        ),
+      }),
+    },
+    ...Object.fromEntries(items.map(({ id: itemId, ...item }) => [itemId, item])),
+  };
+};
+
+const renderTree = async (tree: BlockTree) => {
+  const types = new Set([
+    tree.type,
+    ...Object.values(tree.slots ?? {})
+      .flat()
+      .map((item) => item.type),
+  ]);
+  const definitions = new Map<string, BlockDefinition>(
+    await Promise.all(Array.from(types, async (type) => [type, await load(type, 1)] as const)),
+  );
+  return markup(renderBlock(definitions, flatten(tree), tree.id));
+};
+
+const renderProps = (
+  block: BlockDefinition,
+  props: Readonly<Record<string, Json>>,
+  variant: string,
+) => block.render({ id: BlockId.make("b_test"), props, variant, surface: undefined, slots: {} });
+
+test("the generated registry and fixture list match the block version folders", async () => {
   expect(await readFile(new URL("../src/registry.gen.ts", import.meta.url), "utf8")).toBe(
     await registrySource(),
+  );
+  expect(await readFile(new URL("../src/fixtures.gen.ts", import.meta.url), "utf8")).toBe(
+    await fixturesSource(),
   );
 });
 
 test("every block version has fixtures", () => {
-  const covered = new Set(fixtures.map(([type, version]) => blockKey(type, version)));
+  const covered = new Set(blockFixtures.map((entry) => blockKey(entry.type, entry.version)));
   expect(covered).toEqual(new Set(Object.keys(registry)));
 });
 
-describe.each(fixtures)("%s v%i fixture %s", (type, version, _name, fixture) => {
-  test("renders", async () => {
+describe.each(
+  blockFixtures.map((entry) => [entry.type, entry.version, entry.name, entry] as const),
+)("%s v%i fixture %s", (type, version, _name, entry) => {
+  test("renders, with a section's surface on its root", async () => {
     const block = await load(type, version);
-    const result = block.render(fixture.props, fixture.variant, fixture.surface);
-    if (!result.ok) throw new Error(result.problem);
-    const html = markup(result.element);
-    expect(html).toContain(`<section data-surface="${fixture.surface}"`);
+    const html = await renderTree(fixtureTree(entry));
+    expect(html).toMatch(
+      block.placement === "item" ? /^<li / : `data-surface="${entry.fixture.surface}"`,
+    );
+  });
+
+  test("is complete, so it could be published", async () => {
+    const block = await load(type, version);
+    expect(Schema.is(propsSchema(block.fields, "complete"))(entry.fixture.props)).toBe(true);
   });
 });
 
 describe("field components", () => {
-  test("render plain markup, with page links following the page's address", async () => {
+  test("render plain markup, with alt text from the placement and page links following the page", async () => {
     const hero = await load("hero", 1);
-    const result = hero.render(
+    const result = renderProps(
+      hero,
       {
         heading: "Learn by building",
-        image: { $ref: "media", id: "med_harbour" },
+        image: { $ref: "media", id: "med_harbour", alt: "Boats moored in a calm harbour" },
         cta: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
       },
       "split-image",
-      "default",
     );
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
@@ -65,32 +122,80 @@ describe("field components", () => {
   });
 
   test("render rich text with the field's extensions", async () => {
-    const [, , , fixture] = fixtures.find(([type]) => type === "rich-text") ?? [];
+    const entry = blockFixtures.find((candidate) => candidate.type === "rich-text");
     const block = await load("rich-text", 1);
-    const result = block.render(fixture?.props ?? {}, "narrow", "default");
+    const result = renderProps(block, entry?.fixture.props ?? {}, "narrow");
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
     expect(html).toContain("<em>small teams</em>");
     expect(html).toContain("<h3>Bring with you</h3>");
     expect(html).toContain('<a href="https://example.org/faq">frequently asked questions</a>');
   });
+
+  test("render a form's fields with labels tied to their inputs", async () => {
+    const block = await load("form-section", 1);
+    const result = renderProps(
+      block,
+      { heading: "Register", form: { $ref: "form", id: "frm_register" } },
+      "plain",
+    );
+    if (!result.ok) throw new Error(result.problem);
+    const html = markup(result.element);
+    expect(html).toContain('<label for="b_test-ff_email"');
+    const email = html.match(/<input id="b_test-ff_email"[^>]*>/)?.[0] ?? "";
+    expect(email).toContain('name="ff_email"');
+    expect(email).toContain('type="email"');
+    expect(email).toContain('required=""');
+    expect(html).toContain('<input type="hidden" name="ff_source" value="website"/>');
+    expect(html).toContain(">Register</button>");
+  });
 });
 
-describe("props are checked against the block version", () => {
+describe("blocks that read the site", () => {
+  test("the header shows the site's name and main menu, with links following their pages", async () => {
+    const block = await load("header", 1);
+    const result = block.render({
+      id: BlockId.make("b_header"),
+      props: {},
+      variant: "simple",
+      surface: "default",
+      slots: {},
+    });
+    if (!result.ok) throw new Error(result.problem);
+    const html = markup(result.element);
+    expect(html).toContain(">Harbour Summer School</a>");
+    expect(html).toContain('<a href="/programme"');
+    expect(html).toContain(">Workshops</a>");
+  });
+
+  test("the blog list shows posts newest first", async () => {
+    const block = await load("post-list", 1);
+    const result = renderProps(block, { heading: "News" }, "list");
+    if (!result.ok) throw new Error(result.problem);
+    const html = markup(result.element);
+    expect(html.indexOf("Meet this year&#x27;s mentors")).toBeLessThan(
+      html.indexOf("Dates for this summer are out"),
+    );
+    expect(html).toContain('<time dateTime="2027-04-15">15 April 2027</time>');
+  });
+});
+
+describe("drafts are checked against the block version's limits", () => {
   test("optional fields may be left out and required ones may not", async () => {
     const cta = await load("call-to-action", 1);
     const primary = { label: "Register", link: "https://example.org" };
-    expect(cta.render({ heading: "Places are limited", primary }, "banner", "muted").ok).toBe(true);
-    expect(cta.render({ heading: "Places are limited" }, "banner", "muted").ok).toBe(false);
+    expect(renderProps(cta, { heading: "Places are limited", primary }, "banner").ok).toBe(true);
+    expect(renderProps(cta, { heading: "Places are limited" }, "banner").ok).toBe(false);
   });
 
-  test("text limits apply", async () => {
+  test("maximum lengths and single lines apply, minimum lengths don't", async () => {
     const hero = await load("hero", 1);
-    expect(hero.render({ heading: "x".repeat(81) }, "centered", "brand").ok).toBe(false);
-    expect(hero.render({ heading: "Two\nlines" }, "centered", "brand").ok).toBe(false);
+    expect(renderProps(hero, { heading: "x".repeat(81) }, "centered").ok).toBe(false);
+    expect(renderProps(hero, { heading: "Two\nlines" }, "centered").ok).toBe(false);
+    expect(renderProps(hero, { heading: "" }, "centered").ok).toBe(true);
   });
 
-  test("rich text allows only the field's marks and nodes", async () => {
+  test("rich text allows only the field's marks and nodes, and safe links", async () => {
     const hero = await load("hero", 1);
     const body = (content: ReadonlyArray<Json>) => ({ type: "doc", content });
     const heading = {
@@ -98,7 +203,7 @@ describe("props are checked against the block version", () => {
       attrs: { level: 2 },
       content: [{ type: "text", text: "Hi" }],
     };
-    const result = hero.render({ heading: "Welcome", body: body([heading]) }, "centered", "brand");
+    const result = renderProps(hero, { heading: "Welcome", body: body([heading]) }, "centered");
     expect(result.ok ? "" : result.problem).toContain("heading isn't allowed here");
     const script = {
       type: "paragraph",
@@ -110,13 +215,69 @@ describe("props are checked against the block version", () => {
         },
       ],
     };
-    expect(hero.render({ heading: "Welcome", body: body([script]) }, "centered", "brand").ok).toBe(
+    expect(renderProps(hero, { heading: "Welcome", body: body([script]) }, "centered").ok).toBe(
       false,
     );
   });
 
   test("variants and surfaces must be the block's own", async () => {
     const hero = await load("hero", 1);
-    expect(hero.render({ heading: "Welcome" }, "sideways", "brand").ok).toBe(false);
+    expect(renderProps(hero, { heading: "Welcome" }, "sideways").ok).toBe(false);
+    const item = await load("feature-item", 1);
+    const surfaced = item.render({
+      id: BlockId.make("b_item"),
+      props: { title: "Workshops", body: "Every day" },
+      variant: "default",
+      surface: "brand",
+      slots: {},
+    });
+    expect(surfaced.ok).toBe(false);
+  });
+
+  test("list items need their own IDs", async () => {
+    const gallery = await load("gallery", 1);
+    const image = { $ref: "media", id: "med_harbour", alt: "" };
+    const items = [
+      { id: "it_a", image },
+      { id: "it_a", image },
+    ];
+    expect(renderProps(gallery, { images: items }, "grid").ok).toBe(false);
+    expect(renderProps(gallery, { images: [{ image }] }, "grid").ok).toBe(false);
+  });
+});
+
+describe("completeness is checked apart from drafts", () => {
+  test("required text must be filled in and reach its minimum length", async () => {
+    const hero = await load("hero", 1);
+    const complete = Schema.is(propsSchema(hero.fields, "complete"));
+    expect(complete({ heading: "Learn by building" })).toBe(true);
+    expect(complete({ heading: "" })).toBe(false);
+    expect(complete({ heading: "Hi" })).toBe(false);
+  });
+
+  test("images need alt text, which may be empty for a decorative image", async () => {
+    const split = await load("split", 1);
+    const complete = Schema.is(propsSchema(split.fields, "complete"));
+    const props = (image: Json) => ({
+      heading: "Afternoons on the water",
+      body: {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: "Sail." }] }],
+      },
+      image,
+    });
+    expect(complete(props({ $ref: "media", id: "med_harbour", alt: "" }))).toBe(true);
+    expect(complete(props({ $ref: "media", id: "med_harbour" }))).toBe(false);
+  });
+
+  test("required rich text needs some text", async () => {
+    const block = await load("rich-text", 1);
+    const complete = Schema.is(propsSchema(block.fields, "complete"));
+    expect(complete({ body: { type: "doc", content: [{ type: "paragraph" }] } })).toBe(false);
+  });
+
+  test("a list needs its minimum number of items", async () => {
+    const gallery = await load("gallery", 1);
+    expect(Schema.is(propsSchema(gallery.fields, "complete"))({ images: [] })).toBe(false);
   });
 });

@@ -1,0 +1,20 @@
+{
+  "variant": "image-left",
+  "surface": "muted",
+  "props": {
+    "heading": "Afternoons on the water",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            { "type": "text", "text": "After lunch, take what you made out on the harbour. " },
+            { "type": "text", "text": "Life jackets are provided.", "marks": [{ "type": "bold" }] }
+          ]
+        }
+      ]
+    },
+    "image": { "$ref": "media", "id": "med_harbour", "alt": "" }
+  }
+}

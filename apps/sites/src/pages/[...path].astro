@@ -1,10 +1,10 @@
 ---
-import { renderPage, type References } from "@repo/blocks";
+import "@repo/blocks/site.css";
+import { renderPage, siteData } from "@repo/blocks";
 import { themeCss } from "@repo/tokens";
 
 import { SitePage } from "../components/SitePage.tsx";
 import { loadManifest, loadPage } from "../lib/snapshot.ts";
-import "../styles/site.css";
 
 const { site } = Astro.locals;
 const manifest = await loadManifest(site.id, site.live.snapshot);
@@ -14,16 +14,17 @@ if (entry === undefined) {
   Astro.response.status = manifest.gone.includes(path) ? 410 : 404;
 }
 const page = entry === undefined ? null : await loadPage(site.id, entry.object);
-const sections = page === null ? [] : await renderPage(page, manifest.lockfile);
-const references: References = {
+const rendered = page === null ? null : await renderPage(page, manifest.parts, manifest.lockfile);
+const data = siteData({
+  settings: manifest.settings,
+  menus: manifest.parts.menus,
+  pages: manifest.pages,
+  forms: manifest.forms,
   media: (id) => {
     const file = manifest.media[id];
-    return file === undefined
-      ? undefined
-      : { src: `/_media/${id}`, width: file.width, height: file.height, alt: file.alt };
+    return file === undefined ? undefined : { src: `/_media/${id}`, width: file.width, height: file.height };
   },
-  pagePath: (id) => manifest.pages.find((candidate) => candidate.id === id)?.path,
-};
+});
 const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed" : "Page not found");
 ---
 
@@ -38,10 +39,8 @@ const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed
   </head>
   <body>
     {
-      page ? (
-        <main>
-          <SitePage references={references} sections={sections} />
-        </main>
+      rendered ? (
+        <SitePage site={data} header={rendered.header} sections={rendered.sections} footer={rendered.footer} />
       ) : (
         <main class="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
           <h1 class="text-title">{title}</h1>

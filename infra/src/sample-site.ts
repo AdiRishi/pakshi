@@ -1,8 +1,11 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { FormDefinition } from "@repo/contracts/form";
 import { BrandId, MediaId, ReleaseId, SiteId, SnapshotId } from "@repo/contracts/ids";
+import { FormId } from "@repo/contracts/ids";
 import { PageDocument, PagePath } from "@repo/contracts/page";
+import { SiteParts } from "@repo/contracts/site";
 import { contentHash, MediaFile, SnapshotManifest } from "@repo/contracts/snapshot";
 import { harbour } from "@repo/tokens";
 import { Schema } from "effect";
@@ -15,6 +18,8 @@ const SampleSite = Schema.Struct({
   snapshot: SnapshotId,
   release: ReleaseId,
   lockfile: SnapshotManifest.fields.lockfile,
+  parts: SiteParts,
+  forms: Schema.Record(FormId, FormDefinition),
   media: Schema.Record(MediaId, MediaFile),
   gone: Schema.Array(PagePath),
 });
@@ -26,7 +31,8 @@ const readJson = <S extends Schema.Top & { readonly DecodingServices: never }>(
 
 /**
  * The hand-written snapshot that non-production stages serve: two pages built
- * from block fixtures, the Harbour theme and one image. Pages are stored under
+ * from block fixtures, a header and footer with menus, the Harbour theme and
+ * one image. Pages are stored under
  * their content hash, as publishing will store them.
  */
 export const sampleSite = async () => {
@@ -38,11 +44,13 @@ export const sampleSite = async () => {
       return { page, json, hash: await contentHash(json) };
     }),
   );
-  const manifest = Schema.decodeSync(SnapshotManifest)({
+  const manifest = Schema.decodeUnknownSync(SnapshotManifest)({
     schema: "pakshi.snapshot/1",
     id: site.snapshot,
     site: site.site.id,
     settings: { name: site.site.name },
+    parts: site.parts,
+    forms: site.forms,
     lockfile: site.lockfile,
     theme: harbour,
     media: site.media,
@@ -50,6 +58,7 @@ export const sampleSite = async () => {
       id: page.id,
       path: page.path,
       type: page.type,
+      meta: page.meta,
       object: hash,
     })),
     gone: site.gone,

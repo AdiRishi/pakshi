@@ -1,0 +1,25 @@
+{
+  "variant": "wide",
+  "surface": "inverse",
+  "props": {
+    "images": [
+      {
+        "id": "it_evening",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Two sailing boats on a calm harbour at sunset"
+        }
+      },
+      {
+        "id": "it_morning",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "The harbour before the workshops open"
+        },
+        "caption": "Before the workshops open"
+      }
+    ]
+  }
+}

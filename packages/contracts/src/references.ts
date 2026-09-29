@@ -2,7 +2,17 @@ import { Schema } from "effect";
 
 import { FormId, MediaId, PageId } from "./ids.ts";
 
-export const MediaRef = Schema.Struct({ $ref: Schema.Literal("media"), id: MediaId });
+/**
+ * An image placed on a page. Alt text belongs to the placement, because the
+ * same file can say something different, or nothing, in different places. An
+ * empty alt marks the image as decorative. It may be missing while a draft is
+ * being edited; freezing requires it.
+ */
+export const MediaRef = Schema.Struct({
+  $ref: Schema.Literal("media"),
+  id: MediaId,
+  alt: Schema.optionalKey(Schema.String.check(Schema.isMaxLength(250))),
+});
 export type MediaRef = typeof MediaRef.Type;
 
 export const FormRef = Schema.Struct({ $ref: Schema.Literal("form"), id: FormId });

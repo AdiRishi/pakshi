@@ -1,0 +1,8 @@
+{
+  "variant": "plain",
+  "surface": "default",
+  "props": {
+    "heading": "Ask a question",
+    "form": { "$ref": "form", "id": "frm_register" }
+  }
+}

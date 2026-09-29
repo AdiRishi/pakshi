@@ -1,0 +1,27 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "heading": "Last summer",
+    "images": [
+      {
+        "id": "it_boats",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Two sailing boats on a calm harbour at sunset"
+        },
+        "caption": "The harbour on the last evening"
+      },
+      {
+        "id": "it_launch",
+        "image": { "$ref": "media", "id": "med_harbour", "alt": "Boats moored close to the quay" },
+        "caption": "Launch day"
+      },
+      {
+        "id": "it_quay",
+        "image": { "$ref": "media", "id": "med_harbour", "alt": "" }
+      }
+    ]
+  }
+}

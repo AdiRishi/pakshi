@@ -72,6 +72,17 @@ const markTypes = (document: RichTextDocument) => {
   return found;
 };
 
+/** Whether a rich text value holds no text at all. */
+export const isEmptyRichText = (document: RichTextDocument) => {
+  const hasText = (inline: ReadonlyArray<typeof Inline.Type> | undefined) =>
+    (inline ?? []).some((node) => node.type === "text" && node.text.trim().length > 0);
+  return !document.content.some((node) =>
+    node.type === "paragraph" || node.type === "heading"
+      ? hasText(node.content)
+      : node.content.some((item) => item.content.some((paragraph) => hasText(paragraph.content))),
+  );
+};
+
 /** A rich text value that uses only the marks and nodes its field allows. */
 export const richTextSchema = (
   marks: ReadonlyArray<RichTextMark>,

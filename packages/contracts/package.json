@@ -8,13 +8,21 @@
       "types": "./src/app.ts",
       "default": "./src/app.ts"
     },
-    "./artifacts": {
-      "types": "./src/artifacts.ts",
-      "default": "./src/artifacts.ts"
+    "./draft": {
+      "types": "./src/draft.ts",
+      "default": "./src/draft.ts"
+    },
+    "./form": {
+      "types": "./src/form.ts",
+      "default": "./src/form.ts"
     },
     "./ids": {
       "types": "./src/ids.ts",
       "default": "./src/ids.ts"
+    },
+    "./ops": {
+      "types": "./src/ops.ts",
+      "default": "./src/ops.ts"
     },
     "./page": {
       "types": "./src/page.ts",
@@ -23,6 +31,10 @@
     "./references": {
       "types": "./src/references.ts",
       "default": "./src/references.ts"
+    },
+    "./site": {
+      "types": "./src/site.ts",
+      "default": "./src/site.ts"
     },
     "./snapshot": {
       "types": "./src/snapshot.ts",
