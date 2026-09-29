@@ -12,6 +12,7 @@ import {
 import { Schema } from "effect";
 
 import { type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
+import { LibraryPicker } from "../library-picker.tsx";
 import { FieldControl, valueAt } from "../settings/controls.tsx";
 import { useCanvasRect } from "./anchor.tsx";
 
@@ -29,7 +30,7 @@ export function MediaPopover(props: {
   readonly onClose: () => void;
 }) {
   const store = useStore();
-  const { definitions, media, mediaSrc } = useServices();
+  const { definitions } = useServices();
   const rect = useCanvasRect(props.anchor, props.container);
   const block = useEditorState(
     (state) => holderOf(state.view, props.field.target)?.blocks[props.field.block],
@@ -66,30 +67,10 @@ export function MediaPopover(props: {
           <PopoverTitle>{field.title}</PopoverTitle>
           <PopoverDescription>Choose an image from the site's library.</PopoverDescription>
         </PopoverHeader>
-        <ul className="grid grid-cols-3 gap-2" aria-label="Library">
-          {media.map((file) => (
-            <li key={file.id}>
-              <button
-                type="button"
-                aria-pressed={chosen?.id === file.id}
-                aria-label={file.alt === "" ? file.id : file.alt}
-                className="block aspect-square w-full overflow-hidden rounded-md border-2 border-transparent focus-visible:border-ring focus-visible:outline-none aria-pressed:border-ring"
-                onClick={() => {
-                  if (chosen?.id === file.id) return;
-                  store.run([
-                    {
-                      op: "setProp",
-                      ...props.field,
-                      value: { $ref: "media", id: file.id, alt: file.alt },
-                    },
-                  ]);
-                }}
-              >
-                <img src={mediaSrc(file.id)} alt="" className="size-full object-cover" />
-              </button>
-            </li>
-          ))}
-        </ul>
+        <LibraryPicker
+          chosen={chosen?.id}
+          onChoose={(image) => store.run([{ op: "setProp", ...props.field, value: image }])}
+        />
         <FieldControl
           field={{ ...props.field, path: [...props.field.path, "alt"] }}
           definition={field.parts.alt}
