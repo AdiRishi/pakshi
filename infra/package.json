@@ -33,7 +33,6 @@
   "devDependencies": {
     "@alchemy.run/frontend-frameworks": "catalog:",
     "@cloudflare/workers-types": "catalog:",
-    "@effect/platform-browser": "catalog:",
     "@effect/vitest": "catalog:",
     "@playwright/test": "catalog:",
     "@repo/blocks": "workspace:*",
