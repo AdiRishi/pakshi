@@ -34,6 +34,14 @@ test("dark colors apply only when the visitor prefers a dark scheme", () => {
   expect(dark).toContain("color-scheme: dark;");
 });
 
+test("a fixed scheme applies its colors whatever the visitor prefers", () => {
+  const dark = themeCss(harbour, "dark");
+  expect(dark).not.toContain("prefers-color-scheme");
+  expect(dark).toContain("--background: oklch(0.19 0.02 250);");
+  expect(dark).not.toContain("--background: oklch(0.99 0.004 85);");
+  expect(dark).toContain("color-scheme: dark;");
+});
+
 test("each surface re-scopes the semantic colors for its section", () => {
   const css = themeCss(harbour);
   expect(css).toMatch(/\[data-surface="brand"\] \{[^}]*--background: oklch\(0\.4 0\.12 252\);/);
