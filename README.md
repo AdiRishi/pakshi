@@ -1,4 +1,9 @@
-# Pakshi
+<h1>
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="packages/brand/assets/logo-inverse.svg">
+    <img src="packages/brand/assets/logo.svg" alt="Pakshi" height="72">
+  </picture>
+</h1>
 
 Branded websites that non-technical teams build and run themselves. Describe the site you want, and an AI agent assembles it from a library of professionally designed blocks. You review it, approve it, and it goes live on your domain. No developer in the loop.
 
