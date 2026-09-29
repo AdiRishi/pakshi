@@ -1,4 +1,4 @@
-import type { Field, FieldKind } from "@repo/blocks";
+import { type Field, type FieldKind, placeholderForm } from "@repo/blocks";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import { ExternalUrl } from "@repo/contracts/references";
 import { Button } from "@repo/ui/components/button";
@@ -16,13 +16,13 @@ import { Textarea } from "@repo/ui/components/textarea";
 import { Predicate, Schema } from "effect";
 import { type ComponentType, type ReactNode, useRef, useState } from "react";
 
+import { useDraftSiteData } from "../canvas/page-view.tsx";
 import {
   burstKey,
   controlId,
   type FieldTarget,
   useEditorState,
   useEditorUi,
-  useServices,
   useStore,
 } from "../context.tsx";
 
@@ -296,6 +296,11 @@ function FormControl(props: ControlProps<KindOf<"form">>) {
         onChange={(event) => run([setProp(props.field, { $ref: "form", id: event.target.value })])}
         className="w-full"
       >
+        {current === placeholderForm.id && (
+          <NativeSelectOption value={placeholderForm.id}>
+            {placeholderForm.name} (placeholder)
+          </NativeSelectOption>
+        )}
         {Object.values(forms).map((form) => (
           <NativeSelectOption key={form.id} value={form.id}>
             {form.name}
@@ -308,7 +313,7 @@ function FormControl(props: ControlProps<KindOf<"form">>) {
 
 function MediaControl(props: ControlProps<KindOf<"media">>) {
   const ui = useEditorUi();
-  const { mediaSrc } = useServices();
+  const site = useDraftSiteData();
   const { errors } = useRun();
   const change = useRef<HTMLButtonElement>(null);
   const id = props.value?.id ?? null;
@@ -322,7 +327,11 @@ function MediaControl(props: ControlProps<KindOf<"media">>) {
       <div className="flex items-center gap-3">
         {id !== null && (
           // The alt text control below describes the image, so the thumbnail itself is decorative.
-          <img src={mediaSrc(id)} alt="" className="size-16 rounded-md border object-cover" />
+          <img
+            src={site.media(id)?.src}
+            alt=""
+            className="size-16 rounded-md border object-cover"
+          />
         )}
         <Button
           id={controlId(props.field)}

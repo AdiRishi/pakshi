@@ -1,7 +1,6 @@
 import { type BlockDefinition, FieldEditingProvider } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
-import type { Target } from "@repo/contracts/ops";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -11,17 +10,24 @@ import { FormattingToolbar } from "./canvas/formatting.tsx";
 import { CanvasFrame } from "./canvas/frame.tsx";
 import { MediaPopover } from "./canvas/media-popover.tsx";
 import { PageView } from "./canvas/page-view.tsx";
+import { keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
 import {
   type ActiveRichText,
   controlId,
   type EditorUi,
   type FieldTarget,
+  type InsertSpot,
   ServicesProvider,
   UiProvider,
   useEditorState,
+  useEditorUi,
+  useServices,
   useStore,
 } from "./context.tsx";
+import { BlockPicker } from "./picker.tsx";
+import { type Origin, runCommand } from "./run-command.ts";
 import { SettingsPanel } from "./settings/panel.tsx";
+import { ariaShortcuts, formatShortcut, matches } from "./shortcuts.ts";
 import { type Connection, EditorStore, type Notice } from "./store.ts";
 
 /** What the canvas shows in Studio beside the page: the media popover and the formatting toolbar. */
@@ -54,36 +60,32 @@ const elementOf = (target: EventTarget | null, view: (Window & typeof globalThis
 const isInTextEntry = (target: EventTarget | null, view: (Window & typeof globalThis) | null) =>
   elementOf(target, view)?.closest(textEntry) != null;
 
-/** The blocks in the order a person moves through them: header, sections and their items, footer. */
-const blockOrder = (draft: Draft, page: PageId) => {
-  const document = draft.pages[page];
-  const sections = (document?.root ?? []).flatMap(
-    (id): ReadonlyArray<{ target: Target; block: BlockId }> => [
-      { target: page, block: id },
-      ...Object.values(document?.blocks[id]?.slots ?? {})
-        .flat()
-        .map((item) => ({ target: page, block: item })),
-    ],
-  );
-  return [
-    { target: "site" as const, block: draft.parts.header },
-    ...sections,
-    { target: "site" as const, block: draft.parts.footer },
-  ];
-};
+/** Whether a command's shortcuts reach a key pressed from this origin. */
+const reaches = (where: Where, origin: Origin) =>
+  where === "editor" || (where === "block" ? origin !== "elsewhere" : origin === "canvas");
 
-/** The section an item sits in, or undefined for a section. */
-const parentOf = (draft: Draft, page: PageId, block: BlockId) => {
-  const document = draft.pages[page];
-  return document?.root.find((id) =>
-    Object.values(document.blocks[id]?.slots ?? {}).some((items) => items.includes(block)),
-  );
+/**
+ * An element Studio's popovers can be positioned from. An element in the
+ * canvas is measured through its frame, so the popover lands beside it.
+ */
+const hostAnchor = (element: Element) => {
+  const frame = element.ownerDocument.defaultView?.frameElement;
+  if (frame === null || frame === undefined) return element;
+  return {
+    contextElement: frame,
+    getBoundingClientRect: () => {
+      const inner = element.getBoundingClientRect();
+      const outer = frame.getBoundingClientRect();
+      return new DOMRect(outer.left + inner.left, outer.top + inner.top, inner.width, inner.height);
+    },
+  };
 };
 
 /**
  * Holds the local copy of the draft and the editor's shared state. Studio
- * lays out the panels inside it: `EditorCanvas`, `EditorSettings`, and its
- * own toolbar with `useEditorStatus` and `useEditorCommands`.
+ * lays out the panels inside it: `EditorCanvas`, `EditorOutline`,
+ * `EditorSettings`, and its own toolbar with `useEditorStatus` and
+ * `useToolbarCommands`.
  */
 export function EditorProvider(props: {
   readonly draft: Draft;
@@ -91,6 +93,8 @@ export function EditorProvider(props: {
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
   readonly media: ReadonlyArray<MediaSummary>;
   readonly mediaSrc: (id: MediaId) => string;
+  readonly siteCss: string;
+  readonly scheme: "light" | "dark";
   readonly connection: Connection;
   readonly onNotice: (notice: Notice) => void;
   readonly children: ReactNode;
@@ -108,27 +112,46 @@ export function EditorProvider(props: {
   const [media, setMedia] = useState<CanvasControls["media"]>(null);
   const [richText, setRichText] = useState<ActiveRichText | null>(null);
   const [canvasDocument, setCanvasDocument] = useState<Document | null>(null);
+  const [picker, setPicker] = useState<{
+    readonly spot: InsertSpot;
+    readonly anchor: ReturnType<typeof hostAnchor>;
+    readonly origin: Origin;
+  } | null>(null);
+  const [announcement, setAnnouncement] = useState("");
 
   const services = useMemo(
-    () => ({ store, definitions: props.definitions, media: props.media, mediaSrc: props.mediaSrc }),
-    [store, props.definitions, props.media, props.mediaSrc],
+    () => ({
+      store,
+      definitions: props.definitions,
+      media: props.media,
+      mediaSrc: props.mediaSrc,
+      siteCss: props.siteCss,
+      scheme: props.scheme,
+    }),
+    [store, props.definitions, props.media, props.mediaSrc, props.siteCss, props.scheme],
   );
 
-  const ui = useMemo<EditorUi>(
-    () => ({
+  const ui = useMemo<EditorUi>(() => {
+    const canvasBlock = (block: BlockId) =>
+      canvasDocument?.querySelector<HTMLElement>(`[data-pakshi-block="${block}"]`) ?? null;
+    const outlineBlock = (block: BlockId) =>
+      document.querySelector<HTMLElement>(`[data-pakshi-outline-block="${block}"]`);
+    const focusInCanvas = (field: FieldTarget) => {
+      const element = Array.from(
+        canvasBlock(field.block)?.querySelectorAll<HTMLElement>(
+          `[data-pakshi-field="${field.path.join(".")}"]`,
+        ) ?? [],
+      ).find(
+        (candidate) =>
+          candidate.closest("[data-pakshi-block]")?.getAttribute("data-pakshi-block") ===
+          field.block,
+      );
+      element?.focus();
+    };
+    return {
       openMedia: (field, anchor) => setMedia({ field, anchor }),
       setActiveRichText: setRichText,
-      focusInCanvas: (field) => {
-        const candidates = canvasDocument?.querySelectorAll<HTMLElement>(
-          `[data-pakshi-field="${field.path.join(".")}"]`,
-        );
-        const element = Array.from(candidates ?? []).find(
-          (candidate) =>
-            candidate.closest("[data-pakshi-block]")?.getAttribute("data-pakshi-block") ===
-            field.block,
-        );
-        element?.focus();
-      },
+      focusInCanvas,
       revealControl: (field) => {
         // The settings panel shows the field's control once the selection has rendered.
         setTimeout(() => {
@@ -141,9 +164,45 @@ export function EditorProvider(props: {
           focusable?.focus();
         });
       },
-    }),
-    [canvasDocument],
-  );
+      announce: (message) => {
+        // Clearing first makes a screen reader repeat a message that's the same as the last.
+        setAnnouncement("");
+        requestAnimationFrame(() => setAnnouncement(message));
+      },
+      openPicker: (spot, anchor) => {
+        const element =
+          anchor instanceof Element
+            ? anchor
+            : spot.after === null
+              ? null
+              : anchor === "outline"
+                ? outlineBlock(spot.after)
+                : canvasBlock(spot.after);
+        const shown = element ?? canvasDocument?.defaultView?.frameElement ?? null;
+        if (shown === null) return;
+        const origin: Origin =
+          shown.ownerDocument === canvasDocument
+            ? "canvas"
+            : shown.closest("[data-pakshi-outline]") !== null
+              ? "outline"
+              : "elsewhere";
+        setPicker({ spot, anchor: hostAnchor(shown), origin });
+      },
+      focusSelection: (origin) => {
+        // Focus moves once the change has rendered, since a moved block's element is placed anew.
+        requestAnimationFrame(() => {
+          const { selection } = store.getState();
+          if (selection === null || origin === "elsewhere") return;
+          const element = canvasBlock(selection.block);
+          // The canvas shows what's chosen wherever the command started.
+          element?.scrollIntoView({ block: "nearest" });
+          if (origin === "outline") return outlineBlock(selection.block)?.focus();
+          if (selection.kind === "field") return focusInCanvas(selection);
+          element?.focus({ preventScroll: true });
+        });
+      },
+    };
+  }, [canvasDocument, store]);
 
   const controls = useMemo<CanvasControls>(
     () => ({
@@ -156,18 +215,28 @@ export function EditorProvider(props: {
     [media, richText, canvasDocument],
   );
 
-  // Undo and redo work from Studio and from the canvas, except in a text field, which handles its own.
+  // Shortcuts work from Studio and from the canvas. A key typed in a text field is the field's own.
   useEffect(() => {
     const listeners = (canvasDocument === null ? [document] : [document, canvasDocument]).map(
       (target) => {
         const onKeyDown = (event: globalThis.KeyboardEvent) => {
-          if (!(event.metaKey || event.ctrlKey) || isInTextEntry(event.target, target.defaultView))
+          const view = target.defaultView;
+          if (event.defaultPrevented || event.isComposing || isInTextEntry(event.target, view))
             return;
-          const key = event.key.toLowerCase();
-          if (key === "z" && !event.shiftKey) store.undo();
-          else if ((key === "z" && event.shiftKey) || key === "y") store.redo();
-          else return;
-          event.preventDefault();
+          const origin: Origin =
+            target === canvasDocument
+              ? "canvas"
+              : elementOf(event.target, view)?.closest("[data-pakshi-outline]") != null
+                ? "outline"
+                : "elsewhere";
+          const command = keyboardCommands.find(
+            (candidate) =>
+              candidate.keys !== undefined &&
+              reaches(candidate.keys.where, origin) &&
+              candidate.keys.shortcuts.some((shortcut) => matches(shortcut, event)),
+          );
+          if (command !== undefined && runCommand({ store, ui }, command, undefined, origin))
+            event.preventDefault();
         };
         target.addEventListener("keydown", onKeyDown);
         return () => target.removeEventListener("keydown", onKeyDown);
@@ -176,13 +245,24 @@ export function EditorProvider(props: {
     return () => {
       for (const remove of listeners) remove();
     };
-  }, [store, canvasDocument]);
+  }, [store, ui, canvasDocument]);
 
   return (
     <ServicesProvider value={services}>
       <UiProvider value={ui}>
         <CanvasControlsContext.Provider value={controls}>
           {props.children}
+          {picker !== null && (
+            <BlockPicker
+              spot={picker.spot}
+              anchor={picker.anchor}
+              origin={picker.origin}
+              onClose={() => setPicker(null)}
+            />
+          )}
+          <div aria-live="polite" className="sr-only">
+            {announcement}
+          </div>
         </CanvasControlsContext.Provider>
       </UiProvider>
     </ServicesProvider>
@@ -191,100 +271,43 @@ export function EditorProvider(props: {
 
 /**
  * The page rendered in a frame with the site's stylesheet and theme, edited
- * in place. Arrow keys move between blocks, Enter moves into the selected
- * block's first field, and Escape moves back out.
+ * in place.
  */
 export function EditorCanvas(props: {
-  readonly siteCss: string;
   readonly width: number | null;
-  readonly scheme: "light" | "dark";
   /** The editor's accent color, from Studio's theme. */
   readonly accent: string;
 }) {
-  const store = useStore();
+  const { siteCss, scheme } = useServices();
   const controls = useCanvasControls();
   const theme = useEditorState((state) => state.view.theme);
   const title = useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
   const selection = useEditorState((state) => state.selection);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const css = useMemo(() => themeCss(theme, props.scheme), [theme, props.scheme]);
+  const css = useMemo(() => themeCss(theme, scheme), [theme, scheme]);
 
-  // The canvas listens on its own document, since its content has no wrapper to put handlers on.
+  // The canvas shows the page as sites renders it, but its links don't navigate and its forms don't submit.
   const canvasDocument = controls.document;
   useEffect(() => {
     if (canvasDocument === null) return;
     const view = canvasDocument.defaultView;
-    const focusBlock = (block: BlockId) => {
-      const element = canvasDocument.querySelector<HTMLElement>(`[data-pakshi-block="${block}"]`);
-      element?.focus();
-      element?.scrollIntoView({ block: "nearest" });
-    };
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      if (isInTextEntry(event.target, view)) return;
-      const { view: draft, page, selection: current } = store.getState();
-      const order = blockOrder(draft, page);
-      const index =
-        current === null ? -1 : order.findIndex((entry) => entry.block === current.block);
-      const move = (next: (typeof order)[number] | undefined) => {
-        if (next === undefined) return;
-        event.preventDefault();
-        store.select({ kind: "block", ...next });
-        focusBlock(next.block);
-      };
-      switch (event.key) {
-        case "ArrowDown":
-          return move(order[index + 1]);
-        case "ArrowUp":
-          return move(index === -1 ? order.at(-1) : order[index - 1]);
-        case "Enter": {
-          // Enter on a field, such as a button, is the field's own; on a block it moves inside.
-          if (
-            current === null ||
-            elementOf(event.target, view)?.hasAttribute("data-pakshi-block") !== true
-          )
-            return;
-          const root = canvasDocument.querySelector(`[data-pakshi-block="${current.block}"]`);
-          const field = Array.from(
-            root?.querySelectorAll<HTMLElement>("[data-pakshi-field]") ?? [],
-          ).find((candidate) => candidate.closest("[data-pakshi-block]") === root);
-          if (field === undefined) return;
-          event.preventDefault();
-          field.focus();
-          return;
-        }
-        case "Escape": {
-          if (current === null) return;
-          event.preventDefault();
-          const parent =
-            current.target === "site" ? undefined : parentOf(draft, page, current.block);
-          const block = current.kind === "field" ? current.block : parent;
-          if (block === undefined) return store.select(null);
-          store.select({ kind: "block", target: current.target, block });
-          focusBlock(block);
-          return;
-        }
-      }
-    };
-    // The canvas shows the page as sites renders it, but its links don't navigate and its forms don't submit.
     const onClick = (event: MouseEvent) => {
       if (elementOf(event.target, view)?.closest("a") != null) event.preventDefault();
     };
     const onSubmit = (event: SubmitEvent) => event.preventDefault();
-    canvasDocument.addEventListener("keydown", onKeyDown);
     canvasDocument.addEventListener("click", onClick, { capture: true });
     canvasDocument.addEventListener("submit", onSubmit, { capture: true });
     return () => {
-      canvasDocument.removeEventListener("keydown", onKeyDown);
       canvasDocument.removeEventListener("click", onClick, { capture: true });
       canvasDocument.removeEventListener("submit", onSubmit, { capture: true });
     };
-  }, [canvasDocument, store]);
+  }, [canvasDocument]);
 
   return (
     <div ref={setContainer} className="relative size-full">
       <CanvasFrame
         title={`Canvas: ${title || "Untitled page"}`}
-        siteCss={props.siteCss}
+        siteCss={siteCss}
         themeCss={css}
         accent={props.accent}
         width={props.width}
@@ -316,17 +339,35 @@ export function EditorSettings() {
   return <SettingsPanel />;
 }
 
-/** Whether the draft is saved, and whether undo and redo have anything to do. */
-export const useEditorStatus = () => ({
-  status: useEditorState((state) => state.status),
-  canUndo: useEditorState((state) => state.canUndo),
-  canRedo: useEditorState((state) => state.canRedo),
-});
+/** Whether the draft is saved. */
+export const useEditorStatus = () => useEditorState((state) => state.status);
 
-/** The commands Studio's toolbar offers. */
-export const useEditorCommands = () => {
+/** The commands Studio's toolbar shows, each with whether it can run now. */
+export const useToolbarCommands = () => {
+  const { store } = useServices();
+  const ui = useEditorUi();
+  const available = useEditorState(
+    (state) =>
+      toolbarCommands.map(
+        (command) => command.plan({ state, contracts: store.contracts }) !== undefined,
+      ),
+    (a, b) => a.every((value, index) => value === b[index]),
+  );
+  return toolbarCommands.map((command, index) => ({
+    title: command.title,
+    icon: command.icon,
+    shortcut: command.keys === undefined ? undefined : formatShortcut(command.keys.shortcuts[0]),
+    ariaKeyShortcuts:
+      command.keys === undefined ? undefined : ariaShortcuts(command.keys.shortcuts),
+    disabled: available[index] !== true,
+    run: () => runCommand({ store, ui }, command, undefined, "elsewhere"),
+  }));
+};
+
+/** Clears the selection, so the settings panel shows the page. */
+export const useDeselect = () => {
   const store = useStore();
-  return { undo: () => store.undo(), redo: () => store.redo(), deselect: () => store.select(null) };
+  return () => store.select(null);
 };
 
 /** The title of the page being edited, as the draft has it now. */

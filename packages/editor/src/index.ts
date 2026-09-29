@@ -4,7 +4,9 @@ export {
   EditorCanvas,
   EditorProvider,
   EditorSettings,
-  useEditorCommands,
+  useDeselect,
   useEditorStatus,
   usePageTitle,
+  useToolbarCommands,
 } from "./editor.tsx";
+export { Outline as EditorOutline } from "./outline.tsx";

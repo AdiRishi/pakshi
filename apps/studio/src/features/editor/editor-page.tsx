@@ -3,13 +3,14 @@ import type { MediaId, PageId, SiteId } from "@repo/contracts/ids";
 import {
   type Connection,
   EditorCanvas,
-  type Notice,
+  EditorOutline,
   EditorProvider,
   EditorSettings,
+  type Notice,
   type SaveStatus,
-  useEditorCommands,
   useEditorStatus,
   usePageTitle,
+  useToolbarCommands,
 } from "@repo/editor";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import {
@@ -31,11 +32,9 @@ import {
   LoaderIcon,
   MonitorIcon,
   MoonIcon,
-  Redo2Icon,
   SmartphoneIcon,
   SunIcon,
   TabletIcon,
-  Undo2Icon,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
 
@@ -72,44 +71,8 @@ const saveCopy: Readonly<Record<SaveStatus, { readonly label: string; readonly i
     },
   };
 
-function IconButton(props: {
-  readonly label: string;
-  readonly shortcut: string;
-  readonly disabled: boolean;
-  readonly onClick: () => void;
-  readonly children: ReactNode;
-}) {
-  return (
-    <Tooltip>
-      <TooltipTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={props.label}
-            disabled={props.disabled}
-            onClick={props.onClick}
-          />
-        }
-      >
-        {props.children}
-      </TooltipTrigger>
-      <TooltipContent>
-        {props.label} ({props.shortcut})
-      </TooltipContent>
-    </Tooltip>
-  );
-}
-
-function Toolbar(props: {
-  readonly site: { readonly id: SiteId; readonly name: string };
-  readonly width: Width;
-  readonly onWidth: (width: Width) => void;
-  readonly scheme: "light" | "dark";
-  readonly onScheme: (scheme: "light" | "dark") => void;
-}) {
-  const { status, canUndo, canRedo } = useEditorStatus();
-  const { undo, redo } = useEditorCommands();
+function Header(props: { readonly site: { readonly id: SiteId; readonly name: string } }) {
+  const status = useEditorStatus();
   const title = usePageTitle();
   const save = saveCopy[status];
   return (
@@ -136,13 +99,45 @@ function Toolbar(props: {
         {save.icon}
         {save.label}
       </output>
+    </header>
+  );
+}
+
+/** Undo and redo, the page's address, and how wide and in which scheme the canvas shows it. */
+function CanvasToolbar(props: {
+  readonly width: Width;
+  readonly onWidth: (width: Width) => void;
+  readonly scheme: "light" | "dark";
+  readonly onScheme: (scheme: "light" | "dark") => void;
+}) {
+  const commands = useToolbarCommands();
+  return (
+    <div className="flex items-center gap-3 border-b bg-card px-3 py-1.5">
+      <div className="flex items-center gap-1">
+        {commands.map((command) => (
+          <Tooltip key={command.title}>
+            <TooltipTrigger
+              render={
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={command.title}
+                  aria-keyshortcuts={command.ariaKeyShortcuts}
+                  disabled={command.disabled}
+                  onClick={command.run}
+                />
+              }
+            >
+              {command.icon !== undefined && <command.icon />}
+            </TooltipTrigger>
+            <TooltipContent>
+              {command.title}
+              {command.shortcut !== undefined && ` (${command.shortcut})`}
+            </TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
       <div className="ml-auto flex items-center gap-2">
-        <IconButton label="Undo" shortcut="⌘Z" disabled={!canUndo} onClick={undo}>
-          <Undo2Icon />
-        </IconButton>
-        <IconButton label="Redo" shortcut="⇧⌘Z" disabled={!canRedo} onClick={redo}>
-          <Redo2Icon />
-        </IconButton>
         <ToggleGroup
           aria-label="Page width"
           value={[props.width]}
@@ -177,7 +172,7 @@ function Toolbar(props: {
           </ToggleGroupItem>
         </ToggleGroup>
       </div>
-    </header>
+    </div>
   );
 }
 
@@ -199,38 +194,43 @@ export function EditorPage(props: { readonly site: SiteId; readonly page: PageId
       definitions={definitions}
       media={data.media}
       mediaSrc={mediaSrc}
+      siteCss={siteCss}
+      scheme={scheme}
       connection={connection}
       onNotice={setNotice}
     >
       <div className="flex h-screen flex-col">
-        <Toolbar
-          site={{ id: props.site, name: data.draft.settings.name }}
-          width={width}
-          onWidth={setWidth}
-          scheme={scheme}
-          onScheme={setScheme}
-        />
+        <Header site={{ id: props.site, name: data.draft.settings.name }} />
         <div className="flex min-h-0 flex-1">
-          <main aria-label="Page canvas" className="relative min-w-0 flex-1 bg-muted p-4">
-            <EditorCanvas siteCss={siteCss} width={widths[width]} scheme={scheme} accent={accent} />
-            <div aria-live="polite" className="absolute right-8 bottom-8 max-w-sm">
-              {notice !== null && (
-                <Alert variant="destructive" className="bg-card shadow-md">
-                  <CircleAlertIcon />
-                  <AlertTitle>{notice.message}</AlertTitle>
-                  <AlertDescription>
-                    {notice.errors.map((error) => error.message).join(" ")}
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setNotice(null)}
-                    >
-                      Dismiss
-                    </Button>
-                  </AlertDescription>
-                </Alert>
-              )}
+          <aside
+            aria-label="Structure"
+            className="flex w-80 shrink-0 flex-col overflow-y-auto border-r bg-card"
+          >
+            <EditorOutline />
+          </aside>
+          <main aria-label="Page canvas" className="flex min-w-0 flex-1 flex-col bg-muted">
+            <CanvasToolbar width={width} onWidth={setWidth} scheme={scheme} onScheme={setScheme} />
+            <div className="relative min-h-0 flex-1 p-4">
+              <EditorCanvas width={widths[width]} accent={accent} />
+              <div aria-live="polite" className="absolute right-8 bottom-8 max-w-sm">
+                {notice !== null && (
+                  <Alert variant="destructive" className="bg-card shadow-md">
+                    <CircleAlertIcon />
+                    <AlertTitle>{notice.message}</AlertTitle>
+                    <AlertDescription>
+                      {notice.errors.map((error) => error.message).join(" ")}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setNotice(null)}
+                      >
+                        Dismiss
+                      </Button>
+                    </AlertDescription>
+                  </Alert>
+                )}
+              </div>
             </div>
           </main>
           <aside aria-label="Settings" className="w-96 shrink-0 overflow-y-auto border-l bg-card">

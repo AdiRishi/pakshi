@@ -53,12 +53,14 @@ const open = async (
       definitions={options.definitions ?? definitions}
       media={media}
       mediaSrc={() => pixel}
+      siteCss={siteCss}
+      scheme="light"
       connection={siteDoc.connection}
       onNotice={() => undefined}
     >
       <div style={{ display: "flex", height: 700 }}>
         <div style={{ flex: 1 }}>
-          <EditorCanvas siteCss={siteCss} width={1024} scheme="light" accent="blue" />
+          <EditorCanvas width={1024} accent="blue" />
         </div>
         <aside aria-label="Settings" style={{ width: 360, flexShrink: 0, overflowY: "auto" }}>
           <EditorSettings />
