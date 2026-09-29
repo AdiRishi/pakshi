@@ -1,3 +1,4 @@
+import { D1Client } from "@effect/sql-d1";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import {
   SignedIn,
@@ -9,6 +10,7 @@ import {
 } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { type Cause, Effect, Layer } from "effect";
+import { SqlClient } from "effect/unstable/sql";
 
 import { authFor } from "./auth.ts";
 import { describeViewer } from "./viewer.ts";
@@ -36,14 +38,24 @@ const session = (env: StudioApiEnv) =>
   );
 
 const handlers = (env: StudioApiEnv) =>
-  StudioRpcs.toLayer({
-    viewer: () =>
-      SignedIn.use((person) =>
-        Effect.tryPromise(() => describeViewer(env, person)).pipe(
-          Effect.catch(unavailable("viewer")),
-        ),
-      ),
-  });
+  StudioRpcs.toLayer(
+    Effect.gen(function* () {
+      const sql = yield* SqlClient.SqlClient;
+      return StudioRpcs.of({
+        viewer: () =>
+          SignedIn.use((person) =>
+            describeViewer(person).pipe(
+              Effect.provideService(SqlClient.SqlClient, sql),
+              Effect.catchTags({
+                SqlError: unavailable("viewer"),
+                // A row that doesn't match its schema is a bug, not an outage.
+                SchemaError: Effect.die,
+              }),
+            ),
+          ),
+      });
+    }),
+  ).pipe(Layer.provide(D1Client.layer({ db: env.CORE })), Layer.orDie);
 
 const makeHandler = (env: StudioApiEnv) =>
   rpcWebHandler(StudioRpcs, Layer.mergeAll(handlers(env), session(env)));

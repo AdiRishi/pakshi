@@ -13,7 +13,9 @@ catalog:
   "@cloudflare/workers-types": 5.20260928.1
   "@effect/platform-node": 4.0.0-rc.117
   "@effect/platform-node-shared": 4.0.0-rc.117
+  "@effect/sql-d1": 4.0.0-rc.117
   "@effect/sql-sqlite-do": 4.0.0-rc.117
+  "@effect/sql-sqlite-node": 4.0.0-rc.117
   "@effect/tsgo": 0.46.1
   "@effect/vitest": 4.0.0-rc.117
   "@fontsource-variable/onest": 5.3.1
@@ -87,7 +89,9 @@ minimumReleaseAge: 1440
 overrides:
   "@effect/platform-node": "catalog:"
   "@effect/platform-node-shared": "catalog:"
+  "@effect/sql-d1": "catalog:"
   "@effect/sql-sqlite-do": "catalog:"
+  "@effect/sql-sqlite-node": "catalog:"
   "@effect/vitest": "catalog:"
   effect: "catalog:"
 
