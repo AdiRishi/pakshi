@@ -149,10 +149,14 @@ export const Op = Schema.Union([
 ]);
 export type Op = typeof Op.Type;
 
-/** Ops applied together, all or none. */
+/**
+ * Ops applied together, all or none. An undo batch instead applies each op
+ * that would erase no one else's change since, and passes over the rest.
+ */
 export const Batch = Schema.Struct({
   id: BatchId,
   ops: Schema.Array(Op).check(Schema.isMinLength(1), Schema.isMaxLength(500)),
+  undo: Schema.optionalKey(Schema.Boolean),
 });
 export type Batch = typeof Batch.Type;
 
@@ -188,6 +192,8 @@ export const BatchRule = Schema.Literals([
   "meta",
   /** A new page's document breaks the page rules. */
   "page",
+  /** The person may no longer edit this draft. */
+  "permission",
 ]);
 export type BatchRule = typeof BatchRule.Type;
 

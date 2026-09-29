@@ -33,12 +33,19 @@ import { Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 /** The block versions a draft's lockfile pins, keyed by block type. */
 export type BlockContracts = ReadonlyMap<BlockType, BlockContract>;
 
+/** An op that applied, and the draft it applied to. */
+export interface Step {
+  readonly op: Op;
+  readonly before: Draft;
+}
+
 export type ApplyResult =
   | {
       readonly ok: true;
       readonly draft: Draft;
       /** Ops that undo the batch, in the order to apply them. */
       readonly inverse: ReadonlyArray<Op>;
+      readonly steps: ReadonlyArray<Step>;
     }
   | { readonly ok: false; readonly errors: ReadonlyArray<BatchError> };
 
@@ -591,9 +598,11 @@ export const applyOps = (
 ): ApplyResult => {
   let current = draft;
   const inverse: Array<Op> = [];
+  const steps: Array<Step> = [];
   for (const [index, op] of ops.entries()) {
     try {
       const applied = applyOp(current, op, contracts);
+      steps.push({ op, before: current });
       current = applied.draft;
       inverse.unshift(applied.inverse);
     } catch (error) {
@@ -601,5 +610,38 @@ export const applyOps = (
       return { ok: false, errors: error.errors.map((found) => ({ ...found, op: index })) };
     }
   }
-  return { ok: true, draft: current, inverse };
+  return { ok: true, draft: current, inverse, steps };
+};
+
+/**
+ * Applies each op that `keep` accepts and that still applies, and passes
+ * over the rest. Undo works this way: the parts of a command that others
+ * have changed since, or that no longer exist, are left as they are.
+ */
+export const applyEach = (
+  draft: Draft,
+  ops: ReadonlyArray<Op>,
+  contracts: BlockContracts,
+  keep: (op: Op, draft: Draft) => boolean,
+) => {
+  let current = draft;
+  const inverse: Array<Op> = [];
+  const steps: Array<Step> = [];
+  const skipped: Array<number> = [];
+  for (const [index, op] of ops.entries()) {
+    if (!keep(op, current)) {
+      skipped.push(index);
+      continue;
+    }
+    try {
+      const result = applyOp(current, op, contracts);
+      steps.push({ op, before: current });
+      current = result.draft;
+      inverse.unshift(result.inverse);
+    } catch (error) {
+      if (!(error instanceof Rejection)) throw error;
+      skipped.push(index);
+    }
+  }
+  return { draft: current, inverse, steps, skipped };
 };

@@ -8,6 +8,10 @@
       "types": "./src/access.ts",
       "default": "./src/access.ts"
     },
+    "./commit": {
+      "types": "./src/commit.ts",
+      "default": "./src/commit.ts"
+    },
     "./document": {
       "types": "./src/document.ts",
       "default": "./src/document.ts"
