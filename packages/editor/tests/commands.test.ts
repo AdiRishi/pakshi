@@ -17,7 +17,7 @@ import type { EditorUi, InsertSpot } from "../src/context.tsx";
 import { runCommand } from "../src/run-command.ts";
 import { EditorStore } from "../src/store.ts";
 import { allowedTypes } from "../src/structure.ts";
-import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
+import { definitions, fakeSiteDoc, fixtureDraft, meera } from "./support/site-doc.ts";
 
 const page = PageId.make("pg_home");
 const id = (value: string) => BlockId.make(value);
@@ -28,7 +28,8 @@ const open = () => {
     draft: fixtureDraft,
     page,
     contracts: definitions,
-    connection: siteDoc.connection,
+    person: meera,
+    connection: siteDoc.connection(meera),
     onNotice: () => undefined,
   });
   const announced: Array<string> = [];

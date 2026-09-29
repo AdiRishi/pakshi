@@ -86,6 +86,12 @@ export const ServerMessage = Schema.TaggedUnion({
   Synced: { catchUp: CatchUp, peers: Schema.Array(Peer) },
   /** A batch SiteDoc committed, sent to everyone connected, its sender included. */
   Committed: Commit.fields,
+  /**
+   * A batch sent again that SiteDoc committed when it first arrived, at
+   * `revision`, sent only to its sender. The draft the sender caught up to
+   * already has it.
+   */
+  Known: { batch: BatchId, revision: Schema.Int },
   /** A batch SiteDoc refused, sent only to its sender. */
   Rejected: { batch: BatchId, errors: Schema.Array(BatchError) },
   PeerChanged: { peer: Peer },

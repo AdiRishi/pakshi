@@ -1,12 +1,16 @@
-import { BlockId, PageId } from "@repo/contracts/ids";
+import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
+import type { Collaborator } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
-import { EditorStore, type Notice } from "../src/store.ts";
-import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
+import type { Notice } from "../src/notices.ts";
+import { EditorStore } from "../src/store.ts";
+import { insertOp } from "../src/structure.ts";
+import { definitions, fakeSiteDoc, fixtureDraft, meera, sam } from "./support/site-doc.ts";
 
 const page = PageId.make("pg_home");
 const hero = BlockId.make("b_herocentered");
+const original = "Summer school at the harbour";
 
 const setHeading = (value: string): Op => ({
   op: "setProp",
@@ -19,23 +23,26 @@ const setHeading = (value: string): Op => ({
 const headingOf = (store: EditorStore) =>
   store.getState().view.pages[page]?.blocks[hero]?.props["heading"];
 
-const confirmedHeading = (store: EditorStore) =>
-  store.getState().confirmed.pages[page]?.blocks[hero]?.props["heading"];
+const serverHeading = (siteDoc: ReturnType<typeof fakeSiteDoc>) =>
+  siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"];
 
-const open = (siteDoc = fakeSiteDoc()) => {
+/** An editor for `person`, connected to the SiteDoc. */
+const open = (siteDoc: ReturnType<typeof fakeSiteDoc>, person: Collaborator = meera) => {
   const notices: Array<Notice> = [];
   const store = new EditorStore({
     draft: fixtureDraft,
     page,
     contracts: definitions,
-    connection: siteDoc.connection,
+    person,
+    connection: siteDoc.connection(person),
     onNotice: (notice) => notices.push(notice),
   });
-  return { store, siteDoc, notices };
+  store.connect();
+  return { store, notices };
 };
 
-/** Lets pending sends and their answers run. */
-const settle = () => vi.advanceTimersByTimeAsync(20_000);
+/** Lets typing's timers run and every message arrive. */
+const settle = () => vi.advanceTimersByTimeAsync(5000);
 
 beforeEach(() => {
   vi.useFakeTimers();
@@ -47,155 +54,290 @@ afterEach(() => {
 
 describe("a command", () => {
   test("shows at once and reaches SiteDoc, which then confirms it", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     expect(store.run([setHeading("Build and sail")])).toEqual([]);
     expect(headingOf(store)).toBe("Build and sail");
     await settle();
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"]).toBe("Build and sail");
-    expect(confirmedHeading(store)).toBe("Build and sail");
+    expect(serverHeading(siteDoc)).toBe("Build and sail");
+    expect(store.getState().confirmed.revision).toBe(1);
     expect(store.getState().status).toBe("saved");
   });
 
   test("that breaks a rule is refused locally and never sent", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     expect(store.run([setHeading("x".repeat(81))])).toEqual([
       expect.objectContaining({ rule: "value", path: ["heading"] }),
     ]);
     await settle();
-    expect(siteDoc.received).toEqual([]);
+    expect(siteDoc.log()).toEqual([]);
     expect(store.getState().canUndo).toBe(false);
   });
 });
 
 describe("typing", () => {
   test("a burst in one field is one undo step and one batch", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
     for (const heading of ["S", "Sa", "Sai", "Sail"]) store.run([setHeading(heading)], "heading");
     await settle();
-    expect(siteDoc.received).toHaveLength(1);
-    expect(siteDoc.received[0]?.ops).toEqual([setHeading("Sail")]);
+    expect(siteDoc.log().map((batch) => batch.ops)).toEqual([[setHeading("Sail")]]);
     store.undo();
-    expect(headingOf(store)).toBe("Summer school at the harbour");
+    expect(headingOf(store)).toBe(original);
   });
 
   test("keystrokes reach SiteDoc within half a second while the burst goes on", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
     store.run([setHeading("S")], "heading");
     await vi.advanceTimersByTimeAsync(400);
-    expect(siteDoc.received).toHaveLength(1);
+    expect(serverHeading(siteDoc)).toBe("S");
     store.run([setHeading("Sa")], "heading");
     await settle();
-    expect(siteDoc.received.map((batch) => batch.ops)).toEqual([
+    expect(siteDoc.log().map((batch) => batch.ops)).toEqual([
       [setHeading("S")],
       [setHeading("Sa")],
     ]);
     store.undo();
-    expect(headingOf(store)).toBe("Summer school at the harbour");
+    expect(headingOf(store)).toBe(original);
   });
 
   test("typing waiting to be sent counts as saving, until SiteDoc has it", async () => {
-    const { store } = open();
+    const { store } = open(fakeSiteDoc());
+    await settle();
     store.run([setHeading("Sail")], "heading");
     expect(store.getState().status).toBe("saving");
     await settle();
     expect(store.getState().status).toBe("saved");
   });
 
-  test("a clearable required heading can be emptied and typed again", async () => {
-    const { store, siteDoc } = open();
+  test("a required heading can be emptied and typed again", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     expect(store.run([setHeading("")], "heading")).toEqual([]);
     expect(store.run([setHeading("B")], "heading")).toEqual([]);
     await settle();
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"]).toBe("B");
+    expect(serverHeading(siteDoc)).toBe("B");
   });
 
   test("cancelling a burst puts the field back as it was", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     store.run([setHeading("Sail")], "heading");
     store.cancelBurst();
     await settle();
-    expect(headingOf(store)).toBe("Summer school at the harbour");
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"]).toBe(
-      "Summer school at the harbour",
-    );
+    expect(headingOf(store)).toBe(original);
+    expect(serverHeading(siteDoc)).toBe(original);
     expect(store.getState().canUndo).toBe(false);
   });
 });
 
 describe("undo", () => {
   test("reverses one command at a time, and redo brings them back", async () => {
-    const { store, siteDoc } = open();
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     store.run([setHeading("First")]);
     store.run([{ op: "setVariant", target: page, block: hero, variant: "split-image" }]);
     store.undo();
     expect(store.getState().view.pages[page]?.blocks[hero]?.variant).toBe("centered");
     expect(headingOf(store)).toBe("First");
     store.undo();
-    expect(headingOf(store)).toBe("Summer school at the harbour");
+    expect(headingOf(store)).toBe(original);
     store.redo();
     expect(headingOf(store)).toBe("First");
     await settle();
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"]).toBe("First");
+    expect(serverHeading(siteDoc)).toBe("First");
     expect(siteDoc.draft().pages[page]?.blocks[hero]?.variant).toBe("centered");
   });
 
   test("a new command clears what redo could bring back", () => {
-    const { store } = open();
+    const { store } = open(fakeSiteDoc());
     store.run([setHeading("First")]);
     store.undo();
     store.run([setHeading("Second")]);
     expect(store.getState().canRedo).toBe(false);
   });
+
+  test("never removes another person's edit, and says what it left", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    mine.store.run([setHeading("Meera's heading")]);
+    await settle();
+    theirs.store.run([setHeading("Sam's heading")]);
+    await settle();
+    mine.store.undo();
+    await settle();
+    expect(serverHeading(siteDoc)).toBe("Sam's heading");
+    expect(headingOf(mine.store)).toBe("Sam's heading");
+    expect(headingOf(theirs.store)).toBe("Sam's heading");
+    expect(mine.notices).toContainEqual(
+      expect.objectContaining({ title: "Some of that couldn't be undone." }),
+    );
+  });
+
+  test("never takes back someone else's change it received", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    open(siteDoc, sam);
+    await settle();
+    siteDoc.commit(sam, [setHeading("Sam's heading")]);
+    await settle();
+    expect(mine.store.getState().canUndo).toBe(false);
+    mine.store.undo();
+    await settle();
+    expect(serverHeading(siteDoc)).toBe("Sam's heading");
+  });
+});
+
+describe("other people's changes", () => {
+  test("arrive as SiteDoc commits them", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    theirs.store.run([setHeading("Sail")]);
+    await settle();
+    expect(headingOf(mine.store)).toBe("Sail");
+    expect(mine.store.getState().confirmed.revision).toBe(1);
+  });
+
+  test("don't replace a field while this person's own edit to it is unconfirmed", async () => {
+    const siteDoc = fakeSiteDoc({ auto: false });
+    const mine = open(siteDoc, meera);
+    open(siteDoc, sam);
+    siteDoc.deliver();
+    mine.store.run([setHeading("Mine")]);
+    siteDoc.commit(sam, [setHeading("Theirs")]);
+    // Sam's commit reaches this editor before its own batch reaches SiteDoc.
+    const committed = siteDoc.waiting();
+    expect(committed).toHaveLength(1);
+    siteDoc.step(1);
+    expect(headingOf(mine.store)).toBe("Mine");
+    siteDoc.deliver();
+    expect(headingOf(mine.store)).toBe("Mine");
+    expect(serverHeading(siteDoc)).toBe("Mine");
+  });
+
+  test("the person whose write is replaced is told who replaced it", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    mine.store.run([setHeading("Mine")]);
+    await settle();
+    theirs.store.run([setHeading("Theirs")]);
+    await settle();
+    expect(mine.notices).toEqual([
+      {
+        title: "Sam Okafor replaced your change.",
+        description: expect.stringContaining("Heading"),
+      },
+    ]);
+    expect(theirs.notices).toEqual([]);
+  });
+
+  test("an edit to a block someone removed is dropped, and its author is told", async () => {
+    const siteDoc = fakeSiteDoc({ auto: false });
+    const mine = open(siteDoc, meera);
+    siteDoc.deliver();
+    mine.store.run([setHeading("Sail")]);
+    siteDoc.commit(sam, [{ op: "removeBlock", page, block: hero }]);
+    siteDoc.deliver();
+    expect(mine.store.getState().view.pages[page]?.blocks[hero]).toBeUndefined();
+    expect(mine.notices).toEqual([
+      {
+        title: "Your change to Heading in Hero was dropped.",
+        description: "Someone removed what it changed.",
+      },
+    ]);
+    expect(mine.store.getState().status).toBe("saved");
+  });
+
+  test("removing the selected block clears the selection with a notice", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    await settle();
+    mine.store.select({ kind: "block", target: page, block: hero });
+    siteDoc.commit(sam, [{ op: "removeBlock", page, block: hero }]);
+    await settle();
+    expect(mine.store.getState().selection).toBeNull();
+    expect(mine.notices).toEqual([{ title: "Sam Okafor removed the block you had selected." }]);
+  });
 });
 
 describe("the connection", () => {
-  test("sends one batch at a time, in order", async () => {
-    const { store, siteDoc } = open();
-    siteDoc.hold();
-    store.run([setHeading("One")]);
-    store.run([setHeading("Two")]);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(siteDoc.received).toHaveLength(1);
-    siteDoc.release();
-    await vi.advanceTimersByTimeAsync(0);
-    siteDoc.release();
+  test("edits made while it's down are sent once it's back, and apply once", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
     await settle();
-    expect(siteDoc.received.map((batch) => batch.ops)).toEqual([
-      [setHeading("One")],
-      [setHeading("Two")],
-    ]);
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.props["heading"]).toBe("Two");
-  });
-
-  test("resends a batch that didn't arrive with the same ID, and it applies once", async () => {
-    const { store, siteDoc } = open();
-    siteDoc.failNext(2);
+    siteDoc.drop(meera);
     store.run([setHeading("Sail")]);
-    await vi.advanceTimersByTimeAsync(0);
-    expect(store.getState().status).toBe("retrying");
     await settle();
-    expect(new Set(siteDoc.received.map((batch) => batch.id)).size).toBe(1);
-    expect(siteDoc.received).toHaveLength(3);
-    expect(siteDoc.draft().revision).toBe(1);
+    expect(serverHeading(siteDoc)).toBe("Sail");
+    expect(siteDoc.log()).toHaveLength(1);
     expect(store.getState().status).toBe("saved");
   });
 
-  test("a batch SiteDoc refuses is taken back out of the page, and the person is told", async () => {
+  test("a batch that arrived before the connection dropped is recognised, not applied again", async () => {
+    const siteDoc = fakeSiteDoc({ auto: false });
+    const { store } = open(siteDoc);
+    siteDoc.deliver();
+    const insert = insertOp(definitions, page, "root", null, BlockType.make("rich-text"));
+    expect(store.run([insert])).toEqual([]);
+    // SiteDoc commits it, but the confirmation is lost with the connection.
+    siteDoc.step(0);
+    siteDoc.drop(meera);
+    siteDoc.deliver();
+    expect(siteDoc.log()).toHaveLength(1);
+    expect(store.getState().status).toBe("saved");
+    expect(store.getState().view.pages[page]?.root[0]).toBe(insert.block.id);
+  });
+
+  test("an editor that joins late catches up on what it missed", async () => {
     const siteDoc = fakeSiteDoc();
-    const { store, notices } = open(siteDoc);
-    // SiteDoc's copy lost the hero, as it would after someone else removed it.
-    const { [hero]: _, ...blocks } = fixtureDraft.pages[page]?.blocks ?? {};
-    const home = fixtureDraft.pages[page];
-    if (home === undefined) throw new Error("The fixture draft has no home page.");
-    siteDoc.replace({
-      ...fixtureDraft,
-      pages: { [page]: { ...home, root: home.root.filter((id) => id !== hero), blocks } },
-    });
-    store.run([setHeading("Sail")]);
+    siteDoc.commit(sam, [setHeading("Sail")]);
+    const { store } = open(siteDoc);
     await settle();
-    expect(headingOf(store)).toBe("Summer school at the harbour");
-    expect(notices).toEqual([
-      expect.objectContaining({ errors: [expect.objectContaining({ rule: "unknown-block" })] }),
-    ]);
+    expect(headingOf(store)).toBe("Sail");
+    expect(store.getState().confirmed.revision).toBe(1);
+  });
+
+  test("while it's down the editor says so, and knows no one else is here", async () => {
+    const siteDoc = fakeSiteDoc({ auto: false });
+    const mine = open(siteDoc, meera);
+    open(siteDoc, sam);
+    siteDoc.deliver();
+    expect(mine.store.getState().peers.map((peer) => peer.person)).toEqual([sam]);
+    siteDoc.drop(meera);
+    siteDoc.step(0);
+    expect(mine.store.getState().status).toBe("offline");
+    expect(mine.store.getState().peers).toEqual([]);
+    siteDoc.deliver();
+    expect(mine.store.getState().status).toBe("saved");
+    expect(mine.store.getState().peers.map((peer) => peer.person)).toEqual([sam]);
+  });
+});
+
+describe("presence", () => {
+  test("others see which field a person is on, and when they're typing in it", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    await settle();
+    mine.store.select({ kind: "field", target: page, block: hero, path: ["heading"] });
+    await settle();
+    const [peer] = theirs.store.getState().peers;
+    expect(peer?.presence).toEqual({
+      page,
+      focus: { target: page, block: hero, path: ["heading"] },
+      typing: false,
+    });
+    mine.store.run([setHeading("S")], "heading");
+    await vi.advanceTimersByTimeAsync(100);
+    expect(theirs.store.getState().peers[0]?.presence?.typing).toBe(true);
+    await settle();
+    expect(theirs.store.getState().peers[0]?.presence?.typing).toBe(false);
   });
 });

@@ -1,18 +1,19 @@
 import { loadBlocks } from "@repo/blocks";
 import type { MediaId, PageId, SiteId } from "@repo/contracts/ids";
+import type { Collaborator } from "@repo/contracts/live";
 import {
-  type Connection,
   EditorCanvas,
   EditorOutline,
+  EditorParticipants,
   EditorProvider,
   EditorSettings,
   type Notice,
+  presenceColorCount,
   type SaveStatus,
   useEditorStatus,
   usePageTitle,
   useToolbarCommands,
 } from "@repo/editor";
-import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -37,10 +38,12 @@ import {
   TabletIcon,
 } from "lucide-react";
 import { type ReactNode, useState } from "react";
+import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
-import { applyBatch } from "@/features/sites/functions";
 import { editorDraftQuery } from "@/features/sites/queries";
+
+import { liveConnection } from "./live-connection";
 
 import siteCss from "@repo/blocks/site.css?url";
 
@@ -57,16 +60,26 @@ const blocksQuery = (lockfile: Parameters<typeof loadBlocks>[0]) =>
 
 const mediaSrc = (id: MediaId) => `/media/${id}`;
 
-/** The editor's accent, read from Studio's theme so the canvas outlines match Studio. */
-const studioAccent = () =>
-  getComputedStyle(document.documentElement).getPropertyValue("--ring").trim();
+const themeValue = (name: string) =>
+  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/** The colors the canvas draws with, read from Studio's theme so they match Studio. */
+const canvasColors = () => ({
+  accent: themeValue("--ring"),
+  presence: Array.from({ length: presenceColorCount }, (_, index) =>
+    themeValue(`--presence-${index + 1}`),
+  ),
+});
+
+const showNotice = (notice: Notice) =>
+  toast.warning(notice.title, { description: notice.description });
 
 const saveCopy: Readonly<Record<SaveStatus, { readonly label: string; readonly icon: ReactNode }>> =
   {
     saved: { label: "Saved to the draft", icon: <CircleCheckIcon /> },
     saving: { label: "Saving", icon: <LoaderIcon className="animate-spin" /> },
-    retrying: {
-      label: "Can't reach Pakshi. Retrying",
+    offline: {
+      label: "Can't reach Pakshi. Reconnecting",
       icon: <CircleAlertIcon className="text-destructive" />,
     },
   };
@@ -99,6 +112,9 @@ function Header(props: { readonly site: { readonly id: SiteId; readonly name: st
         {save.icon}
         {save.label}
       </output>
+      <div className="ml-auto">
+        <EditorParticipants />
+      </div>
     </header>
   );
 }
@@ -177,16 +193,17 @@ function CanvasToolbar(props: {
 }
 
 /** Studio's editor screen: the page in the canvas and the settings panel beside it. */
-export function EditorPage(props: { readonly site: SiteId; readonly page: PageId }) {
+export function EditorPage(props: {
+  readonly site: SiteId;
+  readonly page: PageId;
+  readonly person: Collaborator;
+}) {
   const { data } = useSuspenseQuery(editorDraftQuery(props.site));
   const { data: definitions } = useSuspenseQuery(blocksQuery(data.draft.lockfile));
   const [width, setWidth] = useState<Width>("desktop");
   const [scheme, setScheme] = useState<"light" | "dark">("light");
-  const [accent] = useState(studioAccent);
-  const [notice, setNotice] = useState<Notice | null>(null);
-  const [connection] = useState<Connection>(() => ({
-    send: (batch) => applyBatch({ data: { site: props.site, batch } }),
-  }));
+  const [colors] = useState(canvasColors);
+  const [connection] = useState(() => liveConnection(props.site));
   return (
     <EditorProvider
       draft={data.draft}
@@ -196,8 +213,9 @@ export function EditorPage(props: { readonly site: SiteId; readonly page: PageId
       mediaSrc={mediaSrc}
       siteCss={siteCss}
       scheme={scheme}
+      person={props.person}
       connection={connection}
-      onNotice={setNotice}
+      onNotice={showNotice}
     >
       <div className="flex h-screen flex-col">
         <Header site={{ id: props.site, name: data.draft.settings.name }} />
@@ -210,27 +228,12 @@ export function EditorPage(props: { readonly site: SiteId; readonly page: PageId
           </aside>
           <main aria-label="Page canvas" className="flex min-w-0 flex-1 flex-col bg-muted">
             <CanvasToolbar width={width} onWidth={setWidth} scheme={scheme} onScheme={setScheme} />
-            <div className="relative min-h-0 flex-1 p-4">
-              <EditorCanvas width={widths[width]} accent={accent} />
-              <div aria-live="polite" className="absolute right-8 bottom-8 max-w-sm">
-                {notice !== null && (
-                  <Alert variant="destructive" className="bg-card shadow-md">
-                    <CircleAlertIcon />
-                    <AlertTitle>{notice.message}</AlertTitle>
-                    <AlertDescription>
-                      {notice.errors.map((error) => error.message).join(" ")}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="mt-2"
-                        onClick={() => setNotice(null)}
-                      >
-                        Dismiss
-                      </Button>
-                    </AlertDescription>
-                  </Alert>
-                )}
-              </div>
+            <div className="min-h-0 flex-1 p-4">
+              <EditorCanvas
+                width={widths[width]}
+                accent={colors.accent}
+                presence={colors.presence}
+              />
             </div>
           </main>
           <aside aria-label="Settings" className="w-96 shrink-0 overflow-y-auto border-l bg-card">

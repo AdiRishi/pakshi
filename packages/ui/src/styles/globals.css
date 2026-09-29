@@ -38,6 +38,14 @@
   --sidebar-accent-foreground: #0d2436;
   --sidebar-border: #dce6ee;
   --sidebar-ring: #1c74b8;
+  /* Colors that tell the people editing a draft apart. Each holds white text. */
+  --presence-1: #0e7c86;
+  --presence-2: #7b3fa0;
+  --presence-3: #b24a12;
+  --presence-4: #2e7d32;
+  --presence-5: #a8326b;
+  --presence-6: #4b4fa8;
+  --presence-foreground: #ffffff;
 }
 
 @theme inline {
@@ -68,6 +76,13 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-presence-1: var(--presence-1);
+  --color-presence-2: var(--presence-2);
+  --color-presence-3: var(--presence-3);
+  --color-presence-4: var(--presence-4);
+  --color-presence-5: var(--presence-5);
+  --color-presence-6: var(--presence-6);
+  --color-presence-foreground: var(--presence-foreground);
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
