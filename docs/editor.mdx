@@ -242,8 +242,6 @@ Use existing packages where the job has clear edges, and pin exact versions:
 
 **No dependency holds its own copy of page state.** The one exception is a rich text field's value inside its TipTap editor. That is allowed because a field is one value with one editor, and remote changes reach it only through the minimal-transaction path. Puck broke this rule, and most of its integration problems followed from it.
 
-When `@tiptap/core` and `@dnd-kit/react` enter the workspace catalog, add their sources to `.repos/` through `scripts/lib/reference-repos.ts`, pinned to the catalog versions, so their code can be read at the version in use.
-
 ## Testing
 
 - **The local copy** is tested through the editor's public interface against an in-process fake `SiteDoc` that runs the real document module. The fake stands in for the connection only.
