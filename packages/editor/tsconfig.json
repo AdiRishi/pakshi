@@ -1,0 +1,9 @@
+{
+  "extends": "@repo/tsconfig/react.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["vite/client"]
+  },
+  "include": ["src"]
+}

@@ -4,6 +4,7 @@
 @import "@fontsource-variable/onest";
 
 @source "../../../../apps/studio/src";
+@source "../../../editor/src";
 @source "..";
 
 @custom-variant dark (&:is(.dark *));
