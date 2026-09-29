@@ -61,3 +61,28 @@ export const siteMedia = Effect.fn("StudioApi.siteMedia")(function* (site: {
     alt: row.alt,
   }));
 });
+
+/**
+ * Whether a person may see a library image: one in a site's library to
+ * people who can edit that site, one in a brand's library to people who can
+ * edit any site in the brand. An image in no library is seen by no one.
+ */
+export const canSeeMedia = Effect.fn("StudioApi.canSeeMedia")(function* (
+  person: Person,
+  media: MediaId,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const sites = yield* SqlSchema.findAll({
+    Request: MediaId,
+    Result: Schema.Struct({ id: SiteId, brand_id: BrandId }),
+    execute: (id) => sql`
+      select s.id, s.brand_id from media m
+      join sites s on s.id = m.site_id or s.brand_id = m.brand_id
+      where m.id = ${id}`,
+  })(media);
+  if (sites.length === 0) return false;
+  const { access } = yield* loadAccess(person.id);
+  return sites.some((site) =>
+    authorize(access, "page.edit", { kind: "site", id: site.id, brand: site.brand_id }),
+  );
+});
