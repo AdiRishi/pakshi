@@ -1,3 +1,5 @@
+import { placeholderTree } from "@repo/blocks";
+import { propsSchema } from "@repo/blocks/fields";
 import { BlockId, PageId } from "@repo/contracts/ids";
 import { BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
@@ -193,6 +195,37 @@ describe("every op's inverse restores the draft exactly", () => {
 });
 
 describe("applying ops", () => {
+  const addable = Array.from(contracts.values()).filter(
+    (contract) => contract.placement === "section" || contract.placement === "item",
+  );
+  test.each(addable.map((contract) => [contract.type, contract] as const))(
+    "a new %s with its placeholder content can be inserted, and is complete",
+    (type, contract) => {
+      const tree = placeholderTree(contracts, type);
+      const host = Object.entries(home().blocks).flatMap(([id, placed]) => {
+        const hostContract = contracts.get(placed.type);
+        return hostContract?.placement === "section"
+          ? Object.entries(hostContract.slots)
+              .filter(([, spec]) => spec.accepts.includes(type))
+              .map(([slot]) => ({ block: BlockId.make(id), slot }))
+          : [];
+      })[0];
+      const list = contract.placement === "section" ? ("root" as const) : host;
+      if (list === undefined) throw new Error(`No section on the home page can hold a ${type}.`);
+      const result = applyOps(
+        harbourDraft,
+        [{ op: "insertBlock", page: PageId.make("pg_home"), list, after: null, block: tree }],
+        contracts,
+      );
+      expect(result.ok ? [] : result.errors).toEqual([]);
+      for (const placed of [tree, ...Object.values(tree.slots ?? {}).flat()]) {
+        const placedContract = contracts.get(placed.type);
+        if (placedContract === undefined) throw new Error(`No contract for ${placed.type}.`);
+        expect(Schema.is(propsSchema(placedContract.fields, "complete"))(placed.props)).toBe(true);
+      }
+    },
+  );
+
   test("a required heading can be cleared and typed again", () => {
     const cleared = applied({
       op: "setProp",

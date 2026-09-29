@@ -1,6 +1,6 @@
 import { readFile } from "node:fs/promises";
 
-import { BlockId } from "@repo/contracts/ids";
+import { BlockId, BlockType, ItemId, MediaId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
 import { Schema } from "effect";
@@ -13,8 +13,9 @@ import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
 import { propsSchema } from "../src/fields.ts";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
+import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
-import { blockKey, renderBlock } from "../src/render.tsx";
+import { blockKey, loadBlocks, renderBlock } from "../src/render.tsx";
 import { siteData } from "../src/site-data.ts";
 
 const load = async (type: string, version: number) => {
@@ -279,5 +280,97 @@ describe("completeness is checked apart from drafts", () => {
   test("a list needs its minimum number of items", async () => {
     const gallery = await load("gallery", 1);
     expect(Schema.is(propsSchema(gallery.fields, "complete"))({ images: [] })).toBe(false);
+  });
+});
+
+const contracts = await loadBlocks(
+  Object.fromEntries(blockFixtures.map((entry) => [entry.type, entry.version])),
+);
+
+/** The IDs of a list field's items. */
+const itemIds = (list: Json | undefined) =>
+  Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ id: ItemId })))(list).map(
+    (item) => item.id,
+  );
+
+describe("placeholders", () => {
+  const placed = (type: string) => placeholderTree(contracts, BlockType.make(type));
+
+  test("a new block and its items get new IDs every time, list items included", () => {
+    const ids = (tree: BlockTree) => [
+      tree.id,
+      ...Object.values(tree.slots ?? {})
+        .flat()
+        .map((item) => item.id),
+    ];
+    expect(new Set([...ids(placed("feature-grid")), ...ids(placed("feature-grid"))]).size).toBe(8);
+    const images = [placed("gallery"), placed("gallery")].flatMap((tree) =>
+      itemIds(tree.props["images"]),
+    );
+    expect(new Set(images).size).toBe(6);
+  });
+
+  test("every field of a new block holds placeholder content", () => {
+    expect(placeholderPaths(contracts, placed("hero"))).toEqual([
+      ["heading"],
+      ["body"],
+      ["image"],
+      ["cta"],
+    ]);
+  });
+
+  test("a field stops being a placeholder once it's changed", () => {
+    const hero = placed("hero");
+    const edited = {
+      ...hero,
+      props: { ...hero.props, heading: "Summer school at the harbour" },
+    };
+    expect(placeholderPaths(contracts, edited)).toEqual([["body"], ["image"], ["cta"]]);
+  });
+
+  test("a button is a placeholder while its link is, even after its label changes", () => {
+    const hero = placed("hero");
+    const withCta = (cta: Json) => ({ ...hero, props: { ...hero.props, cta } });
+    expect(
+      placeholderPaths(contracts, withCta({ label: "Register", link: "https://example.com" })),
+    ).toContainEqual(["cta"]);
+    expect(
+      placeholderPaths(contracts, withCta({ label: "Find out more", link: "https://example.org" })),
+    ).not.toContainEqual(["cta"]);
+  });
+
+  test("a placeholder image stays one until another image replaces it, whatever its alt text", () => {
+    const split = placed("split");
+    const paths = (id: string) =>
+      placeholderPaths(contracts, {
+        ...split,
+        props: { ...split.props, image: { $ref: "media", id, alt: "A calm harbour" } },
+      });
+    expect(paths("med_pakshiArch")).toContainEqual(["image"]);
+    expect(paths("med_harbour")).not.toContainEqual(["image"]);
+  });
+
+  test("items hold their section's placeholder content, and list items are found by ID", () => {
+    const [item] = placed("feature-grid").slots?.["items"] ?? [];
+    if (item === undefined) throw new Error("The feature grid's placeholder has no items.");
+    expect(placeholderPaths(contracts, item)).toEqual([["title"], ["body"]]);
+    const gallery = placed("gallery");
+    const [first] = itemIds(gallery.props["images"]);
+    expect(placeholderPaths(contracts, gallery)).toContainEqual(["images", first, "image"]);
+    expect(placeholderPaths(contracts, gallery)).toContainEqual(["images", first, "caption"]);
+  });
+
+  test("real content holds no placeholders", () => {
+    for (const entry of blockFixtures.filter((fixture) => fixture.name !== "placeholder")) {
+      const tree = fixtureTree(entry);
+      for (const block of [tree, ...Object.values(tree.slots ?? {}).flat()])
+        expect(placeholderPaths(contracts, block)).toEqual([]);
+    }
+  });
+
+  test("placeholder images and the placeholder form resolve on every site", () => {
+    const bare = siteData({ ...fixtureSite, forms: {}, media: () => undefined });
+    expect(bare.media(MediaId.make("med_pakshiHills"))?.src).toMatch(/^data:image\/svg\+xml,/);
+    expect(bare.form(placeholderForm.id)?.submitLabel).toBe("Send message");
   });
 });

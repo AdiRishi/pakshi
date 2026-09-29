@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Root, Text, usePosts } from "../../components.tsx";
 import { optional, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: text({ title: "Heading", min: 3, max: 80 }),
@@ -95,5 +96,6 @@ export default defineBlock({
     purpose: "The site's newest blog posts, with links to each",
     avoid: ["more than one per page"],
   },
+  placeholder,
   component: PostList,
 });

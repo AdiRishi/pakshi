@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { FormView, Root, Text } from "../../components.tsx";
 import { form, optional, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: text({ title: "Heading", min: 3, max: 80 }),
@@ -50,5 +51,6 @@ export default defineBlock({
     purpose: "Collect a registration, an enquiry or a sign-up with one of the site's forms",
     avoid: ["more than one form on a page"],
   },
+  placeholder,
   component: FormSection,
 });

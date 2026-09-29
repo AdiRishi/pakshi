@@ -4,30 +4,11 @@ import type { BlockTree } from "@repo/contracts/ops";
 import { type BlockInstance, PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
 import { Menus, SiteSettings } from "@repo/contracts/site";
 import { MediaFile } from "@repo/contracts/snapshot";
-import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 
+import { BlockFixture } from "./contract.ts";
 import site from "./fixture-site.json" with { type: "json" };
 import { fixtureFiles } from "./fixtures.gen.ts";
-
-const Props = Schema.Record(Schema.String, Schema.Json);
-
-/**
- * Example content for one block version, stored beside it. A section's
- * fixture carries the items in its slots.
- */
-export const BlockFixture = Schema.Struct({
-  variant: Schema.String,
-  surface: Schema.optionalKey(Surface),
-  props: Props,
-  slots: Schema.optionalKey(
-    Schema.Record(
-      Schema.String,
-      Schema.Array(Schema.Struct({ type: BlockType, variant: Schema.String, props: Props })),
-    ),
-  ),
-});
-export type BlockFixture = typeof BlockFixture.Type;
 
 /** Every fixture of every block version. */
 export const blockFixtures = fixtureFiles.map((file) => ({

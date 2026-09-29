@@ -1,0 +1,77 @@
+{
+  "variant": "image-right",
+  "surface": "muted",
+  "props": {
+    "heading": "Tell the story behind it",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Pair a picture with a few lines about what makes this worth a closer look."
+            }
+          ]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What people will get out of it"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Who it's for"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "When and where it happens"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_pakshiArch",
+      "alt": ""
+    },
+    "cta": {
+      "label": "Read more",
+      "link": "https://example.com"
+    }
+  }
+}
