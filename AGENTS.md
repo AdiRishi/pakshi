@@ -22,6 +22,13 @@ state lives in Cloudflare. Non-production stages seed the test users from
 `workers/test-identity-provider/src/users.ts` with their grants, and serve the
 snapshot in `fixtures/sample-site` at the Sites Worker's own host.
 
+They also seed the "Block fixtures N" sites at `fixtures-N.<sites host>`, such
+as `fixtures-1.localhost:1339`. These are test sites, not part of the sample:
+each shows block fixtures on its home page, so the browser suite can check that
+the editor canvas renders every fixture exactly as `sites` does
+(`infra/src/fixture-sites.ts`). The first holds every section and item fixture;
+the others exist because a site shows only one header and one footer fixture.
+
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
 
