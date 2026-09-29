@@ -1,11 +1,19 @@
 import type { Viewer } from "@repo/contracts/studio";
 import { Link, useNavigate, useRouter } from "@tanstack/react-router";
-import { HouseIcon, LogOutIcon } from "lucide-react";
+import { GlobeIcon, HouseIcon, LogOutIcon } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from "@/components/ui/empty";
+import { Item, ItemContent, ItemDescription, ItemGroup, ItemTitle } from "@/components/ui/item";
 import {
   Sidebar,
   SidebarContent,
@@ -99,18 +107,28 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
               </CardHeader>
               <CardContent className="px-0">
                 {viewer.sites.length === 0 ? (
-                  <p className="px-6 py-4 text-sm text-muted-foreground">
-                    You can't edit any sites yet. Ask your team's Pakshi admin for access.
-                  </p>
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyMedia variant="icon">
+                        <GlobeIcon />
+                      </EmptyMedia>
+                      <EmptyTitle>No sites yet</EmptyTitle>
+                      <EmptyDescription>
+                        You can't edit any sites yet. Ask your team's Pakshi admin for access.
+                      </EmptyDescription>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
-                  <ul className="divide-y">
+                  <ItemGroup className="gap-0 divide-y">
                     {viewer.sites.map((site) => (
-                      <li key={site.id} className="flex flex-col gap-0.5 px-6 py-3">
-                        <span className="text-sm font-semibold">{site.name}</span>
-                        <span className="text-sm text-muted-foreground">{site.brand}</span>
-                      </li>
+                      <Item key={site.id} render={<li />} className="rounded-none px-6">
+                        <ItemContent>
+                          <ItemTitle>{site.name}</ItemTitle>
+                          <ItemDescription>{site.brand}</ItemDescription>
+                        </ItemContent>
+                      </Item>
                     ))}
-                  </ul>
+                  </ItemGroup>
                 )}
               </CardContent>
             </Card>
@@ -126,19 +144,28 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
               </CardHeader>
               <CardContent className="px-0">
                 {viewer.roles.length === 0 ? (
-                  <p className="px-6 py-4 text-sm text-muted-foreground">No roles yet</p>
+                  <Empty>
+                    <EmptyHeader>
+                      <EmptyTitle>No roles yet</EmptyTitle>
+                    </EmptyHeader>
+                  </Empty>
                 ) : (
-                  <ul className="divide-y">
+                  <ItemGroup className="gap-0 divide-y">
                     {viewer.roles.map((role) => (
-                      <li
+                      <Item
                         key={`${role.role}-${role.scope}`}
-                        className="flex justify-between gap-3 px-6 py-3 text-sm"
+                        render={<li />}
+                        className="rounded-none px-6"
                       >
-                        <span className="font-semibold">{role.role}</span>
-                        <span className="text-muted-foreground">{role.scope}</span>
-                      </li>
+                        <ItemContent>
+                          <ItemTitle>{role.role}</ItemTitle>
+                        </ItemContent>
+                        <ItemContent className="flex-none">
+                          <ItemDescription>{role.scope}</ItemDescription>
+                        </ItemContent>
+                      </Item>
                     ))}
-                  </ul>
+                  </ItemGroup>
                 )}
               </CardContent>
             </Card>
