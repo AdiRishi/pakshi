@@ -1,7 +1,8 @@
-export const workerCompatibility = {
-  date: "2026-09-01",
-  flags: ["nodejs_compat"] satisfies Array<"nodejs_compat">,
-};
+/**
+ * Node.js compatibility is on by default from 2026-08-04, so no flag is set.
+ * Alchemy's local runtime pins workerd, which caps the date `pnpm dev` accepts.
+ */
+export const workerCompatibility = { date: "2026-09-01" };
 
 export const workerObservability = {
   enabled: true,

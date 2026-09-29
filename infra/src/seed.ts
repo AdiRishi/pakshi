@@ -1,5 +1,6 @@
-import { routingKeys, objectKeys } from "@repo/contracts/snapshot";
-import { LiveRelease, SnapshotManifest } from "@repo/contracts/snapshot";
+import { createHash } from "node:crypto";
+
+import { LiveRelease, objectKeys, routingKeys, SnapshotManifest } from "@repo/contracts/snapshot";
 import type { DefaultRole, Scope } from "@repo/domain/access";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
@@ -21,10 +22,32 @@ const testGrants = (site: Extract<Scope, { kind: "site" }>["id"]) =>
     { user: "user_jonah", role: "approver", scope: { kind: "site", id: site } },
   ] as const satisfies ReadonlyArray<{ user: TestUserId; role: DefaultRole; scope: Scope }>;
 
+const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
+
+/**
+ * A hash of everything the seed writes. Alchemy reruns an Action only when its
+ * input changes, so this makes an edited fixture, theme or grant reach a stage
+ * that was seeded before.
+ */
+const seedContents = Effect.gen(function* () {
+  const sample = yield* Effect.promise(sampleSite);
+  const manifest = yield* Schema.encodeEffect(SnapshotManifest)(sample.manifest).pipe(Effect.orDie);
+  return sha256(
+    JSON.stringify({
+      brand: sample.brand,
+      site: sample.site,
+      manifest,
+      media: sample.media.map((file) => [file.id, sha256(file.bytes)]),
+      users: testUsers,
+      grants: testGrants(sample.site.id),
+    }),
+  );
+});
+
 /**
  * Seeds a non-production stage: the test users and their grants, and the
  * sample site published at the Sites Worker's own host. Every write is an
- * upsert, so deploying again leaves the same state.
+ * upsert, so running it again leaves the same state.
  */
 export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
   readonly url: Output.Output<string | undefined>;
@@ -36,7 +59,10 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
       const db = yield* Cloudflare.D1.QueryDatabase(data.core);
       const content = yield* Cloudflare.R2.ReadWriteBucket(data.content);
       const routing = yield* Cloudflare.KV.ReadWriteNamespace(data.routing);
-      return Effect.fn(function* (input: { readonly sitesHost: string }) {
+      return Effect.fn(function* (input: {
+        readonly sitesHost: string;
+        readonly contents: string;
+      }) {
         const sample = yield* Effect.promise(sampleSite);
         const now = new Date().toISOString();
         yield* db.batch([
@@ -103,5 +129,8 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
       ]),
     ),
   );
-  yield* seed({ sitesHost: Output.map(sites.url, (url) => new URL(url ?? "").host) });
+  yield* seed({
+    sitesHost: Output.map(sites.url, (url) => new URL(url ?? "").host),
+    contents: yield* seedContents,
+  });
 });

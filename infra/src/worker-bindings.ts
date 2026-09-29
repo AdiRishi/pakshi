@@ -33,6 +33,7 @@ export interface SitesApiEnv extends Cloudflare.InferEnv<ReturnType<typeof sites
 export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function* (
   environment: DeploymentConfig["environment"],
   data: DataPlane,
+  sitesApi: Effect.Success<typeof SitesApi>,
   sitesApiWorkerName: string,
   identity: IdentityProvider,
 ) {
@@ -42,9 +43,14 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
     // deletes the class and everything it stored.
     SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),
     SITE_AGENT: Cloudflare.DurableObject<SiteAgent>("SiteAgent"),
+    // Alchemy's local runtime can't resolve a Worker reference inside a
+    // Durable Object binding, so the class is bound by sites-api's fixed name.
     SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions", {
       scriptName: sitesApiWorkerName,
     }),
+    // Referencing sites-api makes Alchemy deploy it first, so the class above
+    // exists before this Worker binds it.
+    SITES_API: sitesApi,
     CORE: data.core,
     CONTENT: data.content,
     ROUTING: data.routing,

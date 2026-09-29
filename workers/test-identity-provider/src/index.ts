@@ -79,7 +79,7 @@ const chooserPage = (request: AuthorizeRequest) => {
     )
     .join("");
   return new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Choose a test account</title></head><body><main><h1>Choose a test account</h1><p>This identity provider exists only in test and staging stages.</p>${choices}</main></body></html>`,
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>Choose a test account</title></head><body><main><h1>Choose a test account</h1><p>This identity provider exists only in the dev stack and in tests.</p>${choices}</main></body></html>`,
     { headers: { "content-type": "text/html; charset=utf-8" } },
   );
 };
@@ -210,7 +210,7 @@ const handle = async (request: Request, env: TestIdentityProviderEnv) => {
 };
 
 /**
- * A minimal OpenID Connect provider for test and staging stages. Anyone who
+ * A minimal OpenID Connect provider for the dev stack and tests. Anyone who
  * reaches it can sign in as one of the test users, so production never deploys it.
  */
 export default {

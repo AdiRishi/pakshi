@@ -32,10 +32,10 @@ export const SitesApi = Effect.gen(function* () {
 /** Domain logic, sign-in, and the SiteDoc and SiteAgent Durable Objects. */
 export const StudioApi = Effect.gen(function* () {
   const config = yield* deploymentConfig();
-  yield* SitesApi;
   const env = yield* studioApiBindings(
     config.environment,
     yield* dataPlane,
+    yield* SitesApi,
     workerName("sites-api", config.stage),
     yield* identityProvider,
   );
@@ -48,16 +48,16 @@ export const StudioApi = Effect.gen(function* () {
   });
 });
 
-const memo = (...paths: ReadonlyArray<string>) => ({
+/** What decides whether Studio is rebuilt: its own files and the workspace packages it imports. */
+const studioMemo = {
   include: [
     "**/*",
     "../../packages/*/src/**",
     "../../packages/*/package.json",
     "../../tooling/tsconfig/**",
-    ...paths,
   ],
   lockfile: true,
-});
+};
 
 /** Studio, the admin app. */
 export const Studio = Effect.gen(function* () {
@@ -66,17 +66,19 @@ export const Studio = Effect.gen(function* () {
     ...workerDefaults,
     name: workerName("studio", config.stage),
     rootDir: "../apps/studio",
-    main: "src/worker.ts",
     workersDev: true,
-    memo: memo(),
+    memo: studioMemo,
     env: studioBindings(config.environment, yield* StudioApi, yield* identityProvider),
   });
 });
 
 /**
- * Every published site and preview, rendered from snapshots. Astro's dev
- * server resolves a relative root from its own working directory, so the
- * stack passes an absolute one.
+ * Every published site and preview, rendered from snapshots.
+ *
+ * `rootDir` must be absolute: in dev, Alchemy starts Astro with the resolved
+ * root as its working directory, then resolves a relative `rootDir` again from
+ * there. Alchemy's Astro builder hashes only files under `rootDir`, and finds
+ * the workspace packages Sites imports on its own.
  */
 export const Sites = Effect.fn("Pakshi.Sites")(function* (rootDir: string) {
   const config = yield* deploymentConfig();
@@ -86,7 +88,7 @@ export const Sites = Effect.fn("Pakshi.Sites")(function* (rootDir: string) {
     rootDir,
     workersDev: true,
     sessionKVBindingName: false,
-    memo: memo(),
+    memo: { include: ["**/*"], lockfile: true },
     env: sitesBindings(yield* dataPlane, yield* SitesApi),
   });
 });
