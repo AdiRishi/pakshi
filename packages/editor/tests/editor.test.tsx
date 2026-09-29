@@ -27,14 +27,16 @@ const pixel =
 const open = async (
   options: {
     readonly draft?: Draft;
+    readonly page?: PageId;
     readonly definitions?: ReadonlyMap<BlockType, BlockDefinition>;
   } = {},
 ) => {
   const siteDoc = fakeSiteDoc(options.draft);
+  await page.viewport(1440, 900);
   await render(
     <EditorProvider
       draft={options.draft ?? fixtureDraft}
-      page={home}
+      page={options.page ?? home}
       definitions={options.definitions ?? definitions}
       media={media}
       mediaSrc={() => pixel}
@@ -45,7 +47,7 @@ const open = async (
         <div style={{ flex: 1 }}>
           <EditorCanvas siteCss={siteCss} width={1024} scheme="light" accent="blue" />
         </div>
-        <aside aria-label="Settings" style={{ width: 360, overflowY: "auto" }}>
+        <aside aria-label="Settings" style={{ width: 360, flexShrink: 0, overflowY: "auto" }}>
           <EditorSettings />
         </aside>
       </div>
@@ -148,6 +150,54 @@ describe("the keyboard alone", () => {
     heroField(canvas(), "cta")?.focus();
     await userEvent.keyboard("{Enter}");
     await expect.poll(() => document.activeElement?.id).toMatch(/cta-label$/);
+  });
+});
+
+describe("a post's settings", () => {
+  test("edit its date, tags and cover image", async () => {
+    const post = PageId.make("pg_launch");
+    const draft: Draft = {
+      ...fixtureDraft,
+      pages: {
+        ...fixtureDraft.pages,
+        [post]: {
+          schema: "pakshi.page/1",
+          id: post,
+          type: "post",
+          path: "/blog/launch",
+          meta: {
+            title: "We're open",
+            description: "",
+            date: "2027-03-02",
+            author: "Meera Kapoor",
+            tags: [],
+            excerpt: "",
+          },
+          root: [],
+          blocks: {},
+        },
+      },
+    };
+    const { siteDoc } = await open({ draft, page: post });
+    const meta = () => {
+      const page = siteDoc.draft().pages[post];
+      return page?.type === "post" ? page.meta : undefined;
+    };
+
+    await userEvent.fill(page.getByLabelText("Date"), "2027-04-01");
+    await expect.poll(() => meta()?.date).toBe("2027-04-01");
+
+    await userEvent.fill(page.getByLabelText("Tags"), "news, july,  news");
+    await userEvent.keyboard("{Tab}");
+    await expect.poll(() => meta()?.tags).toEqual(["news", "july"]);
+
+    await userEvent.click(page.getByRole("list", { name: "Library" }).getByRole("button").first());
+    await expect.poll(() => meta()?.cover?.id).toBe("med_harbour");
+    await userEvent.fill(page.getByLabelText("Alt text"), "The harbour at dawn");
+    await expect.poll(() => meta()?.cover?.alt).toBe("The harbour at dawn");
+
+    await userEvent.click(page.getByRole("button", { name: "Remove" }));
+    await expect.poll(() => meta()?.cover).toBeUndefined();
   });
 });
 
