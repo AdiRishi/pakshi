@@ -16,6 +16,7 @@
     "@base-ui/react": "catalog:",
     "@fontsource-variable/onest": "catalog:",
     "class-variance-authority": "catalog:",
+    "cmdk": "catalog:",
     "cn": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",
