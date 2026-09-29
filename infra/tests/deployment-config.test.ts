@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest";
 import * as Effect from "effect/Effect";
 
-import { decodeStage, stageEnvironment } from "../src/deployment-config.ts";
+import { decodeStage, stageEnvironment, workerName } from "../src/deployment-config.ts";
 
 it.effect("accepts the supported deployment stages", () =>
   Effect.gen(function* () {
@@ -21,3 +21,14 @@ it.effect("rejects unsupported deployment stages", () =>
     }
   }),
 );
+
+it("names production's Workers the same way on every deploy", () => {
+  expect(
+    ["studio", "studio-api", "sites", "sites-api"].map((worker) => workerName(worker, "prod")),
+  ).toEqual([
+    "pakshi-studio-prod",
+    "pakshi-studio-api-prod",
+    "pakshi-sites-prod",
+    "pakshi-sites-api-prod",
+  ]);
+});

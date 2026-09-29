@@ -33,7 +33,7 @@ export interface SitesApiEnv extends Cloudflare.InferEnv<ReturnType<typeof sites
 export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function* (
   environment: DeploymentConfig["environment"],
   data: DataPlane,
-  sitesApiName: string,
+  sitesApiWorkerName: string,
   identity: IdentityProvider,
 ) {
   const authSecret = yield* Alchemy.makeRandom("AuthSecret");
@@ -43,7 +43,7 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
     SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),
     SITE_AGENT: Cloudflare.DurableObject<SiteAgent>("SiteAgent"),
     SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions", {
-      scriptName: sitesApiName,
+      scriptName: sitesApiWorkerName,
     }),
     CORE: data.core,
     CONTENT: data.content,

@@ -36,3 +36,11 @@ export const deploymentConfig = Effect.fn("Pakshi.DeploymentConfig")(function* (
 });
 
 export type DeploymentConfig = Effect.Success<ReturnType<typeof deploymentConfig>>;
+
+/**
+ * Every Worker's name in Cloudflare, such as `pakshi-studio-api-prod`. Names
+ * are fixed rather than generated so they read clearly in the dashboard, and
+ * because Alchemy replaces a Worker whose name changes, which deletes the data
+ * of any Durable Objects it hosts.
+ */
+export const workerName = (worker: string, stage: Stage) => `pakshi-${worker}-${stage}`;
