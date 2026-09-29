@@ -1,0 +1,144 @@
+import { BrandId, SiteId } from "@repo/contracts/ids";
+import { Schema } from "effect";
+
+/** Every action Pakshi checks. Studio, the API, the agent and live editing all ask about these. */
+export const Permission = Schema.Literals([
+  "org.settings.edit",
+  "roles.manage",
+  "brand.create",
+  "brand.delete",
+  "brand.theme.edit",
+  "site.create",
+  "site.delete",
+  "site.settings.edit",
+  "members.manage",
+  "workflow.edit",
+  "page.edit",
+  "draft.share",
+  "site.publish",
+  "site.approve",
+  "site.approve_own",
+  "site.rollback",
+  "blocks.upgrade",
+  "blocks.request",
+  "submissions.read",
+  "submissions.export",
+]);
+export type Permission = typeof Permission.Type;
+
+const siteWork = [
+  "page.edit",
+  "draft.share",
+  "site.publish",
+  "site.rollback",
+  "blocks.upgrade",
+  "blocks.request",
+] as const satisfies ReadonlyArray<Permission>;
+
+const siteAdministration = [
+  ...siteWork,
+  "site.settings.edit",
+  "members.manage",
+  "submissions.read",
+  "submissions.export",
+] as const satisfies ReadonlyArray<Permission>;
+
+export const DefaultRole = Schema.Literals([
+  "org-admin",
+  "brand-admin",
+  "site-admin",
+  "editor",
+  "approver",
+  "submissions-viewer",
+]);
+export type DefaultRole = typeof DefaultRole.Type;
+
+export const defaultRoles = {
+  "org-admin": { title: "Org admin", permissions: Permission.literals },
+  "brand-admin": {
+    title: "Brand admin",
+    permissions: [
+      ...siteAdministration,
+      "brand.theme.edit",
+      "site.create",
+      "site.delete",
+      "workflow.edit",
+    ],
+  },
+  "site-admin": { title: "Site admin", permissions: siteAdministration },
+  editor: { title: "Editor", permissions: siteWork },
+  approver: { title: "Approver", permissions: ["site.approve"] },
+  "submissions-viewer": {
+    title: "Submissions viewer",
+    permissions: ["submissions.read", "submissions.export"],
+  },
+} as const satisfies Record<
+  DefaultRole,
+  { readonly title: string; readonly permissions: ReadonlyArray<Permission> }
+>;
+
+/** Where a grant or override applies. Grants and overrides reach everything below their scope. */
+export const Scope = Schema.Union([
+  Schema.Struct({ kind: Schema.Literal("organization") }),
+  Schema.Struct({ kind: Schema.Literal("brand"), id: BrandId }),
+  Schema.Struct({ kind: Schema.Literal("site"), id: SiteId }),
+]);
+export type Scope = typeof Scope.Type;
+
+/** The thing being acted on. A site names its brand, because a brand's grants reach its sites. */
+export type Resource =
+  | { readonly kind: "organization" }
+  | { readonly kind: "brand"; readonly id: BrandId }
+  | { readonly kind: "site"; readonly id: SiteId; readonly brand: BrandId };
+
+export const Grant = Schema.Struct({ role: DefaultRole, scope: Scope });
+export type Grant = typeof Grant.Type;
+
+export const Override = Schema.Struct({
+  permission: Permission,
+  scope: Scope,
+  allowed: Schema.Boolean,
+});
+export type Override = typeof Override.Type;
+
+/** A person's grants and overrides, as stored in D1 `core`. */
+export interface Access {
+  readonly grants: ReadonlyArray<Grant>;
+  readonly overrides: ReadonlyArray<Override>;
+}
+
+/** How specific a scope is when it covers the resource, or `null` when it doesn't cover it. */
+const reach = (scope: Scope, resource: Resource) => {
+  switch (scope.kind) {
+    case "organization":
+      return 0;
+    case "brand":
+      return (resource.kind === "brand" && resource.id === scope.id) ||
+        (resource.kind === "site" && resource.brand === scope.id)
+        ? 1
+        : null;
+    case "site":
+      return resource.kind === "site" && resource.id === scope.id ? 2 : null;
+  }
+};
+
+/**
+ * May this person do this action on this thing? The most specific override
+ * that covers the resource decides; without one, any grant that covers the
+ * resource and whose role holds the permission allows it.
+ */
+export const authorize = (access: Access, permission: Permission, resource: Resource) => {
+  let decidingOverride: { readonly depth: number; readonly allowed: boolean } | null = null;
+  for (const override of access.overrides) {
+    const depth = reach(override.scope, resource);
+    if (override.permission !== permission || depth === null) continue;
+    if (decidingOverride === null || depth > decidingOverride.depth)
+      decidingOverride = { depth, allowed: override.allowed };
+  }
+  if (decidingOverride !== null) return decidingOverride.allowed;
+  return access.grants.some(
+    (grant) =>
+      reach(grant.scope, resource) !== null &&
+      defaultRoles[grant.role].permissions.some((held) => held === permission),
+  );
+};
