@@ -9,8 +9,9 @@ const mediaPrefix = "/_media/";
 
 /**
  * Finds the site for the request's host and serves its pages from the
- * Workers cache. The key holds the release and this Worker's version, so a
- * publish or a deploy changes the key instead of needing a purge.
+ * Workers cache. The key holds the site, its release and this Worker's
+ * version, so a publish or a deploy changes the key instead of needing a
+ * purge. Only reads are cached.
  */
 export const onRequest = defineMiddleware(async (context, next) => {
   // Page paths are lowercase letters, digits and hyphens, so no page can take this prefix.
@@ -19,8 +20,12 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const site = await liveSiteFor(context.url.host);
   if (site === null) return new Response("There is no site at this address.", { status: 404 });
 
+  context.locals.site = site;
+  const reading = context.request.method === "GET" || context.request.method === "HEAD";
+  if (!reading) return next();
+
   const key = new Request(
-    `https://page-cache.pakshi/${site.live.release}/${env.CF_VERSION_METADATA.id}${context.url.pathname}`,
+    `https://page-cache.pakshi/${site.id}/${site.live.release}/${env.CF_VERSION_METADATA.id}${context.url.pathname}`,
   );
   const cache = await caches.open("pages");
   const cached = await cache.match(key);
@@ -31,12 +36,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
     return hit;
   }
 
-  context.locals.site = site;
   const rendered = await next();
   const response = new Response(rendered.body, rendered);
   response.headers.set("cache-control", browserCaching);
   response.headers.set("x-pakshi-cache", "miss");
-  if (response.status === 200) {
+  if (response.status === 200 && context.request.method === "GET") {
     const stored = response.clone();
     stored.headers.set("cache-control", "public, max-age=86400");
     context.locals.cfContext.waitUntil(cache.put(key, stored));

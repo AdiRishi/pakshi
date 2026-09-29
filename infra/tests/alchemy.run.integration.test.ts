@@ -60,6 +60,15 @@ test(
 );
 
 test(
+  "only reads are served from or stored in the page cache",
+  Effect.gen(function* () {
+    const { sitesUrl } = yield* stack;
+    const posted = yield* Effect.promise(() => fetch(`${sitesUrl}/programme`, { method: "POST" }));
+    expect(posted.headers.get("x-pakshi-cache")).toBeNull();
+  }),
+);
+
+test(
   "removed addresses are gone and unknown ones are not found",
   Effect.gen(function* () {
     const { sitesUrl } = yield* stack;
