@@ -409,7 +409,7 @@ export class EditorStore {
           Draft: ({ draft }) => draft,
         });
         this.#synced = true;
-        this.#showRemote({ confirmed, view: this.#replay(confirmed), peers });
+        this.#showRemote({ confirmed, view: this.#replay(confirmed).view, peers });
         this.#flush();
       },
       Committed: (commit) => this.#committed(commit),
@@ -477,9 +477,10 @@ export class EditorStore {
       else parts.push(part);
     }
     if (parts.length > 0) this.#onNotice(replacedNotice(batch.actor.name, parts));
-    const view = this.#replay(next);
+    const { view, dropped } = this.#replay(next, batch.actor.name);
     const selection = this.#state.selection;
-    if (selection !== null && !blockExists(view, selection.target, selection.block))
+    // A dropped edit already says who removed the block.
+    if (!dropped && selection !== null && !blockExists(view, selection.target, selection.block))
       this.#onNotice({ title: `${batch.actor.name} removed the block you had selected.` });
     if (mine) this.#set({ confirmed: next, view });
     else this.#showRemote({ confirmed: next, view });
@@ -497,9 +498,14 @@ export class EditorStore {
     );
   }
 
-  /** The pending batches replayed over a confirmed draft. Any that no longer apply are dropped. */
-  #replay(confirmed: Draft) {
+  /**
+   * The pending batches replayed over a confirmed draft. Any that no longer
+   * apply are dropped, and the person told; `by` names whoever's change
+   * caused it, when that's known.
+   */
+  #replay(confirmed: Draft, by?: string) {
     let view = confirmed;
+    let dropped = false;
     const kept: Array<Pending> = [];
     for (const pending of this.#pending) {
       if (pending.batch.undo === true) {
@@ -513,6 +519,7 @@ export class EditorStore {
         kept.push(pending);
         continue;
       }
+      dropped = true;
       const [first] = pending.batch.ops;
       // Described as the person last saw it, since the part may be gone now.
       const part =
@@ -520,15 +527,15 @@ export class EditorStore {
       this.#onNotice({
         title: `Your change to ${part} was dropped.`,
         description: replayed.errors.some((error) => error.rule === "unknown-block")
-          ? "Someone removed what it changed."
-          : `Someone changed the page first, so it no longer fits. ${describeErrors(replayed.errors)}`,
+          ? `${by ?? "Someone"} removed what it changed.`
+          : `${by ?? "Someone"} changed the page first, so it no longer fits. ${describeErrors(replayed.errors)}`,
       });
     }
     this.#pending = kept;
-    return view;
+    return { view, dropped };
   }
 
   #rebase(confirmed: Draft) {
-    this.#set({ confirmed, view: this.#replay(confirmed) });
+    this.#set({ confirmed, view: this.#replay(confirmed).view });
   }
 }

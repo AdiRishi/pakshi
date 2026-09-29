@@ -285,7 +285,7 @@ describe("other people's changes", () => {
     expect(mine.notices).toEqual([
       {
         title: "Your change to Heading in Hero was dropped.",
-        description: "Someone removed what it changed.",
+        description: "Sam Okafor removed what it changed.",
       },
     ]);
     expect(mine.store.getState().status).toBe("saved");
