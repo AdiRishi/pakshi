@@ -87,6 +87,11 @@ const typingShown = 2000;
 
 const newBatchId = () => BatchId.make(randomId("bat"));
 
+const replacedNotice = (name: string, parts: ReadonlyArray<string>): Notice => ({
+  title: `${name} replaced your change.`,
+  description: `They changed ${Array.from(new Set(parts)).join(", ")} after you.`,
+});
+
 /** The key typing in one field shares, so a burst of keystrokes is one undo step. */
 export const fieldKey = (target: Target, block: BlockId, path: PropPath) =>
   `${target}:${block}:${path.join(".")}`;
@@ -118,6 +123,8 @@ export class EditorStore {
   #redo: Array<Step> = [];
   /** The field being typed in, whose undo step is still growing. */
   #burst: string | null = null;
+  /** Someone replaced what the person is typing: told when the typing stops, unless they type over it. */
+  #replacedWhileTyping: { readonly key: string; readonly notice: Notice } | null = null;
   #burstTimer: ReturnType<typeof setTimeout> | undefined;
   #typing = false;
   #typingTimer: ReturnType<typeof setTimeout> | undefined;
@@ -228,6 +235,8 @@ export class EditorStore {
     if (extending && last !== undefined) this.#undo[this.#undo.length - 1] = { ...last, redo: ops };
     else this.#undo.push({ undo: result.inverse, redo: ops });
     this.#burst = burst;
+    if (burst !== null && this.#replacedWhileTyping?.key === burst)
+      this.#replacedWhileTyping = null;
     this.#redo = [];
     if (burst !== null) this.#typed();
     this.#queue({ id: newBatchId(), ops }, burst);
@@ -239,6 +248,7 @@ export class EditorStore {
   endBurst() {
     this.#burst = null;
     this.#stopTyping();
+    this.#tellReplacedWhileTyping();
     this.endBurstBatch();
   }
 
@@ -251,12 +261,19 @@ export class EditorStore {
     if (this.#burst === null) return;
     this.#burst = null;
     this.#stopTyping();
+    this.#tellReplacedWhileTyping();
     this.#pending = this.#pending.map((pending) => ({ ...pending, burst: null }));
     const step = this.#undo.pop();
     if (step === undefined) return;
     const result = applyEach(this.#state.view, step.undo, this.contracts, () => true);
     this.#queue({ id: newBatchId(), ops: step.undo, undo: true }, null);
     this.#set({ view: result.draft });
+  }
+
+  #tellReplacedWhileTyping() {
+    const replaced = this.#replacedWhileTyping;
+    this.#replacedWhileTyping = null;
+    if (replaced !== null) this.#onNotice(replaced.notice);
   }
 
   undo() {
@@ -446,16 +463,20 @@ export class EditorStore {
         title: "Some of that couldn't be undone.",
         description: "Someone else changed it since, so their change stays.",
       });
-    const parts = replaced.flatMap(({ person, op: index }) => {
+    const parts: Array<string> = [];
+    for (const { person, op: index } of replaced) {
       const op = batch.ops[index];
-      if (person !== this.person.id || op === undefined || this.#stillEditing(op)) return [];
-      return [partChanged(op, confirmed, this.contracts)];
-    });
-    if (parts.length > 0)
-      this.#onNotice({
-        title: `${batch.actor.name} replaced your change.`,
-        description: `They changed ${Array.from(new Set(parts)).join(", ")} after you.`,
-      });
+      if (person !== this.person.id || op === undefined || this.#willReplace(op)) continue;
+      const part = partChanged(op, confirmed, this.contracts);
+      if (op.op === "setProp" && fieldKey(op.target, op.block, op.path) === this.#burst)
+        // They're still typing there: they're told when they stop, unless they type over it.
+        this.#replacedWhileTyping = {
+          key: this.#burst,
+          notice: replacedNotice(batch.actor.name, [part]),
+        };
+      else parts.push(part);
+    }
+    if (parts.length > 0) this.#onNotice(replacedNotice(batch.actor.name, parts));
     const view = this.#replay(next);
     const selection = this.#state.selection;
     if (selection !== null && !blockExists(view, selection.target, selection.block))
@@ -464,22 +485,15 @@ export class EditorStore {
     else this.#showRemote({ confirmed: next, view });
   }
 
-  /**
-   * Whether the person is still changing the part an op wrote, in a batch not
-   * yet confirmed or a burst of typing, so their value will replace it again.
-   */
-  #stillEditing(op: Op) {
+  /** Whether a batch of the person's that SiteDoc hasn't confirmed writes the same field, so it will win. */
+  #willReplace(op: Op) {
     if (op.op !== "setProp") return false;
     const key = fieldKey(op.target, op.block, op.path);
-    return (
-      this.#burst === key ||
-      this.#pending.some(({ batch }) =>
-        batch.ops.some(
-          (pending) =>
-            pending.op === "setProp" &&
-            fieldKey(pending.target, pending.block, pending.path) === key,
-        ),
-      )
+    return this.#pending.some(({ batch }) =>
+      batch.ops.some(
+        (pending) =>
+          pending.op === "setProp" && fieldKey(pending.target, pending.block, pending.path) === key,
+      ),
     );
   }
 
