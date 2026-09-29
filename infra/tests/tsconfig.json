@@ -3,7 +3,8 @@
   "compilerOptions": {
     "noEmit": true,
     "types": ["node", "@cloudflare/workers-types", "vitest/globals"],
-    "jsx": "react-jsx"
+    "jsx": "react-jsx",
+    "lib": ["ESNext", "DOM", "DOM.Iterable"]
   },
   "include": ["./**/*.ts", "../src/**/*.ts", "../alchemy.run.ts"]
 }

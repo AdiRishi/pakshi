@@ -80,6 +80,7 @@ export class EditorStore {
   #state: EditorState;
   #pending: ReadonlyArray<Pending> = [];
   #sending = false;
+  #retrying = false;
   #timer: ReturnType<typeof setTimeout> | undefined;
   #undo: Array<Step> = [];
   #redo: Array<Step> = [];
@@ -116,7 +117,7 @@ export class EditorStore {
     };
   };
 
-  #set(next: Partial<EditorState>) {
+  #set(next: Partial<Omit<EditorState, "status">>) {
     const merged = { ...this.#state, ...next };
     const selection = merged.selection;
     this.#state = {
@@ -125,6 +126,8 @@ export class EditorStore {
         selection !== null && !blockExists(merged.view, selection.target, selection.block)
           ? null
           : selection,
+      // Typing waiting to be sent counts as saving, so "saved" means SiteDoc has everything.
+      status: this.#retrying ? "retrying" : this.#pending.length > 0 ? "saving" : "saved",
       canUndo: this.#undo.length > 0,
       canRedo: this.#redo.length > 0,
     };
@@ -224,12 +227,8 @@ export class EditorStore {
   #flush() {
     if (this.#sending) return;
     const next = this.#pending[0];
-    if (next === undefined || next.burst !== null) {
-      if (next === undefined) this.#set({ status: "saved" });
-      return;
-    }
+    if (next === undefined || next.burst !== null) return;
     this.#sending = true;
-    this.#set({ status: "saving" });
     this.#send(next.batch, 0);
   }
 
@@ -237,11 +236,13 @@ export class EditorStore {
     this.#connection.send(batch).then(
       (outcome) => {
         this.#sending = false;
+        this.#retrying = false;
         this.#settle(batch, outcome);
         this.#flush();
       },
       () => {
-        this.#set({ status: "retrying" });
+        this.#retrying = true;
+        this.#set({});
         const delay = retryDelays[Math.min(attempt, retryDelays.length - 1)];
         setTimeout(() => this.#send(batch, attempt + 1), delay);
       },
