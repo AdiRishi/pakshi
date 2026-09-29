@@ -1,8 +1,9 @@
-import type { BlockDefinition } from "@repo/blocks";
+import type { BlockDefinition, RichTextDocument } from "@repo/blocks";
 import { fixtureSite } from "@repo/blocks/fixtures";
 import type { Draft } from "@repo/contracts/draft";
-import { BlockId, type BlockType, MediaId, PageId } from "@repo/contracts/ids";
+import { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { MediaSummary } from "@repo/contracts/studio";
+import { Schema } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
@@ -108,6 +109,46 @@ describe("editing text in place", () => {
     await expect.poll(() => heroHeading(siteDoc)).toBe("");
     await userEvent.keyboard("Build");
     await expect.poll(() => heroHeading(siteDoc)).toBe("Build");
+  });
+});
+
+/** The text of a rich text value's first paragraph. */
+const firstParagraph = (document: RichTextDocument) => {
+  const [first] = document.content;
+  return first?.type === "paragraph"
+    ? (first.content ?? []).map((inline) => (inline.type === "text" ? inline.text : "")).join("")
+    : "";
+};
+
+describe("undo", () => {
+  test("in formatted text on the page leaves the text showing what the draft holds", async () => {
+    const { siteDoc, canvas } = await open();
+    const block = BlockId.make("b_richtextnarrow");
+    const paragraph = canvas().querySelector<HTMLElement>(
+      `[data-pakshi-block='${block}'] [data-pakshi-field='body'] p`,
+    );
+    const editable = paragraph?.closest<HTMLElement>("[contenteditable='true']");
+    const field = definitions.get(BlockType.make("rich-text"))?.fields["body"];
+    if (paragraph == null || editable == null || field?.kind !== "richText")
+      throw new Error("The rich text has no paragraph.");
+    const saved = () =>
+      firstParagraph(
+        Schema.decodeSync(field.draft)(siteDoc.draft().pages[home]?.blocks[block]?.props["body"]),
+      );
+    editable.focus();
+    const selection = canvas().getSelection();
+    selection?.selectAllChildren(paragraph);
+    selection?.collapseToEnd();
+    await userEvent.keyboard(" Alpha");
+    await expect.poll(saved).toBe(paragraph.textContent);
+    // TipTap starts a new undo step after half a second without typing.
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    await userEvent.keyboard(" beta");
+    await expect.poll(saved).toBe(paragraph.textContent);
+    const mod = navigator.platform.startsWith("Mac") ? "Meta" : "Control";
+    await userEvent.keyboard(`{${mod}>}z{/${mod}}`);
+    await expect.poll(() => paragraph.textContent.includes(" beta")).toBe(false);
+    await expect.poll(saved).toBe(paragraph.textContent);
   });
 });
 

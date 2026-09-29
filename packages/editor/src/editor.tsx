@@ -158,19 +158,23 @@ export function EditorProvider(props: {
 
   // Undo and redo work from Studio and from the canvas, except in a text field, which handles its own.
   useEffect(() => {
-    const onKeyDown = (event: globalThis.KeyboardEvent) => {
-      const view = event.currentTarget instanceof Document ? event.currentTarget.defaultView : null;
-      if (!(event.metaKey || event.ctrlKey) || isInTextEntry(event.target, view)) return;
-      const key = event.key.toLowerCase();
-      if (key === "z" && !event.shiftKey) store.undo();
-      else if ((key === "z" && event.shiftKey) || key === "y") store.redo();
-      else return;
-      event.preventDefault();
-    };
-    const targets = canvasDocument === null ? [document] : [document, canvasDocument];
-    for (const target of targets) target.addEventListener("keydown", onKeyDown);
+    const listeners = (canvasDocument === null ? [document] : [document, canvasDocument]).map(
+      (target) => {
+        const onKeyDown = (event: globalThis.KeyboardEvent) => {
+          if (!(event.metaKey || event.ctrlKey) || isInTextEntry(event.target, target.defaultView))
+            return;
+          const key = event.key.toLowerCase();
+          if (key === "z" && !event.shiftKey) store.undo();
+          else if ((key === "z" && event.shiftKey) || key === "y") store.redo();
+          else return;
+          event.preventDefault();
+        };
+        target.addEventListener("keydown", onKeyDown);
+        return () => target.removeEventListener("keydown", onKeyDown);
+      },
+    );
     return () => {
-      for (const target of targets) target.removeEventListener("keydown", onKeyDown);
+      for (const remove of listeners) remove();
     };
   }, [store, canvasDocument]);
 
