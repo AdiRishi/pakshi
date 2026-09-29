@@ -15,6 +15,8 @@ import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as SignInStartRouteImport } from './routes/sign-in_.start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
+import { Route as AuthedSitesSiteIdIndexRouteImport } from './routes/_authed/sites/$siteId/index'
+import { Route as AuthedSitesSiteIdPagesPageIdRouteImport } from './routes/_authed/sites/$siteId/pages/$pageId'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -45,6 +47,17 @@ const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   path: '/api/auth/$',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthedSitesSiteIdIndexRoute = AuthedSitesSiteIdIndexRouteImport.update({
+  id: '/sites/$siteId/',
+  path: '/sites/$siteId/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedSitesSiteIdPagesPageIdRoute =
+  AuthedSitesSiteIdPagesPageIdRouteImport.update({
+    id: '/sites/$siteId/pages/$pageId',
+    path: '/sites/$siteId/pages/$pageId',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
@@ -52,6 +65,8 @@ export interface FileRoutesByFullPath {
   '/sign-out': typeof SignOutRoute
   '/sign-in/start': typeof SignInStartRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
@@ -59,6 +74,8 @@ export interface FileRoutesByTo {
   '/sign-in/start': typeof SignInStartRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/sites/$siteId': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +85,28 @@ export interface FileRoutesById {
   '/sign-in_/start': typeof SignInStartRoute
   '/_authed/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authed/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/_authed/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/sign-out' | '/sign-in/start' | '/api/auth/$'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/sign-out'
+    | '/sign-in/start'
+    | '/api/auth/$'
+    | '/sites/$siteId/'
+    | '/sites/$siteId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/sign-in' | '/sign-out' | '/sign-in/start' | '/' | '/api/auth/$'
+  to:
+    | '/sign-in'
+    | '/sign-out'
+    | '/sign-in/start'
+    | '/'
+    | '/api/auth/$'
+    | '/sites/$siteId'
+    | '/sites/$siteId/pages/$pageId'
   id:
     | '__root__'
     | '/_authed'
@@ -82,6 +115,8 @@ export interface FileRouteTypes {
     | '/sign-in_/start'
     | '/_authed/'
     | '/api/auth/$'
+    | '/_authed/sites/$siteId/'
+    | '/_authed/sites/$siteId/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -136,15 +171,33 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiAuthSplatRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authed/sites/$siteId/': {
+      id: '/_authed/sites/$siteId/'
+      path: '/sites/$siteId'
+      fullPath: '/sites/$siteId/'
+      preLoaderRoute: typeof AuthedSitesSiteIdIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$siteId/pages/$pageId': {
+      id: '/_authed/sites/$siteId/pages/$pageId'
+      path: '/sites/$siteId/pages/$pageId'
+      fullPath: '/sites/$siteId/pages/$pageId'
+      preLoaderRoute: typeof AuthedSitesSiteIdPagesPageIdRouteImport
+      parentRoute: typeof AuthedRoute
+    }
   }
 }
 
 interface AuthedRouteChildren {
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedSitesSiteIdIndexRoute: typeof AuthedSitesSiteIdIndexRoute
+  AuthedSitesSiteIdPagesPageIdRoute: typeof AuthedSitesSiteIdPagesPageIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedSitesSiteIdIndexRoute: AuthedSitesSiteIdIndexRoute,
+  AuthedSitesSiteIdPagesPageIdRoute: AuthedSitesSiteIdPagesPageIdRoute,
 }
 
 const AuthedRouteWithChildren =

@@ -1,6 +1,7 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/contracts/rpc/client";
 import {
+  SiteNotFound,
   StudioRpcs,
   studioSessionHeaders,
   StudioUnavailable,
@@ -16,6 +17,8 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
   const failure = Cause.squash(cause);
   if (Schema.is(Unauthenticated)(failure))
     return new AppRequestError("unauthenticated", "Your session has ended. Sign in again.");
+  if (Schema.is(SiteNotFound)(failure))
+    return new AppRequestError("not_found", "There's no site here that you can work on.");
   if (Schema.is(StudioUnavailable)(failure) || failure instanceof RpcClientError.RpcClientError)
     return new AppRequestError(
       "unavailable",
@@ -54,7 +57,7 @@ export const callStudio = <A, E>(
       Effect.catchCause((cause) => {
         if (Cause.hasInterruptsOnly(cause)) return Effect.interrupt;
         const error = toAppError(cause);
-        return error.code === "unauthenticated"
+        return error.code === "unauthenticated" || error.code === "not_found"
           ? Effect.fail(error)
           : Effect.logError("Studio call failed", cause).pipe(Effect.andThen(Effect.fail(error)));
       }),
