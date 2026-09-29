@@ -150,6 +150,9 @@ export interface FieldEditing {
     Omit<MediaProps, "field"> & FieldAddress & { readonly file: ResolvedMedia }
   >;
   readonly Cta: ComponentType<Omit<CtaProps, "field"> & FieldAddress & { readonly href: string }>;
+  readonly Slot: ComponentType<
+    SlotProps & { readonly block: BlockId; readonly children: ReadonlyArray<ReactNode> }
+  >;
 }
 
 const FieldEditingContext = createContext<FieldEditing | null>(null);
@@ -262,13 +265,28 @@ export const Cta = (options: CtaProps) => {
   );
 };
 
-/** A section's slot: the items placed in it, rendered inside this element. */
-export const Slot = (options: {
+interface SlotProps {
   readonly name: string;
-  readonly as?: "div" | "ul" | "ol";
+  readonly as?: "div" | "ul" | "ol" | undefined;
   readonly className?: string | undefined;
-}) => {
-  const items = useBlockFrame().slots[options.name] ?? [];
+}
+
+/** A section's slot: the items placed in it, rendered inside this element. */
+export const Slot = (options: SlotProps) => {
+  const frame = useBlockFrame();
+  const editing = useContext(FieldEditingContext);
+  const items = frame.slots[options.name] ?? [];
+  if (editing !== null)
+    return (
+      <editing.Slot
+        block={frame.id}
+        name={options.name}
+        as={options.as}
+        className={options.className}
+      >
+        {items}
+      </editing.Slot>
+    );
   const Element = options.as ?? "div";
   return <Element className={options.className}>{items}</Element>;
 };
