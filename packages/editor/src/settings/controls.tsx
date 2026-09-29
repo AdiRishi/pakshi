@@ -12,7 +12,6 @@ import {
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
-import { Textarea } from "@repo/ui/components/textarea";
 import { Predicate, Schema } from "effect";
 import { type ComponentType, type ReactNode, useRef, useState } from "react";
 
@@ -26,6 +25,7 @@ import {
   useStore,
 } from "../context.tsx";
 import { FieldPresence } from "../participants.tsx";
+import { FieldInput, FieldTextarea } from "./field-text.tsx";
 
 type Json = Schema.Json;
 
@@ -146,12 +146,12 @@ function TextControl(props: ControlProps<KindOf<"text">>) {
       description={`${(text ?? "").length} of ${definition.max} characters`}
     >
       {definition.multiline ? (
-        <Textarea
+        <FieldTextarea
           {...shared}
           onChange={(event) => run([setProp(field, event.target.value)], burstKey(field))}
         />
       ) : (
-        <Input
+        <FieldInput
           {...shared}
           onChange={(event) =>
             run([setProp(field, event.target.value.replace(/\n/g, " "))], burstKey(field))

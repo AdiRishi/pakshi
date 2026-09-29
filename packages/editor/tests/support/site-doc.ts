@@ -161,6 +161,18 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
     }
   };
 
+  /** Hands an editor the next thing waiting for it. */
+  const arrive = (socket: Socket) => {
+    const item = socket.toClient.shift();
+    if (item === undefined) return;
+    if (item.kind === "open") {
+      socket.open = true;
+      broadcast({ _tag: "PeerChanged", peer: peerOf(socket) }, socket);
+      socket.events.onOpen();
+    } else if (item.kind === "close") socket.events.onClose();
+    else socket.events.onMessage(item.message);
+  };
+
   /** The queues with something waiting, each with how to run its next item. */
   const ready = () =>
     sockets.flatMap((socket) => [
@@ -172,20 +184,7 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
             },
           ]
         : []),
-      ...(socket.toClient.length > 0 && !socket.closed
-        ? [
-            () => {
-              const item = socket.toClient.shift();
-              if (item === undefined) return;
-              if (item.kind === "open") {
-                socket.open = true;
-                broadcast({ _tag: "PeerChanged", peer: peerOf(socket) }, socket);
-                socket.events.onOpen();
-              } else if (item.kind === "close") socket.events.onClose();
-              else socket.events.onMessage(item.message);
-            },
-          ]
-        : []),
+      ...(socket.toClient.length > 0 && !socket.closed ? [() => arrive(socket)] : []),
     ]);
 
   /** Runs every waiting message, including the ones running them sends, until none are left. */
@@ -226,6 +225,7 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
         close: () => {
           socket.closed = true;
           if (socket.open) broadcast({ _tag: "PeerLeft", connection: socket.id }, socket);
+          schedule();
         },
       };
     },
@@ -238,6 +238,11 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
     /** Every batch SiteDoc committed, in order. */
     log: () => log,
     deliver,
+    /** Delivers what's waiting for the editors, and nothing that's waiting for SiteDoc. */
+    receive: () => {
+      for (const socket of sockets)
+        while (socket.toClient.length > 0 && !socket.closed) arrive(socket);
+    },
     /** Runs the next item of one waiting queue, chosen by `pick`, and says whether any was waiting. */
     step: (pick: number) => {
       const next = ready();

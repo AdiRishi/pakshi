@@ -12,6 +12,7 @@ import { CanvasFrame } from "./canvas/frame.tsx";
 import { MediaPopover } from "./canvas/media-popover.tsx";
 import { CanvasOverlay } from "./canvas/overlay.tsx";
 import { PageView } from "./canvas/page-view.tsx";
+import { StableView } from "./canvas/stable-view.tsx";
 import { keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
 import {
   type ActiveRichText,
@@ -332,6 +333,7 @@ export function EditorCanvas(props: {
         </FieldEditingProvider>
       </CanvasFrame>
       {canvasDocument !== null && <CanvasOverlay document={canvasDocument} />}
+      {canvasDocument !== null && <StableView document={canvasDocument} />}
       {container !== null && controls.media !== null && (
         <MediaPopover
           field={controls.media.field}
