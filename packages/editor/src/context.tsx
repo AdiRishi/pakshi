@@ -6,7 +6,7 @@ import type { Editor } from "@tiptap/core";
 import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 
 import type { Origin } from "./run-command.ts";
-import type { EditorState, EditorStore } from "./store.ts";
+import { type EditorState, type EditorStore, fieldKey } from "./store.ts";
 
 /**
  * What the editor needs from Studio besides the draft: block versions, images
@@ -117,8 +117,7 @@ export const useEditorUi = () => {
 };
 
 /** The key typing in a field shares, so a burst of keystrokes is one undo step. */
-export const burstKey = (field: FieldTarget) =>
-  `${field.target}:${field.block}:${field.path.join(".")}`;
+export const burstKey = (field: FieldTarget) => fieldKey(field.target, field.block, field.path);
 
 /** The ID of a field's control in the settings panel. */
 export const controlId = (field: FieldTarget) =>

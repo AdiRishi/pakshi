@@ -1,6 +1,7 @@
 import { type BlockDefinition, FieldEditingProvider } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
+import type { Collaborator } from "@repo/contracts/live";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -26,11 +27,12 @@ import {
   useStore,
 } from "./context.tsx";
 import { BlockDragDrop } from "./dnd.tsx";
+import type { Notice } from "./notices.ts";
 import { BlockPicker } from "./picker.tsx";
 import { type Origin, runCommand } from "./run-command.ts";
 import { SettingsPanel } from "./settings/panel.tsx";
 import { ariaShortcuts, formatShortcut, matches } from "./shortcuts.ts";
-import { type Connection, EditorStore, type Notice } from "./store.ts";
+import { type Connection, EditorStore } from "./store.ts";
 
 /** What the canvas shows in Studio beside the page: the media popover and the formatting toolbar. */
 interface CanvasControls {
@@ -97,6 +99,8 @@ export function EditorProvider(props: {
   readonly mediaSrc: (id: MediaId) => string;
   readonly siteCss: string;
   readonly scheme: "light" | "dark";
+  /** The person editing, as the others see them. */
+  readonly person: Collaborator;
   readonly connection: Connection;
   readonly onNotice: (notice: Notice) => void;
   readonly children: ReactNode;
@@ -107,10 +111,12 @@ export function EditorProvider(props: {
         draft: props.draft,
         page: props.page,
         contracts: props.definitions,
+        person: props.person,
         connection: props.connection,
         onNotice: props.onNotice,
       }),
   );
+  useEffect(() => store.connect(), [store]);
   const [media, setMedia] = useState<CanvasControls["media"]>(null);
   const [richText, setRichText] = useState<ActiveRichText | null>(null);
   const [canvasDocument, setCanvasDocument] = useState<Document | null>(null);
@@ -282,6 +288,8 @@ export function EditorCanvas(props: {
   readonly width: number | null;
   /** The editor's accent color, from Studio's theme. */
   readonly accent: string;
+  /** The colors that tell other people apart, from Studio's theme, in order. */
+  readonly presence: ReadonlyArray<string>;
 }) {
   const { siteCss, scheme } = useServices();
   const controls = useCanvasControls();
@@ -315,6 +323,7 @@ export function EditorCanvas(props: {
         siteCss={siteCss}
         themeCss={css}
         accent={props.accent}
+        presence={props.presence}
         width={props.width}
         onDocument={controls.setCanvasDocument}
       >

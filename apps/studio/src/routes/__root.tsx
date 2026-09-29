@@ -6,6 +6,7 @@ import {
   EmptyHeader,
   EmptyTitle,
 } from "@repo/ui/components/empty";
+import { Toaster } from "@repo/ui/components/sonner";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient } from "@tanstack/react-query";
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
@@ -55,6 +56,7 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
       </head>
       <body>
         {children}
+        <Toaster />
         <TanStackDevtools
           config={{ position: "bottom-right" }}
           plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}

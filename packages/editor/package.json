@@ -32,6 +32,7 @@
     "react-dom": "catalog:"
   },
   "devDependencies": {
+    "@effect/vitest": "catalog:",
     "@repo/tsconfig": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@types/react": "catalog:",

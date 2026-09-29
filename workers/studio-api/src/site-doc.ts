@@ -179,6 +179,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
               return;
             }
             const result = await this.#commit(state.person, batch);
+            if (result.status === "duplicate")
+              this.#send(
+                connection,
+                ServerMessage.cases.Known.make({ batch: batch.id, revision: result.revision }),
+              );
             if (result.status === "rejected")
               this.#send(
                 connection,

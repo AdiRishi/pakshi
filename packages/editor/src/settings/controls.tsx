@@ -25,6 +25,7 @@ import {
   useEditorUi,
   useStore,
 } from "../context.tsx";
+import { FieldPresence } from "../participants.tsx";
 
 type Json = Schema.Json;
 
@@ -91,6 +92,7 @@ function ControlRow<F extends Field>(props: {
             <span className="font-normal text-muted-foreground">Optional</span>
           )}
         </FieldLabel>
+        <FieldPresence field={props.field} />
         {props.definition.optional && props.value !== undefined && (
           <Button variant="ghost" size="xs" onClick={() => run([setProp(props.field, undefined)])}>
             Remove

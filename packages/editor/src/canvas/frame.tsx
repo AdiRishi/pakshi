@@ -1,6 +1,8 @@
 import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
+import { presenceColorCount } from "../presence.ts";
+
 /*
  * Marks the editor draws inside the canvas. They're outlines and pseudo
  * content only, so they never change the page's layout, and they scroll with
@@ -47,6 +49,19 @@ img[data-pakshi-field], a[data-pakshi-field] { cursor: pointer; }
   background: #ffe2a8; color: #6b4000; pointer-events: none;
 }
 .pakshi-drop-line { background: var(--pakshi-editor-accent); border-radius: 2px; }
+.pakshi-presence {
+  position: absolute; box-sizing: border-box; border: 2px solid var(--pakshi-presence);
+  border-radius: 4px; pointer-events: none;
+}
+.pakshi-presence-label {
+  position: absolute; bottom: 100%; right: -2px; padding: 3px 8px; white-space: nowrap;
+  border-radius: 6px 6px 0 0; background: var(--pakshi-presence); color: #fff; font-size: 11px;
+}
+${Array.from(
+  { length: presenceColorCount },
+  (_, index) =>
+    `.pakshi-presence[data-color="${index + 1}"] { --pakshi-presence: var(--pakshi-presence-${index + 1}); }`,
+).join("\n")}
 `;
 
 const shell = (siteCss: string) =>
@@ -132,6 +147,8 @@ export function CanvasFrame(props: {
   readonly themeCss: string;
   /** The editor's own accent color, read from Studio's theme. */
   readonly accent: string;
+  /** The colors that tell other people apart, from Studio's theme, in order. */
+  readonly presence: ReadonlyArray<string>;
   readonly width: number | null;
   readonly onDocument?: (document: Document) => void;
   readonly children: ReactNode;
@@ -141,7 +158,9 @@ export function CanvasFrame(props: {
       title={props.title}
       siteCss={props.siteCss}
       themeCss={props.themeCss}
-      extraCss={`:root { --pakshi-editor-accent: ${props.accent}; }${editorCss}`}
+      extraCss={`:root { --pakshi-editor-accent: ${props.accent}; ${props.presence
+        .map((color, index) => `--pakshi-presence-${index + 1}: ${color};`)
+        .join(" ")} }${editorCss}`}
       className="mx-auto block h-full border-0 bg-background shadow-sm transition-[width]"
       style={{ width: props.width === null ? "100%" : props.width }}
       onDocument={props.onDocument}

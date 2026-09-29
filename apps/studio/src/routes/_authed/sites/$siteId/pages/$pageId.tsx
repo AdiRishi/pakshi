@@ -19,6 +19,7 @@ export const Route = createFileRoute("/_authed/sites/$siteId/pages/$pageId")({
   },
   component: function EditPage() {
     const { siteId, pageId } = Route.useParams();
-    return <EditorPage site={siteId} page={pageId} />;
+    const { user } = Route.useRouteContext().viewer;
+    return <EditorPage site={siteId} page={pageId} person={{ id: user.id, name: user.name }} />;
   },
 });

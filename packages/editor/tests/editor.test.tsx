@@ -9,11 +9,13 @@ import { cleanup, render } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 
 import { EditorCanvas, EditorOutline, EditorProvider, EditorSettings } from "../src/index.ts";
-import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
+import { definitions, fakeSiteDoc, fixtureDraft, meera } from "./support/site-doc.ts";
 
 import siteCss from "@repo/blocks/site.css?url";
 
 const home = PageId.make("pg_home");
+
+const presenceColors = ["teal", "purple", "chocolate", "green", "crimson", "slateblue"];
 
 /** An image the library suggests no alt text for, as for a decorative pattern. */
 const pattern: MediaSummary = {
@@ -44,7 +46,8 @@ const open = async (
     readonly definitions?: ReadonlyMap<BlockType, BlockDefinition>;
   } = {},
 ) => {
-  const siteDoc = fakeSiteDoc(options.draft);
+  const siteDoc =
+    options.draft === undefined ? fakeSiteDoc() : fakeSiteDoc({ draft: options.draft });
   await page.viewport(1440, 900);
   await render(
     <EditorProvider
@@ -55,7 +58,8 @@ const open = async (
       mediaSrc={() => pixel}
       siteCss={siteCss}
       scheme="light"
-      connection={siteDoc.connection}
+      person={meera}
+      connection={siteDoc.connection(meera)}
       onNotice={() => undefined}
     >
       <div style={{ display: "flex", height: 700 }}>
@@ -63,7 +67,7 @@ const open = async (
           <EditorOutline />
         </aside>
         <div style={{ flex: 1 }}>
-          <EditorCanvas width={1024} accent="blue" />
+          <EditorCanvas width={1024} accent="blue" presence={presenceColors} />
         </div>
         <aside aria-label="Settings" style={{ width: 360, flexShrink: 0, overflowY: "auto" }}>
           <EditorSettings />
@@ -483,15 +487,15 @@ describe("editing structure", () => {
       targetPosition: { x: 40, y: target.offsetHeight - 6 },
       steps: 12,
     });
-    await expect.poll(() => dragged.siteDoc.received.length).toBe(1);
-    const dragOps = dragged.siteDoc.received[0]?.ops;
+    await expect.poll(() => dragged.siteDoc.log().length).toBe(1);
+    const dragOps = dragged.siteDoc.log()[0]?.ops;
     await cleanup();
 
     const moved = await open();
     outlineRow("b_calltoactionbanner")?.focus();
     await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
-    await expect.poll(() => moved.siteDoc.received.length).toBe(1);
-    expect(moved.siteDoc.received[0]?.ops).toEqual(dragOps);
+    await expect.poll(() => moved.siteDoc.log().length).toBe(1);
+    expect(moved.siteDoc.log()[0]?.ops).toEqual(dragOps);
     expect(dragOps).toEqual([
       {
         op: "moveBlock",
@@ -513,7 +517,7 @@ describe("editing structure", () => {
     // Over another row first, which chooses where the block would land, then out.
     await pointerPath(source, [center(over), center(outside)]);
     await new Promise((resolve) => setTimeout(resolve, 300));
-    expect(siteDoc.received).toEqual([]);
+    expect(siteDoc.log()).toEqual([]);
   });
 
   test("adding to an empty slot from the outline chooses the new item there", async () => {

@@ -1,5 +1,5 @@
-export type { EditorState, Notice, SaveStatus, Selection } from "./store.ts";
-export type { Connection } from "./store.ts";
+export type { Notice } from "./notices.ts";
+export type { Connection, EditorState, LiveLink, SaveStatus, Selection } from "./store.ts";
 export {
   EditorCanvas,
   EditorProvider,
@@ -10,3 +10,5 @@ export {
   useToolbarCommands,
 } from "./editor.tsx";
 export { Outline as EditorOutline } from "./outline.tsx";
+export { EditorParticipants } from "./participants.tsx";
+export { presenceColorCount } from "./presence.ts";
