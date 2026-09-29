@@ -4,7 +4,7 @@ import type { Op } from "@repo/contracts/ops";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Notice } from "../src/notices.ts";
-import { EditorStore } from "../src/store.ts";
+import { EditorStore, fieldKey } from "../src/store.ts";
 import { insertOp } from "../src/structure.ts";
 import { definitions, fakeSiteDoc, fixtureDraft, meera, sam } from "./support/site-doc.ts";
 
@@ -19,6 +19,9 @@ const setHeading = (value: string): Op => ({
   path: ["heading"],
   value,
 });
+
+/** The burst key typing in the hero's heading shares, as the canvas gives it. */
+const typingInHeading = fieldKey(page, hero, ["heading"]);
 
 const headingOf = (store: EditorStore) =>
   store.getState().view.pages[page]?.blocks[hero]?.props["heading"];
@@ -236,6 +239,39 @@ describe("other people's changes", () => {
       },
     ]);
     expect(theirs.notices).toEqual([]);
+  });
+
+  test("someone still typing in a field that was replaced is told when they stop", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    mine.store.run([setHeading("Mine")], typingInHeading);
+    await settle();
+    theirs.store.run([setHeading("Theirs")]);
+    await settle();
+    expect(mine.notices).toEqual([]);
+    mine.store.endBurst();
+    expect(mine.notices).toEqual([
+      expect.objectContaining({ title: "Sam Okafor replaced your change." }),
+    ]);
+  });
+
+  test("typing over someone's replacement tells them instead", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    mine.store.run([setHeading("Mine")], typingInHeading);
+    await settle();
+    theirs.store.run([setHeading("Theirs")]);
+    await settle();
+    mine.store.run([setHeading("Mine again")], typingInHeading);
+    await settle();
+    mine.store.endBurst();
+    expect(mine.notices).toEqual([]);
+    expect(theirs.notices).toEqual([
+      expect.objectContaining({ title: "Meera Kapoor replaced your change." }),
+    ]);
+    expect(serverHeading(siteDoc)).toBe("Mine again");
   });
 
   test("an edit to a block someone removed is dropped, and its author is told", async () => {
