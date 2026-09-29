@@ -1,0 +1,110 @@
+{
+  "settings": { "name": "Harbour Summer School" },
+  "menus": {
+    "main": [
+      { "id": "mi_home", "label": "Home", "target": { "$ref": "page", "id": "pg_home" } },
+      {
+        "id": "mi_programme",
+        "label": "Programme",
+        "target": { "$ref": "page", "id": "pg_programme" },
+        "children": [
+          {
+            "id": "mi_workshops",
+            "label": "Workshops",
+            "target": { "$ref": "page", "id": "pg_programme" }
+          }
+        ]
+      },
+      { "id": "mi_news", "label": "News", "target": { "$ref": "page", "id": "pg_news" } }
+    ],
+    "footer": [
+      { "id": "mi_contact", "label": "Contact", "target": "mailto:hello@example.org" },
+      { "id": "mi_privacy", "label": "Privacy", "target": "https://example.org/privacy" }
+    ]
+  },
+  "forms": {
+    "frm_register": {
+      "id": "frm_register",
+      "name": "Registration",
+      "submitLabel": "Register",
+      "fields": [
+        { "kind": "shortText", "id": "ff_name", "label": "Your name", "required": true },
+        { "kind": "email", "id": "ff_email", "label": "Email", "required": true },
+        { "kind": "phone", "id": "ff_phone", "label": "Phone", "required": false },
+        {
+          "kind": "select",
+          "id": "ff_week",
+          "label": "Which week?",
+          "required": true,
+          "options": ["First week of July", "Second week of July"]
+        },
+        {
+          "kind": "longText",
+          "id": "ff_notes",
+          "label": "Anything we should know?",
+          "required": false
+        },
+        {
+          "kind": "checkbox",
+          "id": "ff_consent",
+          "label": "I agree to Harbour Schools keeping these details for this year's summer school.",
+          "required": true,
+          "link": "https://example.org/privacy"
+        },
+        { "kind": "hidden", "id": "ff_source", "label": "Source", "value": "website" }
+      ]
+    }
+  },
+  "media": {
+    "med_harbour": { "contentType": "image/jpeg", "width": 1600, "height": 1067 }
+  },
+  "pages": [
+    {
+      "id": "pg_home",
+      "path": "/",
+      "type": "page",
+      "meta": {
+        "title": "Harbour Summer School",
+        "description": "Five days of hands-on workshops at the harbour."
+      }
+    },
+    {
+      "id": "pg_programme",
+      "path": "/programme",
+      "type": "page",
+      "meta": { "title": "Programme", "description": "What happens each day." }
+    },
+    {
+      "id": "pg_news",
+      "path": "/news",
+      "type": "page",
+      "meta": { "title": "News", "description": "What's happening at the harbour." }
+    },
+    {
+      "id": "pg_dates",
+      "path": "/news/dates-announced",
+      "type": "post",
+      "meta": {
+        "title": "Dates for this summer are out",
+        "description": "Summer school runs in the first two weeks of July.",
+        "date": "2027-03-02",
+        "author": "Meera Kapoor",
+        "tags": ["dates"],
+        "excerpt": "Summer school runs in the first two weeks of July, with places for 60 students each week."
+      }
+    },
+    {
+      "id": "pg_mentors",
+      "path": "/news/meet-the-mentors",
+      "type": "post",
+      "meta": {
+        "title": "Meet this year's mentors",
+        "description": "Twelve boat builders are joining us.",
+        "date": "2027-04-15",
+        "author": "Sam Okafor",
+        "tags": ["mentors"],
+        "excerpt": "Twelve boat builders from around the region are joining us as mentors."
+      }
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+{
+  "variant": "simple",
+  "surface": "default",
+  "props": { "cta": { "label": "Register", "link": "https://example.org/register" } }
+}

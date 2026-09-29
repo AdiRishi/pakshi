@@ -3,10 +3,10 @@ import { Cta, Root, Text } from "../../components.tsx";
 import { cta, optional, text } from "../../fields.ts";
 
 const props = {
-  heading: text({ min: 3, max: 80 }),
-  body: optional(text({ max: 200, multiline: true })),
-  primary: cta(),
-  secondary: optional(cta()),
+  heading: text({ title: "Heading", min: 3, max: 80 }),
+  body: optional(text({ title: "Text", max: 200, multiline: true })),
+  primary: cta({ title: "Main button" }),
+  secondary: optional(cta({ title: "Second button" })),
 };
 
 const button =
@@ -61,6 +61,7 @@ export default defineBlock({
   props,
   variants: ["banner", "centered"],
   surfaces: ["default", "muted", "brand", "inverse"],
+  slots: {},
   interactive: false,
   agent: {
     purpose: "Ask the visitor to take one or two next steps",

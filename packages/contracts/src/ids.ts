@@ -27,6 +27,36 @@ export type ReleaseId = typeof ReleaseId.Type;
 export const SnapshotId = prefixed("snap").pipe(Schema.brand("SnapshotId"));
 export type SnapshotId = typeof SnapshotId.Type;
 
+export const DraftId = prefixed("dr").pipe(Schema.brand("DraftId"));
+export type DraftId = typeof DraftId.Type;
+
+/** A batch of edit operations. Its sender creates the ID, so a batch sent twice applies once. */
+export const BatchId = prefixed("bat").pipe(Schema.brand("BatchId"));
+export type BatchId = typeof BatchId.Type;
+
+/** An item in a list inside a block's props, such as one image in a gallery. */
+export const ItemId = prefixed("it").pipe(Schema.brand("ItemId"));
+export type ItemId = typeof ItemId.Type;
+
+export const MenuItemId = prefixed("mi").pipe(Schema.brand("MenuItemId"));
+export type MenuItemId = typeof MenuItemId.Type;
+
+/** A field in a form definition. */
+export const FormFieldId = prefixed("ff").pipe(Schema.brand("FormFieldId"));
+export type FormFieldId = typeof FormFieldId.Type;
+
+const alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+/**
+ * A new random ID with this prefix, such as `b_4fT0x…`. Its 22 base-62 digits
+ * carry about 130 random bits, so IDs made by different editors and the agent
+ * never collide.
+ */
+export const randomId = <P extends string>(prefix: P): `${P}_${string}` => {
+  const bytes = crypto.getRandomValues(new Uint8Array(22));
+  return `${prefix}_${Array.from(bytes, (byte) => alphabet[byte % 62]).join("")}`;
+};
+
 /** A block type such as `hero` or `call-to-action`. */
 export const BlockType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/));
 export type BlockType = typeof BlockType.Type;

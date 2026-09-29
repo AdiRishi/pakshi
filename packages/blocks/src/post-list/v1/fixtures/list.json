@@ -1,0 +1,5 @@
+{
+  "variant": "list",
+  "surface": "default",
+  "props": { "heading": "News", "intro": "What's happening at the harbour." }
+}

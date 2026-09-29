@@ -1,8 +1,10 @@
 import { ResolvedTheme } from "@repo/tokens";
 import { Predicate, Schema } from "effect";
 
-import { BlockType, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
-import { PagePath } from "./page.ts";
+import { FormDefinition } from "./form.ts";
+import { BlockType, FormId, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
+import { PageMeta, PagePath, PostMeta } from "./page.ts";
+import { SiteParts, SiteSettings } from "./site.ts";
 
 /** The SHA-256 of a page object's canonical JSON, in lowercase hex. */
 export const ContentHash = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)).pipe(
@@ -10,33 +12,47 @@ export const ContentHash = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/
 );
 export type ContentHash = typeof ContentHash.Type;
 
+/** A stored image. Files never change, so a media ID always renders the same file. */
 export const MediaFile = Schema.Struct({
   contentType: Schema.Literals(["image/jpeg", "image/png", "image/webp", "image/avif"]),
   width: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   height: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
-  alt: Schema.String,
 });
 export type MediaFile = typeof MediaFile.Type;
 
-export const SnapshotPage = Schema.Struct({
-  id: PageId,
-  path: PagePath,
-  type: Schema.Literals(["page", "post"]),
-  object: ContentHash,
-});
+/** The block version each block type renders at. */
+export const Lockfile = Schema.Record(
+  BlockType,
+  Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
+);
+export type Lockfile = typeof Lockfile.Type;
+
+const snapshotPageFields = { id: PageId, path: PagePath, object: ContentHash };
 
 /**
- * Everything that leaves a draft: the site's settings, block lockfile, resolved
- * theme and media, plus one entry per page pointing at its content-addressed
- * page object. Snapshots never change once written, so previews, submissions
+ * A page's entry in the manifest. It carries the page's meta, so menus and
+ * blog lists can show titles and post details without loading every page.
+ */
+export const SnapshotPage = Schema.Union([
+  Schema.Struct({ ...snapshotPageFields, type: Schema.Literal("page"), meta: PageMeta }),
+  Schema.Struct({ ...snapshotPageFields, type: Schema.Literal("post"), meta: PostMeta }),
+]);
+export type SnapshotPage = typeof SnapshotPage.Type;
+
+/**
+ * Everything that leaves a draft: the site's settings, header, footer, menus,
+ * forms, block lockfile, resolved theme and media, plus one entry per page
+ * pointing at its content-addressed page object. Snapshots never change once written, so previews, submissions
  * and releases are all pointers to one.
  */
 export const SnapshotManifest = Schema.Struct({
   schema: Schema.Literal("pakshi.snapshot/1"),
   id: SnapshotId,
   site: SiteId,
-  settings: Schema.Struct({ name: Schema.String }),
-  lockfile: Schema.Record(BlockType, Schema.Int.check(Schema.isGreaterThanOrEqualTo(1))),
+  settings: SiteSettings,
+  parts: SiteParts,
+  forms: Schema.Record(FormId, FormDefinition),
+  lockfile: Lockfile,
   theme: ResolvedTheme,
   media: Schema.Record(MediaId, MediaFile),
   pages: Schema.Array(SnapshotPage),

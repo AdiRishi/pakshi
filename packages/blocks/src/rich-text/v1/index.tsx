@@ -3,8 +3,9 @@ import { RichText, Root, Text } from "../../components.tsx";
 import { optional, richText, text } from "../../fields.ts";
 
 const props = {
-  heading: optional(text({ max: 120 })),
+  heading: optional(text({ title: "Heading", max: 120 })),
   body: richText({
+    title: "Text",
     marks: ["bold", "italic", "link"],
     nodes: ["heading", "bulletList", "orderedList"],
   }),
@@ -46,6 +47,7 @@ export default defineBlock({
   props,
   variants: ["narrow", "wide"],
   surfaces: ["default", "muted", "brand", "inverse"],
+  slots: {},
   interactive: false,
   agent: {
     purpose: "Long-form writing: paragraphs, subheadings and lists",

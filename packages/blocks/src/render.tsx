@@ -1,4 +1,7 @@
-import type { PageDocument } from "@repo/contracts/page";
+import type { BlockId, BlockType } from "@repo/contracts/ids";
+import type { BlockInstance, PageDocument } from "@repo/contracts/page";
+import type { SiteParts } from "@repo/contracts/site";
+import type { Lockfile } from "@repo/contracts/snapshot";
 import { Fragment } from "react";
 
 import type { BlockDefinition } from "./block.tsx";
@@ -7,7 +10,7 @@ import { registry } from "./registry.gen.ts";
 export const blockKey = (type: string, version: number) => `${type}@${version}`;
 
 /** Loads the version of a block type that a lockfile pins. */
-export const loadBlock = async (type: string, lockfile: Readonly<Record<string, number>>) => {
+export const loadBlock = async (type: BlockType, lockfile: Lockfile) => {
   const version = lockfile[type];
   if (version === undefined) throw new Error(`The lockfile pins no version of ${type}.`);
   const load = registry[blockKey(type, version)];
@@ -15,29 +18,51 @@ export const loadBlock = async (type: string, lockfile: Readonly<Record<string, 
   return (await load()).default;
 };
 
-/**
- * Renders a page's sections at the lockfile's block versions. A snapshot is
- * checked when it's frozen, so a block that doesn't render here is a bug.
- */
-export const renderPage = async (
-  page: PageDocument,
-  lockfile: Readonly<Record<string, number>>,
-) => {
-  const types = new Set(Object.values(page.blocks).map((block) => block.type));
-  const definitions = new Map<string, BlockDefinition>(
+/** Loads every block version a lockfile pins, keyed by block type. */
+export const loadBlocks = async (lockfile: Lockfile) =>
+  new Map<BlockType, BlockDefinition>(
     await Promise.all(
-      Array.from(types, async (type) => [type, await loadBlock(type, lockfile)] as const),
+      Object.keys(lockfile).map(async (type) => [type, await loadBlock(type, lockfile)] as const),
     ),
   );
-  return page.root.map((id) => {
-    const instance = page.blocks[id];
-    const definition = definitions.get(instance?.type ?? "");
-    if (instance === undefined || definition === undefined)
-      throw new Error(`Section ${id} has no block to render.`);
-    if (definition.placement !== "section")
-      throw new Error(`Section ${id} is a ${definition.type}, which only goes inside a section.`);
-    const result = definition.render(instance.props, instance.variant, instance.surface);
-    if (!result.ok) throw new Error(`Section ${id} can't render: ${result.problem}`);
-    return <Fragment key={id}>{result.element}</Fragment>;
+
+/**
+ * Renders one placed block, with the items in its slots. Snapshots are checked
+ * when they're frozen and drafts on every batch, so a block that doesn't
+ * render here is a bug.
+ */
+export const renderBlock = (
+  definitions: ReadonlyMap<BlockType, BlockDefinition>,
+  blocks: Readonly<Record<BlockId, BlockInstance>>,
+  id: BlockId,
+) => {
+  const instance = blocks[id];
+  const definition = definitions.get(instance?.type ?? "");
+  if (instance === undefined || definition === undefined)
+    throw new Error(`Block ${id} has no block version to render.`);
+  const slots = Object.fromEntries(
+    Object.entries(instance.slots ?? {}).map(([slot, items]) => [
+      slot,
+      items.map((item) => renderBlock(definitions, blocks, item)),
+    ]),
+  );
+  const result = definition.render({
+    id,
+    props: instance.props,
+    variant: instance.variant,
+    surface: instance.surface,
+    slots,
   });
+  if (!result.ok) throw new Error(`Block ${id} can't render: ${result.problem}`);
+  return <Fragment key={id}>{result.element}</Fragment>;
+};
+
+/** Renders a page with the site's header and footer, at the lockfile's block versions. */
+export const renderPage = async (page: PageDocument, parts: SiteParts, lockfile: Lockfile) => {
+  const definitions = await loadBlocks(lockfile);
+  return {
+    header: renderBlock(definitions, parts.blocks, parts.header),
+    sections: page.root.map((id) => renderBlock(definitions, page.blocks, id)),
+    footer: renderBlock(definitions, parts.blocks, parts.footer),
+  };
 };

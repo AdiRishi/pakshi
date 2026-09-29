@@ -3,10 +3,10 @@ import { Cta, Media, RichText, Root, Text } from "../../components.tsx";
 import { cta, media, optional, richText, text } from "../../fields.ts";
 
 const props = {
-  heading: text({ min: 3, max: 80 }),
-  body: optional(richText({ marks: ["bold", "italic", "link"] })),
-  image: optional(media()),
-  cta: optional(cta()),
+  heading: text({ title: "Heading", min: 3, max: 80 }),
+  body: optional(richText({ title: "Text", marks: ["bold", "italic", "link"] })),
+  image: optional(media({ title: "Image" })),
+  cta: optional(cta({ title: "Button" })),
 };
 
 const Hero = ({
@@ -84,6 +84,7 @@ export default defineBlock({
   props,
   variants: ["centered", "split-image"],
   surfaces: ["default", "muted", "brand", "inverse"],
+  slots: {},
   interactive: false,
   agent: {
     purpose: "Opening message of a page, with one primary action",

@@ -1,0 +1,25 @@
+{
+  "variant": "two-columns",
+  "surface": "brand",
+  "props": { "heading": "Why come" },
+  "slots": {
+    "items": [
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Learn by doing",
+          "body": "You'll leave with something you built yourself."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Meet people",
+          "body": "Work alongside students from every school in the region."
+        }
+      }
+    ]
+  }
+}

@@ -625,6 +625,9 @@ importers:
       react:
         specifier: 'catalog:'
         version: 19.3.0
+      tailwindcss:
+        specifier: 'catalog:'
+        version: 4.3.3
     devDependencies:
       '@repo/tsconfig':
         specifier: workspace:*

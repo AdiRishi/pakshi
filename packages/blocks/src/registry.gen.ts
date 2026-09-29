@@ -5,6 +5,14 @@ export const registry: Readonly<
   Record<string, () => Promise<{ readonly default: BlockDefinition }>>
 > = {
   "call-to-action@1": () => import("./call-to-action/v1/index.tsx"),
+  "feature-grid@1": () => import("./feature-grid/v1/index.tsx"),
+  "feature-item@1": () => import("./feature-item/v1/index.tsx"),
+  "footer@1": () => import("./footer/v1/index.tsx"),
+  "form-section@1": () => import("./form-section/v1/index.tsx"),
+  "gallery@1": () => import("./gallery/v1/index.tsx"),
+  "header@1": () => import("./header/v1/index.tsx"),
   "hero@1": () => import("./hero/v1/index.tsx"),
+  "post-list@1": () => import("./post-list/v1/index.tsx"),
   "rich-text@1": () => import("./rich-text/v1/index.tsx"),
+  "split@1": () => import("./split/v1/index.tsx"),
 };

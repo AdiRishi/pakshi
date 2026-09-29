@@ -1,7 +1,15 @@
-import { type References, ReferencesProvider } from "@repo/blocks";
+import { type SiteData, SiteDataProvider } from "@repo/blocks";
 import type { ReactElement } from "react";
 
 export const SitePage = (options: {
-  readonly references: References;
+  readonly site: SiteData;
+  readonly header: ReactElement;
   readonly sections: ReadonlyArray<ReactElement>;
-}) => <ReferencesProvider value={options.references}>{options.sections}</ReferencesProvider>;
+  readonly footer: ReactElement;
+}) => (
+  <SiteDataProvider value={options.site}>
+    {options.header}
+    <main>{options.sections}</main>
+    {options.footer}
+  </SiteDataProvider>
+);

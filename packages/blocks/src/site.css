@@ -1,7 +1,12 @@
+/*
+ * The stylesheet every site page loads, and the editor canvas with it: one
+ * Tailwind build over the blocks, with the theme's variables mapped to
+ * utilities. Sites differ only in their theme's variable file.
+ */
 @import "tailwindcss";
 @import "@repo/tokens/tailwind.css";
 
-@source "../../../../packages/blocks/src";
+@source ".";
 
 @layer base {
   body {

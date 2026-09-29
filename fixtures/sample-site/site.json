@@ -12,14 +12,68 @@
   "lockfile": {
     "hero": 1,
     "rich-text": 1,
-    "call-to-action": 1
+    "call-to-action": 1,
+    "header": 1,
+    "footer": 1
   },
+  "parts": {
+    "header": "b_siteheader",
+    "footer": "b_sitefooter",
+    "blocks": {
+      "b_siteheader": {
+        "type": "header",
+        "variant": "simple",
+        "surface": "default",
+        "props": {
+          "cta": {
+            "label": "Register",
+            "link": "https://example.org/register"
+          }
+        }
+      },
+      "b_sitefooter": {
+        "type": "footer",
+        "variant": "simple",
+        "surface": "muted",
+        "props": {
+          "note": "Harbour Schools runs summer school with the Harbour Sailing Trust."
+        }
+      }
+    },
+    "menus": {
+      "main": [
+        {
+          "id": "mi_home",
+          "label": "Home",
+          "target": {
+            "$ref": "page",
+            "id": "pg_home"
+          }
+        },
+        {
+          "id": "mi_programme",
+          "label": "Programme",
+          "target": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      ],
+      "footer": [
+        {
+          "id": "mi_contact",
+          "label": "Contact",
+          "target": "mailto:hello@example.org"
+        }
+      ]
+    }
+  },
+  "forms": {},
   "media": {
     "med_harbour": {
       "contentType": "image/jpeg",
       "width": 1600,
-      "height": 1067,
-      "alt": "Two sailing boats on a calm harbour at sunset"
+      "height": 1067
     }
   },
   "gone": ["/old-programme"]
