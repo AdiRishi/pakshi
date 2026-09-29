@@ -11,6 +11,22 @@
     "./artifacts": {
       "types": "./src/artifacts.ts",
       "default": "./src/artifacts.ts"
+    },
+    "./ids": {
+      "types": "./src/ids.ts",
+      "default": "./src/ids.ts"
+    },
+    "./page": {
+      "types": "./src/page.ts",
+      "default": "./src/page.ts"
+    },
+    "./references": {
+      "types": "./src/references.ts",
+      "default": "./src/references.ts"
+    },
+    "./snapshot": {
+      "types": "./src/snapshot.ts",
+      "default": "./src/snapshot.ts"
     }
   },
   "scripts": {
@@ -18,6 +34,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@repo/tokens": "workspace:*",
     "effect": "catalog:"
   },
   "devDependencies": {
