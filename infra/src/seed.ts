@@ -41,7 +41,8 @@ const seedContents = Effect.gen(function* () {
       brand: sample.brand,
       sites: [sample.site, ...fixtures.map((fixture) => fixture.site)],
       manifests,
-      media: sample.media.map((file) => [file.id, sha256(file.bytes)]),
+      // Every media field the seed writes, since suggested alt text reaches no manifest.
+      media: sample.media.map(({ bytes, ...file }) => ({ ...file, bytes: sha256(bytes) })),
       users: testUsers,
       grants: testGrants(sample.site.id),
     }),
