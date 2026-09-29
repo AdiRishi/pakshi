@@ -112,7 +112,7 @@
       // hand, so a lint error here has no legal fix — it can only be silenced
       // or it blocks the next `shadcn add`. The components are changed through
       // theme tokens and composition instead.
-      "files": ["apps/studio/src/components/ui/**", "apps/studio/src/hooks/use-mobile.ts"],
+      "files": ["packages/ui/src/components/**", "packages/ui/src/hooks/**"],
       "rules": {
         "anti-slop/no-runtime-typeof": "off",
         "anti-slop/require-safety-comment-for-type-assertion": "off",

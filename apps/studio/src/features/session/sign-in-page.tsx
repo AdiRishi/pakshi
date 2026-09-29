@@ -1,8 +1,5 @@
-import { CircleAlertIcon } from "lucide-react";
-
-import { Logo } from "@/components/logo";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { buttonVariants } from "@/components/ui/button";
+import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
+import { buttonVariants } from "@repo/ui/components/button";
 import {
   Card,
   CardContent,
@@ -10,7 +7,10 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "@repo/ui/components/card";
+import { CircleAlertIcon } from "lucide-react";
+
+import { Logo } from "@/components/logo";
 
 export function SignInPage(props: { readonly organizationName: string; readonly failed: boolean }) {
   return (

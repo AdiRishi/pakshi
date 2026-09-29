@@ -3,6 +3,9 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/onest";
 
+@source "../../../../apps/studio/src";
+@source "..";
+
 @custom-variant dark (&:is(.dark *));
 
 /* shadcn's theme variables, set to the Studio designs' colors. */
