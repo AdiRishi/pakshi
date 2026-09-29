@@ -17,6 +17,12 @@ A Durable Object's data is keyed by its binding name in `worker-bindings.ts`:
 renaming the binding deletes the class and its data. To rename the class, change
 its `className` and keep the binding name.
 
+Workspaces export TypeScript source, so Turbo tasks depend on the `transit`
+task to hash their dependencies' source. A workspace that imports another
+workspace by relative path, as `@repo/infra` imports `workers/*`, lists those
+paths in its own `transit` inputs in `turbo.json`. Without them, a cached
+result survives a change it should not.
+
 `pnpm dev` and the infra tests need an Alchemy Cloudflare profile, because stack
 state lives in Cloudflare. Non-production stages seed the test users from
 `workers/test-identity-provider/src/users.ts` with their grants, and serve the
