@@ -89,7 +89,7 @@ Blocks are frozen code: a released version never changes ([decision 006](/decisi
 
 Studio gives the editor:
 
-- **A connection** that sends batches and receives confirmed batches, rejections with structured errors, presence, and a fresh copy of the draft after a long disconnect. Studio builds it on PartySocket through `studio-api`. Until live co-editing, it sends batches over Studio RPC and receives only their outcomes ([decision 032](/decision-log#decision-032)).
+- **A connection** that sends batches and receives confirmed batches, rejections with structured errors, presence, and a fresh copy of the draft after a long disconnect. Studio builds it on PartySocket through `studio-api`, and the editor resends what `SiteDoc` hasn't confirmed each time it opens ([decision 043](/decision-log#decision-043)).
 - **The person and their permissions** for this draft, as answered by `authorize`. The editor hides what the person can't do; `SiteDoc` still checks every batch.
 - **Services:** the media picker and upload, reference resolution (media ID to image URL, page ID to title and address, form ID to form definition) and a page picker for links.
 
@@ -180,11 +180,11 @@ If a1 and b1 both changed the same field, both editors end with b1's value, and 
 These rules must each hold, and each has a test:
 
 1. **Pending edits stay.** A field with this person's unconfirmed edit keeps showing their value until the edit is confirmed.
-2. **Plain text keeps its caret.** A remote change to a focused plain text field applies the new value and keeps the caret in the same place relative to the surrounding text. If it replaced this person's confirmed edit, they are told.
+2. **Plain text keeps its caret.** A remote change to a focused plain text field applies the new value and keeps the caret in the same place relative to the surrounding text. If it replaced this person's confirmed edit, they are told. Text inputs in the settings panel keep their caret the same way.
 3. **Rich text keeps its cursor.** A remote change to a focused rich text field applies as a minimal ProseMirror transaction, computed with `prosemirror-changeset`, that stays out of the field's undo history. If the minimal transaction can't reproduce the new value, the field is replaced whole and the cursor keeps its text offset.
-4. **Composition is never interrupted.** Nothing is written into a field while the person is composing text with an input method. The change applies when composition ends.
+4. **Composition is never interrupted.** Nothing is written into a field while the person is composing text with an input method. The change applies when composition ends, made again around what was composed ([decision 045](/decision-log#decision-045)).
 5. **Selection is stable.** Inserts and moves elsewhere never change what is selected.
-6. **The view is stable.** Blocks inserted or grown above the viewport don't move what the person is looking at.
+6. **The view is stable.** Blocks inserted or grown above the viewport don't move what the person is looking at. The editor keeps the view in place itself, with the browser's scroll anchoring off, so every browser behaves the same.
 7. **Remote changes aren't undoable locally.** A remote change never enters this person's undo stack.
 
 **Presence:** the editor publishes the person's selected block, focused field and typing state, and draws other people's as outlines labelled with their names. The agent appears as the agent acting for its user.
