@@ -1,0 +1,47 @@
+{
+  "$schema": "https://t3.codes/schema/t3.json",
+  "iconPath": "packages/brand/assets/mark.svg",
+  "scripts": [
+    {
+      "name": "Install",
+      "command": "pnpm install",
+      "icon": "configure",
+      "runOnWorktreeCreate": true
+    },
+    {
+      "name": "Dev",
+      "command": "pnpm dev",
+      "icon": "play"
+    },
+    {
+      "name": "Docs",
+      "command": "pnpm docs:dev",
+      "icon": "play"
+    },
+    {
+      "name": "Check",
+      "command": "pnpm check",
+      "icon": "lint"
+    },
+    {
+      "name": "Typecheck",
+      "command": "pnpm typecheck",
+      "icon": "test"
+    },
+    {
+      "name": "Test",
+      "command": "pnpm test",
+      "icon": "test"
+    },
+    {
+      "name": "Fix",
+      "command": "pnpm fix",
+      "icon": "lint"
+    },
+    {
+      "name": "Build",
+      "command": "pnpm build",
+      "icon": "build"
+    }
+  ]
+}
