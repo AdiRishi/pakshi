@@ -81,10 +81,7 @@ export function MediaPopover(props: {
                     {
                       op: "setProp",
                       ...props.field,
-                      value:
-                        file.alt === ""
-                          ? { $ref: "media", id: file.id }
-                          : { $ref: "media", id: file.id, alt: file.alt },
+                      value: { $ref: "media", id: file.id, alt: file.alt },
                     },
                   ]);
                 }}

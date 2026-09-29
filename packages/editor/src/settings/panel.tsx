@@ -282,12 +282,7 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
               aria-label={file.alt === "" ? file.id : file.alt}
               className="block aspect-square w-full overflow-hidden rounded-md border-2 border-transparent focus-visible:border-ring focus-visible:outline-none aria-pressed:border-ring"
               onClick={() => {
-                if (cover?.id !== file.id)
-                  set(
-                    file.alt === ""
-                      ? { $ref: "media", id: file.id }
-                      : { $ref: "media", id: file.id, alt: file.alt },
-                  );
+                if (cover?.id !== file.id) set({ $ref: "media", id: file.id, alt: file.alt });
               }}
             >
               <img src={mediaSrc(file.id)} alt="" className="size-full object-cover" />

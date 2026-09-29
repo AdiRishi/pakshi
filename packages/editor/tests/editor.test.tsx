@@ -14,11 +14,23 @@ import siteCss from "@repo/blocks/site.css?url";
 
 const home = PageId.make("pg_home");
 
-const media: ReadonlyArray<MediaSummary> = Object.entries(fixtureSite.media).map(([id, file]) => ({
-  id: MediaId.make(id),
-  ...file,
-  alt: "Two sailing boats on a calm harbour at sunset",
-}));
+/** An image the library suggests no alt text for, as for a decorative pattern. */
+const pattern: MediaSummary = {
+  id: MediaId.make("med_pattern"),
+  contentType: "image/png",
+  width: 1200,
+  height: 800,
+  alt: "",
+};
+
+const media: ReadonlyArray<MediaSummary> = [
+  ...Object.entries(fixtureSite.media).map(([id, file]) => ({
+    id: MediaId.make(id),
+    ...file,
+    alt: "Two sailing boats on a calm harbour at sunset",
+  })),
+  pattern,
+];
 
 /** A 1x1 image, so the canvas needs no media server. */
 const pixel =
@@ -150,6 +162,21 @@ describe("the keyboard alone", () => {
     heroField(canvas(), "cta")?.focus();
     await userEvent.keyboard("{Enter}");
     await expect.poll(() => document.activeElement?.id).toMatch(/cta-label$/);
+  });
+});
+
+describe("choosing an image", () => {
+  test("stores empty alt text for a library image with none suggested, marking it decorative", async () => {
+    const { siteDoc, canvas } = await open();
+    const split = BlockId.make("b_splitimageleft");
+    canvas()
+      .querySelector<HTMLElement>(`[data-pakshi-block='${split}'] [data-pakshi-field='image']`)
+      ?.focus();
+    await userEvent.keyboard("{Enter}");
+    await userEvent.click(page.getByRole("button", { name: pattern.id }));
+    await expect
+      .poll(() => siteDoc.draft().pages[home]?.blocks[split]?.props["image"])
+      .toEqual({ $ref: "media", id: pattern.id, alt: "" });
   });
 });
 
