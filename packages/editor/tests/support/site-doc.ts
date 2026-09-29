@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import { blockFixtures, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
+import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
 import { Draft } from "@repo/contracts/draft";
 import type { BatchId } from "@repo/contracts/ids";
 import type { Batch } from "@repo/contracts/ops";
@@ -23,7 +23,7 @@ if (header === undefined || footer === undefined)
   throw new Error("Blocks need header and footer fixtures.");
 
 /** A draft whose home page holds every section fixture, under a header and footer from their fixtures. */
-export const fixtureDraft = Schema.decodeUnknownSync(Draft)({
+export const fixtureDraft = Schema.decodeSync(Draft)({
   id: "dr_fixtures",
   site: "site_fixtures",
   base: { release: "rel_fixtures", snapshot: "snap_fixtures" },
@@ -32,8 +32,7 @@ export const fixtureDraft = Schema.decodeUnknownSync(Draft)({
   parts: {
     header: header.id,
     footer: footer.id,
-    // Decoding the draft drops the trees' own IDs from the instances.
-    blocks: Object.fromEntries([header, footer].map((part) => [part.id, part])),
+    blocks: Object.fromEntries([header, footer].flatMap(flattenTree)),
     menus: fixtureSite.menus,
   },
   forms: fixtureSite.forms,
@@ -47,27 +46,7 @@ export const fixtureDraft = Schema.decodeUnknownSync(Draft)({
       path: "/",
       meta: { title: "Home", description: "" },
       root: sections.map((section) => section.id),
-      blocks: Object.fromEntries(
-        sections.flatMap(({ id, slots, ...section }) => [
-          [
-            id,
-            slots === undefined
-              ? section
-              : {
-                  ...section,
-                  slots: Object.fromEntries(
-                    Object.entries(slots).map(([slot, items]) => [
-                      slot,
-                      items.map((item) => item.id),
-                    ]),
-                  ),
-                },
-          ],
-          ...Object.values(slots ?? {})
-            .flat()
-            .map(({ id: itemId, ...item }) => [itemId, item]),
-        ]),
-      ),
+      blocks: Object.fromEntries(sections.flatMap(flattenTree)),
     },
   },
 });
