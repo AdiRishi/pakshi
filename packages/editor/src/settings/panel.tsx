@@ -20,6 +20,7 @@ import { Schema } from "effect";
 import { useId, useState } from "react";
 
 import { useEditorState, useServices, useStore } from "../context.tsx";
+import { LibraryPicker } from "../library-picker.tsx";
 import { FieldControl } from "./controls.tsx";
 
 const holderOf = (draft: Draft, target: Target) =>
@@ -256,7 +257,6 @@ function PostTags(props: { readonly value: ReadonlyArray<string> }) {
 
 /** A post's cover image, chosen from the library, with alt text for where it's shown. */
 function PostCover(props: { readonly value: PostMeta["cover"] }) {
-  const { media, mediaSrc } = useServices();
   const { set, errors, burst, endBurst } = useSetMeta("cover");
   const altId = useId();
   const cover = props.value;
@@ -273,23 +273,7 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
         )}
       </div>
       <FieldDescription>Shown with the post in blog lists and when it's shared.</FieldDescription>
-      <ul className="grid grid-cols-4 gap-2" aria-label="Library">
-        {media.map((file) => (
-          <li key={file.id}>
-            <button
-              type="button"
-              aria-pressed={cover?.id === file.id}
-              aria-label={file.alt === "" ? file.id : file.alt}
-              className="block aspect-square w-full overflow-hidden rounded-md border-2 border-transparent focus-visible:border-ring focus-visible:outline-none aria-pressed:border-ring"
-              onClick={() => {
-                if (cover?.id !== file.id) set({ $ref: "media", id: file.id, alt: file.alt });
-              }}
-            >
-              <img src={mediaSrc(file.id)} alt="" className="size-full object-cover" />
-            </button>
-          </li>
-        ))}
-      </ul>
+      <LibraryPicker chosen={cover?.id} onChoose={(image) => set(image)} />
       {cover !== undefined && (
         <Field>
           <FieldLabel htmlFor={altId}>Alt text</FieldLabel>
