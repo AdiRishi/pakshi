@@ -365,7 +365,7 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
     value: isRecord(props.value) ? props.value[name] : undefined,
   });
   return (
-    <FieldSet>
+    <FieldSet id={controlId(props.field)}>
       <div className="flex items-center justify-between gap-2">
         <FieldLegend variant="label">{props.definition.title}</FieldLegend>
         {props.definition.optional && (
