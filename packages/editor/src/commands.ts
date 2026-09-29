@@ -23,7 +23,9 @@ import {
   listOf,
   moveByOne,
   moveDestinations,
+  moveOp,
   removeOp,
+  sameList,
 } from "./structure.ts";
 
 /** A key with modifiers. `mod` is ⌘ on a Mac and Ctrl elsewhere. */
@@ -247,6 +249,28 @@ const moveCommand = (direction: "up" | "down"): Command => ({
 export const moveUp = moveCommand("up");
 export const moveDown = moveCommand("down");
 
+/** Moves a block to a spot in a list, as a drop does. */
+export const place: Command<{
+  readonly block: BlockId;
+  readonly list: BlockList;
+  readonly after: BlockId | null;
+}> = {
+  title: "Move here",
+  plan: (context, { block, list, after }) => {
+    const page = context.state.view.pages[context.state.page];
+    const op = page === undefined ? undefined : moveOp(page, context.contracts, block, list, after);
+    if (page === undefined || op === undefined) return undefined;
+    const chosen = { page, block };
+    return {
+      kind: "change",
+      ops: [op],
+      select: { kind: "block", target: page.id, block },
+      announce: (draft) =>
+        `Moved ${labelOf(context, page, block)}, ${whereIn(context, draft, chosen)}.`,
+    };
+  },
+};
+
 /** Moves an item to the end of another section's slot that accepts it. */
 export const moveTo: Command<{ readonly list: Exclude<BlockList, "root"> }> = {
   title: "Move to",
@@ -254,23 +278,22 @@ export const moveTo: Command<{ readonly list: Exclude<BlockList, "root"> }> = {
     const chosen = chosenBlock(context);
     if (chosen === undefined) return undefined;
     const destination = moveDestinations(chosen.page, context.contracts, chosen.block).find(
-      (candidate) =>
-        candidate.list !== "root" &&
-        candidate.list.block === list.block &&
-        candidate.list.slot === list.slot,
+      (candidate) => sameList(candidate.list, list),
     );
-    if (destination === undefined) return undefined;
+    const op =
+      destination === undefined
+        ? undefined
+        : moveOp(
+            chosen.page,
+            context.contracts,
+            chosen.block,
+            list,
+            destination.ids.at(-1) ?? null,
+          );
+    if (op === undefined) return undefined;
     return {
       kind: "change",
-      ops: [
-        {
-          op: "moveBlock",
-          page: chosen.page.id,
-          block: chosen.block,
-          list,
-          after: destination.ids.at(-1) ?? null,
-        },
-      ],
+      ops: [op],
       announce: (draft) =>
         `Moved ${labelOf(context, chosen.page, chosen.block)} to ${labelOf(context, chosen.page, list.block)}, ${whereIn(context, draft, chosen)}.`,
     };

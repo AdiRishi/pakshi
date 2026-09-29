@@ -9,6 +9,7 @@ import { fieldEditing, isSelectedField } from "./canvas/fields.tsx";
 import { FormattingToolbar } from "./canvas/formatting.tsx";
 import { CanvasFrame } from "./canvas/frame.tsx";
 import { MediaPopover } from "./canvas/media-popover.tsx";
+import { CanvasOverlay } from "./canvas/overlay.tsx";
 import { PageView } from "./canvas/page-view.tsx";
 import { keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
 import {
@@ -24,6 +25,7 @@ import {
   useServices,
   useStore,
 } from "./context.tsx";
+import { BlockDragDrop } from "./dnd.tsx";
 import { BlockPicker } from "./picker.tsx";
 import { type Origin, runCommand } from "./run-command.ts";
 import { SettingsPanel } from "./settings/panel.tsx";
@@ -251,7 +253,7 @@ export function EditorProvider(props: {
     <ServicesProvider value={services}>
       <UiProvider value={ui}>
         <CanvasControlsContext.Provider value={controls}>
-          {props.children}
+          <BlockDragDrop>{props.children}</BlockDragDrop>
           {picker !== null && (
             <BlockPicker
               spot={picker.spot}
@@ -317,6 +319,7 @@ export function EditorCanvas(props: {
           <PageView />
         </FieldEditingProvider>
       </CanvasFrame>
+      {canvasDocument !== null && <CanvasOverlay document={canvasDocument} />}
       {container !== null && controls.media !== null && (
         <MediaPopover
           field={controls.media.field}

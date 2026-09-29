@@ -13,14 +13,15 @@ import {
   RectangleHorizontalIcon,
   SquareIcon,
 } from "lucide-react";
-import { type KeyboardEvent, type ReactNode, useState } from "react";
+import { type KeyboardEvent, type ReactNode, useCallback, useState } from "react";
 
 import { BlockMenu } from "./block-menu.tsx";
 import { enterBlock, moveDown, moveUp } from "./commands.ts";
 import { useEditorState, useEditorUi, useServices } from "./context.tsx";
+import { useBlockDrag, useBlockDrop, useDropPlacement, useDropTarget } from "./dnd.tsx";
 import { runCommand } from "./run-command.ts";
 import { formatShortcut } from "./shortcuts.ts";
-import { blockLabel } from "./structure.ts";
+import { allowedTypes, blockLabel } from "./structure.ts";
 
 /** A section's slots and the items in them: all the outline needs to lay out its rows. */
 interface SectionSlots {
@@ -63,6 +64,7 @@ function Row(props: {
   readonly children?: ReactNode;
 }) {
   const { store, definitions } = useServices();
+  const ui = useEditorUi();
   const instance = useEditorState(
     (state) =>
       (props.target === "site" ? state.view.parts : state.view.pages[props.target])?.blocks[
@@ -73,6 +75,34 @@ function Row(props: {
     (state) => state.selection?.kind === "block" && state.selection.block === props.block,
   );
   const [menuOpen, setMenuOpen] = useState(false);
+  const { list, accepts } = useDropPlacement(props.target, props.block);
+  const drag = useBlockDrag({
+    surface: "outline",
+    block: props.block,
+    type: instance?.type ?? "",
+    label: instance === undefined ? "" : blockLabel(definitions, instance),
+    disabled: props.target === "site",
+  });
+  const drop = useBlockDrop({
+    surface: "outline",
+    list: list ?? "root",
+    block: props.block,
+    accepts,
+  });
+  const { ref: dragRef } = drag;
+  const { ref: dropRef } = drop;
+  const rowRef = useCallback(
+    (element: HTMLDivElement | null) => {
+      dragRef(element);
+      dropRef(element);
+    },
+    [dragRef, dropRef],
+  );
+  const dropTarget = useDropTarget();
+  const line =
+    dropTarget?.surface === "outline" && dropTarget.block === props.block
+      ? dropTarget.edge
+      : undefined;
   if (instance === undefined) return null;
   const contract = definitions.get(instance.type);
   const placement = contract?.placement;
@@ -105,8 +135,9 @@ function Row(props: {
       className="group/row outline-none"
       onFocus={(event) => {
         // Selection follows focus, as in any tree. A click focuses the row it lands in.
-        if (event.target === event.currentTarget)
-          store.select({ kind: "block", target: props.target, block: props.block });
+        if (event.target !== event.currentTarget) return;
+        store.select({ kind: "block", target: props.target, block: props.block });
+        ui.focusSelection("outline");
       }}
       onKeyDown={(event) => {
         if (
@@ -120,8 +151,9 @@ function Row(props: {
       }}
     >
       <div
+        ref={rowRef}
         className={cn(
-          "flex h-9 items-center gap-2 rounded-md pr-1 text-sm",
+          "relative flex h-9 items-center gap-2 rounded-md pr-1 text-sm",
           props.level === 1 ? "pl-1" : "pl-7",
           selected ? "bg-accent text-accent-foreground" : "hover:bg-muted",
           "group-focus-visible/row:ring-2 group-focus-visible/row:ring-ring",
@@ -154,6 +186,7 @@ function Row(props: {
           />
         )}
         <span className="shrink-0 text-xs text-muted-foreground">{secondary}</span>
+        {line !== undefined && <DropLine edge={line} />}
         {props.target === "site" ? (
           <span className="size-7 shrink-0" />
         ) : (
@@ -183,6 +216,19 @@ function Row(props: {
       </div>
       {props.children}
     </li>
+  );
+}
+
+/** Where a dragged block would land, at the top or bottom of a row. */
+function DropLine(props: { readonly edge: "before" | "after" }) {
+  return (
+    <span
+      aria-hidden
+      className={cn(
+        "pointer-events-none absolute inset-x-1 h-0.5 rounded-full bg-ring",
+        props.edge === "before" ? "-top-px" : "-bottom-px",
+      )}
+    />
   );
 }
 
@@ -443,9 +489,46 @@ function SlotRows(props: {
           focusable={props.focusable === item}
         />
       ))}
-      <li role="none">
-        <AddButton label={`Add to ${spec?.title ?? props.slot}`} inset onClick={props.onAdd} />
-      </li>
+      <SlotEnd
+        page={props.page}
+        section={props.section}
+        slot={props.slot}
+        label={`Add to ${spec?.title ?? props.slot}`}
+        onAdd={props.onAdd}
+      />
     </>
+  );
+}
+
+/** The end of a slot: it adds a block there, and takes a dropped one. */
+function SlotEnd(props: {
+  readonly page: PageId;
+  readonly section: BlockId;
+  readonly slot: string;
+  readonly label: string;
+  readonly onAdd: (anchor: HTMLElement) => void;
+}) {
+  const { definitions } = useServices();
+  const list = { block: props.section, slot: props.slot };
+  const accepts = useEditorState(
+    (state) => {
+      const document = state.view.pages[props.page];
+      return document === undefined ? [] : allowedTypes(document, definitions, list);
+    },
+    (a, b) => a.join() === b.join(),
+  );
+  const { ref: attach } = useBlockDrop({ surface: "outline", list, block: null, accepts });
+  const dropTarget = useDropTarget();
+  const targeted =
+    dropTarget?.surface === "outline" &&
+    dropTarget.block === null &&
+    dropTarget.list !== "root" &&
+    dropTarget.list.block === props.section &&
+    dropTarget.list.slot === props.slot;
+  return (
+    <li role="none" ref={attach} className="relative">
+      <AddButton label={props.label} inset onClick={props.onAdd} />
+      {targeted && <DropLine edge="before" />}
+    </li>
   );
 }

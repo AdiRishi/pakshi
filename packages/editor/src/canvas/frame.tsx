@@ -23,6 +23,30 @@ img[data-pakshi-field], a[data-pakshi-field] { cursor: pointer; }
 [data-pakshi-empty]::before {
   content: attr(data-pakshi-placeholder); opacity: 0.5; pointer-events: none;
 }
+.pakshi-overlay {
+  position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483000;
+  pointer-events: none; font: 600 12px/1 system-ui, sans-serif;
+}
+.pakshi-overlay > * { position: static; }
+.pakshi-handle, .pakshi-insert, .pakshi-badge, .pakshi-drop-line { position: absolute; }
+.pakshi-handle, .pakshi-insert {
+  display: flex; align-items: center; gap: 4px; pointer-events: auto; border: 0;
+  color: #fff; background: var(--pakshi-editor-accent); font: inherit;
+}
+.pakshi-handle {
+  height: 24px; padding: 0 8px 0 4px; border-radius: 6px; cursor: grab; white-space: nowrap;
+}
+.pakshi-insert {
+  height: 28px; padding: 0 12px 0 8px; border-radius: 14px; border: 2px solid #fff;
+  transform: translate(-50%, -50%); cursor: pointer; white-space: nowrap;
+  box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+}
+.pakshi-insert-round { width: 28px; padding: 0; justify-content: center; }
+.pakshi-badge {
+  transform: translateX(-100%); padding: 4px 8px; border-radius: 8px;
+  background: #ffe2a8; color: #6b4000; pointer-events: none;
+}
+.pakshi-drop-line { background: var(--pakshi-editor-accent); border-radius: 2px; }
 `;
 
 const shell = (siteCss: string) =>
