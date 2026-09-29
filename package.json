@@ -14,12 +14,12 @@
     "plan": "pnpm --filter @repo/infra plan",
     "prepare": "effect-tsgo patch --typescript --oxlint",
     "prod": "turbo deploy --ui=stream --filter @repo/infra",
-    "prod:destroy": "pnpm --filter @repo/infra prod:destroy",
     "sync:repos": "node scripts/src/sync-reference-repos.ts",
     "test": "turbo test",
     "test:unit": "turbo test --filter=!@repo/infra",
     "test:infra-live": "pnpm --filter @repo/infra test:live",
-    "typecheck": "turbo typecheck"
+    "typecheck": "turbo typecheck",
+    "plan:check": "pnpm --filter @repo/infra plan:check"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

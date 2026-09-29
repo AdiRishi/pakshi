@@ -22,7 +22,8 @@
     "test:live": "vitest run --config vitest.live.config.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "deploy:staging": "alchemy deploy --stage staging --yes",
-    "plan:staging": "alchemy plan --stage staging"
+    "plan:staging": "alchemy plan --stage staging",
+    "plan:check": "node scripts/check-production-plan.ts"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
