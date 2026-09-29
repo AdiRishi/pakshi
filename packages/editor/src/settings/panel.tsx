@@ -15,7 +15,6 @@ import {
   FieldLegend,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Textarea } from "@repo/ui/components/textarea";
 import { Schema } from "effect";
 import { CircleAlertIcon, EllipsisIcon } from "lucide-react";
 import { useId, useState } from "react";
@@ -26,6 +25,7 @@ import { LibraryPicker } from "../library-picker.tsx";
 import { blockLabel } from "../structure.ts";
 import { Appearance } from "./appearance.tsx";
 import { FieldControl } from "./controls.tsx";
+import { FieldInput, FieldTextarea } from "./field-text.tsx";
 
 const holderOf = (draft: Draft, target: Target) =>
   target === "site" ? draft.parts : draft.pages[target];
@@ -152,9 +152,9 @@ function MetaText(props: {
     <Field data-invalid={errors.length > 0 || undefined}>
       <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
       {props.multiline === true ? (
-        <Textarea {...shared} onChange={(event) => change(event.target.value)} />
+        <FieldTextarea {...shared} onChange={(event) => change(event.target.value)} />
       ) : (
-        <Input {...shared} onChange={(event) => change(event.target.value)} />
+        <FieldInput {...shared} onChange={(event) => change(event.target.value)} />
       )}
       <FieldDescription>
         {props.description} {props.value.length} of {props.max} characters.
@@ -261,7 +261,7 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
       {cover !== undefined && (
         <Field>
           <FieldLabel htmlFor={altId}>Alt text</FieldLabel>
-          <Input
+          <FieldInput
             id={altId}
             value={cover.alt ?? ""}
             maxLength={250}

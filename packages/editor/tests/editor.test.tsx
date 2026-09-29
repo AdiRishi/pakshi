@@ -1,91 +1,13 @@
 import type { BlockDefinition, RichTextDocument } from "@repo/blocks";
-import { fixtureSite } from "@repo/blocks/fixtures";
 import type { Draft } from "@repo/contracts/draft";
-import { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
-import type { MediaSummary } from "@repo/contracts/studio";
+import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
 import { Schema } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
-import { cleanup, render } from "vitest-browser-react";
+import { cleanup } from "vitest-browser-react";
 import { page, userEvent } from "vitest/browser";
 
-import { EditorCanvas, EditorOutline, EditorProvider, EditorSettings } from "../src/index.ts";
-import { definitions, fakeSiteDoc, fixtureDraft, meera } from "./support/site-doc.ts";
-
-import siteCss from "@repo/blocks/site.css?url";
-
-const home = PageId.make("pg_home");
-
-const presenceColors = ["teal", "purple", "chocolate", "green", "crimson", "slateblue"];
-
-/** An image the library suggests no alt text for, as for a decorative pattern. */
-const pattern: MediaSummary = {
-  id: MediaId.make("med_pattern"),
-  contentType: "image/png",
-  width: 1200,
-  height: 800,
-  alt: "",
-};
-
-const media: ReadonlyArray<MediaSummary> = [
-  ...Object.entries(fixtureSite.media).map(([id, file]) => ({
-    id: MediaId.make(id),
-    ...file,
-    alt: "Two sailing boats on a calm harbour at sunset",
-  })),
-  pattern,
-];
-
-/** A 1x1 image, so the canvas needs no media server. */
-const pixel =
-  "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
-
-const open = async (
-  options: {
-    readonly draft?: Draft;
-    readonly page?: PageId;
-    readonly definitions?: ReadonlyMap<BlockType, BlockDefinition>;
-  } = {},
-) => {
-  const siteDoc =
-    options.draft === undefined ? fakeSiteDoc() : fakeSiteDoc({ draft: options.draft });
-  await page.viewport(1440, 900);
-  await render(
-    <EditorProvider
-      draft={options.draft ?? fixtureDraft}
-      page={options.page ?? home}
-      definitions={options.definitions ?? definitions}
-      media={media}
-      mediaSrc={() => pixel}
-      siteCss={siteCss}
-      scheme="light"
-      person={meera}
-      connection={siteDoc.connection(meera)}
-      onNotice={() => undefined}
-    >
-      <div style={{ display: "flex", height: 700 }}>
-        <aside aria-label="Structure" style={{ width: 320, flexShrink: 0, overflowY: "auto" }}>
-          <EditorOutline />
-        </aside>
-        <div style={{ flex: 1 }}>
-          <EditorCanvas width={1024} accent="blue" presence={presenceColors} />
-        </div>
-        <aside aria-label="Settings" style={{ width: 360, flexShrink: 0, overflowY: "auto" }}>
-          <EditorSettings />
-        </aside>
-      </div>
-    </EditorProvider>,
-  );
-  await expect.element(page.getByTitle(/^Canvas:/)).toBeVisible();
-  const canvas = () => {
-    const content = document.querySelector("iframe")?.contentDocument;
-    if (content === null || content === undefined) throw new Error("The canvas has no document.");
-    return content;
-  };
-  await expect
-    .poll(() => canvas().querySelectorAll("[data-pakshi-block]").length)
-    .toBeGreaterThan(0);
-  return { siteDoc, canvas };
-};
+import { home, openEditor as open, pattern } from "./support/mount.tsx";
+import { definitions, fakeSiteDoc, fixtureDraft } from "./support/site-doc.ts";
 
 const heroField = (canvas: Document, field: string) =>
   canvas.querySelector<HTMLElement>(

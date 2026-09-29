@@ -111,6 +111,7 @@ export class EditorStore {
   readonly #connection: Connection;
   readonly #onNotice: (notice: Notice) => void;
   readonly #listeners = new Set<() => void>();
+  readonly #beforeRemote = new Set<() => void>();
   #state: EditorState;
   #pending: ReadonlyArray<Pending> = [];
   #undo: Array<Step> = [];
@@ -159,6 +160,22 @@ export class EditorStore {
       this.#listeners.delete(listener);
     };
   };
+
+  /**
+   * Runs a listener just before someone else's change reaches what the
+   * person sees, such as to note what's on screen so the view can stay put.
+   */
+  beforeRemoteChange = (listener: () => void) => {
+    this.#beforeRemote.add(listener);
+    return () => {
+      this.#beforeRemote.delete(listener);
+    };
+  };
+
+  #showRemote(next: Partial<Omit<EditorState, "status" | "canUndo" | "canRedo">>) {
+    for (const listener of this.#beforeRemote) listener();
+    this.#set(next);
+  }
 
   /** Connects to SiteDoc, and returns what disconnects. */
   connect = () => {
@@ -375,7 +392,7 @@ export class EditorStore {
           Draft: ({ draft }) => draft,
         });
         this.#synced = true;
-        this.#set({ confirmed, view: this.#replay(confirmed), peers });
+        this.#showRemote({ confirmed, view: this.#replay(confirmed), peers });
         this.#flush();
       },
       Committed: (commit) => this.#committed(commit),
@@ -443,7 +460,8 @@ export class EditorStore {
     const selection = this.#state.selection;
     if (selection !== null && !blockExists(view, selection.target, selection.block))
       this.#onNotice({ title: `${batch.actor.name} removed the block you had selected.` });
-    this.#set({ confirmed: next, view });
+    if (mine) this.#set({ confirmed: next, view });
+    else this.#showRemote({ confirmed: next, view });
   }
 
   /**

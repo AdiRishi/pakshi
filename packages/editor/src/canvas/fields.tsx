@@ -7,6 +7,8 @@ import {
 import type { PageId } from "@repo/contracts/ids";
 import { Editor } from "@tiptap/core";
 import { UndoRedo } from "@tiptap/extensions";
+import type { Node as DocumentNode } from "@tiptap/pm/model";
+import { Mapping } from "@tiptap/pm/transform";
 import { Option, Schema } from "effect";
 import {
   type ComponentProps,
@@ -30,6 +32,8 @@ import {
 import { useBlockDrop, useDropPlacement } from "../dnd.tsx";
 import type { Selection } from "../store.ts";
 import { allowedTypes } from "../structure.ts";
+import { mapOffset, rebaseText } from "../text-changes.ts";
+import { changeTo, rebaseOnto, remoteChange } from "./rich-text-sync.ts";
 
 const samePath = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
   a.length === b.length && a.every((step, index) => step === b[index]);
@@ -50,36 +54,61 @@ const useField = (address: FieldAddress) => {
 
 // Caret -------------------------------------------------------------------
 
-/** The caret's position in an element, counted in characters of its text. */
-const caretOffset = (element: HTMLElement) => {
-  const selection = element.ownerDocument.getSelection();
-  if (selection === null || selection.rangeCount === 0) return null;
-  const range = selection.getRangeAt(0);
-  if (!element.contains(range.endContainer)) return null;
-  const before = range.cloneRange();
+/** How many characters of an element's text come before a point in it. */
+const textOffset = (element: HTMLElement, node: Node, offset: number) => {
+  const before = element.ownerDocument.createRange();
   before.selectNodeContents(element);
-  before.setEnd(range.endContainer, range.endOffset);
+  before.setEnd(node, offset);
   return before.toString().length;
 };
 
-const placeCaret = (element: HTMLElement, offset: number) => {
-  const document = element.ownerDocument;
-  const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+/** The selection in an element, as character offsets of its text, or null when it's elsewhere. */
+const selectionIn = (element: HTMLElement) => {
+  const selection = element.ownerDocument.getSelection();
+  if (selection === null || selection.anchorNode === null || selection.focusNode === null)
+    return null;
+  if (!element.contains(selection.anchorNode) || !element.contains(selection.focusNode))
+    return null;
+  return {
+    anchor: textOffset(element, selection.anchorNode, selection.anchorOffset),
+    focus: textOffset(element, selection.focusNode, selection.focusOffset),
+  };
+};
+
+/** The text node and offset in it at a character offset of an element's text. */
+const pointAt = (element: HTMLElement, offset: number) => {
+  const walker = element.ownerDocument.createTreeWalker(element, NodeFilter.SHOW_TEXT);
   let remaining = offset;
-  let node = walker.nextNode();
-  while (node !== null) {
+  for (let node = walker.nextNode(); node !== null; node = walker.nextNode()) {
     const length = node.textContent?.length ?? 0;
-    if (remaining <= length) {
-      const range = document.createRange();
-      range.setStart(node, remaining);
-      range.collapse(true);
-      document.getSelection()?.removeAllRanges();
-      document.getSelection()?.addRange(range);
-      return;
-    }
+    if (remaining <= length) return { node, offset: remaining };
     remaining -= length;
-    node = walker.nextNode();
   }
+  return { node: element, offset: element.childNodes.length };
+};
+
+const placeSelection = (element: HTMLElement, anchor: number, focus: number) => {
+  const start = pointAt(element, anchor);
+  const end = pointAt(element, focus);
+  element.ownerDocument
+    .getSelection()
+    ?.setBaseAndExtent(start.node, start.offset, end.node, end.offset);
+};
+
+/**
+ * Shows new text in a field, keeping the person's caret or selection in the
+ * same place relative to the text around it.
+ */
+const replaceText = (element: HTMLElement, text: string) => {
+  const before = element.textContent ?? "";
+  const selection = element.ownerDocument.activeElement === element ? selectionIn(element) : null;
+  element.textContent = text;
+  if (selection !== null)
+    placeSelection(
+      element,
+      mapOffset(before, text, selection.anchor),
+      mapOffset(before, text, selection.focus),
+    );
 };
 
 /** Inserts text at the caret, replacing any selection, as typing would. */
@@ -107,23 +136,25 @@ const EditableText: FieldEditing["Text"] = (props) => {
   const store = useStore();
   const { field, selected } = useField(props);
   const element = useRef<HTMLElement>(null);
-  const composing = useRef(false);
+  /** The field's text when an input method started composing, or null when none is. */
+  const composingFrom = useRef<string | null>(null);
+  const value = useRef(props.value);
   const definition = props.definition;
   if (definition.kind !== "text") throw new Error(`${props.path.join(".")} isn't plain text.`);
   const { max, multiline } = definition;
 
+  // Nothing is written into the field while an input method composes in it.
   useLayoutEffect(() => {
+    value.current = props.value;
     const current = element.current;
-    if (current === null || composing.current || current.textContent === props.value) return;
-    const focused = current.ownerDocument.activeElement === current;
-    const offset = focused ? caretOffset(current) : null;
-    current.textContent = props.value;
-    if (offset !== null) placeCaret(current, Math.min(offset, props.value.length));
+    if (current === null || composingFrom.current !== null || current.textContent === props.value)
+      return;
+    replaceText(current, props.value);
   }, [props.value]);
 
   const commit = () => {
     const current = element.current;
-    if (current === null || composing.current) return;
+    if (current === null || composingFrom.current !== null) return;
     const text = current.textContent ?? "";
     const errors = store.run(
       [{ op: "setProp", target: field.target, block: field.block, path: field.path, value: text }],
@@ -176,10 +207,15 @@ const EditableText: FieldEditing["Text"] = (props) => {
       onBlur={() => store.endBurst()}
       onInput={commit}
       onCompositionStart={() => {
-        composing.current = true;
+        composingFrom.current = element.current?.textContent ?? "";
       }}
       onCompositionEnd={() => {
-        composing.current = false;
+        const current = element.current;
+        const base = composingFrom.current;
+        composingFrom.current = null;
+        // A change that arrived while composing applies now, with the composed text made again on it.
+        if (current !== null && base !== null && value.current !== base)
+          replaceText(current, rebaseText(base, current.textContent ?? "", value.current));
         commit();
       }}
       onPaste={(event) => {
@@ -216,7 +252,7 @@ const EditableText: FieldEditing["Text"] = (props) => {
  * Rich text edited in place with TipTap, mounted on the field's own element so
  * no wrapper changes the layout. It offers only the field's marks and nodes,
  * the same extensions `sites` renders with. While the field has focus, undo
- * goes to TipTap's own history.
+ * goes to TipTap's own history, which never holds other people's changes.
  */
 const EditableRichText: FieldEditing["RichText"] = (props) => {
   const store = useStore();
@@ -224,6 +260,15 @@ const EditableRichText: FieldEditing["RichText"] = (props) => {
   const { field, selected } = useField(props);
   const element = useRef<HTMLDivElement>(null);
   const editor = useRef<Editor | null>(null);
+  const value = useRef(props.value);
+  /**
+   * While an input method composes: the document when it started, and how
+   * the composing has changed it since. Nothing is saved or written into the
+   * field until it ends.
+   */
+  const composition = useRef<{ readonly base: DocumentNode; readonly mapping: Mapping } | null>(
+    null,
+  );
   const definition = props.definition;
   if (definition.kind !== "richText") throw new Error(`${props.path.join(".")} isn't rich text.`);
   const pathKey = field.path.join(".");
@@ -235,13 +280,33 @@ const EditableRichText: FieldEditing["RichText"] = (props) => {
       ? [{ message: "Not allowed here" }]
       : store.run([{ op: "setProp", ...field, value: decoded.value }], burstKey(field));
     if (errors.length > 0)
-      updated.commands.setContent(toJsonContent(props.value), { emitUpdate: false });
+      updated.commands.setContent(toJsonContent(value.current), { emitUpdate: false });
   });
   const onFocused = useEffectEvent((focused: Editor, mount: HTMLElement) => {
     store.select({ kind: "field", ...field });
     ui.setActiveRichText({ target: field, editor: focused, field: definition, element: mount });
   });
   const initialContent = useEffectEvent(() => toJsonContent(props.value));
+
+  /** Shows the stored value, unless it's what the field already holds or someone is composing. */
+  const showValue = useEffectEvent(() => {
+    const instance = editor.current;
+    if (instance === null || composition.current !== null) return;
+    const next = instance.schema.nodeFromJSON(toJsonContent(value.current));
+    if (!next.eq(instance.state.doc)) instance.view.dispatch(changeTo(instance.state, next));
+  });
+
+  /** Ends a composition: a change that arrived meanwhile is made on the composed text, and the result saved. */
+  const endComposition = useEffectEvent(() => {
+    const instance = editor.current;
+    const ended = composition.current;
+    if (instance === null || ended === null || instance.view.composing) return;
+    composition.current = null;
+    const theirs = instance.schema.nodeFromJSON(toJsonContent(value.current));
+    if (!theirs.eq(ended.base))
+      instance.view.dispatch(rebaseOnto(instance.state, ended.base, theirs, ended.mapping));
+    if (!instance.state.doc.eq(ended.base)) onChange(instance);
+  });
 
   useEffect(() => {
     const mount = element.current;
@@ -265,8 +330,26 @@ const EditableRichText: FieldEditing["RichText"] = (props) => {
           view.dom.closest<HTMLElement>("[data-pakshi-block]")?.focus();
           return true;
         },
+        handleDOMEvents: {
+          compositionstart: (view) => {
+            composition.current ??= { base: view.state.doc, mapping: new Mapping() };
+            return false;
+          },
+          // ProseMirror reads what was composed a moment after the event, so this waits for it.
+          compositionend: () => {
+            requestAnimationFrame(() => endComposition());
+            return false;
+          },
+        },
       },
-      onUpdate: ({ editor: updated }) => onChange(updated),
+      onTransaction: ({ transaction }) => {
+        if (transaction.docChanged) composition.current?.mapping.appendMapping(transaction.mapping);
+        if (composition.current !== null && !instance.view.composing) endComposition();
+      },
+      onUpdate: ({ editor: updated, transaction }) => {
+        if (transaction.getMeta(remoteChange) === true || composition.current !== null) return;
+        onChange(updated);
+      },
       onFocus: ({ editor: focused }) => onFocused(focused, mount),
       // The toolbar stays while the field is selected, so its link popover can take focus.
       onBlur: () => store.endBurst(),
@@ -279,11 +362,10 @@ const EditableRichText: FieldEditing["RichText"] = (props) => {
     // Later values reach the editor through the effect below, not by making a new one.
   }, [definition, pathKey, store]);
 
+  // Someone else's change applies as the smallest edit, so the cursor stays where it was.
   useEffect(() => {
-    const instance = editor.current;
-    if (instance === null || instance.isFocused) return;
-    if (JSON.stringify(instance.getJSON()) !== JSON.stringify(props.value))
-      instance.commands.setContent(toJsonContent(props.value), { emitUpdate: false });
+    value.current = props.value;
+    showValue();
   }, [props.value]);
 
   return (

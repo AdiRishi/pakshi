@@ -6,9 +6,11 @@ import { presenceColorCount } from "../presence.ts";
 /*
  * Marks the editor draws inside the canvas. They're outlines and pseudo
  * content only, so they never change the page's layout, and they scroll with
- * the page because they belong to it.
+ * the page because they belong to it. The browser's own scroll anchoring is
+ * off, because the editor keeps the view in place itself, in every browser.
  */
 const editorCss = `
+html { overflow-anchor: none; }
 [data-pakshi-block] { cursor: default; }
 [data-pakshi-block]:hover:not(:has([data-pakshi-block]:hover)) {
   outline: 2px dashed var(--pakshi-editor-accent); outline-offset: -2px;
