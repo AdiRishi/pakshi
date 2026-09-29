@@ -93,6 +93,14 @@ describe("typing", () => {
     expect(headingOf(store)).toBe("Summer school at the harbour");
   });
 
+  test("typing waiting to be sent counts as saving, until SiteDoc has it", async () => {
+    const { store } = open();
+    store.run([setHeading("Sail")], "heading");
+    expect(store.getState().status).toBe("saving");
+    await settle();
+    expect(store.getState().status).toBe("saved");
+  });
+
   test("a clearable required heading can be emptied and typed again", async () => {
     const { store, siteDoc } = open();
     expect(store.run([setHeading("")], "heading")).toEqual([]);

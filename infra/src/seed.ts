@@ -10,6 +10,7 @@ import * as Effect from "effect/Effect";
 
 import { testUsers } from "../../workers/test-identity-provider/src/users.ts";
 import { dataPlane } from "./data-plane.ts";
+import { fixtureSites } from "./fixture-sites.ts";
 import { sampleSite } from "./sample-site.ts";
 
 type TestUserId = (typeof testUsers)[number]["id"];
@@ -31,12 +32,15 @@ const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value
  */
 const seedContents = Effect.gen(function* () {
   const sample = yield* Effect.promise(sampleSite);
-  const manifest = yield* Schema.encodeEffect(SnapshotManifest)(sample.manifest).pipe(Effect.orDie);
+  const fixtures = yield* Effect.promise(fixtureSites);
+  const manifests = yield* Effect.forEach([sample, ...fixtures], (published) =>
+    Schema.encodeEffect(SnapshotManifest)(published.manifest).pipe(Effect.orDie),
+  );
   return sha256(
     JSON.stringify({
       brand: sample.brand,
-      site: sample.site,
-      manifest,
+      sites: [sample.site, ...fixtures.map((fixture) => fixture.site)],
+      manifests,
       media: sample.media.map((file) => [file.id, sha256(file.bytes)]),
       users: testUsers,
       grants: testGrants(sample.site.id),
@@ -45,9 +49,10 @@ const seedContents = Effect.gen(function* () {
 });
 
 /**
- * Seeds a non-production stage: the test users and their grants, and the
- * sample site published at the Sites Worker's own host. Every write is an
- * upsert, so running it again leaves the same state.
+ * Seeds a non-production stage: the test users and their grants, the sample
+ * site published at the Sites Worker's own host, and the block fixture sites
+ * at `fixtures-N.` hosts beside it. Every write is an upsert, so running it
+ * again leaves the same state.
  */
 export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
   readonly url: Output.Output<string | undefined>;
@@ -64,6 +69,11 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
         readonly contents: string;
       }) {
         const sample = yield* Effect.promise(sampleSite);
+        const fixtures = yield* Effect.promise(fixtureSites);
+        const published = [
+          { ...sample, host: input.sitesHost },
+          ...fixtures.map((fixture) => ({ ...fixture, host: fixture.host(input.sitesHost) })),
+        ];
         const now = new Date().toISOString();
         yield* db.batch([
           db
@@ -71,18 +81,21 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
               "insert into brands (id, name) values (?, ?) on conflict (id) do update set name = excluded.name",
             )
             .bind(sample.brand.id, sample.brand.name),
-          db
-            .prepare(
-              "insert into sites (id, brand_id, name) values (?, ?, ?) on conflict (id) do update set name = excluded.name",
-            )
-            .bind(sample.site.id, sample.brand.id, sample.site.name),
+          ...published.map(({ site }) =>
+            db
+              .prepare(
+                "insert into sites (id, brand_id, name) values (?, ?, ?) on conflict (id) do update set name = excluded.name",
+              )
+              .bind(site.id, sample.brand.id, site.name),
+          ),
+          // The sample image is in the brand's library, so every site in the brand can place it.
           ...sample.media.map((file) =>
             db
               .prepare(
-                `insert into media (id, site_id, content_type, width, height, alt) values (?, ?, ?, ?, ?, ?)
-                 on conflict (id) do update set alt = excluded.alt`,
+                `insert into media (id, brand_id, content_type, width, height, alt) values (?, ?, ?, ?, ?, ?)
+                 on conflict (id) do update set site_id = null, brand_id = excluded.brand_id, alt = excluded.alt`,
               )
-              .bind(file.id, sample.site.id, file.contentType, file.width, file.height, file.alt),
+              .bind(file.id, sample.brand.id, file.contentType, file.width, file.height, file.alt),
           ),
           ...testUsers.map((user) =>
             db
@@ -109,25 +122,27 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
           yield* content.put(objectKeys.media(file.id), file.bytes, {
             httpMetadata: { contentType: file.contentType },
           });
-        for (const { json, hash } of sample.pages)
-          yield* content.put(objectKeys.page(sample.site.id, hash), JSON.stringify(json), {
-            httpMetadata: { contentType: "application/json" },
-          });
-        yield* content.put(
-          objectKeys.manifest(sample.site.id, sample.snapshot),
-          JSON.stringify(yield* Schema.encodeEffect(SnapshotManifest)(sample.manifest)),
-          { httpMetadata: { contentType: "application/json" } },
-        );
-        yield* routing.put(routingKeys.host(input.sitesHost), sample.site.id);
-        yield* routing.put(
-          routingKeys.site(sample.site.id),
-          JSON.stringify(
-            yield* Schema.encodeEffect(LiveRelease)({
-              release: sample.release,
-              snapshot: sample.snapshot,
-            }),
-          ),
-        );
+        for (const site of published) {
+          for (const { json, hash } of site.pages)
+            yield* content.put(objectKeys.page(site.site.id, hash), JSON.stringify(json), {
+              httpMetadata: { contentType: "application/json" },
+            });
+          yield* content.put(
+            objectKeys.manifest(site.site.id, site.snapshot),
+            JSON.stringify(yield* Schema.encodeEffect(SnapshotManifest)(site.manifest)),
+            { httpMetadata: { contentType: "application/json" } },
+          );
+          yield* routing.put(routingKeys.host(site.host), site.site.id);
+          yield* routing.put(
+            routingKeys.site(site.site.id),
+            JSON.stringify(
+              yield* Schema.encodeEffect(LiveRelease)({
+                release: site.release,
+                snapshot: site.snapshot,
+              }),
+            ),
+          );
+        }
       });
     }).pipe(
       Effect.provide([

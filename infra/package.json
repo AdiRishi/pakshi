@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",
+    "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/domain": "workspace:*",
     "@repo/tokens": "workspace:*",
@@ -32,6 +33,7 @@
   },
   "devDependencies": {
     "@alchemy.run/frontend-frameworks": "catalog:",
+    "@axe-core/playwright": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "@effect/vitest": "catalog:",
     "@playwright/test": "catalog:",

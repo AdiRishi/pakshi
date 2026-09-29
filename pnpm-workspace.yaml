@@ -9,6 +9,7 @@ packages:
 catalog:
   "@alchemy.run/frontend-frameworks": 2.0.0-beta.79
   "@astrojs/react": 7.0.0
+  "@axe-core/playwright": 4.13.0
   "@base-ui/react": 1.8.0
   "@cloudflare/workers-types": 5.20260928.1
   "@effect/platform-node": 4.0.0-rc.117
