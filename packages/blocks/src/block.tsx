@@ -4,7 +4,7 @@ import { Schema } from "effect";
 import type { Json } from "effect/Schema";
 import { type ComponentType, createContext, type ReactElement, useContext } from "react";
 
-import type { BlockContract, Placement } from "./contract.ts";
+import { type BlockContract, BlockFixture, type Placement } from "./contract.ts";
 import { type Fields, propsSchema, type PropsOf } from "./fields.ts";
 
 export interface BlockComponentProps<F extends Fields, Variant extends string> {
@@ -12,7 +12,17 @@ export interface BlockComponentProps<F extends Fields, Variant extends string> {
   readonly variant: Variant;
 }
 
-type BlockSpec<F extends Fields, Variant extends string> = Placement & {
+/**
+ * A placement as a block definition gives it. Its placeholder is the JSON of
+ * its `fixtures/placeholder.json`, which `defineBlock` decodes.
+ */
+type PlacementSpec<P extends Placement = Placement> = P extends {
+  readonly placeholder: BlockFixture;
+}
+  ? Omit<P, "placeholder"> & { readonly placeholder: unknown }
+  : P;
+
+type BlockSpec<F extends Fields, Variant extends string> = PlacementSpec & {
   readonly type: BlockType;
   readonly version: number;
   readonly title: string;
@@ -59,6 +69,8 @@ export const useBlockFrame = () => {
   return frame;
 };
 
+const decodeFixture = Schema.decodeUnknownSync(BlockFixture);
+
 const contractOf = <F extends Fields, Variant extends string>(
   spec: BlockSpec<F, Variant>,
 ): BlockContract => {
@@ -78,9 +90,10 @@ const contractOf = <F extends Fields, Variant extends string>(
         surfaces: spec.surfaces,
         slots: spec.slots,
         interactive: spec.interactive,
+        placeholder: decodeFixture(spec.placeholder),
       };
     case "item":
-      return { ...common, placement: "item" };
+      return { ...common, placement: "item", placeholder: decodeFixture(spec.placeholder) };
     case "header":
     case "footer":
       return { ...common, placement: spec.placement, surfaces: spec.surfaces };

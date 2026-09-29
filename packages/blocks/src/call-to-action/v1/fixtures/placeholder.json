@@ -1,0 +1,16 @@
+{
+  "variant": "banner",
+  "surface": "brand",
+  "props": {
+    "heading": "Ready when you are",
+    "body": "One clear next step works better than three. Say what happens when someone clicks.",
+    "primary": {
+      "label": "Get started",
+      "link": "https://example.com"
+    },
+    "secondary": {
+      "label": "Ask a question",
+      "link": "mailto:hello@example.com"
+    }
+  }
+}

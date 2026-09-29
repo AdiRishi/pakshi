@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Media, Root, Text } from "../../components.tsx";
 import { list, media, optional, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: optional(text({ title: "Heading", max: 80 })),
@@ -75,5 +76,6 @@ export default defineBlock({
     purpose: "A set of photos that together show a place, an event or work",
     avoid: ["a single image, which belongs in a split or hero"],
   },
+  placeholder,
   component: Gallery,
 });

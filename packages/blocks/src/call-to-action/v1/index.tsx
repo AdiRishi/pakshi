@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Cta, Root, Text } from "../../components.tsx";
 import { cta, optional, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: text({ title: "Heading", min: 3, max: 80 }),
@@ -67,5 +68,6 @@ export default defineBlock({
     purpose: "Ask the visitor to take one or two next steps",
     avoid: ["long explanations, which belong in rich text"],
   },
+  placeholder,
   component: CallToAction,
 });

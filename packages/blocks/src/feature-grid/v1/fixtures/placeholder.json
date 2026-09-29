@@ -1,0 +1,36 @@
+{
+  "variant": "three-columns",
+  "surface": "default",
+  "props": {
+    "heading": "Why people come back",
+    "intro": "Three short reasons, each in a sentence or two."
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Made for beginners",
+          "body": "No experience needed. Everyone starts in the same place and goes at their own pace."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Small groups",
+          "body": "Groups stay small, so there's always time for questions."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Something to show for it",
+          "body": "You leave with something finished, and the know-how to do it again."
+        }
+      }
+    ]
+  }
+}

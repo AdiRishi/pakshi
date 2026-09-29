@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { RichText, Root, Text } from "../../components.tsx";
 import { optional, richText, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: optional(text({ title: "Heading", max: 120 })),
@@ -53,5 +54,6 @@ export default defineBlock({
     purpose: "Long-form writing: paragraphs, subheadings and lists",
     avoid: ["a single short sentence, which belongs in another block"],
   },
+  placeholder,
   component: RichTextBlock,
 });

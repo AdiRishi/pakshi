@@ -1,0 +1,12 @@
+{
+  "variant": "card",
+  "surface": "muted",
+  "props": {
+    "heading": "Get in touch",
+    "intro": "Send us a message and we'll reply within two working days.",
+    "form": {
+      "$ref": "form",
+      "id": "frm_pakshiContact"
+    }
+  }
+}

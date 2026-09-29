@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Root, Slot, Text } from "../../components.tsx";
 import { optional, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: text({ title: "Heading", min: 3, max: 80 }),
@@ -51,5 +52,6 @@ export default defineBlock({
     purpose: "Several parallel points, such as what's included or why to come, each short",
     avoid: ["a single item", "items that need more than two sentences"],
   },
+  placeholder,
   component: FeatureGrid,
 });

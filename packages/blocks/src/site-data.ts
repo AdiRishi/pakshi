@@ -6,6 +6,7 @@ import type { Menus, SiteSettings } from "@repo/contracts/site";
 import { Order, Predicate } from "effect";
 
 import type { PostSummary, ResolvedMedia, SiteData } from "./components.tsx";
+import { placeholderForm, placeholderMedia } from "./placeholders.ts";
 
 /** What `siteData` needs of a page: a snapshot's page entry and a draft's page both have it. */
 export type PageEntry =
@@ -27,7 +28,11 @@ const newestFirst = Order.combine(
   Order.mapInput(Order.String, (post: PostSummary) => post.title),
 );
 
-/** Builds what blocks read beyond their props from a site's settings, menus, pages, forms and media. */
+/**
+ * Builds what blocks read beyond their props from a site's settings, menus,
+ * pages, forms and media. Placeholder images and the placeholder form resolve
+ * on every site.
+ */
 export const siteData = (site: {
   readonly settings: SiteSettings;
   readonly menus: Menus;
@@ -68,8 +73,8 @@ export const siteData = (site: {
           : [],
       )
       .toSorted(newestFirst),
-    media: site.media,
+    media: (id) => placeholderMedia.get(id) ?? site.media(id),
     pagePath: (id) => paths.get(id),
-    form: (id) => site.forms[id],
+    form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),
   };
 };

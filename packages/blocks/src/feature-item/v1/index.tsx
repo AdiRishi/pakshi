@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Root, Text } from "../../components.tsx";
 import { text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   title: text({ title: "Title", max: 60 }),
@@ -30,5 +31,6 @@ export default defineBlock({
   props,
   variants: ["default"],
   agent: { purpose: "One point in a feature grid: a short title and a sentence or two" },
+  placeholder,
   component: FeatureItem,
 });

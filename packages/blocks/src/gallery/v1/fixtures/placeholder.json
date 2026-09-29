@@ -1,0 +1,36 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "heading": "A look around",
+    "images": [
+      {
+        "id": "it_hills",
+        "image": {
+          "$ref": "media",
+          "id": "med_pakshiHills",
+          "alt": ""
+        },
+        "caption": "Say where or when this was taken"
+      },
+      {
+        "id": "it_sea",
+        "image": {
+          "$ref": "media",
+          "id": "med_pakshiSea",
+          "alt": ""
+        },
+        "caption": "A caption can name who's in it"
+      },
+      {
+        "id": "it_circles",
+        "image": {
+          "$ref": "media",
+          "id": "med_pakshiCircles",
+          "alt": ""
+        },
+        "caption": "Or leave the picture to speak for itself"
+      }
+    ]
+  }
+}

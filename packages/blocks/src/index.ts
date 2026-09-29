@@ -1,5 +1,6 @@
 export type { BlockComponentProps, BlockDefinition, RenderInput, RenderResult } from "./block.tsx";
 export type { BlockContract, Placement, SlotSpec } from "./contract.ts";
+export { BlockFixture } from "./contract.ts";
 export { defineBlock } from "./block.tsx";
 export type {
   FieldAddress,
@@ -51,6 +52,12 @@ export {
   richText,
   text,
 } from "./fields.ts";
+export {
+  placeholderForm,
+  placeholderMedia,
+  placeholderPaths,
+  placeholderTree,
+} from "./placeholders.ts";
 export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 export type { RichTextDocument, RichTextMark, RichTextNode } from "./rich-text.ts";

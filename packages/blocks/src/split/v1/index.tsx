@@ -1,6 +1,7 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Cta, Media, RichText, Root, Text } from "../../components.tsx";
 import { cta, media, optional, richText, text } from "../../fields.ts";
+import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   heading: text({ title: "Heading", min: 3, max: 80 }),
@@ -60,5 +61,6 @@ export default defineBlock({
     purpose: "A short explanation beside an image that shows it",
     avoid: ["several in a row with the image on the same side"],
   },
+  placeholder,
   component: Split,
 });

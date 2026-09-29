@@ -1,7 +1,27 @@
-import type { BlockType } from "@repo/contracts/ids";
-import type { Surface } from "@repo/tokens";
+import { BlockType } from "@repo/contracts/ids";
+import { Surface } from "@repo/tokens";
+import { Schema } from "effect";
 
 import type { Fields } from "./fields.ts";
+
+const Props = Schema.Record(Schema.String, Schema.Json);
+
+/**
+ * Example content for one block version, stored beside it in `fixtures/`. A
+ * section's fixture carries the items in its slots.
+ */
+export const BlockFixture = Schema.Struct({
+  variant: Schema.String,
+  surface: Schema.optionalKey(Surface),
+  props: Props,
+  slots: Schema.optionalKey(
+    Schema.Record(
+      Schema.String,
+      Schema.Array(Schema.Struct({ type: BlockType, variant: Schema.String, props: Props })),
+    ),
+  ),
+});
+export type BlockFixture = typeof BlockFixture.Type;
 
 /** A named list of item blocks inside a section, and the item types it accepts. */
 export interface SlotSpec {
@@ -13,6 +33,9 @@ export interface SlotSpec {
  * Where a block goes. Sections sit at the top of a page, choose a surface and
  * may hold items in slots. Items sit in a section's slot and have neither. A
  * site's header and footer are one block each, shared by every page.
+ *
+ * Sections and items can be added to a page, so they carry the placeholder
+ * content a new one starts with: their `placeholder` fixture.
  */
 export type Placement =
   | {
@@ -21,8 +44,9 @@ export type Placement =
       readonly slots: Readonly<Record<string, SlotSpec>>;
       /** Interactive blocks hydrate on the site, so they must be top-level sections. */
       readonly interactive: boolean;
+      readonly placeholder: BlockFixture;
     }
-  | { readonly placement: "item" }
+  | { readonly placement: "item"; readonly placeholder: BlockFixture }
   | {
       readonly placement: "header" | "footer";
       readonly surfaces: readonly [Surface, ...Array<Surface>];
