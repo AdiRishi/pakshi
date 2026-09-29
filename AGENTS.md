@@ -13,11 +13,9 @@ truth. A checkpoint is done when its "Done when" checks pass.
 Infrastructure belongs in `infra/`; Worker bindings are defined once in
 `infra/src/worker-bindings.ts` and imported by each runtime.
 
-Production data is never deleted by a deploy. D1, R2, KV and the Workers that
-host Durable Objects are retained in production, and `pnpm plan:check` fails a
-plan that deletes a D1 database, an R2 bucket or a Durable Object class. A
-Durable Object's data is keyed by its binding name in `worker-bindings.ts`:
-renaming the binding deletes the class, so rename with `className` instead.
+A Durable Object's data is keyed by its binding name in `worker-bindings.ts`:
+renaming the binding deletes the class and its data. To rename the class, change
+its `className` and keep the binding name.
 
 `pnpm dev` and the infra tests need an Alchemy Cloudflare profile, because stack
 state lives in Cloudflare. Non-production stages seed the test users from

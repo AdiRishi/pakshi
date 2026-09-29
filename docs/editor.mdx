@@ -251,7 +251,7 @@ When `@tiptap/core` and `@dnd-kit/react` enter the workspace catalog, add their 
 - **Browser tests** (Vitest browser mode with Playwright, already in the workspace) cover each [remote-change rule](#remote-changes), input-method composition, and keyboard-only journeys.
 - **Screenshot parity:** every fixture of every live block version is captured in the canvas and in `sites`, in light and dark, and they must match. This is the [quality gate](/technical-design#blocks-and-versioning) every block release already runs.
 - **Accessibility:** axe runs on the editor screen.
-- **Two browsers on staging:** the [live co-editing checkpoint](/build-plan#4-live-co-editing) runs a scripted session in two browsers against one draft.
+- **Two browsers:** the [live co-editing checkpoint](/build-plan#4-live-co-editing) runs a scripted session in two browsers against one draft in the dev stack.
 
 ## Mistakes to avoid
 

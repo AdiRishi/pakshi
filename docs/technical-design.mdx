@@ -88,9 +88,9 @@ We start from [application-platform-starter](https://github.com/AdiRishi/applica
 | `tooling/`                       | Shared TypeScript configs and the starter's oxlint rules                                                                                                                                                                              |
 | `docs/`                          | Blume documentation site and repository ADRs                                                                                                                                                                                          |
 
-**Environments** are Alchemy stages: local development uses Alchemy's local emulation, per-branch and staging stages run in a non-production Cloudflare account, and production runs in its own account so customer data and limits stay separate. CI deploys with the starter's commands, and `test:infra-live` deploys, tests and removes an isolated stage. Only staging and production have custom hostnames and a preview domain; branch stages use `workers.dev`.
+**Environments** are two Alchemy stacks ([decision 028](/decision-log#decision-028)): `dev`, which runs locally on Alchemy's emulation, and `prod`, in its own Cloudflare account so customer data and limits stay separate. Infrastructure test suites deploy throwaway local stages. Production has the custom hostnames and the preview domain.
 
-**Production data safety:** production has no destroy script, and no bucket is force-destroyed. Production D1 databases and R2 buckets are retained on removal. Durable Object data can't be retained that way: when a class leaves a Worker, Alchemy deploys a migration that deletes the class and all its data. So CI fails if a production plan deletes a D1 database, an R2 bucket or a Durable Object class.
+**Destroying a stack** deletes everything in it: its Workers with their Durable Object data, its D1 database, its KV namespace and its R2 bucket, which is emptied first. A Durable Object's data is keyed by its binding name, so renaming a binding also deletes the class and its data; renaming the class keeps them.
 
 ## Where data lives
 
@@ -429,7 +429,7 @@ All public hostnames point to the `sites` Worker through Cloudflare for SaaS, us
 
 - **Observability:** Workers Logs and tracing on all four Workers; AI Gateway for model cost, latency and errors per brand.
 - **Alerts:** error rate on `sites`, form intake failures, publish failures and D1/KV mismatches, unsent emails, custom hostname certificate problems, and agent cost per brand per day.
-- **Backups:** D1 Time Travel restores `core` to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery, through `restoreTo` on `SiteDoc` and `SiteSubmissions`. Every published snapshot in R2 is already a full copy of that release. A restore drill in staging restores one `SiteDoc` and the `core` database, then runs the D1/KV reconcile.
+- **Backups:** D1 Time Travel restores `core` to any minute in the last 30 days ([Time Travel](https://developers.cloudflare.com/d1/reference/time-travel/)). Durable Objects offer 30-day point-in-time recovery, through `restoreTo` on `SiteDoc` and `SiteSubmissions`. Every published snapshot in R2 is already a full copy of that release. A restore drill in production, before real sites launch, restores one `SiteDoc` and the `core` database, then runs the D1/KV reconcile.
 
 ## Deliberately not built
 

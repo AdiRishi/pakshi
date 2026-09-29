@@ -4,16 +4,15 @@ import * as Effect from "effect/Effect";
 import * as Schema from "effect/Schema";
 import { HttpClient } from "effect/unstable/http";
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
-import { expect, inject } from "vitest";
+import { expect } from "vitest";
 
 import Stack from "../alchemy.run.ts";
 import { waitForWorker } from "./support/worker-readiness.ts";
 
-const live = inject("live");
 const { test, beforeAll, afterAll, deploy, destroy } = Test.make({
   providers: Cloudflare.providers(),
   stage: `test-${crypto.randomUUID().slice(0, 8)}`,
-  dev: !live,
+  dev: true,
 });
 
 const stack = beforeAll(
@@ -49,9 +48,7 @@ test(
   }),
 );
 
-// The Cache API does nothing on workers.dev hostnames, so a live stage without
-// a custom domain can't show a hit.
-test.skipIf(live)(
+test(
   "a second request for a page is served from the cache",
   Effect.gen(function* () {
     const { sitesUrl } = yield* stack;

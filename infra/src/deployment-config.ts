@@ -5,11 +5,11 @@ import * as Function from "effect/Function";
 import * as Record from "effect/Record";
 import * as Schema from "effect/Schema";
 
-type Environment = "local" | "staging" | "production" | "test";
+type Environment = "local" | "production" | "test";
 
+/** The two stacks: local development and production. Test suites deploy throwaway local stages. */
 const stages = {
   dev: "local",
-  staging: "staging",
   prod: "production",
 } as const satisfies Record<string, Environment>;
 

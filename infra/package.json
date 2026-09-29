@@ -19,11 +19,8 @@
     "dev:destroy": "alchemy destroy --stage dev",
     "plan": "alchemy plan --stage prod",
     "test": "vitest run --config vitest.config.ts",
-    "test:live": "vitest run --config vitest.live.config.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
-    "deploy:staging": "alchemy deploy --stage staging --yes",
-    "plan:staging": "alchemy plan --stage staging",
-    "plan:check": "node scripts/check-production-plan.ts"
+    "prod:destroy": "alchemy destroy --stage prod --yes"
   },
   "dependencies": {
     "@effect/platform-node": "catalog:",

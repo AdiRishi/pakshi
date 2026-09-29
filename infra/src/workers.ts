@@ -1,4 +1,3 @@
-import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 
@@ -19,9 +18,9 @@ const workerDefaults = {
 };
 
 /**
- * Form intake, and the SiteSubmissions Durable Objects. Production retains it
- * with their data. studio-api binds those objects by this Worker's name, so the
- * name is fixed per stage rather than generated at deploy time.
+ * Form intake, and the SiteSubmissions Durable Objects. studio-api binds those
+ * objects by this Worker's name, so the name is fixed per stage rather than
+ * generated at deploy time.
  */
 export const sitesApiName = (stage: string) => `pakshi-sites-api-${stage}`;
 
@@ -32,7 +31,7 @@ export const SitesApi = Effect.gen(function* () {
     name: sitesApiName(config.stage),
     main: "../workers/sites-api/src/index.ts",
     env: sitesApiBindings(config.environment),
-  }).pipe(Alchemy.RemovalPolicy.retain(config.production));
+  });
 });
 
 /** Domain logic, sign-in, and the SiteDoc and SiteAgent Durable Objects. */
@@ -49,7 +48,7 @@ export const StudioApi = Effect.gen(function* () {
     ...workerDefaults,
     main: "../workers/studio-api/src/index.ts",
     env,
-  }).pipe(Alchemy.RemovalPolicy.retain(config.production));
+  });
 });
 
 const memo = (...paths: ReadonlyArray<string>) => ({

@@ -12,7 +12,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - **Build the checkpoints in order.** Each one starts from the finished state of the one before it.
 - **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
 - **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
-- **Every checkpoint deploys to staging** and ends in a demo someone can run there.
+- **Every checkpoint ends in a demo** someone can run locally with `pnpm dev`. Checks that need Cloudflare's network, such as custom hostnames or KV propagation, run against production.
 - **The riskiest work comes first.** Checkpoints 1 to 5 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
 - **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
 - **This doc changes as we learn.** Tick checkpoints off, and split or reorder them when that makes the work clearer.
@@ -36,7 +36,7 @@ Turn the starter into Pakshi's four Workers and prove that everything deploys to
 
 **Build:**
 
-- Remove the starter's sample CSV app, its `prod:destroy` script and `forceDestroy` on buckets. Add the [production data safety](/technical-design#repository-and-environments) CI check. Update `AGENTS.md` and `apps/web/AGENTS.md`, and record the new layout in an ADR.
+- Remove the starter's sample CSV app, and make [destroying a stack](/technical-design#repository-and-environments) delete everything in it. Update `AGENTS.md` and `apps/web/AGENTS.md`, and record the new layout in an ADR.
 - The [repository layout](/technical-design#repository-and-environments): `sites` (Astro 7), `sites-api`, `studio` (from `apps/web`) and `studio-api` as a plain Worker, all in the Alchemy graph. Declare the `SiteDoc`, `SiteAgent` and `SiteSubmissions` Durable Object classes, even if they do little yet.
 - D1 `core` with users and sessions, and [staff sign-in](/technical-design#security-and-access) through Better Auth's `genericOAuth` against a test OIDC provider.
 - `authorize` with the permission catalogue and the [default roles](/product-spec#roles-and-permissions), seeded for test users. There's no permissions UI yet.
@@ -44,14 +44,13 @@ Turn the starter into Pakshi's four Workers and prove that everything deploys to
 - `packages/blocks` with the field builders, the [field components](/editor#with-blocks) blocks render their fields through, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme preset in light and dark.
 - `sites` [serving](/technical-design#publishing-serving-and-previews) a hand-written snapshot from R2 through the KV `host → site → release` lookup, with the release and Worker version in the cache key.
 
-**Demo:** sign in to Studio on staging, then open a platform subdomain that serves a page from the hand-written snapshot, in light and dark.
+**Demo:** sign in to Studio in the dev stack, then open the Sites address, which serves a page from the hand-written snapshot, in light and dark.
 
 **Done when:**
 
-- `pnpm dev` runs all four Workers and the three Durable Object classes locally, and `test:infra-live` deploys them to an isolated stage and removes it.
-- A test user signs in through the test OIDC provider on staging.
+- `pnpm dev` runs all four Workers and the three Durable Object classes locally.
+- A test user signs in through the test OIDC provider in the dev stack.
 - The served page matches its fixture screenshot in light and dark, and a second request is a cache hit.
-- CI fails a production plan that deletes a Durable Object class, a D1 database or an R2 bucket.
 - `authorize` has tests for every default role on organization, brand and site scopes.
 
 **Proves:** hosting in Alchemy.
@@ -114,7 +113,7 @@ Several people and their presence in one draft, and no one loses their place whe
 - [Live collaboration](/technical-design#editing-the-site-document-and-the-editor): broadcast, presence per draft, page, block and field, confirmation by batch ID and resending after a reconnect, later write wins with a notice, dropped ops on removed blocks with a notice, the typing marker, and the per-connection permission cache.
 - In the editor: pending batches replayed over each broadcast, other people's presence on the canvas, and the [rules for remote changes](/editor#remote-changes).
 
-**Demo:** two browsers edit the same page on staging, each seeing the other's presence and changes live.
+**Demo:** two browsers edit the same page in the dev stack, each seeing the other's presence and changes live.
 
 **Done when:**
 
@@ -143,7 +142,7 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 **Done when:**
 
 - Scripted merge cases produce the expected valid result for every conflict type, the non-conflicts (identical changes, additions on both sides), site-level parts, and sides on different block versions.
-- A publish and a rollback are each live on a staging platform subdomain within 60 seconds.
+- A publish and a rollback are each live on a production platform subdomain within 60 seconds.
 - Two publishes started at once on one site happen one after the other.
 - The reconcile job restores a KV entry that was changed by hand.
 - After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
@@ -243,7 +242,7 @@ Everything else a real site needs.
 
 - A form post lands only in that site's `SiteSubmissions` and sends its notification.
 - Flooding one site's form leaves another site's forms working.
-- A custom hostname serves over HTTPS on staging.
+- A custom hostname serves over HTTPS in production.
 - An unpublished page returns 410 and leaves the sitemap and menus.
 - A deleted site stops serving at once, and an org admin can restore it within 30 days.
 
@@ -257,7 +256,7 @@ Finish access control, safety and operations, then run real sites on Pakshi.
 - The audit log's viewer, with every audited action recorded.
 - Pre-flight's [accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
 - The content security policy on every site.
-- [Operations](/technical-design#operations): alerts, and the restore drill in staging.
+- [Operations](/technical-design#operations): alerts, and the restore drill in production.
 - Block requests filed into the platform team's tracker.
 - Recording for every [success metric](/product-spec#success-metrics).
 

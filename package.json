@@ -17,9 +17,8 @@
     "sync:repos": "node scripts/src/sync-reference-repos.ts",
     "test": "turbo test",
     "test:unit": "turbo test --filter=!@repo/infra",
-    "test:infra-live": "pnpm --filter @repo/infra test:live",
     "typecheck": "turbo typecheck",
-    "plan:check": "pnpm --filter @repo/infra plan:check"
+    "prod:destroy": "pnpm --filter @repo/infra prod:destroy"
   },
   "devDependencies": {
     "@effect/tsgo": "catalog:",

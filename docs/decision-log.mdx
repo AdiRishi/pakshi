@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                         | Date       | Status            |
 | --- | -------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 028 | Two stacks, dev and prod, and destroying one deletes everything                  | 2026-09-29 | Accepted          |
 | 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware | 2026-09-29 | Accepted          |
 | 026 | Drafts may be incomplete; completeness is checked at submission                  | 2026-09-29 | Accepted          |
 | 025 | Build our own visual editor on the page document, instead of Puck                | 2026-09-29 | Accepted          |
@@ -37,6 +38,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 002 | Host on Cloudflare                                                               | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                         | 2026-09-27 | Accepted          |
 
+## 028 — Two stacks, dev and prod, and destroying one deletes everything [#decision-028]
+
+**Context.** The design had branch, staging and production stages, retained production's D1 databases and R2 buckets on removal, and failed CI on any production plan that deleted a database, a bucket or a Durable Object class. That meant another account to run, and teardown that left data behind.
+
+**Decision.** Pakshi has two stacks: `dev`, which runs locally, and `prod`. `dev:destroy` and `prod:destroy` delete everything in the stack, Durable Object data and the R2 bucket's contents included. Test suites deploy throwaway local stages. Checks that need Cloudflare's network run against production.
+
+**Rejected.** A staging stage; retaining production stores on removal; a CI check on the production plan.
+
+**Consequences.** Nothing stands between a destroy, a removed resource or a renamed Durable Object binding and production data. Recovery relies on D1 Time Travel and Durable Object point-in-time recovery within their 30-day windows, and a destroyed stack can't be recovered that way.
+
 ## 027 — Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware [#decision-027]
 
 **Context.** The design named `@astrojs/cloudflare`. Alchemy's `Website.Astro` resource, which builds, emulates and deploys the `sites` Worker, adds its own fork of that adapter, fails the build if the app declares one, and owns the Worker's entry file. `sites` has to look up the host and release in KV and serve pages from the Workers Cache API before Astro renders.
@@ -45,7 +56,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Rejected.** Building with the upstream adapter and deploying the output as a plain Worker, which gives up Alchemy's local emulation and build memoization for `sites`; a separate front Worker for caching, which adds a fifth Worker.
 
-**Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so page caching works only on custom domains; branch stages render every request.
+**Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so deployed page caching needs a custom domain; the dev stack emulates the cache locally.
 
 ## 026 — Drafts may be incomplete; completeness is checked at submission [#decision-026]
 
