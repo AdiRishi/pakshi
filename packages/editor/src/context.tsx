@@ -1,19 +1,27 @@
 import type { BlockDefinition, Field } from "@repo/blocks";
 import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
-import type { PropPath, Target } from "@repo/contracts/ops";
+import type { BlockList, PropPath, Target } from "@repo/contracts/ops";
 import type { MediaSummary } from "@repo/contracts/studio";
 import type { Editor } from "@tiptap/core";
 import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 
+import type { Origin } from "./run-command.ts";
 import type { EditorState, EditorStore } from "./store.ts";
 
-/** What the editor needs from Studio besides the draft: block versions, images and their addresses. */
+/**
+ * What the editor needs from Studio besides the draft: block versions, images
+ * and their addresses, and what a page is rendered with.
+ */
 export interface EditorServices {
   readonly store: EditorStore;
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
   readonly media: ReadonlyArray<MediaSummary>;
   /** The address the canvas loads an image from. */
   readonly mediaSrc: (id: MediaId) => string;
+  /** The address of the stylesheet `sites` renders pages with. */
+  readonly siteCss: string;
+  /** The color scheme the canvas and block previews show the theme in. */
+  readonly scheme: "light" | "dark";
 }
 
 const ServicesContext = createContext<EditorServices | null>(null);
@@ -76,8 +84,20 @@ export interface ActiveRichText {
   readonly element: HTMLElement;
 }
 
+/** A spot in a list where a new block can go: after a block, or first when `after` is null. */
+export interface InsertSpot {
+  readonly list: BlockList;
+  readonly after: BlockId | null;
+}
+
 /** Controls that render in Studio, opened from fields in the canvas, and the way back. */
 export interface EditorUi {
+  /** Tells a screen reader what just changed. */
+  readonly announce: (message: string) => void;
+  /** Opens the block picker for a spot, beside an element or the block it follows. */
+  readonly openPicker: (spot: InsertSpot, anchor: Element | Origin) => void;
+  /** Moves focus to the selected block or field, where a command started. */
+  readonly focusSelection: (origin: Origin) => void;
   readonly openMedia: (field: FieldTarget, anchor: HTMLElement) => void;
   readonly setActiveRichText: (active: ActiveRichText | null) => void;
   /** Moves focus to a field on the page. */

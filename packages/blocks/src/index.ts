@@ -61,6 +61,7 @@ export {
 export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 export type { RichTextDocument, RichTextMark, RichTextNode } from "./rich-text.ts";
+export { richTextLines } from "./rich-text.ts";
 export { blockKey, loadBlock, loadBlocks, renderBlock, renderPage } from "./render.tsx";
 export type { PageEntry } from "./site-data.ts";
 export { siteData } from "./site-data.ts";

@@ -60,20 +60,18 @@ const sameEntries = (a: ReadonlyArray<PageEntry>, b: ReadonlyArray<PageEntry>) =
 const usePageEntries = () =>
   useEditorState((state): ReadonlyArray<PageEntry> => Object.values(state.view.pages), sameEntries);
 
-/** The page being edited, with the site's header and footer, as `sites` lays it out. */
-export function PageView() {
+/** What blocks read beyond their props, from the draft as the person sees it. */
+export const useDraftSiteData = () => {
   const { media, mediaSrc } = useServices();
-  const page = useEditorState((state) => state.page);
-  const root = useEditorState((state) => state.view.pages[state.page]?.root);
-  const parts = useEditorState((state) => state.view.parts);
+  const menus = useEditorState((state) => state.view.parts.menus);
   const settings = useEditorState((state) => state.view.settings);
   const forms = useEditorState((state) => state.view.forms);
   const pages = usePageEntries();
-  const data = useMemo(() => {
+  return useMemo(() => {
     const files = new Map(media.map((file) => [file.id, file]));
     return siteData({
       settings,
-      menus: parts.menus,
+      menus,
       pages,
       forms,
       media: (id) => {
@@ -83,7 +81,15 @@ export function PageView() {
           : { src: mediaSrc(id), width: file.width, height: file.height };
       },
     });
-  }, [settings, parts.menus, pages, forms, media, mediaSrc]);
+  }, [settings, menus, pages, forms, media, mediaSrc]);
+};
+
+/** The page being edited, with the site's header and footer, as `sites` lays it out. */
+export function PageView() {
+  const page = useEditorState((state) => state.page);
+  const root = useEditorState((state) => state.view.pages[state.page]?.root);
+  const parts = useEditorState((state) => state.view.parts);
+  const data = useDraftSiteData();
   return (
     <SiteDataProvider value={data}>
       <TargetProvider value="site">

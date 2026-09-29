@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useRef, useState } from "react";
+import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 /*
@@ -31,18 +31,20 @@ const shell = (siteCss: string) =>
   `<style data-pakshi-editor></style></head><body><div data-pakshi-canvas></div></body></html>`;
 
 /**
- * A same-origin frame that Studio's React tree renders the page into through
- * a portal. It loads only the site stylesheet and the draft's theme, never
+ * A same-origin frame that Studio's React tree renders into through a portal.
+ * It loads only the site stylesheet, the draft's theme and `extraCss`, never
  * Studio's styles, and its width is the page's own, so its media queries apply.
  */
-export function CanvasFrame(props: {
+export function Frame(props: {
   readonly title: string;
   readonly siteCss: string;
   readonly themeCss: string;
-  /** The editor's own accent color, read from Studio's theme. */
-  readonly accent: string;
-  readonly width: number | null;
-  readonly onDocument?: (document: Document) => void;
+  readonly extraCss?: string;
+  readonly className?: string;
+  readonly style?: CSSProperties;
+  /** A frame that only shows something: it takes no focus and hides from assistive technology. */
+  readonly inert?: boolean;
+  readonly onDocument?: ((document: Document) => void) | undefined;
   readonly children: ReactNode;
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
@@ -77,10 +79,9 @@ export function CanvasFrame(props: {
 
   useEffect(() => {
     const document = root?.ownerDocument;
-    const editor = document?.querySelector("style[data-pakshi-editor]");
-    if (editor !== null && editor !== undefined)
-      editor.textContent = `:root { --pakshi-editor-accent: ${props.accent}; }${editorCss}`;
-  }, [root, props.accent]);
+    const extra = document?.querySelector("style[data-pakshi-editor]");
+    if (extra !== null && extra !== undefined) extra.textContent = props.extraCss ?? "";
+  }, [root, props.extraCss]);
 
   return (
     <>
@@ -89,10 +90,39 @@ export function CanvasFrame(props: {
         title={props.title}
         srcDoc={srcDoc}
         onLoad={attach}
-        className="mx-auto block h-full border-0 bg-background shadow-sm transition-[width]"
-        style={{ width: props.width === null ? "100%" : props.width }}
+        className={props.className}
+        style={props.style}
+        tabIndex={props.inert === true ? -1 : undefined}
+        aria-hidden={props.inert === true || undefined}
+        inert={props.inert === true || undefined}
       />
       {root !== null && createPortal(props.children, root)}
     </>
+  );
+}
+
+/** The canvas's frame: the page at a chosen width, with the editor's outlines drawn in its accent. */
+export function CanvasFrame(props: {
+  readonly title: string;
+  readonly siteCss: string;
+  readonly themeCss: string;
+  /** The editor's own accent color, read from Studio's theme. */
+  readonly accent: string;
+  readonly width: number | null;
+  readonly onDocument?: (document: Document) => void;
+  readonly children: ReactNode;
+}) {
+  return (
+    <Frame
+      title={props.title}
+      siteCss={props.siteCss}
+      themeCss={props.themeCss}
+      extraCss={`:root { --pakshi-editor-accent: ${props.accent}; }${editorCss}`}
+      className="mx-auto block h-full border-0 bg-background shadow-sm transition-[width]"
+      style={{ width: props.width === null ? "100%" : props.width }}
+      onDocument={props.onDocument}
+    >
+      {props.children}
+    </Frame>
   );
 }

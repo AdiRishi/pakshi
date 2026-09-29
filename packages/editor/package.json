@@ -14,6 +14,9 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@dnd-kit/abstract": "catalog:",
+    "@dnd-kit/dom": "catalog:",
+    "@dnd-kit/react": "catalog:",
     "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/domain": "workspace:*",
@@ -22,6 +25,7 @@
     "@tiptap/core": "catalog:",
     "@tiptap/extensions": "catalog:",
     "@tiptap/pm": "catalog:",
+    "cn": "catalog:",
     "effect": "catalog:",
     "lucide-react": "catalog:",
     "react": "catalog:",

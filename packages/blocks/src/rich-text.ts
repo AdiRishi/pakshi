@@ -62,16 +62,20 @@ const markTypes = (document: RichTextDocument) => {
   return found;
 };
 
-/** Whether a rich text value holds no text at all. */
-export const isEmptyRichText = (document: RichTextDocument) => {
-  const hasText = (inline: ReadonlyArray<typeof Inline.Type> | undefined) =>
-    (inline ?? []).some((node) => node.type === "text" && node.text.trim().length > 0);
-  return !document.content.some((node) =>
+/** The text of each paragraph and heading, list items' paragraphs included, in order. */
+export const richTextLines = (document: RichTextDocument) => {
+  const text = (inline: ReadonlyArray<typeof Inline.Type> | undefined) =>
+    (inline ?? []).map((node) => (node.type === "text" ? node.text : " ")).join("");
+  return document.content.flatMap((node) =>
     node.type === "paragraph" || node.type === "heading"
-      ? hasText(node.content)
-      : node.content.some((item) => item.content.some((paragraph) => hasText(paragraph.content))),
+      ? [text(node.content)]
+      : node.content.flatMap((item) => item.content.map((paragraph) => text(paragraph.content))),
   );
 };
+
+/** Whether a rich text value holds no text at all. */
+export const isEmptyRichText = (document: RichTextDocument) =>
+  richTextLines(document).every((line) => line.trim().length === 0);
 
 /** A rich text value that uses only the marks and nodes its field allows. */
 export const richTextSchema = (
