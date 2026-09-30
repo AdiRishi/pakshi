@@ -5,9 +5,8 @@ import type { Lockfile } from "@repo/contracts/snapshot";
 import { Fragment } from "react";
 
 import type { BlockDefinition } from "./block.tsx";
+import { blockKey } from "./contract.ts";
 import { registry } from "./registry.gen.ts";
-
-export const blockKey = (type: string, version: number) => `${type}@${version}`;
 
 /** Loads the version of a block type that a lockfile pins. */
 export const loadBlock = async (type: BlockType, lockfile: Lockfile) => {
@@ -25,6 +24,34 @@ export const loadBlocks = async (lockfile: Lockfile) =>
       Object.keys(lockfile).map(async (type) => [type, await loadBlock(type, lockfile)] as const),
     ),
   );
+
+/**
+ * Loads every version of each block type, from the oldest to the newest that
+ * any of these lockfiles pins, keyed as the registry names them. Content can
+ * migrate through them from any of the lockfiles to any other.
+ */
+export const loadBlockVersions = async (lockfiles: ReadonlyArray<Lockfile>) => {
+  const ranges = new Map<BlockType, { readonly from: number; readonly to: number }>();
+  for (const lockfile of lockfiles)
+    for (const [type, version] of Object.entries(lockfile)) {
+      const range = ranges.get(type);
+      ranges.set(type, {
+        from: Math.min(range?.from ?? version, version),
+        to: Math.max(range?.to ?? version, version),
+      });
+    }
+  const versions = Array.from(ranges).flatMap(([type, { from, to }]) =>
+    Array.from({ length: to - from + 1 }, (_, index) => ({ type, version: from + index })),
+  );
+  return new Map<string, BlockDefinition>(
+    await Promise.all(
+      versions.map(
+        async ({ type, version }) =>
+          [blockKey(type, version), await loadBlock(type, { [type]: version })] as const,
+      ),
+    ),
+  );
+};
 
 /**
  * Renders one placed block, with the items in its slots. Snapshots are checked

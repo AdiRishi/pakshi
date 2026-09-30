@@ -11,11 +11,12 @@ import { describe, expect, test } from "vitest";
 import { fixturesSource, registrySource } from "../scripts/generate-registry.ts";
 import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
+import { blockKey } from "../src/contract.ts";
 import { propsSchema } from "../src/fields.ts";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
-import { blockKey, loadBlocks, renderBlock } from "../src/render.tsx";
+import { loadBlocks, renderBlock } from "../src/render.tsx";
 import { siteData } from "../src/site-data.ts";
 
 const load = async (type: string, version: number) => {

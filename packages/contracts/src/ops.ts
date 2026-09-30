@@ -1,8 +1,11 @@
-import { Surface } from "@repo/tokens";
+import { ResolvedTheme, Surface } from "@repo/tokens";
 import { Schema } from "effect";
 
-import { BatchId, BlockId, BlockType, PageId } from "./ids.ts";
+import { FormDefinition } from "./form.ts";
+import { BatchId, BlockId, BlockType, FormId, PageId } from "./ids.ts";
 import { PageDocument, PagePath } from "./page.ts";
+import { Menus, SiteSettings } from "./site.ts";
+import { LiveRelease, Lockfile } from "./snapshot.ts";
 
 /** Where a block lives: a page, or the site-level parts that hold the header and footer. */
 export const Target = Schema.Union([PageId, Schema.Literal("site")]);
@@ -134,6 +137,23 @@ export type CreatePage = typeof CreatePage.Type;
 export const DeletePage = Schema.Struct({ op: Schema.Literal("deletePage"), page: PageId });
 export type DeletePage = typeof DeletePage.Type;
 
+/**
+ * Moves a draft onto a release, with the site-wide values only a merge
+ * changes: the block lockfile, the theme, settings, forms and menus. SiteDoc
+ * makes it when it merges a release into a draft or publishes the draft;
+ * people's batches can't carry it.
+ */
+export const Rebase = Schema.Struct({
+  op: Schema.Literal("rebase"),
+  base: LiveRelease,
+  lockfile: Lockfile,
+  theme: ResolvedTheme,
+  settings: SiteSettings,
+  forms: Schema.Record(FormId, FormDefinition),
+  menus: Menus,
+});
+export type Rebase = typeof Rebase.Type;
+
 /** One change to a draft. People, the agent, undo and merging all speak this vocabulary. */
 export const Op = Schema.Union([
   SetProp,
@@ -146,6 +166,7 @@ export const Op = Schema.Union([
   SetPath,
   CreatePage,
   DeletePage,
+  Rebase,
 ]);
 export type Op = typeof Op.Type;
 
@@ -194,6 +215,10 @@ export const BatchRule = Schema.Literals([
   "page",
   /** The person may no longer edit this draft. */
   "permission",
+  /** Only SiteDoc makes this change, when it merges or publishes. */
+  "system",
+  /** The draft was published or closed, so it takes no more changes. */
+  "closed",
 ]);
 export type BatchRule = typeof BatchRule.Type;
 

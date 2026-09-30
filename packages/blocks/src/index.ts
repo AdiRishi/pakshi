@@ -1,6 +1,6 @@
 export type { BlockComponentProps, BlockDefinition, RenderInput, RenderResult } from "./block.tsx";
-export type { BlockContract, Placement, SlotSpec } from "./contract.ts";
-export { BlockFixture } from "./contract.ts";
+export type { BlockContract, Placement, SlotSpec, StoredProps } from "./contract.ts";
+export { BlockFixture, blockKey } from "./contract.ts";
 export { defineBlock } from "./block.tsx";
 export type {
   FieldAddress,
@@ -62,6 +62,6 @@ export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 export type { RichTextDocument, RichTextMark, RichTextNode } from "./rich-text.ts";
 export { richTextLines } from "./rich-text.ts";
-export { blockKey, loadBlock, loadBlocks, renderBlock, renderPage } from "./render.tsx";
+export { loadBlock, loadBlocks, loadBlockVersions, renderBlock, renderPage } from "./render.tsx";
 export type { PageEntry } from "./site-data.ts";
 export { siteData } from "./site-data.ts";

@@ -45,6 +45,8 @@ export const partChanged = (op: Op, draft: Draft, contracts: BlockContracts) => 
     case "createPage":
     case "deletePage":
       return "the site's pages";
+    case "rebase":
+      return "the site";
   }
 };
 

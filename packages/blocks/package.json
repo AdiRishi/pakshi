@@ -8,19 +8,23 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./fixtures": {
-      "types": "./src/fixtures.ts",
-      "default": "./src/fixtures.ts"
+    "./contract": {
+      "types": "./src/contract.ts",
+      "default": "./src/contract.ts"
     },
-    "./site.css": "./src/site.css",
     "./fields": {
       "types": "./src/fields.ts",
       "default": "./src/fields.ts"
     },
-    "./contract": {
-      "types": "./src/contract.ts",
-      "default": "./src/contract.ts"
-    }
+    "./fixtures": {
+      "types": "./src/fixtures.ts",
+      "default": "./src/fixtures.ts"
+    },
+    "./placeholders": {
+      "types": "./src/placeholders.ts",
+      "default": "./src/placeholders.ts"
+    },
+    "./site.css": "./src/site.css"
   },
   "scripts": {
     "generate": "node scripts/generate-registry.ts",

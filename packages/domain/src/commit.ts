@@ -18,8 +18,9 @@ import {
  *
  * A part is named by a key of path segments from its page, or from `site`
  * for the header and footer: a field or a part of one, a block's variant,
- * surface or place, a whole block, a page's meta field or address, or a
- * whole page. A write to a part replaces every write to the parts below it.
+ * surface or place, a whole block, a page's meta field or address, a
+ * whole page, or the site-wide values a rebase sets. A write to a part
+ * replaces every write to the parts below it.
  */
 
 /** Who wrote a part of a draft last, and the revision their batch made. */
@@ -105,6 +106,8 @@ const partsOf = ({ op, before }: Step) => {
       return { own: keyOf([op.page.id]), items: [] };
     case "deletePage":
       return { own: keyOf([op.page]), items: [] };
+    case "rebase":
+      return { own: keyOf(["site", "rebase"]), items: [] };
   }
 };
 
