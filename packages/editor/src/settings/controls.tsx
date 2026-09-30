@@ -80,11 +80,16 @@ function ControlRow<F extends Field>(props: {
   readonly description?: ReactNode;
   readonly children: ReactNode;
 }) {
+  const store = useStore();
   const { run } = useRun();
   const incomplete =
     props.value !== undefined && !Schema.is(props.definition.complete)(props.value);
   return (
-    <FieldRow data-invalid={props.errors.length > 0 || undefined}>
+    // Working in any of the field's controls puts the person on that field, so others see where they are.
+    <FieldRow
+      data-invalid={props.errors.length > 0 || undefined}
+      onFocus={() => store.select({ kind: "field", ...props.field })}
+    >
       <div className="flex items-center justify-between gap-2">
         <FieldLabel htmlFor={controlId(props.field)}>
           {props.definition.title}
@@ -148,14 +153,12 @@ function TextControl(props: ControlProps<KindOf<"text">>) {
       {definition.multiline ? (
         <FieldTextarea
           {...shared}
-          onChange={(event) => run([setProp(field, event.target.value)], burstKey(field))}
+          onValue={(typed) => run([setProp(field, typed)], burstKey(field))}
         />
       ) : (
         <FieldInput
           {...shared}
-          onChange={(event) =>
-            run([setProp(field, event.target.value.replace(/\n/g, " "))], burstKey(field))
-          }
+          onValue={(typed) => run([setProp(field, typed.replace(/\n/g, " "))], burstKey(field))}
         />
       )}
     </ControlRow>
