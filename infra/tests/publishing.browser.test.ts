@@ -1,32 +1,16 @@
 import AxeBuilder from "@axe-core/playwright";
-import { expect, type FrameLocator, type Page, test } from "@playwright/test";
+import { expect, type Page, test } from "@playwright/test";
 
-import { newDraft, openInEditor, signedIn } from "./support/studio.ts";
-
-const sitesUrl = process.env.SITES_URL ?? "";
+import {
+  appendToHeading,
+  heading,
+  liveHome,
+  newDraft,
+  openInEditor,
+  signedIn,
+} from "./support/studio.ts";
 
 const wcag = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
-
-const heading = (canvas: FrameLocator, block: string) =>
-  canvas.locator(`[data-pakshi-block="${block}"] [data-pakshi-field="heading"]`);
-
-/** Adds text to the end of a block's heading, and waits for the draft to have it. */
-const appendToHeading = async (page: Page, canvas: FrameLocator, block: string, text: string) => {
-  const field = heading(canvas, block);
-  await field.evaluate((element) => {
-    element.focus();
-    const selection = element.ownerDocument.getSelection();
-    selection?.selectAllChildren(element);
-    selection?.collapseToEnd();
-  });
-  await page.keyboard.type(text);
-  await page.getByRole("button", { name: "Page settings" }).click();
-  await expect(page.getByText("Saved to the draft")).toBeVisible();
-};
-
-/** The live home page's HTML, fetched past any cache in between. */
-const liveHome = async (page: Page) =>
-  (await page.request.get(sitesUrl, { headers: { "cache-control": "no-cache" } })).text();
 
 const noViolations = async (page: Page) => {
   const results = await new AxeBuilder({ page })
@@ -57,14 +41,14 @@ test("two drafts publish one after the other through an update, and a rollback u
   await appendToHeading(sam, samCanvas, "b_register", " soon");
 
   // Meera publishes first. Her draft closes, and Sam's editor shows his is behind.
-  await meera.getByRole("button", { name: "Publish" }).click();
+  await meera.getByRole("button", { name: "Submit", exact: true }).click();
   await meera.getByRole("dialog").getByRole("button", { name: "Publish" }).click();
   await expect(meera.getByRole("alertdialog", { name: "You published this draft" })).toBeVisible();
   await expect.poll(() => liveHome(meera)).toContain(`${visible} each morning`);
   await expect(sam.getByText("Behind the live site")).toBeVisible();
 
   // Sam's publish needs his draft updated first, and the heading needs a decision.
-  await sam.getByRole("button", { name: "Publish" }).click();
+  await sam.getByRole("button", { name: "Submit", exact: true }).click();
   await sam.getByRole("dialog").getByRole("button", { name: "Publish" }).click();
   await expect(sam.getByRole("heading", { name: "Bring this draft up to date" })).toBeVisible();
   const conflict = sam.getByRole("region", { name: "Heading in Rich text" });
@@ -81,7 +65,7 @@ test("two drafts publish one after the other through an update, and a rollback u
 
   // Updated, the draft publishes with his heading and both drafts' other changes.
   await expect(sam.getByText("Up to date with live")).toBeVisible();
-  await sam.getByRole("button", { name: "Publish" }).click();
+  await sam.getByRole("button", { name: "Submit", exact: true }).click();
   await sam.getByRole("dialog").getByRole("button", { name: "Publish" }).click();
   await expect(sam.getByText("Summer copy is published")).toBeVisible();
   await expect

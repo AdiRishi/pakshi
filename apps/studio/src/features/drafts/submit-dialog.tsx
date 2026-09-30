@@ -61,7 +61,10 @@ function Checks(props: {
           return (
             <li key={check.title} className="flex gap-3 text-sm">
               {found.length === 0 ? (
-                <CircleCheckIcon className="mt-0.5 size-4 shrink-0 text-success" aria-hidden />
+                <CircleCheckIcon
+                  className="mt-0.5 size-4 shrink-0 text-success-foreground"
+                  aria-hidden
+                />
               ) : (
                 <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
               )}

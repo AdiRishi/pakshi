@@ -114,9 +114,8 @@ function StepEditor(props: {
             </FieldDescription>
             <div className="grid gap-3 sm:grid-cols-2">
               {DefaultRole.literals.map((role) => (
-                <Field key={role} orientation="horizontal">
+                <Label key={role} className="font-normal">
                   <Checkbox
-                    id={`${id}-${role}`}
                     checked={step.roles.includes(role)}
                     onCheckedChange={(checked) =>
                       props.onChange({
@@ -127,8 +126,8 @@ function StepEditor(props: {
                       })
                     }
                   />
-                  <Label htmlFor={`${id}-${role}`}>{roleTitles[role]}s</Label>
-                </Field>
+                  {roleTitles[role]}s
+                </Label>
               ))}
             </div>
             {step.people.length > 0 && (
@@ -248,7 +247,6 @@ export function WorkflowEditor(props: { readonly view: WorkflowView }) {
   const [own, setOwn] = useState<Workflow | null>(view.own);
   const [tried, setTried] = useState(false);
   const parent = parentOf[view.scope.kind];
-  const switchId = useId();
   const save = useMutation({
     mutationFn: (steps: Workflow | null) => saveWorkflow({ data: { scope: view.scope, steps } }),
     onSuccess: async (saved) => {
@@ -279,14 +277,13 @@ export function WorkflowEditor(props: { readonly view: WorkflowView }) {
       {parent !== null && (
         <Card>
           <CardContent className="flex flex-col gap-4">
-            <Field orientation="horizontal">
+            <Label>
               <Switch
-                id={switchId}
                 checked={own === null}
                 onCheckedChange={(inherit) => setOwn(inherit ? null : [...view.inherited.steps])}
               />
-              <FieldLabel htmlFor={switchId}>Use {parent} workflow</FieldLabel>
-            </Field>
+              Use {parent} workflow
+            </Label>
             {own === null && (
               <>
                 <StepList steps={view.inherited.steps} />
