@@ -72,7 +72,7 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
 ) {
   const workspace = yield* Workspace;
   const turn = yield* Turn;
-  const typed = typedOver(yield* workspace.typing, ops);
+  const typed = typedOver(draft, yield* workspace.typing, ops);
   if (typed.length > 0) return yield* fail(...typed);
   const media = unknownMedia(draft, ops);
   if (media.length > 0)

@@ -219,6 +219,38 @@ describe("a turn", () => {
     }),
   );
 
+  it.effect("won't remove a section someone is typing in", () =>
+    Effect.gen(function* () {
+      const { state, layer } = yield* Effect.promise(() => desk(harbourDraft));
+      state.typing = [
+        {
+          target: home,
+          block: BlockId.make("b_hero"),
+          path: ["heading"],
+          person: { id: "user_meera", name: "Meera Kapoor" },
+        },
+      ];
+      const model = scriptedModel([
+        {
+          calls: [
+            {
+              name: "apply_ops",
+              params: { page: "pg_home", ops: [{ op: "removeBlock", block: "b_hero" }] },
+            },
+          ],
+        },
+      ]);
+      yield* runTurn({
+        chat: yield* Chat.empty,
+        system: "",
+        message: "Remove the hero",
+        afterStep: Effect.void,
+      }).pipe(Effect.provide(Layer.merge(layer, model.layer)));
+      expect(state.commits).toEqual([]);
+      expect(JSON.stringify(model.calls[1]?.prompt)).toContain("Meera Kapoor is typing");
+    }),
+  );
+
   it.effect("fetches only addresses the person gave", () =>
     Effect.gen(function* () {
       const fetch = {
