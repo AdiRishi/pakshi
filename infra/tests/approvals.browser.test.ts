@@ -122,6 +122,11 @@ test("a draft shared by link goes through a two-step workflow, updating itself w
     await meera.goto(`${studioUrl}/approvals`);
     await meera.getByRole("link", { name: `Review ${summerCopy}` }).click();
     await expect(meera.getByText("Approved by Jonah Reyes")).toBeVisible();
+    // Links in the live site's page keep to the live site.
+    await meera.getByRole("button", { name: "Live site now" }).click();
+    await expect(
+      meera.frameLocator("iframe").getByRole("link", { name: "Programme" }).first(),
+    ).toHaveAttribute("href", /version=live/);
     await expect(meera.getByRole("button", { name: /Added|Heading in/ }).first()).toBeVisible();
     await noViolations(meera);
     await decide(meera, "Approve and publish");

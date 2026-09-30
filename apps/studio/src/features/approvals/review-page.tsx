@@ -317,9 +317,9 @@ export function ReviewPage(props: { readonly site: SiteId; readonly submission: 
         <Changes review={data} path={path} onPage={setPath} />
         <main className="flex min-w-0 flex-1 flex-col p-4">
           <iframe
-            key={`${version}${path}`}
+            key={`${submission.snapshot}${version}${path}`}
             title={`${version === "submitted" ? "Submitted version" : "Live version"} of ${page?.title || path}`}
-            src={`${reviewBasePath}/${data.site.id}/${submission.id}${path}?version=${version}`}
+            src={`${reviewBasePath}/${data.site.id}/${submission.id}${path}?${new URLSearchParams({ version, snapshot: submission.snapshot })}`}
             className="min-h-0 flex-1 rounded-md border bg-background"
           />
         </main>

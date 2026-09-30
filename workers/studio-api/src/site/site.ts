@@ -30,7 +30,7 @@ import {
   type DraftSummary,
   NothingToRollBack,
   type PageSummary,
-  type ReviewPage,
+  ReviewPage,
   type SiteView,
   type SubmissionNotFound,
   SubmitOutcome,
@@ -225,9 +225,14 @@ export class Site extends Context.Service<
       { readonly name: DraftName; readonly view: SiteView },
       StorageError | DraftNotFound
     >;
-    /** A page of a submission, or of the live release beside it, with the blocks the submission changed. */
+    /**
+     * A page of a submission, or of the live release beside it, with the
+     * blocks the submission changed, while the submission still has the
+     * snapshot the reviewer is looking at.
+     */
     readonly submissionView: (
       id: SubmissionId,
+      snapshot: SnapshotId,
       version: "submitted" | "live",
       path: PagePath,
     ) => Effect.Effect<ReviewPage, StorageError | SubmissionNotFound>;
@@ -991,15 +996,19 @@ export class Site extends Context.Service<
               return { name: (yield* drafts.summary(id)).name, view };
             }),
           ),
-        submissionView: Effect.fn("Site.submissionView")(function* (id, version, path) {
+        submissionView: Effect.fn("Site.submissionView")(function* (id, snapshot, version, path) {
           const { submission } = yield* approvals.get(id);
+          if (submission.snapshot !== snapshot) return ReviewPage.cases.Changed.make({});
           const target = yield* liveRelease;
           const view = yield* snapshotView(
             version === "submitted" ? submission.snapshot : target.snapshot,
             path,
           );
           const changes = yield* changesOf(submission);
-          return { view, changed: changedBlocks(changes, view.page?.id, version) };
+          return ReviewPage.cases.Page.make({
+            view,
+            changed: changedBlocks(changes, view.page?.id, version),
+          });
         }),
         decide: (approver, id, snapshot, decision, note, studio) =>
           inReleaseTurn(decisionOn(approver, id, snapshot, decision, note, studio)),

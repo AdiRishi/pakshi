@@ -477,6 +477,10 @@ it.effect(
         const merged = yield* site.submission(loaded.id);
         expect(merged.snapshot).not.toBe(loaded.snapshot);
         expect(merged.approvals.map((approval) => approval.by)).toEqual([jonah]);
+        // Reviewers see only the version they decide on.
+        expect(yield* site.submissionView(loaded.id, loaded.snapshot, "submitted", "/")).toEqual({
+          _tag: "Changed",
+        });
         expect(yield* approve(site, approver(meera), loaded)).toMatchObject({ _tag: "Stale" });
         const last = yield* approve(site, approver(meera), merged);
         if (last._tag !== "Published") return yield* Effect.die(`Not published: ${last._tag}`);
@@ -612,10 +616,13 @@ it.effect("a preview shows the draft's latest saved page, and a review marks wha
       });
       expect((yield* site.draftView(id, "/missing")).view.page).toBeNull();
       const submission = yield* submitted(site, id);
-      const submittedPage = yield* site.submissionView(submission.id, "submitted", "/");
-      expect(submittedPage.changed).toEqual(["b_hero"]);
-      const livePage = yield* site.submissionView(submission.id, "live", "/");
-      expect(headingOn(livePage.view.page ?? undefined)).toBe("Learn by building");
+      const shown = (version: "submitted" | "live") =>
+        Effect.flatMap(
+          site.submissionView(submission.id, submission.snapshot, version, "/"),
+          (page) => (page._tag === "Page" ? Effect.succeed(page) : Effect.die("It changed.")),
+        );
+      expect((yield* shown("submitted")).changed).toEqual(["b_hero"]);
+      expect(headingOn((yield* shown("live")).view.page ?? undefined)).toBe("Learn by building");
       expect((yield* site.review(submission.id)).changes).toMatchObject([
         { _tag: "ValueChanged", block: { id: "b_hero" }, field: "Heading" },
       ]);
