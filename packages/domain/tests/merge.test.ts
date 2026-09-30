@@ -55,8 +55,9 @@ const newBase = Schema.decodeSync(LiveRelease)({ release: "rel_two", snapshot: "
 const merge = (
   sides: { readonly draft: Draft; readonly live: Draft },
   resolutions: Resolutions = {},
+  from: Draft = harbourDraft,
 ) => {
-  const result = mergeSites({ base: harbourDraft, ...sides }, library, resolutions);
+  const result = mergeSites({ base: from, ...sides }, library, resolutions);
   const using = contractsAt(library, result.content.lockfile);
   const committed = applyOps(
     sides.draft,
@@ -258,6 +259,25 @@ describe("changes on one side", () => {
 });
 
 describe("a conflict", () => {
+  test("arises when list items added on each side together break the list's limit", () => {
+    const image = (id: string) => ({ id, image: { $ref: "media", id: "med_harbour", alt: id } });
+    const gallery = (ids: ReadonlyArray<string>): WireOp =>
+      setProp("b_gallery", ["images"], ids.map(image));
+    const full = Array.from({ length: 23 }, (_, index) => `it_photo${index}`);
+    const base = edit(harbourDraft, [gallery(full)]);
+    const draft = edit(base, [gallery([...full, "it_draft"])]);
+    const live = edit(base, [gallery([...full, "it_live"])]);
+    const { conflicts } = merge({ draft, live }, {}, base);
+    expect(conflicts).toEqual([
+      expect.objectContaining({ _tag: "Changed", field: "Images", kind: "list" }),
+    ]);
+    const images = block(
+      merge({ draft, live }, choosing(conflicts, "live"), base).content,
+      "b_gallery",
+    )?.props["images"];
+    expect(Array.isArray(images) && images.length).toBe(24);
+  });
+
   test("arises when both sides change one field differently, and keeps the side chosen", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
     const live = edit(harbourDraft, [heading("Sail a boat")]);

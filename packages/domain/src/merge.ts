@@ -17,7 +17,7 @@ import type { MetaField } from "@repo/contracts/ops";
 import { type BlockInstance, type PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
 import { MenuItem, type SiteParts } from "@repo/contracts/site";
 import type { Lockfile } from "@repo/contracts/snapshot";
-import { Equal, Predicate, Schema } from "effect";
+import { Equal, Option, Predicate, Schema } from "effect";
 import type { Json } from "effect/Schema";
 
 import type { BlockContracts } from "./document.ts";
@@ -359,20 +359,35 @@ const mergeContent = (
       live: live.props[name],
     };
     const value =
-      field?.kind === "list" ? mergeList(merge, fieldSpot, values) : merge.value(fieldSpot, values);
+      field?.kind === "list"
+        ? mergeList(merge, fieldSpot, values, field)
+        : merge.value(fieldSpot, values);
     if (value !== undefined) props[name] = value;
   }
   const merged = { type: draft.type, variant, props };
   return surface === undefined ? merged : { ...merged, surface };
 };
 
-/** A list field merged item by item, or the whole list as one conflict. */
-const mergeList = (merge: Merge, spot: ValueSpot, values: Sides<Json | undefined>) => {
-  const items = mergeItems({
+/**
+ * A list field merged item by item, or the whole list as one conflict. Each
+ * side's list is valid, but together they can break the field's rules, such
+ * as its most items; that's a conflict too.
+ */
+const mergeList = (
+  merge: Merge,
+  spot: ValueSpot,
+  values: Sides<Json | undefined>,
+  field: Field,
+) => {
+  const merged = mergeItems({
     base: itemsOf(values.base),
     draft: itemsOf(values.draft),
     live: itemsOf(values.live),
   });
+  const items =
+    merged !== "conflict" && Option.isSome(Schema.decodeOption(field.draft)(merged))
+      ? merged
+      : "conflict";
   if (items === "conflict")
     return merge.conflict({ _tag: "Changed", ...spot, draft: values.draft, live: values.live }) ===
       "draft"
