@@ -4,8 +4,8 @@ import AxeBuilder from "@axe-core/playwright";
 import { type Browser, expect, type FrameLocator, type Page, test } from "@playwright/test";
 
 import { fixtureSites, fixturesPath } from "../src/fixture-sites.ts";
+import { newDraft, signedIn } from "./support/studio.ts";
 
-const studioUrl = process.env.STUDIO_URL ?? "";
 const sitesUrl = new URL(process.env.SITES_URL ?? "http://localhost");
 
 const sites = await fixtureSites();
@@ -13,14 +13,17 @@ const sites = await fixtureSites();
 const wcag = ["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"];
 
 /** A browser page signed in to Studio as the org admin, who can edit every site. */
-const signedIn = async (browser: Browser) => {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 900 } });
-  const page = await context.newPage();
-  await page.goto(studioUrl);
-  await page.getByRole("link", { name: /^Continue with .* account$/ }).click();
-  await page.getByRole("button", { name: "Meera Kapoor" }).click();
-  await expect(page.getByRole("heading", { name: "Hello, Meera" })).toBeVisible();
-  return page;
+const asAdmin = (browser: Browser) => signedIn(browser, "Meera Kapoor");
+
+/** Each site's draft for these tests, started the first time a test opens the site. */
+const drafts = new Map<string, string>();
+
+const draftOf = async (page: Page, site: string) => {
+  const known = drafts.get(site);
+  if (known !== undefined) return known;
+  const url = await newDraft(page, site, "Editor tests");
+  drafts.set(site, url);
+  return url;
 };
 
 const fixturesUrl = (site: (typeof sites)[number]) =>
@@ -41,7 +44,7 @@ const openCanvas = async (
   site: (typeof sites)[number],
   scheme: "light" | "dark",
 ): Promise<FrameLocator> => {
-  await page.goto(`${studioUrl}/sites/${site.site.id}/pages/${site.page}`);
+  await page.goto(`${await draftOf(page, site.site.id)}/pages/${site.page}`);
   await page.getByRole("button", { name: scheme === "dark" ? "Dark" : "Light" }).click();
   const frame = page.frameLocator("iframe[title^='Canvas']");
   await expect(frame.locator("[data-pakshi-block]").first()).toBeVisible();
@@ -138,7 +141,7 @@ for (const scheme of ["light", "dark"] as const) {
   test(`every block fixture renders the same in the editor canvas and in sites, in ${scheme}`, async ({
     browser,
   }) => {
-    const studio = await signedIn(browser);
+    const studio = await asAdmin(browser);
     for (const site of sites) {
       const frame = await openCanvas(studio, site, scheme);
       const width = (await studio.locator("iframe[title^='Canvas']").boundingBox())?.width ?? 0;
@@ -229,7 +232,7 @@ for (const scheme of ["light", "dark"] as const) {
 test("axe finds no violations on the editor screen", async ({ browser }) => {
   const [site] = sites;
   if (site === undefined) throw new Error("There are no fixture sites.");
-  const studio = await signedIn(browser);
+  const studio = await asAdmin(browser);
   await openCanvas(studio, site, "light");
   const results = await new AxeBuilder({ page: studio })
     .withTags(wcag)
@@ -249,8 +252,8 @@ const caretAtEnd = (field: ReturnType<FrameLocator["getByRole"]>) =>
   });
 
 test("an edit survives a reload, and undo reverses one action at a time", async ({ browser }) => {
-  const studio = await signedIn(browser);
-  await studio.goto(`${studioUrl}/sites/site_harbour/pages/pg_programme`);
+  const studio = await asAdmin(browser);
+  await studio.goto(`${await draftOf(studio, "site_harbour")}/pages/pg_programme`);
   const frame = studio.frameLocator("iframe[title^='Canvas']");
   const heading = frame.getByRole("textbox", { name: "Heading" }).first();
   const description = studio.getByLabel("Description");
@@ -289,9 +292,9 @@ test("an edit survives a reload, and undo reverses one action at a time", async 
 test("a section dragged by its handle in the canvas moves, and undo puts it back", async ({
   browser,
 }) => {
-  const studio = await signedIn(browser);
+  const studio = await asAdmin(browser);
   await studio.setViewportSize({ width: 1440, height: 2000 });
-  await studio.goto(`${studioUrl}/sites/site_harbour/pages/pg_home`);
+  await studio.goto(`${await draftOf(studio, "site_harbour")}/pages/pg_home`);
   const frame = studio.frameLocator("iframe[title^='Canvas']");
   const sections = () =>
     studio
