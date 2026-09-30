@@ -62,12 +62,24 @@ const submit = async (page: Page, draft: string) => {
   await expect(page.getByText(`${draft} is sent for approval`)).toBeVisible();
 };
 
+type Approval = "Approve" | "Approve and publish";
+
+/** Approves the submission open on the review screen, which returns to the Approvals screen. */
+const decide = async (page: Page, action: Approval) => {
+  const approvals = `${studioUrl}/approvals`;
+  // The page renders on the server, and the button works once it hydrates.
+  await expect(async () => {
+    if (page.url() !== approvals)
+      await page.getByRole("button", { name: action }).click({ timeout: 1000 });
+    await expect(page).toHaveURL(approvals, { timeout: 5000 });
+  }).toPass();
+};
+
 /** Approves a draft's submission from the Approvals screen. */
-const approve = async (page: Page, draft: string, action: "Approve" | "Approve and publish") => {
+const approve = async (page: Page, draft: string, action: Approval) => {
   await page.goto(`${studioUrl}/approvals`);
   await page.getByRole("link", { name: `Review ${draft}` }).click();
-  await page.getByRole("button", { name: action }).click();
-  await expect(page).toHaveURL(`${studioUrl}/approvals`);
+  await decide(page, action);
 };
 
 test("a draft shared by link goes through a two-step workflow, updating itself when another draft publishes", async ({
@@ -112,8 +124,7 @@ test("a draft shared by link goes through a two-step workflow, updating itself w
     await expect(meera.getByText("Approved by Jonah Reyes")).toBeVisible();
     await expect(meera.getByRole("button", { name: /Added|Heading in/ }).first()).toBeVisible();
     await noViolations(meera);
-    await meera.getByRole("button", { name: "Approve and publish" }).click();
-    await expect(meera).toHaveURL(`${studioUrl}/approvals`);
+    await decide(meera, "Approve and publish");
     await expect
       .poll(async () => {
         const html = await liveHome(sam);
