@@ -123,7 +123,7 @@ function Steps(props: { readonly review: Review }) {
                 </span>
               ))}
               {index === current && submission.status._tag === "InReview" && (
-                <span className="font-medium text-primary">Waiting for approval</span>
+                <span className="font-medium">Waiting for approval</span>
               )}
             </span>
           </li>

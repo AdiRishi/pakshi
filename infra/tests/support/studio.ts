@@ -1,6 +1,7 @@
-import { type Browser, expect, type Page } from "@playwright/test";
+import { type Browser, expect, type FrameLocator, type Page } from "@playwright/test";
 
 export const studioUrl = process.env.STUDIO_URL ?? "";
+export const sitesUrl = process.env.SITES_URL ?? "";
 
 /** A browser page signed in to Studio as a test user, in a context of its own. */
 export const signedIn = async (
@@ -39,3 +40,37 @@ export const openInEditor = async (page: Page, draftUrl: string, pageId: string)
   await expect(canvas.locator("[data-pakshi-block]").first()).toBeVisible();
   return canvas;
 };
+
+/** A block's heading as the editor canvas shows it. */
+export const heading = (canvas: FrameLocator, block: string) =>
+  canvas.locator(`[data-pakshi-block="${block}"] [data-pakshi-field="heading"]`);
+
+/** Adds text to the end of a block's heading, and waits for the draft to have it. */
+export const appendToHeading = async (
+  page: Page,
+  canvas: FrameLocator,
+  block: string,
+  text: string,
+) => {
+  const field = heading(canvas, block);
+  await field.evaluate((element) => {
+    element.focus();
+    const selection = element.ownerDocument.getSelection();
+    selection?.selectAllChildren(element);
+    selection?.collapseToEnd();
+  });
+  await page.keyboard.type(text);
+  await page.getByRole("button", { name: "Page settings" }).click();
+  await expect(page.getByText("Saved to the draft")).toBeVisible();
+};
+
+/** The live home page's HTML, fetched past any cache in between. */
+export const liveHome = async (page: Page) =>
+  (await page.request.get(sitesUrl, { headers: { "cache-control": "no-cache" } })).text();
+
+/** The draft ID at the end of a draft's address in Studio. */
+export const draftIdOf = (draftUrl: string) => new URL(draftUrl).pathname.split("/").at(-1) ?? "";
+
+/** A draft's preview address, which Studio serves to anyone the draft is shared with. */
+export const previewOf = (site: string, draftUrl: string) =>
+  `${studioUrl}/preview/${site}/${draftIdOf(draftUrl)}/`;

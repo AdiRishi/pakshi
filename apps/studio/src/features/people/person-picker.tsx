@@ -37,10 +37,13 @@ export function PersonPicker(props: {
         value={search}
         onValueChange={setSearch}
       />
-      {deferred !== "" && (
-        <CommandList>
+      {/* The input controls the list, so the list is there even before a search. */}
+      <CommandList>
+        {deferred !== "" && (
           <CommandEmpty>{found.isFetching ? "Searching" : "No one matches."}</CommandEmpty>
-          {people.map((person) => (
+        )}
+        {deferred !== "" &&
+          people.map((person) => (
             <CommandItem
               key={person.id}
               value={person.id}
@@ -55,8 +58,7 @@ export function PersonPicker(props: {
               </span>
             </CommandItem>
           ))}
-        </CommandList>
-      )}
+      </CommandList>
     </Command>
   );
 }
