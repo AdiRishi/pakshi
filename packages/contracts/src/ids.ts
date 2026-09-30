@@ -42,6 +42,10 @@ export type BatchId = typeof BatchId.Type;
 export const TurnId = prefixed("turn").pipe(Schema.brand("TurnId"));
 export type TurnId = typeof TurnId.Type;
 
+/** A document someone gave the agent to work from, such as a programme or a brief. */
+export const SourceId = prefixed("src").pipe(Schema.brand("SourceId"));
+export type SourceId = typeof SourceId.Type;
+
 /** An item in a list inside a block's props, such as one image in a gallery. */
 export const ItemId = prefixed("it").pipe(Schema.brand("ItemId"));
 export type ItemId = typeof ItemId.Type;

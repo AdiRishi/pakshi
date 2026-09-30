@@ -370,6 +370,7 @@ catalogs:
       version: 2.9.1
 
 overrides:
+  '@effect/ai-openai-compat': 4.0.0-rc.117
   '@effect/platform-node': 4.0.0-rc.117
   '@effect/platform-node-shared': 4.0.0-rc.117
   '@effect/sql-d1': 4.0.0-rc.117
@@ -628,6 +629,43 @@ importers:
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../tooling/tsconfig
+      typescript:
+        specifier: 'catalog:'
+        version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+
+  packages/agent:
+    dependencies:
+      '@effect/ai-openai-compat':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)
+      '@repo/blocks':
+        specifier: workspace:*
+        version: link:../blocks
+      '@repo/contracts':
+        specifier: workspace:*
+        version: link:../contracts
+      '@repo/domain':
+        specifier: workspace:*
+        version: link:../domain
+      '@repo/tokens':
+        specifier: workspace:*
+        version: link:../tokens
+      effect:
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117
+    devDependencies:
+      '@effect/vitest':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)(vitest@5.0.2)
+      '@repo/tsconfig':
+        specifier: workspace:*
+        version: link:../../tooling/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.3
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
@@ -1841,6 +1879,11 @@ packages:
 
   '@dotenvx/primitives@0.8.0':
     resolution: {integrity: sha512-VYJy0uhFm9zTJ1TxBaW/pA8bjbOM/OttaNMwZ1RHG4JKyRG7DhSdiqD1ipQoAyoD22olUtxbP78W9xY3Wd11bg==}
+
+  '@effect/ai-openai-compat@4.0.0-rc.117':
+    resolution: {integrity: sha512-TJFO5CGOks+y9d6Fbj3/lfWO4FHWMIS0h+8MOMEcNyDau/BTZYIYP/Ab9OID0Rwsbvq3Wi7kxJKpA88QgaVqkw==}
+    peerDependencies:
+      effect: 4.0.0-rc.117
 
   '@effect/platform-node-shared@4.0.0-rc.117':
     resolution: {integrity: sha512-GyRkEfLBG49MwJe+/XDPiXYcQ44RA9p2z0AurlsWhR1cd1PqOUMEZU1pORL+/R5hR8aH6ZuqoJYD8lAc6h+wlA==}
@@ -9351,6 +9394,10 @@ snapshots:
       yocto-spinner: 1.2.2
 
   '@dotenvx/primitives@0.8.0': {}
+
+  '@effect/ai-openai-compat@4.0.0-rc.117(effect@4.0.0-rc.117)':
+    dependencies:
+      effect: 4.0.0-rc.117
 
   '@effect/platform-node-shared@4.0.0-rc.117(effect@4.0.0-rc.117)':
     dependencies:

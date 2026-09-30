@@ -18,9 +18,12 @@ const everyNode: ReadonlyArray<RichTextNode> = ["heading", "bulletList", "ordere
 
 const writer = new MarkdownManager({ extensions: richTextExtensions(everyMark, everyNode) });
 
-const readers = new WeakMap<RichTextField, MarkdownManager>();
+/** What reading a field's Markdown needs of the field. Optional fields have it too. */
+type MarkdownField = Pick<RichTextField, "title" | "marks" | "nodes" | "draft">;
 
-const readerFor = (field: RichTextField) => {
+const readers = new WeakMap<MarkdownField, MarkdownManager>();
+
+const readerFor = (field: MarkdownField) => {
   let reader = readers.get(field);
   if (reader === undefined) {
     reader = new MarkdownManager({ extensions: richTextExtensions(field.marks, field.nodes) });
@@ -135,7 +138,7 @@ const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
  * doesn't fit the field.
  */
 export const richTextFromMarkdown = (
-  field: RichTextField,
+  field: MarkdownField,
   markdown: string,
 ): Result.Result<RichTextDocument, string> => {
   const reader = readerFor(field);
