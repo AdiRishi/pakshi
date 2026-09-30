@@ -1007,6 +1007,9 @@ importers:
       '@effect/sql-sqlite-do':
         specifier: 4.0.0-rc.117
         version: 4.0.0-rc.117(effect@4.0.0-rc.117)
+      '@repo/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
       '@repo/blocks':
         specifier: workspace:*
         version: link:../../packages/blocks

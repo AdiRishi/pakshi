@@ -128,7 +128,7 @@ export const runTurn = Effect.fn("Agent.runTurn")(
         prompt = giveUp;
       } else prompt = Prompt.empty;
     }
-    return "done" satisfies TurnStatus;
+    return "done" as const;
   },
   Effect.catchTag("AiError", (error) => Effect.succeed(endedBy(error))),
   Effect.provide(agentHandlers),

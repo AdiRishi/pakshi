@@ -142,12 +142,14 @@ export const AgentClientMessage = Schema.TaggedUnion({
   Send: {
     text: Request.fields.text,
     sources: Schema.Array(SourceId),
+    /** The page the person has open. */
+    page: PageId,
     selected: Schema.NullOr(Selected),
   },
   /** Answers a question in a turn, which starts the next turn. */
-  Answer: { turn: TurnId, part: Schema.String, answer: Request.fields.text },
+  Answer: { turn: TurnId, part: Schema.String, answer: Request.fields.text, page: PageId },
   /** Builds a proposed plan, which starts the next turn. */
-  Build: { turn: TurnId, part: Schema.String },
+  Build: { turn: TurnId, part: Schema.String, page: PageId },
   /** Stops the turn under way. What it committed stays. */
   Stop: {},
   /** Undoes everything a turn changed, except what someone has changed since. */
