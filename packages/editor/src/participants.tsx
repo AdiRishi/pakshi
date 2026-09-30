@@ -1,6 +1,7 @@
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { cn } from "cn";
+import { SparklesIcon } from "lucide-react";
 
 import type { FieldTarget } from "./context.tsx";
 import { initials, presenceColor, useFieldPeers, useParticipants } from "./presence.ts";
@@ -31,7 +32,11 @@ export function EditorParticipants() {
                 aria-hidden
                 className={cn("text-xs font-semibold", colorClass(participant.color))}
               >
-                {initials(participant.name)}
+                {participant.agent ? (
+                  <SparklesIcon className="size-4" />
+                ) : (
+                  initials(participant.name)
+                )}
               </AvatarFallback>
             </TooltipTrigger>
             <TooltipContent>

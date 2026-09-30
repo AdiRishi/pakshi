@@ -16,7 +16,7 @@ import {
   useStore,
 } from "../context.tsx";
 import { type DropTarget, flowsInRow, useBlockDrag, useDropTarget } from "../dnd.tsx";
-import { presenceColor } from "../presence.ts";
+import { peerColor, peerName } from "../presence.ts";
 import { blockLabel, listOf, slotOf } from "../structure.ts";
 
 /*
@@ -256,8 +256,8 @@ const presenceMarksOf = (document: Document, peers: ReadonlyArray<Peer>, page: P
       {
         key: peer.connection,
         box: boxOf(element),
-        color: presenceColor(peer.person.id),
-        label: presence.typing ? `${firstName} is typing` : peer.person.name,
+        color: peerColor(peer),
+        label: presence.typing ? `${firstName} is typing` : peerName(peer),
       },
     ];
   });
@@ -273,6 +273,7 @@ export function CanvasOverlay(props: { readonly document: Document }) {
   );
   const needingContent = useBlocksNeedingContent();
   const peers = useEditorState((state) => state.peers, samePeers);
+  const highlights = useEditorState((state) => state.highlights);
   const dropTarget = useDropTarget();
   const [hovered, setHovered] = useState<BlockId | undefined>(undefined);
   const [resized, setResized] = useState(0);
@@ -282,7 +283,8 @@ export function CanvasOverlay(props: { readonly document: Document }) {
     readonly line: Box | null;
     readonly start: InsertPointAt | null;
     readonly presence: ReadonlyArray<PresenceMark>;
-  }>({ chrome: [], badges: [], line: null, start: null, presence: [] });
+    readonly highlights: ReadonlyArray<{ readonly block: BlockId; readonly box: Box }>;
+  }>({ chrome: [], badges: [], line: null, start: null, presence: [], highlights: [] });
 
   // The block under the pointer. Moving onto its controls keeps it.
   useEffect(() => {
@@ -353,11 +355,17 @@ export function CanvasOverlay(props: { readonly document: Document }) {
       line,
       start,
       presence: presenceMarksOf(props.document, peers, page),
+      highlights: highlights.flatMap(({ target, block }) => {
+        const element =
+          target === page || target === "site" ? blockElement(props.document, block) : null;
+        return element === null ? [] : [{ block, box: boxOf(element) }];
+      }),
     });
   }, [
     document,
     page,
     peers,
+    highlights,
     headerBlock,
     hovered,
     selected,
@@ -370,6 +378,13 @@ export function CanvasOverlay(props: { readonly document: Document }) {
 
   return createPortal(
     <div className="pakshi-overlay">
+      {layout.highlights.map(({ block, box }) => (
+        <div
+          key={block}
+          className="pakshi-highlight"
+          style={{ top: box.top, left: box.left, width: box.width, height: box.height }}
+        />
+      ))}
       {layout.presence.map((mark) => (
         <div
           key={mark.key}

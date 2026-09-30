@@ -1,5 +1,13 @@
 import { isBehind } from "@repo/contracts/draft";
-import { BatchId, BlockId, BlockType, PageId, ReleaseId, SnapshotId } from "@repo/contracts/ids";
+import {
+  BatchId,
+  BlockId,
+  BlockType,
+  PageId,
+  ReleaseId,
+  SnapshotId,
+  TurnId,
+} from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { LiveRelease } from "@repo/contracts/snapshot";
@@ -519,5 +527,25 @@ describe("the draft's standing", () => {
     siteDoc.announce({ _tag: "DraftClosed", by: sam, release: release.release });
     await settle();
     expect(store.getState().closed).toEqual({ by: sam, release: release.release });
+  });
+});
+
+describe("the agent's changes", () => {
+  const turn = TurnId.make("turn_one");
+
+  test("are marked on the page for a moment, and named as the agent's", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store, notices } = open(siteDoc, sam);
+    store.run([setHeading("Build a boat")]);
+    await settle();
+    siteDoc.commitFromAgent(sam, turn, {
+      id: BatchId.make("bat_agent"),
+      ops: [setHeading("Build a boat in a week")],
+    });
+    await vi.advanceTimersByTimeAsync(10);
+    expect(store.getState().highlights).toEqual([{ target: page, block: hero }]);
+    expect(notices.at(-1)?.title).toBe("Pakshi, for Sam Okafor replaced your change.");
+    await settle();
+    expect(store.getState().highlights).toEqual([]);
   });
 });

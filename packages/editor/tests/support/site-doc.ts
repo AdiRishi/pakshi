@@ -1,7 +1,7 @@
 import { loadBlocks } from "@repo/blocks";
 import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
 import { Draft } from "@repo/contracts/draft";
-import { BatchId, randomId } from "@repo/contracts/ids";
+import { BatchId, randomId, type TurnId } from "@repo/contracts/ids";
 import type {
   ClientMessage,
   Collaborator,
@@ -112,10 +112,20 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
     for (const socket of live()) if (socket !== without) toClient(socket, message);
   };
 
-  const commit = (actor: Collaborator, batch: Parameters<typeof commitBatch>[3]) => {
+  const commit = (
+    actor: Collaborator,
+    batch: Parameters<typeof commitBatch>[3],
+    turn: TurnId | null = null,
+  ) => {
     const earlier = known.get(batch.id);
     if (earlier !== undefined) return { status: "known", revision: earlier } as const;
-    const result = commitBatch(draft, writes, actor.id, batch, definitions);
+    const result = commitBatch(
+      draft,
+      writes,
+      turn === null ? actor.id : `agent:${turn}`,
+      batch,
+      definitions,
+    );
     if (!result.ok) return { status: "rejected", errors: result.errors } as const;
     draft = result.draft;
     writes = result.writes;
@@ -123,7 +133,7 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
       id: batch.id,
       revision: draft.revision,
       actor,
-      turn: null,
+      turn,
       ops: result.ops,
     };
     log.push(committed);
@@ -243,6 +253,15 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
     /** Commits a batch SiteDoc makes itself, such as a merge, as if `actor` made it. */
     commitFromSite: (actor: Collaborator, batch: Parameters<typeof commitBatch>[3]) => {
       commit(actor, batch);
+      schedule();
+    },
+    /** Commits a batch the agent made for `actor` in one turn of their conversation. */
+    commitFromAgent: (
+      actor: Collaborator,
+      turn: TurnId,
+      batch: Parameters<typeof commitBatch>[3],
+    ) => {
+      commit(actor, batch, turn);
       schedule();
     },
     /** Sends everyone connected a message, such as news of a release going live. */
