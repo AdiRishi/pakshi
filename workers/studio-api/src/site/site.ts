@@ -55,6 +55,9 @@ export type Opened =
 
 const encodePage = Schema.encodeSync(PageDocument);
 
+/** How many snapshots' content a SiteDoc keeps in memory. */
+const keptSnapshots = 4;
+
 const releaseOf = (indexed: IndexedRelease) => indexed.release;
 
 export class Site extends Context.Service<
@@ -185,10 +188,17 @@ export class Site extends Context.Service<
       );
 
       const contents = new Map<SnapshotId, SiteContent>();
-      /** What a snapshot holds, read from R2 once. Snapshots never change. */
+      /**
+       * What a snapshot holds, read from R2. Snapshots never change, so the few
+       * read last are kept: merges and new drafts read the same ones again.
+       */
       const contentOf = Effect.fn("Site.contentOf")(function* (snapshot: SnapshotId) {
         const known = contents.get(snapshot);
-        if (known !== undefined) return known;
+        if (known !== undefined) {
+          contents.delete(snapshot);
+          contents.set(snapshot, known);
+          return known;
+        }
         const manifest = yield* snapshots.manifest(snapshot);
         const pages = yield* Effect.forEach(manifest.pages, (page) => snapshots.page(page.object), {
           concurrency: "unbounded",
@@ -202,6 +212,8 @@ export class Site extends Context.Service<
           pages: Object.fromEntries(pages.map((page) => [page.id, page])),
         };
         contents.set(snapshot, content);
+        const [oldest] = contents.keys();
+        if (contents.size > keptSnapshots && oldest !== undefined) contents.delete(oldest);
         return content;
       });
 
