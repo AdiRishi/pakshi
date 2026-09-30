@@ -20,9 +20,17 @@
       "types": "./src/fixtures.ts",
       "default": "./src/fixtures.ts"
     },
+    "./markdown": {
+      "types": "./src/markdown.ts",
+      "default": "./src/markdown.ts"
+    },
     "./placeholders": {
       "types": "./src/placeholders.ts",
       "default": "./src/placeholders.ts"
+    },
+    "./recipes": {
+      "types": "./src/recipes.ts",
+      "default": "./src/recipes.ts"
     },
     "./site.css": "./src/site.css"
   },
@@ -44,9 +52,11 @@
     "@tiptap/extension-list": "catalog:",
     "@tiptap/extension-paragraph": "catalog:",
     "@tiptap/extension-text": "catalog:",
+    "@tiptap/markdown": "catalog:",
     "@tiptap/pm": "catalog:",
     "@tiptap/static-renderer": "catalog:",
     "effect": "catalog:",
+    "marked": "catalog:",
     "react": "catalog:",
     "tailwindcss": "catalog:"
   },
