@@ -1,6 +1,6 @@
+import { D1Client } from "@effect/sql-d1";
 import { MediaId, type SiteId } from "@repo/contracts/ids";
 import { PageDocument } from "@repo/contracts/page";
-import { Release } from "@repo/contracts/release";
 import {
   LiveRelease,
   MediaFile,
@@ -13,6 +13,7 @@ import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, Option, Schema } from "effect";
 
 import { MediaLibrary, ReleaseIndex, Routing, Snapshots } from "./platform.ts";
+import { recordRelease } from "./release-index.ts";
 
 const json = { httpMetadata: { contentType: "application/json" } };
 
@@ -23,7 +24,6 @@ const MediaRow = Schema.Struct({
   height: MediaFile.fields.height,
 });
 
-const encodeRelease = Schema.encodeSync(Schema.fromJsonString(Release));
 const encodePage = Schema.encodeSync(Schema.fromJsonString(PageDocument));
 const encodeManifest = Schema.encodeSync(Schema.fromJsonString(SnapshotManifest));
 const liveJson = Schema.fromJsonString(LiveRelease);
@@ -33,6 +33,7 @@ const decodeMediaRows = Schema.decodeUnknownSync(Schema.Array(MediaRow));
 
 /** A site's platform edges over studio-api's bindings: R2 for snapshots, KV for routing, D1 for the rest. */
 export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
+  const core = D1Client.layer({ db: env.CORE });
   const reader = snapshotReader(async (key) => (await env.CONTENT.get(key))?.text() ?? null);
   return Layer.mergeAll(
     Layer.succeed(Snapshots)({
@@ -72,16 +73,7 @@ export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
         }),
     }),
     Layer.succeed(ReleaseIndex)({
-      record: ({ seq, release }) =>
-        Effect.promise(() =>
-          env.CORE.prepare(
-            `insert into releases (id, site_id, seq, snapshot, release, published_at)
-             values (?, ?, ?, ?, ?, ?)
-             on conflict (id) do update set seq = excluded.seq, release = excluded.release`,
-          )
-            .bind(release.id, site, seq, release.snapshot, encodeRelease(release), release.at)
-            .run(),
-        ),
+      record: (indexed) => recordRelease(site, indexed).pipe(Effect.provide(core), Effect.orDie),
     }),
   );
 };
