@@ -15,6 +15,18 @@
     "./document": {
       "types": "./src/document.ts",
       "default": "./src/document.ts"
+    },
+    "./freeze": {
+      "types": "./src/freeze.ts",
+      "default": "./src/freeze.ts"
+    },
+    "./merge": {
+      "types": "./src/merge.ts",
+      "default": "./src/merge.ts"
+    },
+    "./rebase": {
+      "types": "./src/rebase.ts",
+      "default": "./src/rebase.ts"
     }
   },
   "scripts": {

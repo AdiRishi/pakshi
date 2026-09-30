@@ -24,6 +24,10 @@
       "types": "./src/live.ts",
       "default": "./src/live.ts"
     },
+    "./merge": {
+      "types": "./src/merge.ts",
+      "default": "./src/merge.ts"
+    },
     "./ops": {
       "types": "./src/ops.ts",
       "default": "./src/ops.ts"
@@ -32,9 +36,25 @@
       "types": "./src/page.ts",
       "default": "./src/page.ts"
     },
+    "./publishing": {
+      "types": "./src/publishing.ts",
+      "default": "./src/publishing.ts"
+    },
     "./references": {
       "types": "./src/references.ts",
       "default": "./src/references.ts"
+    },
+    "./release": {
+      "types": "./src/release.ts",
+      "default": "./src/release.ts"
+    },
+    "./rpc/client": {
+      "types": "./src/rpc/client.ts",
+      "default": "./src/rpc/client.ts"
+    },
+    "./rpc/server": {
+      "types": "./src/rpc/server.ts",
+      "default": "./src/rpc/server.ts"
     },
     "./site": {
       "types": "./src/site.ts",
@@ -47,14 +67,6 @@
     "./studio": {
       "types": "./src/studio.ts",
       "default": "./src/studio.ts"
-    },
-    "./rpc/client": {
-      "types": "./src/rpc/client.ts",
-      "default": "./src/rpc/client.ts"
-    },
-    "./rpc/server": {
-      "types": "./src/rpc/server.ts",
-      "default": "./src/rpc/server.ts"
     }
   },
   "scripts": {

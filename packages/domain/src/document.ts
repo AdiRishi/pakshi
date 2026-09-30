@@ -209,6 +209,16 @@ const setProp = (draft: Draft, op: SetProp, contracts: BlockContracts) => {
   const contract = contractFor(contracts, block.type);
   const [name, ...rest] = op.path;
   const field = name === undefined ? undefined : contract.fields[name];
+  // A prop an older version left, which this version doesn't have, can be removed.
+  const stale = name === undefined || field !== undefined ? undefined : block.props[name];
+  if (name !== undefined && stale !== undefined && rest.length === 0 && op.value === undefined)
+    return {
+      draft: withBlock(draft, op.target, op.block, {
+        ...block,
+        props: withKey(block.props, name, undefined),
+      }),
+      inverse: { ...op, value: stale } satisfies SetProp,
+    };
   if (name === undefined || field === undefined)
     throw reject("field", `${contract.title} has no field ${op.path.join(".")}.`, op.path);
   if (rest.length === 0 && op.value === undefined && !field.optional)
@@ -478,17 +488,16 @@ const setMeta = (draft: Draft, op: SetMeta) => {
   };
 };
 
-const checkPathFree = (draft: Draft, page: PageId, path: string) => {
-  const taken = Object.values(draft.pages).find(
-    (other) => other.path === path && other.id !== page,
-  );
+/** Rejects a page whose address another page in the draft has too. A page that's gone has none. */
+const checkPathFree = (draft: Draft, id: PageId) => {
+  const path = draft.pages[id]?.path;
+  const taken = Object.values(draft.pages).find((other) => other.path === path && other.id !== id);
   if (taken !== undefined)
     throw reject("path-taken", `${taken.meta.title || taken.id} already has the address ${path}.`);
 };
 
 const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: BlockContracts) => {
   if (page.id in draft.pages) throw reject("page-exists", `There's already a page ${page.id}.`);
-  checkPathFree(draft, page.id, page.path);
   check(PageDocument, page, "page", []);
   const inPlace = (id: BlockId, path: BatchError["path"]) => {
     const block = blockOf(page, id);
@@ -574,7 +583,6 @@ const applyOp = (draft: Draft, op: Op, contracts: BlockContracts) => {
       return setMeta(draft, op);
     case "setPath": {
       const page = pageOf(draft, op.page);
-      checkPathFree(draft, op.page, op.path);
       return {
         draft: { ...draft, pages: { ...draft.pages, [op.page]: { ...page, path: op.path } } },
         inverse: { ...op, path: page.path },
@@ -584,7 +592,35 @@ const applyOp = (draft: Draft, op: Op, contracts: BlockContracts) => {
       return createPage(draft, op.page, contracts);
     case "deletePage":
       return deletePage(draft, op.page);
+    case "rebase":
+      return {
+        draft: {
+          ...draft,
+          base: op.base,
+          lockfile: op.lockfile,
+          theme: op.theme,
+          settings: op.settings,
+          forms: op.forms,
+          parts: { ...draft.parts, menus: op.menus },
+        },
+        inverse: {
+          op: "rebase",
+          base: draft.base,
+          lockfile: draft.lockfile,
+          theme: draft.theme,
+          settings: draft.settings,
+          forms: draft.forms,
+          menus: draft.parts.menus,
+        } satisfies Op,
+      };
   }
+};
+
+/** The page an op gives an address to, if it gives one. */
+const addressedBy = (op: Op) => {
+  if (op.op === "setPath") return op.page;
+  if (op.op === "createPage") return op.page.id;
+  return null;
 };
 
 /**
@@ -599,15 +635,32 @@ export const applyOps = (
   let current = draft;
   const inverse: Array<Op> = [];
   const steps: Array<Step> = [];
+  // Addresses are checked once the whole batch has applied, so a batch can
+  // swap two pages' addresses. Each page maps to the last op that addressed it.
+  const addressed = new Map<PageId, number>();
+  const rejected = (error: Rejection, index: number): ApplyResult => ({
+    ok: false,
+    errors: error.errors.map((found) => ({ ...found, op: index })),
+  });
   for (const [index, op] of ops.entries()) {
     try {
       const applied = applyOp(current, op, contracts);
       steps.push({ op, before: current });
       current = applied.draft;
       inverse.unshift(applied.inverse);
+      const page = addressedBy(op);
+      if (page !== null) addressed.set(page, index);
     } catch (error) {
       if (!(error instanceof Rejection)) throw error;
-      return { ok: false, errors: error.errors.map((found) => ({ ...found, op: index })) };
+      return rejected(error, index);
+    }
+  }
+  for (const [page, index] of addressed) {
+    try {
+      checkPathFree(current, page);
+    } catch (error) {
+      if (!(error instanceof Rejection)) throw error;
+      return rejected(error, index);
     }
   }
   return { ok: true, draft: current, inverse, steps };
@@ -635,6 +688,8 @@ export const applyEach = (
     }
     try {
       const result = applyOp(current, op, contracts);
+      const page = addressedBy(op);
+      if (page !== null) checkPathFree(result.draft, page);
       steps.push({ op, before: current });
       current = result.draft;
       inverse.unshift(result.inverse);

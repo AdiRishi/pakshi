@@ -52,6 +52,12 @@ export type Placement =
       readonly surfaces: readonly [Surface, ...Array<Surface>];
     };
 
+/** How the registry names one block version, such as `hero@2`. */
+export const blockKey = (type: BlockType, version: number) => `${type}@${version}`;
+
+/** A placed block's props as stored, before any version's schema reads them. */
+export type StoredProps = Readonly<Record<string, Schema.Json>>;
+
 /** What the editor, validation and the agent know about a block version, without its component. */
 export type BlockContract = Placement & {
   readonly type: BlockType;
@@ -60,4 +66,9 @@ export type BlockContract = Placement & {
   readonly fields: Fields;
   readonly variants: ReadonlyArray<string>;
   readonly agent: { readonly purpose: string; readonly avoid?: ReadonlyArray<string> };
+  /**
+   * Turns the previous version's props into this version's, so content can
+   * move up any number of versions. A block's first version has none.
+   */
+  readonly migrate: ((previous: StoredProps) => StoredProps) | null;
 };
