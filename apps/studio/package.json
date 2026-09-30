@@ -14,6 +14,7 @@
     "@repo/brand": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/editor": "workspace:*",
+    "@repo/tokens": "workspace:*",
     "@repo/ui": "workspace:*",
     "@tailwindcss/vite": "catalog:",
     "@tanstack/react-devtools": "catalog:",

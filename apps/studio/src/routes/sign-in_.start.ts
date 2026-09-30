@@ -3,6 +3,8 @@ import { createFileRoute } from "@tanstack/react-router";
 import { env } from "cloudflare:workers";
 import { Schema } from "effect";
 
+import { returnTo } from "@/features/session/return-to";
+
 const SignInStarted = Schema.Struct({ url: Schema.String });
 
 /**
@@ -13,7 +15,8 @@ export const Route = createFileRoute("/sign-in_/start")({
   server: {
     handlers: {
       GET: async ({ request }) => {
-        const origin = new URL(request.url).origin;
+        const url = new URL(request.url);
+        const origin = url.origin;
         const failed = Response.redirect(`${origin}/sign-in?error=start`, 302);
         const started = await env.STUDIO_API.fetch(
           new Request(`${origin}/api/auth/sign-in/social`, {
@@ -21,7 +24,7 @@ export const Route = createFileRoute("/sign-in_/start")({
             headers: { "content-type": "application/json", origin },
             body: JSON.stringify({
               provider: identityProviderId,
-              callbackURL: "/",
+              callbackURL: returnTo(url.searchParams.get("redirect")),
               errorCallbackURL: "/sign-in",
               disableRedirect: true,
             }),
