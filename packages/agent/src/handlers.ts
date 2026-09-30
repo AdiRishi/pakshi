@@ -81,13 +81,19 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
     );
   const page = target === "site" ? turn.page : target;
   const block = ops.map(blockOfOp).find((found) => found !== null) ?? null;
-  const committed = yield* workspace.commit(ops, {
-    page,
-    focus: block === null ? null : { target, block },
-    typing: false,
-  });
-  if (committed.status === "rejected") return yield* fail(...describeErrors(ops, committed.errors));
-  yield* activity(call, describeOps(draft, contracts, target, ops), { page, block });
+  // A batch once sent may land, so stopping the turn waits until the chat records it for undo.
+  return yield* Effect.uninterruptible(
+    Effect.gen(function* () {
+      const committed = yield* workspace.commit(ops, {
+        page,
+        focus: block === null ? null : { target, block },
+        typing: false,
+      });
+      if (committed.status === "rejected")
+        return yield* fail(...describeErrors(ops, committed.errors));
+      yield* activity(call, describeOps(draft, contracts, target, ops), { page, block });
+    }),
+  );
 });
 
 const describeIssue = (issue: PreflightIssue) => {
