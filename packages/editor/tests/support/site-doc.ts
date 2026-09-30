@@ -233,6 +233,16 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
 
   return {
     connection,
+    /** Commits a batch SiteDoc makes itself, such as a merge, as if `actor` made it. */
+    commitFromSite: (actor: Collaborator, batch: Parameters<typeof commitBatch>[3]) => {
+      commit(actor, batch);
+      schedule();
+    },
+    /** Sends everyone connected a message, such as news of a release going live. */
+    announce: (message: ServerMessage) => {
+      broadcast(message);
+      schedule();
+    },
     /** The draft as SiteDoc has it. */
     draft: () => draft,
     /** Every batch SiteDoc committed, in order. */

@@ -1,4 +1,4 @@
-import type { SiteId } from "@repo/contracts/ids";
+import type { DraftId, SiteId } from "@repo/contracts/ids";
 import { ClientMessageJson, liveBasePath, ServerMessageJson } from "@repo/contracts/live";
 import type { Connection } from "@repo/editor";
 import { Option, Schema } from "effect";
@@ -8,17 +8,17 @@ const encode = Schema.encodeSync(ClientMessageJson);
 const decode = Schema.decodeUnknownOption(ServerMessageJson);
 
 /**
- * The editor's live connection to a site's SiteDoc, through Studio's own
- * origin. PartySocket reconnects after a drop. It doesn't hold messages sent
+ * The editor's live connection to one of a site's drafts in its SiteDoc,
+ * through Studio's own origin. PartySocket reconnects after a drop. It doesn't hold messages sent
  * while closed, because the editor sends again what SiteDoc hasn't confirmed
  * each time a connection opens.
  */
-export const liveConnection = (site: SiteId): Connection => ({
+export const liveConnection = (site: SiteId, draft: DraftId): Connection => ({
   open: (events) => {
     const socket = new PartySocket({
       host: window.location.host,
       protocol: window.location.protocol === "https:" ? "wss" : "ws",
-      basePath: `${liveBasePath.slice(1)}/${site}`,
+      basePath: `${liveBasePath.slice(1)}/${site}/${draft}`,
       maxEnqueuedMessages: 0,
       minReconnectionDelay: 500,
       maxReconnectionDelay: 10_000,

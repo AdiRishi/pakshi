@@ -1,8 +1,9 @@
 import { Schema } from "effect";
 
 import { Draft } from "./draft.ts";
-import { BatchId, BlockId, PageId } from "./ids.ts";
+import { BatchId, BlockId, PageId, ReleaseId } from "./ids.ts";
 import { Batch, BatchError, Op, PropPath, Target } from "./ops.ts";
+import { LiveRelease } from "./snapshot.ts";
 
 /*
  * The messages between the editor and its site's SiteDoc over a live
@@ -96,6 +97,14 @@ export const ServerMessage = Schema.TaggedUnion({
   Rejected: { batch: BatchId, errors: Schema.Array(BatchError) },
   PeerChanged: { peer: Peer },
   PeerLeft: { connection: Schema.String },
+  /** A release went live, sent to everyone on the site. Drafts that started from another are behind. */
+  LiveChanged: { live: LiveRelease },
+  /** The draft was published or closed, sent to everyone in it. It takes no more changes. */
+  DraftClosed: {
+    by: Collaborator,
+    /** The release it became, or null when someone closed it without publishing. */
+    release: Schema.NullOr(ReleaseId),
+  },
 });
 export type ServerMessage = typeof ServerMessage.Type;
 
@@ -103,5 +112,5 @@ export type ServerMessage = typeof ServerMessage.Type;
 export const ClientMessageJson = Schema.fromJsonString(ClientMessage);
 export const ServerMessageJson = Schema.fromJsonString(ServerMessage);
 
-/** Where Studio and studio-api serve live connections: a site's is at `${liveBasePath}/${site}`. */
+/** Where Studio and studio-api serve live connections: a draft's is at `${liveBasePath}/${site}/${draft}`. */
 export const liveBasePath = "/api/live";

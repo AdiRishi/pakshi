@@ -1,6 +1,7 @@
 import { loadBlocks } from "@repo/blocks";
-import type { MediaId, PageId, SiteId } from "@repo/contracts/ids";
+import type { DraftId, MediaId, PageId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
+import type { OpenedDraft } from "@repo/contracts/studio";
 import {
   EditorCanvas,
   EditorOutline,
@@ -10,10 +11,23 @@ import {
   type Notice,
   presenceColorCount,
   type SaveStatus,
+  useBehind,
+  useDraftClosure,
   useEditorStatus,
+  useOutdated,
   usePageTitle,
   useToolbarCommands,
 } from "@repo/editor";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@repo/ui/components/alert-dialog";
+import { Badge } from "@repo/ui/components/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -22,17 +36,18 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from "@repo/ui/components/breadcrumb";
-import { Button } from "@repo/ui/components/button";
+import { Button, buttonVariants } from "@repo/ui/components/button";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
+import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Link, useNavigate } from "@tanstack/react-router";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
   LoaderIcon,
   MonitorIcon,
   MoonIcon,
+  SendIcon,
   SmartphoneIcon,
   SunIcon,
   TabletIcon,
@@ -41,7 +56,8 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
-import { editorDraftQuery } from "@/features/sites/queries";
+import { PublishDialog } from "@/features/drafts/publish-dialog";
+import { siteDraftsQuery } from "@/features/sites/queries";
 
 import { liveConnection } from "./live-connection";
 
@@ -84,10 +100,27 @@ const saveCopy: Readonly<Record<SaveStatus, { readonly label: string; readonly i
     },
   };
 
-function Header(props: { readonly site: { readonly id: SiteId; readonly name: string } }) {
+interface DraftContext {
+  readonly person: Collaborator;
+  readonly site: { readonly id: SiteId; readonly name: string };
+  readonly draft: { readonly id: DraftId; readonly name: string };
+  readonly canPublish: boolean;
+}
+
+function Header(props: DraftContext) {
   const status = useEditorStatus();
   const title = usePageTitle();
+  const behind = useBehind();
+  const closure = useDraftClosure();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [publishing, setPublishing] = useState(false);
   const save = saveCopy[status];
+  const toUpdate = () =>
+    navigate({
+      to: "/sites/$siteId/drafts/$draftId/update",
+      params: { siteId: props.site.id, draftId: props.draft.id },
+    });
   return (
     <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-4 py-2">
       <Link to="/" aria-label="Home">
@@ -104,6 +137,19 @@ function Header(props: { readonly site: { readonly id: SiteId; readonly name: st
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
+            <BreadcrumbLink
+              render={
+                <Link
+                  to="/sites/$siteId/drafts/$draftId"
+                  params={{ siteId: props.site.id, draftId: props.draft.id }}
+                />
+              }
+            >
+              {props.draft.name}
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
             <BreadcrumbPage>{title || "Untitled"}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
@@ -112,10 +158,103 @@ function Header(props: { readonly site: { readonly id: SiteId; readonly name: st
         {save.icon}
         {save.label}
       </output>
-      <div className="ml-auto">
+      {behind && closure === null && (
+        <div className="flex items-center gap-2">
+          <Badge variant="warning">Behind the live site</Badge>
+          <Link
+            to="/sites/$siteId/drafts/$draftId/update"
+            params={{ siteId: props.site.id, draftId: props.draft.id }}
+            className={buttonVariants({ variant: "link", size: "sm" })}
+          >
+            Update draft
+          </Link>
+        </div>
+      )}
+      <div className="ml-auto flex items-center gap-3">
         <EditorParticipants />
+        {props.canPublish && (
+          <Button onClick={() => setPublishing(true)}>
+            <SendIcon />
+            Publish
+          </Button>
+        )}
       </div>
+      <PublishDialog
+        site={props.site.id}
+        draft={props.draft}
+        open={publishing}
+        onOpenChange={setPublishing}
+        onPublished={async () => {
+          toast.success(`${props.draft.name} is published`, {
+            description: "It's live within about a minute.",
+          });
+          await queryClient.invalidateQueries({
+            queryKey: siteDraftsQuery(props.site.id).queryKey,
+          });
+        }}
+        onNeedsUpdate={toUpdate}
+      />
     </header>
+  );
+}
+
+/**
+ * What happens when the draft stops taking changes: someone published or
+ * closed it, or a merge moved it to block versions this editor didn't load.
+ */
+function DraftStanding(props: DraftContext) {
+  const closure = useDraftClosure();
+  const outdated = useOutdated();
+  const who = closure === null || closure.by.id === props.person.id ? "You" : closure.by.name;
+  if (outdated)
+    return (
+      <AlertDialog open>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This draft now uses newer block versions</AlertDialogTitle>
+            <AlertDialogDescription>
+              Someone brought changes from the live site into it that need newer versions of some
+              blocks. Open the draft again to keep editing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => window.location.reload()}>
+              Open it again
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
+  if (closure === null) return null;
+  return (
+    <AlertDialog open>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>
+            {closure.release === null ? `${who} closed this draft` : `${who} published this draft`}
+          </AlertDialogTitle>
+          <AlertDialogDescription>
+            {closure.release === null
+              ? "Its changes won't go live, and it takes no more edits."
+              : "Its changes are live within about a minute, and it takes no more edits."}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogAction
+            nativeButton={false}
+            render={
+              <Link
+                to="/sites/$siteId"
+                params={{ siteId: props.site.id }}
+                className={buttonVariants()}
+              />
+            }
+          >
+            Back to drafts
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   );
 }
 
@@ -195,18 +334,27 @@ function CanvasToolbar(props: {
 /** Studio's editor screen: the page in the canvas and the settings panel beside it. */
 export function EditorPage(props: {
   readonly site: SiteId;
+  readonly draft: DraftId;
   readonly page: PageId;
   readonly person: Collaborator;
+  readonly opened: Extract<OpenedDraft, { _tag: "Ready" }>;
 }) {
-  const { data } = useSuspenseQuery(editorDraftQuery(props.site));
+  const data = props.opened;
   const { data: definitions } = useSuspenseQuery(blocksQuery(data.draft.lockfile));
   const [width, setWidth] = useState<Width>("desktop");
   const [scheme, setScheme] = useState<"light" | "dark">("light");
   const [colors] = useState(canvasColors);
-  const [connection] = useState(() => liveConnection(props.site));
+  const [connection] = useState(() => liveConnection(props.site, props.draft));
+  const context: DraftContext = {
+    person: props.person,
+    site: { id: props.site, name: data.draft.settings.name },
+    draft: { id: props.draft, name: data.summary.name },
+    canPublish: data.can.publish,
+  };
   return (
     <EditorProvider
       draft={data.draft}
+      live={data.live}
       page={props.page}
       definitions={definitions}
       media={data.media}
@@ -218,7 +366,8 @@ export function EditorPage(props: {
       onNotice={showNotice}
     >
       <div className="flex h-screen flex-col">
-        <Header site={{ id: props.site, name: data.draft.settings.name }} />
+        <Header {...context} />
+        <DraftStanding {...context} />
         <div className="flex min-h-0 flex-1">
           <aside
             aria-label="Structure"

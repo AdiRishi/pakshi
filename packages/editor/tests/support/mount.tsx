@@ -59,6 +59,7 @@ export const openEditor = async (
   await render(
     <EditorProvider
       draft={options.draft ?? fixtureDraft}
+      live={(options.draft ?? fixtureDraft).base}
       page={options.page ?? home}
       definitions={options.definitions ?? definitions}
       media={media}

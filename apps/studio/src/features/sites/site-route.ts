@@ -1,5 +1,5 @@
 import { AppRequestError } from "@repo/contracts/app";
-import { PageId, SiteId } from "@repo/contracts/ids";
+import { DraftId, PageId, SiteId } from "@repo/contracts/ids";
 import { notFound } from "@tanstack/react-router";
 import { Option, Schema } from "effect";
 
@@ -18,6 +18,13 @@ export const siteParams = {
     siteId: decodeOrNotFound(SiteId, params.siteId),
   }),
   stringify: (params: { readonly siteId: SiteId }) => ({ siteId: params.siteId }),
+};
+
+export const draftParams = {
+  parse: (params: { readonly draftId: string }) => ({
+    draftId: decodeOrNotFound(DraftId, params.draftId),
+  }),
+  stringify: (params: { readonly draftId: DraftId }) => ({ draftId: params.draftId }),
 };
 
 export const pageParams = {

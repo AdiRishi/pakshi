@@ -1,6 +1,6 @@
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import type { Draft } from "@repo/contracts/draft";
-import { SiteId } from "@repo/contracts/ids";
+import type { DraftName } from "@repo/contracts/draft";
+import { DraftId, type ReleaseId, SiteId } from "@repo/contracts/ids";
 import {
   ClientMessage,
   ClientMessageJson,
@@ -10,9 +10,9 @@ import {
   ServerMessage,
   ServerMessageJson,
 } from "@repo/contracts/live";
+import type { Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
-import { LiveRelease, routingKeys, snapshotReader } from "@repo/contracts/snapshot";
-import type { BatchOutcome } from "@repo/contracts/studio";
+import { DraftNotFound, NothingToRollBack } from "@repo/contracts/studio";
 import { Permission } from "@repo/domain/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, ManagedRuntime, Option, Schema } from "effect";
@@ -20,11 +20,17 @@ import type { SqlError } from "effect/unstable/sql";
 import * as Migrator from "effect/unstable/sql/Migrator";
 import { type Connection, type ConnectionContext, Server, type WSMessage } from "partyserver";
 
-import { type LiveSnapshot, migrations, SiteDrafts, SiteSource } from "./drafts.ts";
+import { cloudflarePlatform } from "./site/cloudflare.ts";
+import { SiteDrafts, SiteIdentity } from "./site/drafts.ts";
+import { migrations } from "./site/migrations.ts";
+import { LiveUpdates } from "./site/platform.ts";
+import { SiteReleases } from "./site/releases.ts";
+import { Site } from "./site/site.ts";
 
-/** Who a live connection is for, as studio-api found them when it checked their session. */
+/** Who a live connection is for, and the draft it edits, as studio-api found them. */
 export const LiveAuthorization = Schema.Struct({
   person: Collaborator,
+  draft: DraftId,
   /** What the person may do on this site, which every batch they send is checked against. */
   permissions: Schema.Array(Permission),
 });
@@ -37,6 +43,23 @@ const decodeAuthorization = Schema.decodeUnknownOption(Schema.fromJsonString(Liv
 const decodeMessage = Schema.decodeUnknownOption(ClientMessageJson);
 const encodeMessage = Schema.encodeSync(ServerMessageJson);
 
+/** The failures SiteDoc's RPC methods report, which callers decode on their side. */
+export const SiteDocError = Schema.Union([DraftNotFound, NothingToRollBack]);
+export type SiteDocError = typeof SiteDocError.Type;
+
+/**
+ * A SiteDoc call's result as it crosses Durable Object RPC, which copies
+ * plain data only: the value, or the failure encoded.
+ */
+export type Outcome<A> =
+  | { readonly ok: true; readonly value: A }
+  | { readonly ok: false; readonly error: typeof SiteDocError.Encoded };
+
+const encodeError = Schema.encodeSync(SiteDocError);
+
+/** Everything a Site call can fail with. Storage failures are defects to its caller. */
+type SiteFailure = SqlError.SqlError | Schema.SchemaError | SiteDocError;
+
 /** What SiteDoc keeps on each connection. It lives in the socket's attachment, so it survives hibernation. */
 interface LiveState extends LiveAuthorization {
   readonly presence: Presence | null;
@@ -44,39 +67,9 @@ interface LiveState extends LiveAuthorization {
 
 type LiveConnection = Connection<LiveState>;
 
-/** The site's live release, its snapshot and every page in it, read from KV and R2. */
-const readLiveSnapshot = async (env: StudioApiEnv, site: SiteId): Promise<LiveSnapshot> => {
-  const value = await env.ROUTING.get(routingKeys.site(site));
-  if (value === null) throw new Error(`${site} has no live release to start a draft from.`);
-  const live = Schema.decodeSync(Schema.fromJsonString(LiveRelease))(value);
-  const snapshots = snapshotReader(async (key) => (await env.CONTENT.get(key))?.text() ?? null);
-  const manifest = await snapshots.manifest(site, live.snapshot);
-  const pages = await Promise.all(manifest.pages.map((page) => snapshots.page(site, page.object)));
-  return { live, manifest, pages };
-};
-
-/** A site's drafts over its SiteDoc's SQLite storage, with the storage schema applied first. */
-const draftsRuntime = (storage: DurableObjectStorage, env: StudioApiEnv, site: SiteId) =>
-  ManagedRuntime.make(
-    SiteDrafts.layer.pipe(
-      Layer.provide(Layer.effectDiscard(Migrator.make({})({ loader: migrations }))),
-      Layer.provide(
-        Layer.succeed(SiteSource)({
-          site,
-          liveSnapshot: Effect.promise(() => readLiveSnapshot(env, site)),
-        }),
-      ),
-      Layer.provide(SqliteClient.layer({ storage })),
-      Layer.orDie,
-    ),
-  );
-
 /**
- * A site's drafts, submissions and live release, edited live by people and the agent.
- * Other code reaches it through PartyServer's `getServerByName`, named by site ID.
- *
- * Every live message and every commit runs one after another, in the order
- * they arrive, so each commit's broadcast leaves before the next commit starts.
+ * A site's drafts, releases and live connections. Other code reaches it
+ * through PartyServer's `getServerByName`, named by site ID.
  *
  * PartyServer requires its env to extend the global `Cloudflare.Env`. Other
  * Workers' programs include this file through the binding types and declare
@@ -86,26 +79,61 @@ const draftsRuntime = (storage: DurableObjectStorage, env: StudioApiEnv, site: S
 export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   static override options = { hibernate: true };
 
-  #drafts: ReturnType<typeof draftsRuntime> | undefined;
-  #queue: Promise<unknown> = Promise.resolve();
+  #runtime: ManagedRuntime.ManagedRuntime<Site, never> | undefined;
+  #messages: Promise<unknown> = Promise.resolve();
 
-  #run<A>(
-    use: (
-      drafts: SiteDrafts["Service"],
-    ) => Effect.Effect<A, SqlError.SqlError | Schema.SchemaError>,
-  ) {
-    this.#drafts ??= draftsRuntime(
-      this.ctx.storage,
-      this.env,
-      Schema.decodeSync(SiteId)(this.name),
+  /** The site's services over this object's storage, built the first time they're used. */
+  #site() {
+    const site = Schema.decodeSync(SiteId)(this.name);
+    this.#runtime ??= ManagedRuntime.make(
+      Site.layer.pipe(
+        Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer)),
+        Layer.provide(Layer.effectDiscard(Migrator.make({})({ loader: migrations }))),
+        Layer.provideMerge(SqliteClient.layer({ storage: this.ctx.storage })),
+        Layer.provide(cloudflarePlatform(this.env, site)),
+        Layer.provide(
+          Layer.succeed(LiveUpdates)({
+            send: (draft, message) =>
+              Effect.sync(() => {
+                const text = encodeMessage(message);
+                for (const connection of this.getConnections(draft ?? undefined))
+                  connection.send(text);
+              }),
+          }),
+        ),
+        Layer.provide(Layer.succeed(SiteIdentity)({ site })),
+        Layer.orDie,
+      ),
     );
-    return this.#drafts.runPromise(SiteDrafts.use(use));
+    return this.#runtime;
   }
 
-  /** Runs a task after every task queued before it. */
-  #serially<A>(task: () => Promise<A>): Promise<A> {
-    const next = this.#queue.then(task);
-    this.#queue = next.catch(() => undefined);
+  #run<A>(use: (site: Site["Service"]) => Effect.Effect<A, SiteFailure>) {
+    return this.#site().runPromise(Effect.orDie(Site.use(use)));
+  }
+
+  /** Runs a call whose failures its caller decodes, and returns its outcome as plain data. */
+  #call<A>(use: (site: Site["Service"]) => Effect.Effect<A, SiteFailure>): Promise<Outcome<A>> {
+    return this.#site().runPromise(
+      Site.use(use).pipe(
+        Effect.map((value): Outcome<A> => ({ ok: true, value })),
+        Effect.catchIf(Schema.is(SiteDocError), (error) =>
+          Effect.succeed<Outcome<A>>({ ok: false, error: encodeError(error) }),
+        ),
+        Effect.orDie,
+      ),
+    );
+  }
+
+  /** Delivers queued release copies to D1 soon, from the alarm, which retries when it fails. */
+  async #deliverSoon() {
+    if (await this.#run((site) => site.undelivered)) await this.ctx.storage.setAlarm(Date.now());
+  }
+
+  /** Runs each live message after the ones before it, in the order they arrive. */
+  #inOrder<A>(task: () => Promise<A>): Promise<A> {
+    const next = this.#messages.then(task);
+    this.#messages = next.catch(() => undefined);
     return next;
   }
 
@@ -113,8 +141,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     connection.send(encodeMessage(message));
   }
 
-  #broadcast(message: ServerMessage, without: ReadonlyArray<string> = []) {
-    this.broadcast(encodeMessage(message), [...without]);
+  /** Sends to everyone else in the same draft. */
+  #toDraft(connection: LiveConnection, draft: DraftId, message: ServerMessage) {
+    const text = encodeMessage(message);
+    for (const other of this.getConnections(draft))
+      if (other.id !== connection.id) other.send(text);
   }
 
   #peerOf(connection: LiveConnection): Peer | null {
@@ -124,12 +155,17 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
       : { connection: connection.id, person: state.person, presence: state.presence };
   }
 
-  /** Commits a batch and tells everyone connected, or returns why it can't commit. */
-  async #commit(actor: Collaborator, batch: Batch) {
-    const result = await this.#run((drafts) => drafts.applyBatch(actor, batch));
-    if (result.status === "committed")
-      this.#broadcast(ServerMessage.cases.Committed.make(result.commit));
-    return result;
+  override async onStart() {
+    await this.#deliverSoon();
+  }
+
+  override async onAlarm() {
+    await this.#run((site) => site.deliverOutbox);
+  }
+
+  override getConnectionTags(_connection: Connection, { request }: ConnectionContext) {
+    const authorization = decodeAuthorization(request.headers.get(liveAuthorizationHeader));
+    return Option.isSome(authorization) ? [authorization.value.draft] : [];
   }
 
   override onConnect(connection: LiveConnection, { request }: ConnectionContext) {
@@ -141,11 +177,15 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     connection.setState({ ...authorization.value, presence: null });
     const peer = this.#peerOf(connection);
     if (peer !== null)
-      this.#broadcast(ServerMessage.cases.PeerChanged.make({ peer }), [connection.id]);
+      this.#toDraft(
+        connection,
+        authorization.value.draft,
+        ServerMessage.cases.PeerChanged.make({ peer }),
+      );
   }
 
   override onMessage(connection: LiveConnection, raw: WSMessage) {
-    return this.#serially(async () => {
+    return this.#inOrder(async () => {
       const state = connection.state;
       const message = decodeMessage(raw);
       if (state === null || Option.isNone(message)) {
@@ -154,14 +194,20 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
       }
       try {
         await ClientMessage.match(message.value, {
-          Sync: async ({ revision }) => {
-            const catchUp = await this.#run((drafts) => drafts.catchUp(revision));
-            const peers = Array.from(this.getConnections<LiveState>()).flatMap((other) => {
-              const peer = other.id === connection.id ? null : this.#peerOf(other);
-              return peer === null ? [] : [peer];
-            });
-            this.#send(connection, ServerMessage.cases.Synced.make({ catchUp, peers }));
-          },
+          Sync: ({ revision }) =>
+            this.#run((site) =>
+              site.sync(state.draft, revision, (catchUp) =>
+                Effect.sync(() => {
+                  const peers = Array.from(this.getConnections<LiveState>(state.draft)).flatMap(
+                    (other) => {
+                      const peer = other.id === connection.id ? null : this.#peerOf(other);
+                      return peer === null ? [] : [peer];
+                    },
+                  );
+                  this.#send(connection, ServerMessage.cases.Synced.make({ catchUp, peers }));
+                }),
+              ),
+            ),
           Batch: async ({ batch }) => {
             if (!state.permissions.includes("page.edit")) {
               const errors = [
@@ -178,7 +224,9 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
               );
               return;
             }
-            const result = await this.#commit(state.person, batch);
+            const result = await this.#run((site) =>
+              site.applyBatch(state.person, state.draft, batch),
+            );
             if (result.status === "duplicate")
               this.#send(
                 connection,
@@ -194,7 +242,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
             connection.setState({ ...state, presence });
             const peer = this.#peerOf(connection);
             if (peer !== null)
-              this.#broadcast(ServerMessage.cases.PeerChanged.make({ peer }), [connection.id]);
+              this.#toDraft(
+                connection,
+                state.draft,
+                ServerMessage.cases.PeerChanged.make({ peer }),
+              );
           },
         });
       } catch (error) {
@@ -206,26 +258,80 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   override onClose(connection: LiveConnection) {
-    this.#broadcast(ServerMessage.cases.PeerLeft.make({ connection: connection.id }), [
-      connection.id,
-    ]);
+    const draft = connection.state?.draft;
+    if (draft !== undefined)
+      this.#toDraft(
+        connection,
+        draft,
+        ServerMessage.cases.PeerLeft.make({ connection: connection.id }),
+      );
   }
 
-  /** The site's draft, started from the live release the first time it's opened. */
-  async draft(): Promise<Draft> {
-    return this.#serially(() => this.#run((drafts) => drafts.draft));
+  // Calls from studio-api, which has checked the person may make them.
+
+  live() {
+    return this.#run((site) => site.live);
   }
 
-  /** Commits a batch for a person whose permission studio-api has checked. */
-  async applyBatch(actor: Collaborator, batch: Batch): Promise<BatchOutcome> {
-    const result = await this.#serially(() => this.#commit(actor, batch));
-    switch (result.status) {
-      case "committed":
-        return { status: "committed", revision: result.commit.batch.revision };
-      case "duplicate":
-        return { status: "committed", revision: result.revision };
-      case "rejected":
-        return { status: "rejected", errors: result.errors };
-    }
+  releases() {
+    return this.#run((site) => site.releases);
+  }
+
+  drafts() {
+    return this.#run((site) => site.drafts);
+  }
+
+  createDraft(by: Collaborator, name: DraftName) {
+    return this.#run((site) => site.createDraft(by, name));
+  }
+
+  renameDraft(id: DraftId, name: DraftName) {
+    return this.#call((site) => site.renameDraft(id, name));
+  }
+
+  closeDraft(by: Collaborator, id: DraftId) {
+    return this.#call((site) => site.closeDraft(by, id));
+  }
+
+  viewDraft(id: DraftId) {
+    return this.#call((site) => site.view(id));
+  }
+
+  openDraft(by: Collaborator, id: DraftId) {
+    return this.#call((site) => site.open(by, id));
+  }
+
+  applyBatch(actor: Collaborator, id: DraftId, batch: Batch) {
+    return this.#call((site) => site.applyBatch(actor, id, batch));
+  }
+
+  previewUpdate(id: DraftId, resolutions: Resolutions) {
+    return this.#call((site) => site.previewUpdate(id, resolutions));
+  }
+
+  updateDraft(actor: Collaborator, id: DraftId, resolutions: Resolutions) {
+    return this.#call((site) => site.update(actor, id, resolutions));
+  }
+
+  async publish(actor: Collaborator, id: DraftId) {
+    const outcome = await this.#call((site) => site.publish(actor, id));
+    await this.#deliverSoon();
+    return outcome;
+  }
+
+  async rollBack(actor: Collaborator) {
+    const outcome = await this.#call((site) => site.rollBack(actor));
+    await this.#deliverSoon();
+    return outcome;
+  }
+
+  restore(by: Collaborator, release: ReleaseId, name: DraftName) {
+    return this.#run((site) => Effect.map(site.restore(by, release, name), Option.getOrNull));
+  }
+
+  /** Writes the live release to KV and D1 again, for the reconcile job. */
+  async reconcile() {
+    await this.#run((site) => site.reconcile);
+    await this.#deliverSoon();
   }
 }

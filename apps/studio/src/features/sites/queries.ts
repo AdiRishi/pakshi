@@ -1,19 +1,22 @@
-import type { SiteId } from "@repo/contracts/ids";
+import type { DraftId, SiteId } from "@repo/contracts/ids";
 import { queryOptions } from "@tanstack/react-query";
 
-import { getEditorDraft, getSitePages } from "./functions";
+import { getDraftPages, getSiteDrafts, getSiteReleases } from "./functions";
 
-export const sitePagesQuery = (site: SiteId) =>
+export const siteDraftsQuery = (site: SiteId) =>
   queryOptions({
-    queryKey: ["sites", site, "pages"],
-    queryFn: () => getSitePages({ data: { site } }),
+    queryKey: ["sites", site, "drafts"],
+    queryFn: () => getSiteDrafts({ data: { site } }),
   });
 
-export const editorDraftQuery = (site: SiteId) =>
+export const draftPagesQuery = (site: SiteId, draft: DraftId) =>
   queryOptions({
-    queryKey: ["sites", site, "draft"],
-    queryFn: () => getEditorDraft({ data: { site } }),
-    // The editor keeps its own copy of the draft once it's open.
-    staleTime: Number.POSITIVE_INFINITY,
-    gcTime: 0,
+    queryKey: ["sites", site, "drafts", draft, "pages"],
+    queryFn: () => getDraftPages({ data: { site, draft } }),
+  });
+
+export const siteReleasesQuery = (site: SiteId) =>
+  queryOptions({
+    queryKey: ["sites", site, "releases"],
+    queryFn: () => getSiteReleases({ data: { site } }),
   });

@@ -1,7 +1,8 @@
 import { type BlockDefinition, FieldEditingProvider } from "@repo/blocks";
-import type { Draft } from "@repo/contracts/draft";
+import { type Draft, isBehind } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
+import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
@@ -94,6 +95,8 @@ const hostAnchor = (element: Element) => {
  */
 export function EditorProvider(props: {
   readonly draft: Draft;
+  /** The release the site serves as the editor opens. */
+  readonly live: LiveRelease;
   readonly page: PageId;
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
   readonly media: ReadonlyArray<MediaSummary>;
@@ -110,6 +113,7 @@ export function EditorProvider(props: {
     () =>
       new EditorStore({
         draft: props.draft,
+        live: props.live,
         page: props.page,
         contracts: props.definitions,
         person: props.person,
@@ -386,6 +390,16 @@ export const useDeselect = () => {
   const store = useStore();
   return () => store.select(null);
 };
+
+/** Whether the draft started from a release that's no longer live, so it must merge before it's published. */
+export const useBehind = () =>
+  useEditorState((state) => isBehind(state.confirmed.base, state.live));
+
+/** Who published or closed the draft, once someone has. */
+export const useDraftClosure = () => useEditorState((state) => state.closed);
+
+/** Whether the draft must be opened again, because a merge moved it to other block versions. */
+export const useOutdated = () => useEditorState((state) => state.outdated);
 
 /** The title of the page being edited, as the draft has it now. */
 export const usePageTitle = () =>

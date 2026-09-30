@@ -1,6 +1,10 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/contracts/rpc/client";
 import {
+  DraftNotFound,
+  NothingToRollBack,
+  NotPermitted,
+  ReleaseNotFound,
   SiteNotFound,
   StudioRpcs,
   studioSessionHeaders,
@@ -19,6 +23,23 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError("unauthenticated", "Your session has ended. Sign in again.");
   if (Schema.is(SiteNotFound)(failure))
     return new AppRequestError("not_found", "There's no site here that you can work on.");
+  if (Schema.is(DraftNotFound)(failure))
+    return new AppRequestError(
+      "not_found",
+      "This draft was published or closed, or doesn't exist.",
+    );
+  if (Schema.is(ReleaseNotFound)(failure))
+    return new AppRequestError("not_found", "This site has no such release.");
+  if (Schema.is(NotPermitted)(failure))
+    return new AppRequestError(
+      "forbidden",
+      `You don't have permission to ${failure.action} this site.`,
+    );
+  if (Schema.is(NothingToRollBack)(failure))
+    return new AppRequestError(
+      "conflict",
+      "Only the latest publish can be rolled back, and it already has been.",
+    );
   if (Schema.is(StudioUnavailable)(failure) || failure instanceof RpcClientError.RpcClientError)
     return new AppRequestError(
       "unavailable",
@@ -57,9 +78,9 @@ export const callStudio = <A, E>(
       Effect.catchCause((cause) => {
         if (Cause.hasInterruptsOnly(cause)) return Effect.interrupt;
         const error = toAppError(cause);
-        return error.code === "unauthenticated" || error.code === "not_found"
-          ? Effect.fail(error)
-          : Effect.logError("Studio call failed", cause).pipe(Effect.andThen(Effect.fail(error)));
+        return error.code === "unavailable" || error.code === "internal"
+          ? Effect.logError("Studio call failed", cause).pipe(Effect.andThen(Effect.fail(error)))
+          : Effect.fail(error);
       }),
     ),
     { signal: options.request.signal },

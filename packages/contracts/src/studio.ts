@@ -1,11 +1,15 @@
 import { Context, Schema } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
-import { Draft } from "./draft.ts";
-import { DraftId, MediaId, PageId, SiteId } from "./ids.ts";
+import { Draft, DraftName } from "./draft.ts";
+import { DraftId, MediaId, PageId, ReleaseId, SiteId } from "./ids.ts";
+import { Collaborator } from "./live.ts";
+import { Conflict, MergedChange, Resolutions } from "./merge.ts";
 import { Batch, BatchError } from "./ops.ts";
 import { PagePath } from "./page.ts";
-import { MediaFile } from "./snapshot.ts";
+import { Incomplete } from "./publishing.ts";
+import { Release, Timestamp } from "./release.ts";
+import { LiveRelease, MediaFile } from "./snapshot.ts";
 
 /** Better Auth's ID for the organization's identity provider, used by sign-in on both sides. */
 export const identityProviderId = "organization";
@@ -73,17 +77,69 @@ export const PageSummary = Schema.Struct({
 });
 export type PageSummary = typeof PageSummary.Type;
 
-/** A site's pages and posts, as its draft has them. */
-export const SitePages = Schema.Struct({
-  site: Schema.Struct({ id: SiteId, name: Schema.String }),
-  draft: DraftId,
-  pages: Schema.Array(PageSummary),
-});
-export type SitePages = typeof SitePages.Type;
+/** Whether a draft takes changes: open, published, or closed by someone without publishing. */
+export const DraftStatus = Schema.Literals(["open", "published", "closed"]);
+export type DraftStatus = typeof DraftStatus.Type;
 
-/** What the editor opens: the draft, and the images it can place. */
-export const EditorDraft = Schema.Struct({ draft: Draft, media: Schema.Array(MediaSummary) });
-export type EditorDraft = typeof EditorDraft.Type;
+/** A draft as the drafts list shows it. */
+export const DraftSummary = Schema.Struct({
+  id: DraftId,
+  name: DraftName,
+  status: DraftStatus,
+  /** The release the draft started from, or was last updated to. */
+  base: LiveRelease,
+  createdBy: Collaborator,
+  createdAt: Timestamp,
+  /** The latest change, or null when no one has changed the draft yet. */
+  lastEdit: Schema.NullOr(Schema.Struct({ by: Collaborator, at: Timestamp })),
+  /** Everyone who has changed the draft. */
+  people: Schema.Array(Collaborator),
+  /** When the draft was published or closed. */
+  closedAt: Schema.NullOr(Timestamp),
+});
+export type DraftSummary = typeof DraftSummary.Type;
+
+/** What the person may do on the site, beyond editing its drafts. */
+export const SiteAbilities = Schema.Struct({ publish: Schema.Boolean, rollBack: Schema.Boolean });
+export type SiteAbilities = typeof SiteAbilities.Type;
+
+const SiteName = Schema.Struct({ id: SiteId, name: Schema.String });
+
+/** A site's drafts, with the release that's live. */
+export const SiteDrafts = Schema.Struct({
+  site: SiteName,
+  live: Release,
+  drafts: Schema.Array(DraftSummary),
+  can: SiteAbilities,
+});
+export type SiteDrafts = typeof SiteDrafts.Type;
+
+/** A draft's pages and posts. */
+export const DraftPages = Schema.Struct({
+  site: SiteName,
+  live: LiveRelease,
+  draft: DraftSummary,
+  pages: Schema.Array(PageSummary),
+  can: SiteAbilities,
+});
+export type DraftPages = typeof DraftPages.Type;
+
+/**
+ * What opening a draft in the editor gives: the draft and the images it can
+ * place, or word that it's behind with conflicts to settle first. A draft
+ * behind whose merge is clean is updated on the way.
+ */
+export const OpenedDraft = Schema.TaggedUnion({
+  Ready: {
+    draft: Draft,
+    summary: DraftSummary,
+    live: LiveRelease,
+    media: Schema.Array(MediaSummary),
+    can: SiteAbilities,
+  },
+  NeedsUpdate: {},
+});
+export type OpenedDraft = typeof OpenedDraft.Type;
 
 /**
  * What became of a batch. A committed batch took the draft to `revision`; a
@@ -95,16 +151,110 @@ export const BatchOutcome = Schema.Union([
 ]);
 export type BatchOutcome = typeof BatchOutcome.Type;
 
+/** A behind draft's update, as it stands with the sides chosen so far. */
+export const DraftUpdate = Schema.Struct({
+  site: SiteName,
+  draft: DraftSummary,
+  /** The release the draft started from, and the one it's being brought up to. */
+  from: Release,
+  to: Release,
+  conflicts: Schema.Array(Conflict),
+  changes: Schema.Array(MergedChange),
+});
+export type DraftUpdate = typeof DraftUpdate.Type;
+
+export const UpdateOutcome = Schema.TaggedUnion({
+  /** The draft now starts from the live release. */
+  Updated: {},
+  /** Conflicts still need a side. The live site may have moved on, so these are current. */
+  Unresolved: { conflicts: Schema.Array(Conflict) },
+});
+export type UpdateOutcome = typeof UpdateOutcome.Type;
+
+export const PublishOutcome = Schema.TaggedUnion({
+  Published: { release: Release },
+  /** Fields still incomplete. Nothing was published. */
+  Incomplete: { incomplete: Schema.Array(Incomplete) },
+  /** The draft is behind, and merging the live release needs a person. */
+  NeedsUpdate: {},
+});
+export type PublishOutcome = typeof PublishOutcome.Type;
+
+/** A site's releases, newest first. */
+export const SiteReleases = Schema.Struct({
+  site: SiteName,
+  releases: Schema.Array(Release),
+  can: SiteAbilities,
+});
+export type SiteReleases = typeof SiteReleases.Type;
+
+/** No open draft on the site has this ID. */
+export class DraftNotFound extends Schema.TaggedError<DraftNotFound>()("DraftNotFound", {
+  draft: DraftId,
+}) {}
+
+/** The person may work on the site, but not do this. */
+export class NotPermitted extends Schema.TaggedError<NotPermitted>()("NotPermitted", {
+  action: Schema.String,
+}) {}
+
+/** Only the latest publish can be rolled back, and only when a release was live before it. */
+export class NothingToRollBack extends Schema.TaggedError<NothingToRollBack>()(
+  "NothingToRollBack",
+  {},
+) {}
+
+/** The site has no release with this ID. */
+export class ReleaseNotFound extends Schema.TaggedError<ReleaseNotFound>()("ReleaseNotFound", {
+  release: ReleaseId,
+}) {}
+
 const siteError = Schema.Union([StudioUnavailable, SiteNotFound]);
+const draftError = Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound]);
+const forDraft = { site: SiteId, draft: DraftId };
 
 /** Everything Studio asks of studio-api. */
 export class StudioRpcs extends RpcGroup.make(
   Rpc.make("viewer", { success: Viewer, error: StudioUnavailable }),
-  Rpc.make("sitePages", { payload: { site: SiteId }, success: SitePages, error: siteError }),
-  Rpc.make("editorDraft", { payload: { site: SiteId }, success: EditorDraft, error: siteError }),
-  Rpc.make("applyBatch", {
-    payload: { site: SiteId, batch: Batch },
-    success: BatchOutcome,
+  Rpc.make("siteDrafts", { payload: { site: SiteId }, success: SiteDrafts, error: siteError }),
+  Rpc.make("createDraft", {
+    payload: { site: SiteId, name: DraftName },
+    success: DraftSummary,
     error: siteError,
+  }),
+  Rpc.make("renameDraft", { payload: { ...forDraft, name: DraftName }, error: draftError }),
+  Rpc.make("closeDraft", { payload: forDraft, error: draftError }),
+  Rpc.make("draftPages", { payload: forDraft, success: DraftPages, error: draftError }),
+  Rpc.make("openDraft", { payload: forDraft, success: OpenedDraft, error: draftError }),
+  Rpc.make("applyBatch", {
+    payload: { ...forDraft, batch: Batch },
+    success: BatchOutcome,
+    error: draftError,
+  }),
+  Rpc.make("draftUpdate", {
+    payload: { ...forDraft, resolutions: Resolutions },
+    success: DraftUpdate,
+    error: draftError,
+  }),
+  Rpc.make("updateDraft", {
+    payload: { ...forDraft, resolutions: Resolutions },
+    success: UpdateOutcome,
+    error: draftError,
+  }),
+  Rpc.make("publishDraft", {
+    payload: forDraft,
+    success: PublishOutcome,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound, NotPermitted]),
+  }),
+  Rpc.make("siteReleases", { payload: { site: SiteId }, success: SiteReleases, error: siteError }),
+  Rpc.make("rollBack", {
+    payload: { site: SiteId },
+    success: Release,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, NothingToRollBack]),
+  }),
+  Rpc.make("restoreRelease", {
+    payload: { site: SiteId, release: ReleaseId, name: DraftName },
+    success: DraftSummary,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, ReleaseNotFound]),
   }),
 ).middleware(StudioSession) {}

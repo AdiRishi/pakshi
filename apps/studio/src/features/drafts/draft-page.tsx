@@ -1,6 +1,9 @@
-import { PageId, randomId, type SiteId } from "@repo/contracts/ids";
+import { isBehind } from "@repo/contracts/draft";
+import { type DraftId, PageId, randomId, type SiteId } from "@repo/contracts/ids";
 import type { PageDocument } from "@repo/contracts/page";
 import type { PageSummary, Viewer } from "@repo/contracts/studio";
+import { Alert, AlertAction, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
+import { Badge } from "@repo/ui/components/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,14 +38,23 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { FileTextIcon, MoreHorizontalIcon, NewspaperIcon, PlusIcon } from "lucide-react";
+import {
+  FileTextIcon,
+  GitMergeIcon,
+  MoreHorizontalIcon,
+  NewspaperIcon,
+  PlusIcon,
+  SendIcon,
+} from "lucide-react";
 import { useState } from "react";
+import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 
+import { draftPagesQuery, siteDraftsQuery } from "../sites/queries";
+import { sendBatch } from "../sites/send-batch";
 import { PageDialog, type SubmittedPage } from "./page-dialog";
-import { sitePagesQuery } from "./queries";
-import { sendBatch } from "./send-batch";
+import { PublishDialog } from "./publish-dialog";
 
 type PageType = PageSummary["type"];
 
@@ -50,15 +62,13 @@ const copy = {
   page: {
     tab: "Pages",
     create: "New page",
-    description:
-      "The page starts empty in this site's draft. Nothing goes live until it's published.",
+    description: "The page starts empty in this draft. Nothing goes live until it's published.",
     prefix: "/",
   },
   post: {
     tab: "Blog posts",
     create: "New post",
-    description:
-      "The post starts empty in this site's draft. Nothing goes live until it's published.",
+    description: "The post starts empty in this draft. Nothing goes live until it's published.",
     prefix: "/blog/",
   },
 } as const;
@@ -89,6 +99,7 @@ const newPage = (type: PageType, values: SubmittedPage, author: string): PageDoc
 
 function PagesTable(props: {
   readonly site: SiteId;
+  readonly draft: DraftId;
   readonly pages: ReadonlyArray<PageSummary>;
   readonly onRename: (page: PageSummary) => void;
 }) {
@@ -117,8 +128,8 @@ function PagesTable(props: {
             <TableCell className="px-6">
               <div className="flex items-center justify-end gap-2">
                 <Link
-                  to="/sites/$siteId/pages/$pageId"
-                  params={{ siteId: props.site, pageId: page.id }}
+                  to="/sites/$siteId/drafts/$draftId/pages/$pageId"
+                  params={{ siteId: props.site, draftId: props.draft, pageId: page.id }}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
                   aria-label={`Edit ${page.title || page.path}`}
                 >
@@ -149,32 +160,44 @@ function PagesTable(props: {
   );
 }
 
-export function PagesPage(props: { readonly viewer: Viewer; readonly site: SiteId }) {
-  const { data } = useSuspenseQuery(sitePagesQuery(props.site));
+/** A draft's pages and posts, and publishing it. */
+export function DraftPage(props: {
+  readonly viewer: Viewer;
+  readonly site: SiteId;
+  readonly draft: DraftId;
+}) {
+  const { data } = useSuspenseQuery(draftPagesQuery(props.site, props.draft));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [tab, setTab] = useState<PageType>("page");
   const [creating, setCreating] = useState<PageType | null>(null);
   const [renaming, setRenaming] = useState<PageSummary | null>(null);
+  const [publishing, setPublishing] = useState(false);
+  const behind = isBehind(data.draft.base, data.live);
   const byType = (type: PageType) => data.pages.filter((page) => page.type === type);
 
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: sitePagesQuery(props.site).queryKey });
+    queryClient.invalidateQueries({ queryKey: draftPagesQuery(props.site, props.draft).queryKey });
+  const toUpdate = () =>
+    navigate({
+      to: "/sites/$siteId/drafts/$draftId/update",
+      params: { siteId: props.site, draftId: props.draft },
+    });
 
   const create = async (type: PageType, values: SubmittedPage) => {
     const page = newPage(type, values, props.viewer.user.name);
-    const outcome = await sendBatch(props.site, [{ op: "createPage", page }]);
+    const outcome = await sendBatch(props.site, props.draft, [{ op: "createPage", page }]);
     if (outcome.status === "rejected") return outcome.errors;
     await refresh();
     await navigate({
-      to: "/sites/$siteId/pages/$pageId",
-      params: { siteId: props.site, pageId: page.id },
+      to: "/sites/$siteId/drafts/$draftId/pages/$pageId",
+      params: { siteId: props.site, draftId: props.draft, pageId: page.id },
     });
     return [];
   };
 
   const rename = async (page: PageSummary, values: SubmittedPage) => {
-    const outcome = await sendBatch(props.site, [
+    const outcome = await sendBatch(props.site, props.draft, [
       { op: "setMeta", page: page.id, field: "title", value: values.title },
       { op: "setPath", page: page.id, path: values.path },
     ]);
@@ -193,15 +216,55 @@ export function PagesPage(props: { readonly viewer: Viewer; readonly site: SiteI
             </BreadcrumbItem>
             <BreadcrumbSeparator />
             <BreadcrumbItem>
-              <BreadcrumbPage>{data.site.name}</BreadcrumbPage>
+              <BreadcrumbLink render={<Link to="/sites/$siteId" params={{ siteId: props.site }} />}>
+                {data.site.name}
+              </BreadcrumbLink>
+            </BreadcrumbItem>
+            <BreadcrumbSeparator />
+            <BreadcrumbItem>
+              <BreadcrumbPage>{data.draft.name}</BreadcrumbPage>
             </BreadcrumbItem>
           </BreadcrumbList>
         </Breadcrumb>
-        <h1 className="text-3xl font-semibold tracking-tight">{data.site.name}</h1>
+        <div className="flex flex-wrap items-center gap-3">
+          <h1 className="text-3xl font-semibold tracking-tight">{data.draft.name}</h1>
+          {behind ? (
+            <Badge variant="warning">Behind</Badge>
+          ) : (
+            <Badge variant="secondary">Up to date with live</Badge>
+          )}
+          {data.can.publish && (
+            <Button className="ml-auto" onClick={() => setPublishing(true)}>
+              <SendIcon />
+              Publish
+            </Button>
+          )}
+        </div>
         <p className="text-secondary-foreground">
-          Pages and posts in this site's draft. Edits save to the draft as you make them.
+          Pages and posts in this draft. Edits save to the draft as you make them, and nothing goes
+          live until it's published.
         </p>
       </header>
+      {behind && (
+        <div className="px-10 pt-6">
+          <Alert>
+            <GitMergeIcon />
+            <AlertTitle>The live site has changed since this draft started</AlertTitle>
+            <AlertDescription>
+              Bring those changes into the draft before anyone publishes it.
+            </AlertDescription>
+            <AlertAction>
+              <Link
+                to="/sites/$siteId/drafts/$draftId/update"
+                params={{ siteId: props.site, draftId: props.draft }}
+                className={buttonVariants({ variant: "outline", size: "sm" })}
+              >
+                Update draft
+              </Link>
+            </AlertAction>
+          </Alert>
+        </div>
+      )}
       <div className="px-10 py-8">
         <Tabs value={tab} onValueChange={(value: PageType) => setTab(value)}>
           <div className="flex flex-wrap items-center justify-between gap-4">
@@ -232,7 +295,12 @@ export function PagesPage(props: { readonly viewer: Viewer; readonly site: SiteI
                       </EmptyHeader>
                     </Empty>
                   ) : (
-                    <PagesTable site={props.site} pages={byType(type)} onRename={setRenaming} />
+                    <PagesTable
+                      site={props.site}
+                      draft={props.draft}
+                      pages={byType(type)}
+                      onRename={setRenaming}
+                    />
                   )}
                 </CardContent>
               </Card>
@@ -261,13 +329,27 @@ export function PagesPage(props: { readonly viewer: Viewer; readonly site: SiteI
             if (!open) setRenaming(null);
           }}
           heading={`Rename ${renaming.type}`}
-          description="The new title and address apply in this draft. The live site changes when the draft is published."
+          description="The new title and address apply in this draft. The live site changes when it's published."
           submitLabel="Rename"
           initial={{ title: renaming.title, path: renaming.path }}
           addressPrefix={null}
           onSubmit={(values) => rename(renaming, values)}
         />
       )}
+      <PublishDialog
+        site={props.site}
+        draft={data.draft}
+        open={publishing}
+        onOpenChange={setPublishing}
+        onPublished={async () => {
+          toast.success(`${data.draft.name} is published`, {
+            description: "It's live within about a minute.",
+          });
+          await queryClient.invalidateQueries({ queryKey: siteDraftsQuery(props.site).queryKey });
+          await navigate({ to: "/sites/$siteId", params: { siteId: props.site } });
+        }}
+        onNeedsUpdate={toUpdate}
+      />
     </AppShell>
   );
 }

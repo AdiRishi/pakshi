@@ -4,6 +4,8 @@ const AppErrorCode = Schema.Literals([
   "invalid_request",
   "unauthenticated",
   "not_found",
+  "forbidden",
+  "conflict",
   "unavailable",
   "internal",
 ]);

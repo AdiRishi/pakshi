@@ -1,11 +1,21 @@
 export type { Notice } from "./notices.ts";
-export type { Connection, EditorState, LiveLink, SaveStatus, Selection } from "./store.ts";
+export type {
+  Connection,
+  DraftClosure,
+  EditorState,
+  LiveLink,
+  SaveStatus,
+  Selection,
+} from "./store.ts";
 export {
   EditorCanvas,
   EditorProvider,
   EditorSettings,
+  useBehind,
   useDeselect,
+  useDraftClosure,
   useEditorStatus,
+  useOutdated,
   usePageTitle,
   useToolbarCommands,
 } from "./editor.tsx";
