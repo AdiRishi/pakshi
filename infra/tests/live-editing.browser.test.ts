@@ -8,7 +8,7 @@ import {
   test,
 } from "@playwright/test";
 
-import { newDraft, openInEditor, signedIn } from "./support/studio.ts";
+import { newDraft, openInEditor, showOutline, signedIn } from "./support/studio.ts";
 
 /** Someone signed in to Studio in their own browser, with a draft's home page open. */
 const editing = async (browser: Browser, name: string, draft: (page: Page) => Promise<string>) => {
@@ -106,6 +106,7 @@ test("two people edit one draft live, and every change is applied or its author 
   // Someone removes the section another person is typing in. The typing is lost, and its author told.
   await caretAtEnd(aboutHeading(meera.canvas));
   await meera.page.keyboard.type(" and more");
+  await showOutline(sam.page);
   const outlineRow = sam.page.locator('[data-pakshi-outline-block="b_about"]');
   await outlineRow.focus();
   await sam.page.keyboard.press("Delete");

@@ -41,6 +41,9 @@ export const openInEditor = async (page: Page, draftUrl: string, pageId: string)
   return canvas;
 };
 
+/** Shows the editor's outline, in the tab beside the chat with Pakshi. */
+export const showOutline = (page: Page) => page.getByRole("tab", { name: "Outline" }).click();
+
 /** A block's heading as the editor canvas shows it. */
 export const heading = (canvas: FrameLocator, block: string) =>
   canvas.locator(`[data-pakshi-block="${block}"] [data-pakshi-field="heading"]`);
