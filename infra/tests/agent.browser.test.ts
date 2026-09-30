@@ -47,6 +47,12 @@ test("the agent route reaches only the signed-in person's own conversation", asy
     headers: { origin: "https://elsewhere.example" },
   });
   expect(elsewhere.status()).toBe(403);
+  // A draft that doesn't exist has no conversation to open, even for someone who edits the site.
+  const madeUp = await meera.request.post(`${studioUrl}/api/agent/site_harbour/dr_madeup/sources`, {
+    headers: { origin },
+    multipart: { file: { name: "notes.md", mimeType: "text/markdown", buffer: Buffer.from("Hi") } },
+  });
+  expect(madeUp.status()).toBe(404);
 
   // Meera attaches a document to her conversation.
   const attached = await meera.request.post(`${agent}/sources`, {
