@@ -135,3 +135,15 @@ test("a draft shared by link goes through a two-step workflow, updating itself w
     await useBrandWorkflow(meera);
   }
 });
+
+test("the organization can set a workflow of its own, with nothing above it to use", async ({
+  browser,
+}) => {
+  const meera = await signedIn(browser, "Meera Kapoor");
+  await meera.goto(`${studioUrl}/organization/workflow`);
+  // The page renders on the server, and the button works once it hydrates.
+  await expect(async () => {
+    await meera.getByRole("button", { name: "Add step" }).click();
+    await expect(meera.getByRole("heading", { name: "Step 1" })).toBeVisible({ timeout: 1000 });
+  }).toPass();
+});
