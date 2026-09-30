@@ -7,65 +7,107 @@ sidebar:
 
 One short entry per significant decision: the context, what we chose, and why. Newest first.
 
-| #   | Decision                                                                           | Date       | Status            |
-| --- | ---------------------------------------------------------------------------------- | ---------- | ----------------- |
-| 057 | One turn orders every change to submissions and the live release                   | 2026-10-01 | Accepted          |
-| 056 | A submission whose merge needs a person goes back to its draft                     | 2026-10-01 | Accepted          |
-| 055 | A draft's sharing lives with the draft in SiteDoc                                  | 2026-10-01 | Accepted          |
-| 054 | Studio serves previews from the draft itself                                       | 2026-10-01 | Accepted          |
-| 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted          |
-| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Accepted          |
-| 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted          |
-| 050 | A site's first release is the one KV serves                                        | 2026-09-30 | Accepted          |
-| 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts         | 2026-09-30 | Accepted          |
-| 048 | A rollback is a release of the snapshot that was live before                       | 2026-09-30 | Accepted          |
-| 047 | A merge commits as a batch of ops, led by a system-only rebase                     | 2026-09-30 | Accepted          |
-| 046 | Someone typing in a replaced field is told when they stop                          | 2026-09-30 | Accepted          |
-| 045 | Remote changes wait for composition, and the canvas keeps the view in place        | 2026-09-30 | Accepted          |
-| 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted          |
-| 043 | Live connections catch up from the batch log                                       | 2026-09-30 | Accepted          |
-| 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted          |
-| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Accepted          |
-| 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted          |
-| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted          |
-| 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted          |
-| 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted          |
-| 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted          |
-| 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted          |
-| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Accepted          |
-| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Amended by 042    |
-| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Superseded by 043 |
-| 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted          |
-| 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted          |
-| 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted          |
-| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Accepted          |
-| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted          |
-| 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted          |
-| 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted          |
-| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Amended by 057    |
-| 023 | One-click rollback undoes only the latest publish                                  | 2026-09-29 | Accepted          |
-| 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted          |
-| 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted          |
-| 020 | Share drafts like documents                                                        | 2026-09-28 | Amended by 054    |
-| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Accepted          |
-| 018 | Media files never change                                                           | 2026-09-28 | Accepted          |
-| 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted          |
-| 016 | Keep all site data: submissions and releases are never deleted automatically       | 2026-09-29 | Accepted          |
-| 015 | Approval workflows on the organization, a brand or a site                          | 2026-09-29 | Accepted          |
-| 014 | Fine-grained permissions, with roles as bundles and per-person overrides           | 2026-09-28 | Accepted          |
-| 013 | Integrate Puck through a sync module; don't fork                                   | 2026-09-29 | Superseded by 025 |
-| 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted          |
-| 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted          |
-| 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted          |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054    |
-| 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Accepted          |
-| 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted          |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Accepted          |
-| 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025    |
-| 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted          |
-| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054    |
-| 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted          |
-| 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted          |
+| #   | Decision                                                                           | Date       | Status              |
+| --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 061 | One conversation per person per draft                                              | 2026-10-01 | Accepted            |
+| 060 | The agent proposes a site plan with a tool, and the plan becomes its brief         | 2026-10-01 | Accepted            |
+| 059 | One spend limit on AI Gateway for the whole product                                | 2026-10-01 | Accepted            |
+| 058 | The agent runs on Effect AI in a PartyServer Durable Object                        | 2026-10-01 | Accepted            |
+| 057 | One turn orders every change to submissions and the live release                   | 2026-10-01 | Accepted            |
+| 056 | A submission whose merge needs a person goes back to its draft                     | 2026-10-01 | Accepted            |
+| 055 | A draft's sharing lives with the draft in SiteDoc                                  | 2026-10-01 | Accepted            |
+| 054 | Studio serves previews from the draft itself                                       | 2026-10-01 | Accepted            |
+| 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted            |
+| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Accepted            |
+| 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted            |
+| 050 | A site's first release is the one KV serves                                        | 2026-09-30 | Accepted            |
+| 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts         | 2026-09-30 | Accepted            |
+| 048 | A rollback is a release of the snapshot that was live before                       | 2026-09-30 | Accepted            |
+| 047 | A merge commits as a batch of ops, led by a system-only rebase                     | 2026-09-30 | Accepted            |
+| 046 | Someone typing in a replaced field is told when they stop                          | 2026-09-30 | Accepted            |
+| 045 | Remote changes wait for composition, and the canvas keeps the view in place        | 2026-09-30 | Accepted            |
+| 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted            |
+| 043 | Live connections catch up from the batch log                                       | 2026-09-30 | Accepted            |
+| 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted            |
+| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Accepted            |
+| 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted            |
+| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted            |
+| 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted            |
+| 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted            |
+| 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted            |
+| 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted            |
+| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Accepted            |
+| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Amended by 042      |
+| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Superseded by 043   |
+| 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted            |
+| 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted            |
+| 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted            |
+| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Accepted            |
+| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted            |
+| 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted            |
+| 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted            |
+| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Amended by 057      |
+| 023 | One-click rollback undoes only the latest publish                                  | 2026-09-29 | Accepted            |
+| 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted            |
+| 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted            |
+| 020 | Share drafts like documents                                                        | 2026-09-28 | Amended by 054      |
+| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Accepted            |
+| 018 | Media files never change                                                           | 2026-09-28 | Accepted            |
+| 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted            |
+| 016 | Keep all site data: submissions and releases are never deleted automatically       | 2026-09-29 | Accepted            |
+| 015 | Approval workflows on the organization, a brand or a site                          | 2026-09-29 | Accepted            |
+| 014 | Fine-grained permissions, with roles as bundles and per-person overrides           | 2026-09-28 | Accepted            |
+| 013 | Integrate Puck through a sync module; don't fork                                   | 2026-09-29 | Superseded by 025   |
+| 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted            |
+| 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted            |
+| 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted            |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054      |
+| 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Amended by 058, 059 |
+| 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted            |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Accepted            |
+| 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025      |
+| 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted            |
+| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
+| 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
+| 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 061 — One conversation per person per draft [#decision-061]
+
+**Context.** A conversation belongs to one person and works in one draft. The design had `studio-api` check that the signed-in person owns the conversation they connect to, which needs a record of owners.
+
+**Decision.** A `SiteAgent` is named by its site, draft and person. `studio-api` builds the name from the session, so a connection can only reach the signed-in person's own conversation. The chat panel can clear the conversation to start again.
+
+**Rejected.** Several conversations per draft, with an owners table in D1 and a conversation list in the chat panel.
+
+**Consequences.** There's nothing to check or store about ownership. Two people in one draft each talk to their own agent, and both agents' edits reach everyone through `SiteDoc`.
+
+## 060 — The agent proposes a site plan with a tool, and the plan becomes its brief [#decision-060]
+
+**Context.** To build a site, the agent proposes a plan and the person confirms it before anything is built. The tool list had only `ask_user`, which offers choices but can't show a plan's structure. The context prefix carries the agent's working brief, but no tool wrote one.
+
+**Decision.** A `propose_plan` tool takes the plan: pages with their address and recipe, and each page's sections with a line on what each is for. Chat shows it as a plan card, and the person builds it or asks for changes. The plan they build becomes the working brief, which the context prefix carries into every later turn.
+
+**Consequences.** The plan is data the agent builds from section by section, and a later turn still knows what was agreed.
+
+## 059 — One spend limit on AI Gateway for the whole product [#decision-059]
+
+**Context.** [Decision 008](#decision-008) set a monthly spend limit per brand. AI Gateway's spend limits belong to a gateway, and nothing in the product needs brands to have budgets of their own.
+
+**Decision.** One spend limit on the AI Gateway caps model spend for the whole product. Every request is still tagged with its brand, site and person for cost tracking. When the gateway refuses a request because the limit is reached, the agent tells the person it can't help right now.
+
+**Rejected.** A spend ledger per brand in D1, checked before each model call.
+
+**Consequences.** There are no budgets to configure or record per brand. The limit is enforced by the gateway, which may let a burst go slightly over.
+
+## 058 — The agent runs on Effect AI in a PartyServer Durable Object [#decision-058]
+
+**Context.** [Decision 008](#decision-008) chose `AIChatAgent` from `@cloudflare/ai-chat`. Its current version brings the AI SDK, zod and three MCP packages, a second schema stack beside Effect Schema. By default its protocol stores the history, tool results, approvals, clears and state a client sends, and it serves the history without an access check, so `studio-api` would have to override most of it. The chat panel needs its own interface for plans, questions and each turn's changes either way.
+
+**Decision.** `SiteAgent` is a PartyServer room, like `SiteDoc`. Its turns run on Effect AI's `LanguageModel`, `Chat` and `Toolkit`, with every tool's input and output an Effect schema. Models are reached through the Workers AI binding and AI Gateway with Effect's OpenAI-compatible provider. The chat protocol is a schema in `@repo/contracts`, like live editing's: a connection catches up on the conversation when it opens and follows each turn as it streams, and a client sends only its own messages and answers.
+
+**Rejected.** `AIChatAgent` with its client protocol overridden.
+
+**Consequences.** One schema stack, and the agent's turns run in Node for tests and evals. Pakshi stores the conversation and streams turns itself. A turn cut off because the Durable Object was evicted ends as interrupted instead of resuming, and what it committed stays in the draft, where it can be undone. Workers AI streams OpenAI's format with null fields and a trailing usage event that the provider's parser rejects, so Pakshi's adapter rewrites the stream into strict OpenAI chunks.
 
 ## 057 — One turn orders every change to submissions and the live release [#decision-057]
 
