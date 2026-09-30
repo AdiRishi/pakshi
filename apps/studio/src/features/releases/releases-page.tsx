@@ -36,7 +36,19 @@ import { siteDraftsQuery, siteReleasesQuery } from "../sites/queries";
 import { SiteHeader } from "../sites/site-header";
 import { releaseNamed, releaseTitle } from "./describe";
 
-const whoBy = (release: Release) => (release._tag === "Imported" ? "Pakshi" : release.by.name);
+/** Who made a release: who submitted and approved a publish, or who rolled back. */
+const whoBy = (release: Release) => {
+  switch (release._tag) {
+    case "Imported":
+      return "Pakshi";
+    case "RolledBack":
+      return release.by.name;
+    case "Published":
+      return release.approvedBy.length === 0
+        ? release.submittedBy.name
+        : `${release.submittedBy.name}, approved by ${release.approvedBy.map((person) => person.name).join(" and ")}`;
+  }
+};
 
 /** The release before the latest, which rolling back makes live again, when the latest is a publish. */
 const rollBackTarget = (releases: ReadonlyArray<Release>) => {

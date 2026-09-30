@@ -3,11 +3,14 @@ import { SiteId } from "@repo/contracts/ids";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import {
   SignedIn,
+  StudioAddress,
   StudioRpcs,
   StudioSession,
   StudioUnavailable,
   Unauthenticated,
   type Viewer,
+  Visitor,
+  VisitorSession,
 } from "@repo/contracts/studio";
 import { Effect, Layer } from "effect";
 import { describe, expect, test } from "vitest";
@@ -27,9 +30,17 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     StudioSession.of((effect, { headers }) => {
       seen.push(headers["x-studio-origin"]);
       return headers.cookie === "session=sam"
-        ? Effect.provideService(effect, SignedIn, sam)
+        ? effect.pipe(
+            Effect.provideService(SignedIn, sam),
+            Effect.provideService(StudioAddress, headers["x-studio-origin"] ?? ""),
+          )
         : Effect.fail(new Unauthenticated({}));
     }),
+  );
+  const visitor = Layer.succeed(VisitorSession)(
+    VisitorSession.of((effect) =>
+      effect.pipe(Effect.provideService(Visitor, null), Effect.provideService(StudioAddress, "")),
+    ),
   );
   const answer = SignedIn.use((user): Effect.Effect<Viewer> =>
     Effect.succeed({
@@ -42,8 +53,10 @@ const fakeStudioApi = (behaviour: Behaviour) => {
           brand: "Harbour Schools",
         },
       ],
+      approvalsWaiting: 0,
     }),
   );
+  const unused = () => Effect.die(new Error(onlyViewer));
   const handlers = StudioRpcs.toLayer({
     viewer: () => {
       switch (behaviour) {
@@ -57,21 +70,36 @@ const fakeStudioApi = (behaviour: Behaviour) => {
           return Effect.never;
       }
     },
-    siteDrafts: () => Effect.die(new Error(onlyViewer)),
-    createDraft: () => Effect.die(new Error(onlyViewer)),
-    renameDraft: () => Effect.die(new Error(onlyViewer)),
-    closeDraft: () => Effect.die(new Error(onlyViewer)),
-    draftPages: () => Effect.die(new Error(onlyViewer)),
-    openDraft: () => Effect.die(new Error(onlyViewer)),
-    applyBatch: () => Effect.die(new Error(onlyViewer)),
-    draftUpdate: () => Effect.die(new Error(onlyViewer)),
-    updateDraft: () => Effect.die(new Error(onlyViewer)),
-    publishDraft: () => Effect.die(new Error(onlyViewer)),
-    siteReleases: () => Effect.die(new Error(onlyViewer)),
-    rollBack: () => Effect.die(new Error(onlyViewer)),
-    restoreRelease: () => Effect.die(new Error(onlyViewer)),
+    home: unused,
+    people: unused,
+    siteDrafts: unused,
+    createDraft: unused,
+    renameDraft: unused,
+    closeDraft: unused,
+    draftPages: unused,
+    openDraft: unused,
+    applyBatch: unused,
+    draftUpdate: unused,
+    updateDraft: unused,
+    draftSharing: unused,
+    shareDraft: unused,
+    submissionCheck: unused,
+    submitDraft: unused,
+    siteReleases: unused,
+    rollBack: unused,
+    restoreRelease: unused,
+    workflow: unused,
+    saveWorkflow: unused,
+    approvals: unused,
+    review: unused,
+    reviewPage: unused,
+    decide: unused,
+    previewPage: unused,
   });
-  const server = rpcWebHandler(StudioRpcs, Layer.mergeAll(handlers, session));
+  const server = rpcWebHandler(
+    StudioRpcs,
+    handlers.pipe(Layer.provideMerge(Layer.mergeAll(session, visitor))),
+  );
   return { seen, binding: { fetch: (request: Request) => server.handler(request) } };
 };
 

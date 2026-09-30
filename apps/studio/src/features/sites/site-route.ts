@@ -1,5 +1,5 @@
 import { AppRequestError } from "@repo/contracts/app";
-import { DraftId, PageId, SiteId } from "@repo/contracts/ids";
+import { DraftId, PageId, SiteId, SubmissionId } from "@repo/contracts/ids";
 import { notFound } from "@tanstack/react-router";
 import { Option, Schema } from "effect";
 
@@ -32,6 +32,15 @@ export const pageParams = {
     pageId: decodeOrNotFound(PageId, params.pageId),
   }),
   stringify: (params: { readonly pageId: PageId }) => ({ pageId: params.pageId }),
+};
+
+export const submissionParams = {
+  parse: (params: { readonly submissionId: string }) => ({
+    submissionId: decodeOrNotFound(SubmissionId, params.submissionId),
+  }),
+  stringify: (params: { readonly submissionId: SubmissionId }) => ({
+    submissionId: params.submissionId,
+  }),
 };
 
 /** Loads a site's data, treating a site the person can't reach as a page that doesn't exist. */

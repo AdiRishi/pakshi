@@ -1,7 +1,11 @@
+import { Scope } from "@repo/contracts/access";
 import { DraftName } from "@repo/contracts/draft";
-import { DraftId, ReleaseId, SiteId } from "@repo/contracts/ids";
+import { DraftId, ReleaseId, SiteId, SnapshotId, SubmissionId } from "@repo/contracts/ids";
 import { Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
+import { DraftSharing } from "@repo/contracts/sharing";
+import { Decision } from "@repo/contracts/studio";
+import { Workflow } from "@repo/contracts/workflow";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
@@ -72,25 +76,57 @@ export const updateDraft = createServerFn({ method: "POST" })
   )
   .handler(({ data }) => studio((client) => client.updateDraft(data)));
 
-/** Freezes a draft and makes it live. Writing its snapshot can take a while on a large site. */
-export const publishDraft = createServerFn({ method: "POST" })
+/** What submitting a draft now would meet: pre-flight's findings, and who reviews it. */
+export const getSubmissionCheck = createServerFn({ method: "GET" })
   .validator(forDraft)
+  .handler(({ data }) => studio((client) => client.submissionCheck(data)));
+
+const Note = Schema.String.check(Schema.isMaxLength(1000));
+
+/**
+ * Freezes a draft for approval, or makes it live when the site's workflow
+ * has no steps. Writing its snapshot can take a while on a large site.
+ */
+export const submitDraft = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId, note: Note })))
   .handler(({ data }) =>
     callStudio(
       { binding: env.STUDIO_RPC, request: getRequest(), timeout: "60 seconds" },
-      (client) => client.publishDraft(data),
+      (client) => client.submitDraft(data),
     ),
   );
+
+export const getDraftSharing = createServerFn({ method: "GET" })
+  .validator(forDraft)
+  .handler(({ data }) => studio((client) => client.draftSharing(data)));
+
+export const shareDraft = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, draft: DraftId, sharing: DraftSharing }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.shareDraft(data)));
+
+/** People in the organization whose name or email contains the text. */
+export const searchPeople = createServerFn({ method: "GET" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ search: Schema.String })))
+  .handler(({ data }) => studio((client) => client.people(data)));
 
 /** Every release of a site, newest first. */
 export const getSiteReleases = createServerFn({ method: "GET" })
   .validator(forSite)
   .handler(({ data }) => studio((client) => client.siteReleases(data)));
 
-/** Undoes the latest publish. */
+/** Undoes the latest publish. Submissions under review merge the change in, which can take a while. */
 export const rollBack = createServerFn({ method: "POST" })
   .validator(forSite)
-  .handler(({ data }) => studio((client) => client.rollBack(data)));
+  .handler(({ data }) =>
+    callStudio(
+      { binding: env.STUDIO_RPC, request: getRequest(), timeout: "60 seconds" },
+      (client) => client.rollBack(data),
+    ),
+  );
 
 /** Starts a draft holding an earlier release's content. */
 export const restoreRelease = createServerFn({ method: "POST" })
@@ -98,3 +134,47 @@ export const restoreRelease = createServerFn({ method: "POST" })
     Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, release: ReleaseId, name: DraftName })),
   )
   .handler(({ data }) => studio((client) => client.restoreRelease(data)));
+
+const forScope = Schema.toStandardSchemaV1(Schema.Struct({ scope: Scope }));
+
+/** A scope's approval workflow, and the one it uses when it has none of its own. */
+export const getWorkflow = createServerFn({ method: "GET" })
+  .validator(forScope)
+  .handler(({ data }) => studio((client) => client.workflow(data)));
+
+/** Sets a scope's own workflow, or with null, has it use the one above it. */
+export const saveWorkflow = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(Schema.Struct({ scope: Scope, steps: Schema.NullOr(Workflow) })),
+  )
+  .handler(({ data }) => studio((client) => client.saveWorkflow(data)));
+
+/** What waits for the signed-in person's decision, what they sent, and what's finished. */
+export const getApprovals = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.approvals()),
+);
+
+/** What waits for the signed-in person, and the drafts shared with them. */
+export const getHome = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.home()),
+);
+
+const forSubmission = { site: SiteId, submission: SubmissionId };
+
+export const getReview = createServerFn({ method: "GET" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct(forSubmission)))
+  .handler(({ data }) => studio((client) => client.review(data)));
+
+/** Approves a submission's current step, or requests changes. The last approval publishes it. */
+export const decide = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ ...forSubmission, snapshot: SnapshotId, decision: Decision, note: Note }),
+    ),
+  )
+  .handler(({ data }) =>
+    callStudio(
+      { binding: env.STUDIO_RPC, request: getRequest(), timeout: "60 seconds" },
+      (client) => client.decide(data),
+    ),
+  );

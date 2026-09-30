@@ -10,6 +10,7 @@ import { ArrowLeftIcon, CheckIcon, GitMergeIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { toast } from "sonner";
 
+import { describeChange } from "@/features/approvals/describe";
 import { formatDay } from "@/lib/dates";
 
 import { releaseTitle } from "../releases/describe";
@@ -171,25 +172,6 @@ function ConflictCard(props: {
     </section>
   );
 }
-
-const describeChange = (change: MergedChange) => {
-  switch (change._tag) {
-    case "PageAdded":
-      return "New page";
-    case "PageRemoved":
-      return "Page removed";
-    case "BlockAdded":
-      return `Added ${change.block.title}`;
-    case "BlockRemoved":
-      return `Removed ${change.block.title}`;
-    case "BlockMoved":
-      return `Moved ${change.block.title}`;
-    case "ValueChanged":
-      return change.block === null
-        ? `Changed ${change.field}`
-        : `${change.field} in ${change.block.title}`;
-  }
-};
 
 function MergedChanges(props: { readonly changes: ReadonlyArray<MergedChange> }) {
   const byPlace = Map.groupBy(props.changes, (change) => change.place.title);

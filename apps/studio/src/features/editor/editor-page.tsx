@@ -1,7 +1,7 @@
 import { loadBlocks } from "@repo/blocks";
 import type { DraftId, MediaId, PageId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
-import type { OpenedDraft } from "@repo/contracts/studio";
+import type { OpenedDraft, SiteAbilities } from "@repo/contracts/studio";
 import {
   EditorCanvas,
   EditorOutline,
@@ -39,15 +39,14 @@ import {
 import { Button, buttonVariants } from "@repo/ui/components/button";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
-import { queryOptions, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "@tanstack/react-router";
+import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
   LoaderIcon,
   MonitorIcon,
   MoonIcon,
-  SendIcon,
   SmartphoneIcon,
   SunIcon,
   TabletIcon,
@@ -56,8 +55,8 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
-import { PublishDialog } from "@/features/drafts/publish-dialog";
-import { siteDraftsQuery } from "@/features/sites/queries";
+import { standing } from "@/features/approvals/describe";
+import { DraftActions } from "@/features/drafts/draft-actions";
 
 import { liveConnection } from "./live-connection";
 
@@ -104,23 +103,19 @@ interface DraftContext {
   readonly person: Collaborator;
   readonly site: { readonly id: SiteId; readonly name: string };
   readonly draft: { readonly id: DraftId; readonly name: string };
-  readonly canPublish: boolean;
+  readonly can: SiteAbilities;
+  readonly review: OpenedReady["summary"]["review"];
 }
+
+type OpenedReady = Extract<OpenedDraft, { _tag: "Ready" }>;
 
 function Header(props: DraftContext) {
   const status = useEditorStatus();
   const title = usePageTitle();
   const behind = useBehind();
   const closure = useDraftClosure();
-  const navigate = useNavigate();
-  const queryClient = useQueryClient();
-  const [publishing, setPublishing] = useState(false);
   const save = saveCopy[status];
-  const toUpdate = () =>
-    navigate({
-      to: "/sites/$siteId/drafts/$draftId/update",
-      params: { siteId: props.site.id, draftId: props.draft.id },
-    });
+  const review = props.review === null ? null : standing(props.review);
   return (
     <header className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b bg-card px-4 py-2">
       <Link to="/" aria-label="Home">
@@ -158,6 +153,9 @@ function Header(props: DraftContext) {
         {save.icon}
         {save.label}
       </output>
+      {review !== null && props.review?.status._tag !== "Published" && (
+        <Badge variant={review.variant}>{review.label}</Badge>
+      )}
       {behind && closure === null && (
         <div className="flex items-center gap-2">
           <Badge variant="warning">Behind the live site</Badge>
@@ -172,28 +170,13 @@ function Header(props: DraftContext) {
       )}
       <div className="ml-auto flex items-center gap-3">
         <EditorParticipants />
-        {props.canPublish && (
-          <Button onClick={() => setPublishing(true)}>
-            <SendIcon />
-            Publish
-          </Button>
-        )}
+        <DraftActions
+          site={props.site.id}
+          draft={props.draft}
+          can={props.can}
+          onPublished={() => Promise.resolve()}
+        />
       </div>
-      <PublishDialog
-        site={props.site.id}
-        draft={props.draft}
-        open={publishing}
-        onOpenChange={setPublishing}
-        onPublished={async () => {
-          toast.success(`${props.draft.name} is published`, {
-            description: "It's live within about a minute.",
-          });
-          await queryClient.invalidateQueries({
-            queryKey: siteDraftsQuery(props.site.id).queryKey,
-          });
-        }}
-        onNeedsUpdate={toUpdate}
-      />
     </header>
   );
 }
@@ -337,7 +320,7 @@ export function EditorPage(props: {
   readonly draft: DraftId;
   readonly page: PageId;
   readonly person: Collaborator;
-  readonly opened: Extract<OpenedDraft, { _tag: "Ready" }>;
+  readonly opened: OpenedReady;
 }) {
   const data = props.opened;
   const { data: definitions } = useSuspenseQuery(blocksQuery(data.draft.lockfile));
@@ -349,7 +332,8 @@ export function EditorPage(props: {
     person: props.person,
     site: { id: props.site, name: data.draft.settings.name },
     draft: { id: props.draft, name: data.summary.name },
-    canPublish: data.can.publish,
+    can: data.can,
+    review: data.summary.review,
   };
   return (
     <EditorProvider

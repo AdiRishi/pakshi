@@ -44,17 +44,16 @@ import {
   MoreHorizontalIcon,
   NewspaperIcon,
   PlusIcon,
-  SendIcon,
 } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
+import { standing } from "@/features/approvals/describe";
 
-import { draftPagesQuery, siteDraftsQuery } from "../sites/queries";
+import { draftPagesQuery } from "../sites/queries";
 import { sendBatch } from "../sites/send-batch";
+import { DraftActions } from "./draft-actions";
 import { PageDialog, type SubmittedPage } from "./page-dialog";
-import { PublishDialog } from "./publish-dialog";
 
 type PageType = PageSummary["type"];
 
@@ -160,7 +159,7 @@ function PagesTable(props: {
   );
 }
 
-/** A draft's pages and posts, and publishing it. */
+/** A draft's pages and posts, and sharing and submitting it. */
 export function DraftPage(props: {
   readonly viewer: Viewer;
   readonly site: SiteId;
@@ -172,17 +171,12 @@ export function DraftPage(props: {
   const [tab, setTab] = useState<PageType>("page");
   const [creating, setCreating] = useState<PageType | null>(null);
   const [renaming, setRenaming] = useState<PageSummary | null>(null);
-  const [publishing, setPublishing] = useState(false);
   const behind = isBehind(data.draft.base, data.live);
+  const review = data.draft.review;
   const byType = (type: PageType) => data.pages.filter((page) => page.type === type);
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: draftPagesQuery(props.site, props.draft).queryKey });
-  const toUpdate = () =>
-    navigate({
-      to: "/sites/$siteId/drafts/$draftId/update",
-      params: { siteId: props.site, draftId: props.draft },
-    });
 
   const create = async (type: PageType, values: SubmittedPage) => {
     const page = newPage(type, values, props.viewer.user.name);
@@ -233,17 +227,28 @@ export function DraftPage(props: {
           ) : (
             <Badge variant="secondary">Up to date with live</Badge>
           )}
-          {data.can.publish && (
-            <Button className="ml-auto" onClick={() => setPublishing(true)}>
-              <SendIcon />
-              Publish
-            </Button>
+          {review !== null && review.status._tag !== "Published" && (
+            <Badge variant={standing(review).variant}>{standing(review).label}</Badge>
           )}
+          <div className="ml-auto">
+            <DraftActions
+              site={props.site}
+              draft={{ id: props.draft, name: data.draft.name }}
+              can={data.can}
+              onPublished={() => navigate({ to: "/sites/$siteId", params: { siteId: props.site } })}
+            />
+          </div>
         </div>
         <p className="text-secondary-foreground">
           Pages and posts in this draft. Edits save to the draft as you make them, and nothing goes
           live until it's published.
         </p>
+        {review?.status._tag === "ChangesRequested" && (
+          <Alert>
+            <AlertTitle>{review.status.by.name} asked for changes</AlertTitle>
+            {review.status.note !== "" && <AlertDescription>{review.status.note}</AlertDescription>}
+          </Alert>
+        )}
       </header>
       {behind && (
         <div className="px-10 pt-6">
@@ -336,20 +341,6 @@ export function DraftPage(props: {
           onSubmit={(values) => rename(renaming, values)}
         />
       )}
-      <PublishDialog
-        site={props.site}
-        draft={data.draft}
-        open={publishing}
-        onOpenChange={setPublishing}
-        onPublished={async () => {
-          toast.success(`${data.draft.name} is published`, {
-            description: "It's live within about a minute.",
-          });
-          await queryClient.invalidateQueries({ queryKey: siteDraftsQuery(props.site).queryKey });
-          await navigate({ to: "/sites/$siteId", params: { siteId: props.site } });
-        }}
-        onNeedsUpdate={toUpdate}
-      />
     </AppShell>
   );
 }
