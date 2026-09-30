@@ -96,6 +96,27 @@ const replacedNotice = (name: string, parts: ReadonlyArray<string>): Notice => (
 export const fieldKey = (target: Target, block: BlockId, path: PropPath) =>
   `${target}:${block}:${path.join(".")}`;
 
+/** The value an op sets, as a key, or null for ops that change a page's structure. */
+const valueKey = (op: Op) => {
+  switch (op.op) {
+    case "setProp":
+      return fieldKey(op.target, op.block, op.path);
+    case "setVariant":
+    case "setSurface":
+      return `${op.target}:${op.block}:${op.op}`;
+    case "setMeta":
+      return `${op.page}:meta:${op.field}`;
+    case "setPath":
+      return `${op.page}:path`;
+    default:
+      return null;
+  }
+};
+
+/** Whether two value keys name the same value, or one names a part of the other. */
+const overlaps = (a: string, b: string) =>
+  a === b || a.startsWith(`${b}.`) || b.startsWith(`${a}.`);
+
 const blockExists = (draft: Draft, target: Target, block: BlockId) =>
   target === "site"
     ? block in draft.parts.blocks
@@ -121,6 +142,11 @@ export class EditorStore {
   #pending: ReadonlyArray<Pending> = [];
   #undo: Array<Step> = [];
   #redo: Array<Step> = [];
+  /**
+   * The values the person has written since opening the editor. They're told
+   * when someone replaces one of these, not about writes from earlier visits.
+   */
+  readonly #wrote = new Set<string>();
   /** The field being typed in, whose undo step is still growing. */
   #burst: string | null = null;
   /** Someone replaced what the person is typing: told when the typing stops, unless they type over it. */
@@ -308,6 +334,10 @@ export class EditorStore {
   }
 
   #queue(batch: Batch, burst: string | null) {
+    for (const op of batch.ops) {
+      const key = valueKey(op);
+      if (key !== null) this.#wrote.add(key);
+    }
     const last = this.#pending.at(-1);
     if (burst !== null && last !== undefined && last.burst === burst)
       // Only the latest value of the field needs to reach SiteDoc.
@@ -466,7 +496,8 @@ export class EditorStore {
     const parts: Array<string> = [];
     for (const { person, op: index } of replaced) {
       const op = batch.ops[index];
-      if (person !== this.person.id || op === undefined || this.#willReplace(op)) continue;
+      if (person !== this.person.id || op === undefined || !this.#wroteHere(op)) continue;
+      if (this.#willReplace(op)) continue;
       const part = partChanged(op, confirmed, this.contracts);
       if (op.op === "setProp" && fieldKey(op.target, op.block, op.path) === this.#burst)
         // They're still typing there: they're told when they stop, unless they type over it.
@@ -484,6 +515,11 @@ export class EditorStore {
       this.#onNotice({ title: `${batch.actor.name} removed the block you had selected.` });
     if (mine) this.#set({ confirmed: next, view });
     else this.#showRemote({ confirmed: next, view });
+  }
+
+  #wroteHere(op: Op) {
+    const key = valueKey(op);
+    return key !== null && Array.from(this.#wrote).some((written) => overlaps(written, key));
   }
 
   /** Whether a batch of the person's that SiteDoc hasn't confirmed writes the same field, so it will win. */
