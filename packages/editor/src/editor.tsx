@@ -1,10 +1,13 @@
 import { type BlockDefinition, FieldEditingProvider } from "@repo/blocks";
+import type { Selected } from "@repo/contracts/agent";
 import { type Draft, isBehind } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
+import type { Target } from "@repo/contracts/ops";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
+import { Equal } from "effect";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
 import { fieldEditing, isSelectedField } from "./canvas/fields.tsx";
@@ -407,3 +410,42 @@ export const useAccessEnded = () => useEditorState((state) => state.accessEnded)
 /** The title of the page being edited, as the draft has it now. */
 export const usePageTitle = () =>
   useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
+
+/**
+ * The block or field the person has selected, for the agent to know what
+ * "this" means, with the block's title for the chat panel.
+ */
+export const useSelected = (): Selected | null => {
+  const { definitions } = useServices();
+  return useEditorState(
+    ({ selection, page, view }) => {
+      if (selection === null) return null;
+      const holder = selection.target === "site" ? view.parts : view.pages[selection.target];
+      const block = holder?.blocks[selection.block];
+      const title = block === undefined ? undefined : definitions.get(block.type)?.title;
+      if (title === undefined) return null;
+      return {
+        page,
+        focus:
+          selection.kind === "field"
+            ? { target: selection.target, block: selection.block, path: selection.path }
+            : { target: selection.target, block: selection.block },
+        title,
+      };
+    },
+    (a, b) => Equal.equals(a, b),
+  );
+};
+
+/** Selects a block on the page being edited and scrolls the canvas to it. */
+export const useShowBlock = () => {
+  const store = useStore();
+  const ui = useEditorUi();
+  return (target: Target, block: BlockId) => {
+    store.select({ kind: "block", target, block });
+    ui.focusSelection("canvas");
+  };
+};
+
+/** The page being edited. */
+export const usePage = () => useEditorState((state) => state.page);

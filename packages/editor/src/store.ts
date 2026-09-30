@@ -77,6 +77,14 @@ export interface EditorState {
   readonly outdated: boolean;
   /** Whether the draft's sharing changed so the person can no longer edit it. */
   readonly accessEnded: boolean;
+  /** Blocks the agent just changed, which the canvas marks for a moment. */
+  readonly highlights: ReadonlyArray<Highlight>;
+}
+
+/** A block the agent just changed. */
+export interface Highlight {
+  readonly target: Target;
+  readonly block: BlockId;
 }
 
 /** How a draft stopped taking changes: who published or closed it, and the release it became. */
@@ -100,6 +108,8 @@ interface Step {
 const typingDelay = 300;
 /** How long after the last keystroke others still see the person as typing. */
 const typingShown = 2000;
+/** How long the canvas marks a block the agent changed. */
+const highlightShown = 2500;
 
 const newBatchId = () => BatchId.make(randomId("bat"));
 
@@ -132,6 +142,27 @@ const valueKey = (op: Op) => {
 /** Whether two value keys name the same value, or one names a part of the other. */
 const overlaps = (a: string, b: string) =>
   a === b || a.startsWith(`${b}.`) || b.startsWith(`${a}.`);
+
+/** Who made a committed batch, as people read it: the agent names the person it works for. */
+const madeBy = (batch: CommittedBatch) =>
+  batch.turn === null ? batch.actor.name : `Pakshi, for ${batch.actor.name}`;
+
+/** The blocks a batch's ops changed, with the page or site part each is in. */
+const changedBlocks = (ops: ReadonlyArray<Op>): ReadonlyArray<Highlight> =>
+  ops.flatMap((op): ReadonlyArray<Highlight> => {
+    switch (op.op) {
+      case "setProp":
+      case "setVariant":
+      case "setSurface":
+        return [{ target: op.target, block: op.block }];
+      case "insertBlock":
+        return [{ target: op.page, block: op.block.id }];
+      case "moveBlock":
+        return [{ target: op.page, block: op.block }];
+      default:
+        return [];
+    }
+  });
 
 const blockExists = (draft: Draft, target: Target, block: BlockId) =>
   target === "site"
@@ -172,6 +203,7 @@ export class EditorStore {
   #burstTimer: ReturnType<typeof setTimeout> | undefined;
   #typing = false;
   #typingTimer: ReturnType<typeof setTimeout> | undefined;
+  readonly #highlightTimers = new Set<ReturnType<typeof setTimeout>>();
   #link: LiveLink | null = null;
   #socket: "connecting" | "open" | "closed" = "connecting";
   /** Whether SiteDoc has answered this connection's Sync, so batches can go out. */
@@ -205,6 +237,7 @@ export class EditorStore {
       closed: null,
       outdated: false,
       accessEnded: false,
+      highlights: [],
     };
   }
 
@@ -248,8 +281,26 @@ export class EditorStore {
       if (this.#link === link) this.#link = null;
       clearTimeout(this.#burstTimer);
       clearTimeout(this.#typingTimer);
+      for (const timer of this.#highlightTimers) clearTimeout(timer);
+      this.#highlightTimers.clear();
     };
   };
+
+  /** Marks the blocks an agent's batch changed, for a moment. */
+  #highlight(batch: CommittedBatch) {
+    const changed = changedBlocks(batch.ops);
+    if (changed.length === 0) return;
+    const others = (highlights: ReadonlyArray<Highlight>) =>
+      highlights.filter((shown) => !changed.some((block) => block.block === shown.block));
+    this.#set({ highlights: [...others(this.#state.highlights), ...changed] });
+    const timer = setTimeout(() => {
+      this.#highlightTimers.delete(timer);
+      this.#set({
+        highlights: this.#state.highlights.filter((shown) => !changed.includes(shown)),
+      });
+    }, highlightShown);
+    this.#highlightTimers.add(timer);
+  }
 
   #set(next: Partial<Omit<EditorState, "status" | "canUndo" | "canRedo">>) {
     const merged = { ...this.#state, ...next };
@@ -565,17 +616,18 @@ export class EditorStore {
       const key = valueKey(op);
       if (key !== null && Array.from(this.#burstValues).some((typed) => overlaps(typed, key)))
         // They're still typing there: they're told when they stop, unless they type over it.
-        this.#replacedWhileTyping = { key, notice: replacedNotice(batch.actor.name, [part]) };
+        this.#replacedWhileTyping = { key, notice: replacedNotice(madeBy(batch), [part]) };
       else parts.push(part);
     }
-    if (parts.length > 0) this.#onNotice(replacedNotice(batch.actor.name, parts));
-    const { view, dropped } = this.#replay(next, batch.actor.name);
+    if (parts.length > 0) this.#onNotice(replacedNotice(madeBy(batch), parts));
+    const { view, dropped } = this.#replay(next, madeBy(batch));
     const selection = this.#state.selection;
     // A dropped edit already says who removed the block.
     if (!dropped && selection !== null && !blockExists(view, selection.target, selection.block))
-      this.#onNotice({ title: `${batch.actor.name} removed the block you had selected.` });
+      this.#onNotice({ title: `${madeBy(batch)} removed the block you had selected.` });
     if (mine) this.#set({ confirmed: next, view });
     else this.#showRemote({ confirmed: next, view });
+    if (batch.turn !== null) this.#highlight(batch);
   }
 
   #wroteHere(op: Op) {

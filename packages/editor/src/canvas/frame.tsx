@@ -51,6 +51,14 @@ img[data-pakshi-field], a[data-pakshi-field] { cursor: pointer; }
   background: #ffe2a8; color: #6b4000; pointer-events: none;
 }
 .pakshi-drop-line { background: var(--pakshi-editor-accent); border-radius: 2px; }
+.pakshi-highlight {
+  position: absolute; box-sizing: border-box; border: 2px solid var(--pakshi-editor-accent);
+  border-radius: 4px; pointer-events: none;
+  background: color-mix(in oklab, var(--pakshi-editor-accent) 12%, transparent);
+  animation: pakshi-highlight 2.5s ease-out forwards;
+}
+@keyframes pakshi-highlight { 0%, 60% { opacity: 1; } 100% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .pakshi-highlight { animation: none; } }
 .pakshi-presence {
   position: absolute; box-sizing: border-box; border: 2px solid var(--pakshi-presence);
   border-radius: 4px; pointer-events: none;

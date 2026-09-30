@@ -17,7 +17,10 @@ export {
   useDraftClosure,
   useEditorStatus,
   useOutdated,
+  usePage,
   usePageTitle,
+  useSelected,
+  useShowBlock,
   useToolbarCommands,
 } from "./editor.tsx";
 export { Outline as EditorOutline } from "./outline.tsx";

@@ -12,10 +12,22 @@ export const presenceColor = (person: string) => {
   return (hash % presenceColorCount) + 1;
 };
 
-/** Someone else editing the draft, with every connection they have open merged into one. */
+/** How a peer reads to others: a person by their name, the agent as working for its person. */
+export const peerName = (peer: Peer) =>
+  peer.agent ? `Pakshi, for ${peer.person.name}` : peer.person.name;
+
+/** The color a peer shows in. The agent has its own, apart from its person's. */
+export const peerColor = (peer: Peer) =>
+  presenceColor(peer.agent ? peer.connection : peer.person.id);
+
+/**
+ * Someone else editing the draft, with every connection they have open
+ * merged into one, or the agent working for someone.
+ */
 export interface Participant {
   readonly id: string;
   readonly name: string;
+  readonly agent: boolean;
   readonly color: number;
   /** Where they are, in words, such as "Typing in Heading" or "On another page". */
   readonly where: string;
@@ -33,6 +45,7 @@ const sameParticipants = (a: ReadonlyArray<Participant>, b: ReadonlyArray<Partic
       other !== undefined &&
       participant.id === other.id &&
       participant.name === other.name &&
+      participant.agent === other.agent &&
       participant.where === other.where &&
       participant.typing === other.typing
     );
@@ -72,13 +85,15 @@ export const useParticipants = (): ReadonlyArray<Participant> => {
               : contract !== undefined
                 ? `On ${contract.title}`
                 : "On this page";
-      const known = people.get(peer.person.id);
+      const id = peer.agent ? peer.connection : peer.person.id;
+      const known = people.get(id);
       // Someone typing shows as typing, whichever of their windows it's in.
       if (known === undefined || (typing && !known.typing))
-        people.set(peer.person.id, {
-          id: peer.person.id,
-          name: peer.person.name,
-          color: presenceColor(peer.person.id),
+        people.set(id, {
+          id,
+          name: peerName(peer),
+          agent: peer.agent,
+          color: peerColor(peer),
           where,
           typing,
         });
