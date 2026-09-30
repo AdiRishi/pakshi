@@ -4,8 +4,8 @@ import { Release, Timestamp } from "@repo/contracts/release";
 import { Effect } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { recordCopy } from "../src/copies.ts";
 import { reconcileSites } from "../src/reconcile.ts";
-import { recordRelease } from "../src/site/release-index.ts";
 import { core } from "./support/core.ts";
 
 /** KV as `sites` reads it: the release value each site holds. */
@@ -45,13 +45,13 @@ it.effect("recording a release again puts right a copy in D1 that drifted", () =
       snapshot: SnapshotId.make("snap_a1first"),
       at: Timestamp.make("2026-09-01T00:00:00.000Z"),
     });
-    yield* recordRelease(site, { seq: 1, release });
+    yield* recordCopy(site, { _tag: "Release", release: { seq: 1, release } });
     yield* sql`update releases set snapshot = 'snap_changedbyhand' where id = 'rel_a1first'`;
     const asked: Array<SiteId> = [];
     const served = () => Promise.resolve('{"release":"rel_a1first","snapshot":"snap_a1first"}');
     yield* reconcileSites(served, (stale) => Effect.sync(() => void asked.push(stale)));
     expect(asked).toEqual([site]);
-    yield* recordRelease(site, { seq: 1, release });
+    yield* recordCopy(site, { _tag: "Release", release: { seq: 1, release } });
     asked.length = 0;
     yield* reconcileSites(served, (stale) => Effect.sync(() => void asked.push(stale)));
     expect(asked).toEqual([]);

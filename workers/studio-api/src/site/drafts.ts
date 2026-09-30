@@ -14,6 +14,7 @@ import { CatchUp, Collaborator, type Commit } from "@repo/contracts/live";
 import { type Batch, type BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { now, Timestamp } from "@repo/contracts/release";
+import { DraftSharing, unshared } from "@repo/contracts/sharing";
 import { SiteParts, SiteSettings } from "@repo/contracts/site";
 import { type LiveRelease, Lockfile } from "@repo/contracts/snapshot";
 import { DraftNotFound, type DraftStatus, type DraftSummary } from "@repo/contracts/studio";
@@ -22,6 +23,8 @@ import type { BlockContracts } from "@repo/domain/document";
 import { ResolvedTheme } from "@repo/tokens";
 import { Context, Effect, Equal, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+
+import { Outbox } from "./outbox.ts";
 
 /*
  * A site's drafts in its SiteDoc's SQLite storage. Each draft page is its own
@@ -51,6 +54,7 @@ const DraftRow = Schema.Struct({
   forms: json(Forms),
   lockfile: json(Lockfile),
   theme: json(ResolvedTheme),
+  sharing: json(DraftSharing),
 });
 type DraftRow = typeof DraftRow.Type;
 
@@ -74,6 +78,9 @@ const EditorRow = Schema.Struct({
   actor_name: Schema.String,
   at: Timestamp,
 });
+
+/** A draft as the drafts list sums it up, before its latest submission is added. */
+export type DraftInfo = Omit<DraftSummary, "review">;
 
 /** How many batches an editor may be behind before it's sent the whole draft instead. */
 const catchUpLimit = 500;
@@ -120,8 +127,8 @@ export class SiteDrafts extends Context.Service<
   SiteDrafts,
   {
     /** Every draft, open ones first, newest first within each. */
-    readonly list: Effect.Effect<ReadonlyArray<DraftSummary>, StorageError>;
-    readonly summary: (id: DraftId) => Effect.Effect<DraftSummary, StorageError | DraftNotFound>;
+    readonly list: Effect.Effect<ReadonlyArray<DraftInfo>, StorageError>;
+    readonly summary: (id: DraftId) => Effect.Effect<DraftInfo, StorageError | DraftNotFound>;
     /** A draft as it stands, open or not. */
     readonly draft: (id: DraftId) => Effect.Effect<Draft, StorageError | DraftNotFound>;
     /** The block versions a draft pins. */
@@ -133,7 +140,7 @@ export class SiteDrafts extends Context.Service<
       readonly by: Collaborator;
       readonly base: LiveRelease;
       readonly content: SiteContent;
-    }) => Effect.Effect<DraftSummary, StorageError>;
+    }) => Effect.Effect<DraftInfo, StorageError>;
     /** What an editor at `revision` is missing: the batches since, or the whole draft. */
     readonly catchUp: (
       id: DraftId,
@@ -158,12 +165,25 @@ export class SiteDrafts extends Context.Service<
       id: DraftId,
       name: DraftName,
     ) => Effect.Effect<void, StorageError | DraftNotFound>;
+    /** Replaces how a draft is shared, and queues the copy D1 lists shared drafts from. */
+    readonly share: (
+      id: DraftId,
+      sharing: DraftSharing,
+    ) => Effect.Effect<void, StorageError | DraftNotFound>;
+    /** Everyone whose own batches changed the draft up to a revision. */
+    readonly editors: (
+      id: DraftId,
+      revision: number,
+    ) => Effect.Effect<ReadonlyArray<Collaborator>, StorageError>;
+    /** Whether a person changed the draft after a revision. */
+    readonly editedSince: (id: DraftId, revision: number) => Effect.Effect<boolean, StorageError>;
   }
 >()("Pakshi/StudioApi/SiteDrafts") {
   static readonly layer = Layer.effect(
     SiteDrafts,
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const outbox = yield* Outbox;
       const { site } = yield* SiteIdentity;
       const loaded = new Map<DraftId, Loaded>();
 
@@ -209,10 +229,35 @@ export class SiteDrafts extends Context.Service<
           order by revision limit ${catchUpLimit + 1}`,
       });
 
+      const findEditorsUpTo = SqlSchema.findAll({
+        Request: Schema.Struct({ draft: DraftId, revision: Schema.Int }),
+        Result: Collaborator,
+        execute: ({ draft, revision }) => sql`
+          select actor as id, actor_name as name from batches
+          where draft_id = ${draft} and origin = 'person' and revision <= ${revision}
+          group by actor order by min(revision)`,
+      });
+      const findEditedSince = SqlSchema.findOneOption({
+        Request: Schema.Struct({ draft: DraftId, revision: Schema.Int }),
+        Result: Schema.Struct({ revision: Schema.Int }),
+        execute: ({ draft, revision }) => sql`
+          select revision from batches
+          where draft_id = ${draft} and origin = 'person' and revision > ${revision} limit 1`,
+      });
+
+      /** The people a draft is shared with, for D1's list; none once it's closed. */
+      const sendShares = (id: DraftId, name: DraftName, sharing: DraftSharing | null) =>
+        outbox.send({
+          _tag: "Shares",
+          draft: id,
+          name,
+          people: (sharing?.people ?? []).map(({ person, access }) => ({ id: person.id, access })),
+        });
+
       const summaryOf = (
         row: DraftRow,
         editors: ReadonlyArray<typeof EditorRow.Type>,
-      ): DraftSummary => {
+      ): DraftInfo => {
         const people = editors.filter((editor) => editor.draft_id === row.id);
         const [latest] = people;
         return {
@@ -228,6 +273,7 @@ export class SiteDrafts extends Context.Service<
               : { by: { id: latest.actor, name: latest.actor_name }, at: latest.at },
           people: people.map((editor) => ({ id: editor.actor, name: editor.actor_name })),
           closedAt: row.closed_at,
+          sharing: row.sharing,
         };
       };
 
@@ -277,6 +323,7 @@ export class SiteDrafts extends Context.Service<
         committed: Extract<CommitResult, { ok: true }>,
         actor: Collaborator,
         batch: Batch,
+        origin: Origin,
       ) =>
         sql.withTransaction(
           Effect.gen(function* () {
@@ -304,10 +351,10 @@ export class SiteDrafts extends Context.Service<
             for (const key of committed.writesChange.removed)
               yield* sql`delete from writes where draft_id = ${next.id} and key = ${key}`;
             yield* sql`insert into batches
-              (id, draft_id, actor, actor_name, committed_at, revision, ops, inverse)
+              (id, draft_id, actor, actor_name, committed_at, revision, ops, inverse, origin)
               values (${batch.id}, ${next.id}, ${actor.id}, ${actor.name},
                 ${now()}, ${next.revision},
-                ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)})`;
+                ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)}, ${origin})`;
           }),
         );
 
@@ -351,7 +398,8 @@ export class SiteDrafts extends Context.Service<
             lastEdit: null,
             people: [],
             closedAt: null,
-          } satisfies DraftSummary;
+            sharing: unshared,
+          } satisfies DraftInfo;
         }),
         catchUp: Effect.fn("SiteDrafts.catchUp")(function* (id, revision) {
           const { draft } = yield* load(id);
@@ -394,7 +442,7 @@ export class SiteDrafts extends Context.Service<
               : yield* Effect.promise(() => loadBlocks(lockfile));
             const committed = commitBatch(draft, writes, actor.id, batch, contracts);
             if (!committed.ok) return { status: "rejected", errors: committed.errors };
-            yield* store(draft, committed, actor, batch);
+            yield* store(draft, committed, actor, batch, origin);
             loaded.set(id, { draft: committed.draft, writes: committed.writes, contracts });
             return {
               status: "committed",
@@ -412,13 +460,35 @@ export class SiteDrafts extends Context.Service<
           },
         ),
         close: Effect.fn("SiteDrafts.close")(function* (id, status) {
-          yield* rowOf(id);
-          yield* sql`update drafts set status = ${status}, closed_at = ${now()} where id = ${id}`;
+          const row = yield* rowOf(id);
+          yield* sql.withTransaction(
+            Effect.gen(function* () {
+              yield* sql`update drafts set status = ${status}, closed_at = ${now()} where id = ${id}`;
+              yield* sendShares(id, row.name, null);
+            }),
+          );
         }),
         rename: Effect.fn("SiteDrafts.rename")(function* (id, name) {
-          yield* rowOf(id);
-          yield* sql`update drafts set name = ${name} where id = ${id}`;
+          const row = yield* rowOf(id);
+          yield* sql.withTransaction(
+            Effect.gen(function* () {
+              yield* sql`update drafts set name = ${name} where id = ${id}`;
+              yield* sendShares(id, name, row.sharing);
+            }),
+          );
         }),
+        share: Effect.fn("SiteDrafts.share")(function* (id, sharing) {
+          const row = yield* rowOf(id);
+          yield* sql.withTransaction(
+            Effect.gen(function* () {
+              yield* sql`update drafts set sharing = ${encode(DraftSharing, sharing)} where id = ${id}`;
+              yield* sendShares(id, row.name, sharing);
+            }),
+          );
+        }),
+        editors: (id, revision) => findEditorsUpTo({ draft: id, revision }),
+        editedSince: (id, revision) =>
+          Effect.map(findEditedSince({ draft: id, revision }), Option.isSome),
       });
     }),
   );

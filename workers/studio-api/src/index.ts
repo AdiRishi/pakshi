@@ -1,6 +1,7 @@
 import { D1Client } from "@effect/sql-d1";
 import { liveBasePath } from "@repo/contracts/live";
 import { routingKeys } from "@repo/contracts/snapshot";
+import { previewBasePath, reviewBasePath } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { Effect } from "effect";
@@ -8,7 +9,7 @@ import { getServerByName } from "partyserver";
 
 import { authBasePath, authFor } from "./auth.ts";
 import { serveLive } from "./live.ts";
-import { mediaBasePath, serveMedia } from "./media.ts";
+import { mediaBasePath, serveMedia, servePreviewMedia, serveReviewMedia } from "./media.ts";
 import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
 
@@ -25,8 +26,8 @@ export class StudioRpc extends WorkerEntrypoint<StudioApiEnv> {
 /**
  * Sign-in, which Studio forwards unchanged because OAuth needs real HTTP
  * redirects and cookies, the editor's live connections, and images for the
- * editor's canvas. studio-api has no public address; only Studio's service
- * bindings reach it.
+ * editor's canvas, previews and reviews. studio-api has no public address;
+ * only Studio's service bindings reach it.
  */
 export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
   override async fetch(request: Request) {
@@ -36,6 +37,10 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
     if (url.pathname.startsWith(`${liveBasePath}/`)) return serveLive(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${mediaBasePath}/`))
       return serveMedia(request, this.env);
+    if (request.method === "GET" && url.pathname.startsWith(`${previewBasePath}/`))
+      return servePreviewMedia(request, this.env);
+    if (request.method === "GET" && url.pathname.startsWith(`${reviewBasePath}/`))
+      return serveReviewMedia(request, this.env);
     return Response.json({ code: "not_found", message: "Route not found." }, { status: 404 });
   }
 

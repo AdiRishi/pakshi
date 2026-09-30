@@ -57,8 +57,7 @@ export type Submission = typeof Submission.Type;
 export const currentStep = (submission: Pick<Submission, "steps" | "approvals">) => {
   const index = submission.steps.findIndex(
     (step, position) =>
-      submission.approvals.filter((approval) => approval.step === position).length <
-      step.required,
+      submission.approvals.filter((approval) => approval.step === position).length < step.required,
   );
   return index === -1 ? null : index;
 };

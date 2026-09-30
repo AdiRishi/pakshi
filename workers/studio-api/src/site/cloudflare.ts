@@ -12,8 +12,9 @@ import {
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, Option, Schema } from "effect";
 
-import { MediaLibrary, ReleaseIndex, Routing, Snapshots } from "./platform.ts";
-import { recordRelease } from "./release-index.ts";
+import { recordCopy } from "../copies.ts";
+import { type Mailer, notify } from "../notifications.ts";
+import { MediaLibrary, OutboxDelivery, Routing, Snapshots } from "./platform.ts";
 
 const json = { httpMetadata: { contentType: "application/json" } };
 
@@ -31,9 +32,13 @@ const decodeLive = Schema.decodeSync(liveJson);
 const encodeLive = Schema.encodeSync(liveJson);
 const decodeMediaRows = Schema.decodeUnknownSync(Schema.Array(MediaRow));
 
-/** A site's platform edges over studio-api's bindings: R2 for snapshots, KV for routing, D1 for the rest. */
+/** A site's platform edges over studio-api's bindings: R2 for snapshots, KV for routing, D1 and email for the rest. */
 export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
   const core = D1Client.layer({ db: env.CORE });
+  const mailer: Mailer = {
+    from: env.EMAIL_SENDER,
+    send: async (message) => void (await env.EMAIL.send(message)),
+  };
   const reader = snapshotReader(async (key) => (await env.CONTENT.get(key))?.text() ?? null);
   return Layer.mergeAll(
     Layer.succeed(Snapshots)({
@@ -72,8 +77,12 @@ export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
           );
         }),
     }),
-    Layer.succeed(ReleaseIndex)({
-      record: (indexed) => recordRelease(site, indexed).pipe(Effect.provide(core), Effect.orDie),
+    Layer.succeed(OutboxDelivery)({
+      deliver: (message) =>
+        (message._tag === "Notify"
+          ? notify(mailer, site, message.notification, message.submission, message.studio)
+          : recordCopy(site, message)
+        ).pipe(Effect.provide(core), Effect.orDie),
     }),
   );
 };

@@ -7,16 +7,16 @@ import { getServerByName } from "partyserver";
 
 import { authFor } from "./auth.ts";
 import { liveAuthorizationHeader, LiveAuthorization } from "./site-doc.ts";
-import { siteFor } from "./sites.ts";
+import { findSite, standingOn } from "./sites.ts";
 
 const encodeAuthorization = Schema.encodeSync(Schema.fromJsonString(LiveAuthorization));
 
 /**
  * Opens a live connection to one of a site's drafts, at
  * `${liveBasePath}/{site}/{draft}`, for someone signed in to Studio who may
- * edit the site's pages. The WebSocket goes on to SiteDoc with the
- * person and their permissions in a header this Worker sets, replacing any
- * the browser sent. Browsers send cookies with a WebSocket from any page, so
+ * edit the draft: through `page.edit` on the site, or a share. The WebSocket
+ * goes on to SiteDoc with the person and their permissions in a header this
+ * Worker sets, replacing any the browser sent. Browsers send cookies with a WebSocket from any page, so
  * the connection must come from Studio's own origin.
  */
 export const serveLive = async (request: Request, env: StudioApiEnv) => {
@@ -34,13 +34,20 @@ export const serveLive = async (request: Request, env: StudioApiEnv) => {
     return new Response("Not found", { status: 404 });
   const { id, name, email } = session.user;
   const found = await Effect.runPromise(
-    siteFor({ id, name, email }, site.value, "page.edit").pipe(
+    Effect.gen(function* () {
+      const found = yield* findSite(site.value);
+      return yield* standingOn({ id, name, email }, found);
+    }).pipe(
       Effect.asSome,
       Effect.catchTag("SiteNotFound", () => Effect.succeedNone),
       Effect.provide(D1Client.layer({ db: env.CORE })),
     ),
   );
   if (Option.isNone(found)) return new Response("Not found", { status: 404 });
+  const doc = await getServerByName(env.SITE_DOC, site.value);
+  const editsSite = found.value.permissions.includes("page.edit");
+  if (!editsSite && (await doc.access(draft.value, { id, editsSite })) !== "edit")
+    return new Response("Not found", { status: 404 });
   const headers = new Headers(request.headers);
   headers.set(
     liveAuthorizationHeader,
@@ -50,6 +57,5 @@ export const serveLive = async (request: Request, env: StudioApiEnv) => {
       permissions: found.value.permissions,
     }),
   );
-  const doc = await getServerByName(env.SITE_DOC, site.value);
   return doc.fetch(new Request(request, { headers }));
 };

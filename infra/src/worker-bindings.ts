@@ -1,6 +1,7 @@
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import type * as Output from "alchemy/Output";
+import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
 import type * as Redacted from "effect/Redacted";
 
@@ -39,6 +40,10 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
 ) {
   const authSecret = yield* Alchemy.makeRandom("AuthSecret");
   return {
+    /** Approval notifications. Under `alchemy dev` they land in Alchemy's local email simulator. */
+    EMAIL: yield* Cloudflare.Email.SendEmail("Email"),
+    EMAIL_SENDER:
+      environment === "production" ? Config.String("EMAIL_SENDER") : "notifications@pakshi.test",
     // A Durable Object's data is keyed by its binding name here. Renaming one
     // deletes the class and everything it stored.
     SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),

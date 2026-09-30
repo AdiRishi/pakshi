@@ -1,7 +1,7 @@
+import type { DefaultRole, Permission, Scope } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { describe, expect, test } from "vitest";
 
-import type { DefaultRole, Permission, Scope } from "@repo/contracts/access";
 import { type Access, authorize, type Resource } from "../src/access.ts";
 
 const brandA = BrandId.make("brand_a");

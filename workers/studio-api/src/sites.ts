@@ -1,21 +1,18 @@
+import type { Permission } from "@repo/contracts/access";
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { type Person, SiteNotFound } from "@repo/contracts/studio";
-import type { Permission } from "@repo/contracts/access";
-import { authorize, permissionsOn } from "@repo/domain/access";
+import { authorize, permissionsOn, rolesOn } from "@repo/domain/access";
+import type { Approver } from "@repo/domain/approvals";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
-import { loadAccess } from "./viewer.ts";
+import { loadAccess } from "./access.ts";
 
 const SiteRow = Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId });
 
-/**
- * A site the person holds any permission on, with the permissions they hold
- * there. A site they hold none on fails the same way as one that doesn't
- * exist, so IDs reveal nothing.
- */
-export const siteOf = Effect.fn("StudioApi.siteOf")(function* (person: Person, site: SiteId) {
+/** A site, whoever is asking. Callers decide what the person may see of it. */
+export const findSite = Effect.fn("StudioApi.findSite")(function* (site: SiteId) {
   const sql = yield* SqlClient.SqlClient;
   const found = yield* SqlSchema.findOneOption({
     Request: SiteId,
@@ -23,11 +20,29 @@ export const siteOf = Effect.fn("StudioApi.siteOf")(function* (person: Person, s
     execute: (id) => sql`select id, name, brand_id from sites where id = ${id}`,
   })(site);
   if (Option.isNone(found)) return yield* new SiteNotFound({ site });
+  return { id: found.value.id, name: found.value.name, brand: found.value.brand_id };
+});
+
+/** What a person holds on a site: their permissions, and the roles their grants give them there. */
+export const standingOn = Effect.fn("StudioApi.standingOn")(function* (
+  person: Person,
+  site: { readonly id: SiteId; readonly brand: BrandId },
+) {
   const { access } = yield* loadAccess(person.id);
-  const resource = { kind: "site", id: found.value.id, brand: found.value.brand_id } as const;
-  const permissions = permissionsOn(access, resource);
+  const resource = { kind: "site", id: site.id, brand: site.brand } as const;
+  return { permissions: permissionsOn(access, resource), roles: rolesOn(access, resource) };
+});
+
+/**
+ * A site the person holds any permission on, with the permissions they hold
+ * there. A site they hold none on fails the same way as one that doesn't
+ * exist, so IDs reveal nothing.
+ */
+export const siteOf = Effect.fn("StudioApi.siteOf")(function* (person: Person, site: SiteId) {
+  const found = yield* findSite(site);
+  const { permissions, roles } = yield* standingOn(person, found);
   if (permissions.length === 0) return yield* new SiteNotFound({ site });
-  return { id: found.value.id, name: found.value.name, brand: found.value.brand_id, permissions };
+  return { ...found, permissions, roles };
 });
 
 /**
@@ -42,6 +57,16 @@ export const siteFor = Effect.fn("StudioApi.siteFor")(function* (
   const found = yield* siteOf(person, site);
   if (!found.permissions.includes(permission)) return yield* new SiteNotFound({ site });
   return found;
+});
+
+/** The person as someone who may decide on the site's submissions. */
+export const approverOn = (
+  person: Person,
+  standing: { readonly permissions: ReadonlyArray<Permission>; readonly roles: Approver["roles"] },
+): Approver => ({
+  person: { id: person.id, name: person.name },
+  roles: standing.roles,
+  permissions: standing.permissions,
 });
 
 const MediaRow = Schema.Struct({
@@ -73,6 +98,17 @@ export const siteMedia = Effect.fn("StudioApi.siteMedia")(function* (site: {
     height: row.height,
     alt: row.alt,
   }));
+});
+
+/** Whether an image is in a site's library or its brand's. */
+export const inSiteLibrary = Effect.fn("StudioApi.inSiteLibrary")(function* (
+  site: { readonly id: SiteId; readonly brand: BrandId },
+  media: MediaId,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const rows = yield* sql`select 1 from media
+    where id = ${media} and (site_id = ${site.id} or brand_id = ${site.brand})`;
+  return rows.length > 0;
 });
 
 /**

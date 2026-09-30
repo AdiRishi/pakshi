@@ -27,16 +27,20 @@ export const Lockfile = Schema.Record(
 );
 export type Lockfile = typeof Lockfile.Type;
 
-const snapshotPageFields = { id: PageId, path: PagePath, object: ContentHash };
-
 /**
- * A page's entry in the manifest. It carries the page's meta, so menus and
- * blog lists can show titles and post details without loading every page.
+ * A page as a site's page list shows it: enough for menus and blog lists to
+ * show titles and post details without loading every page.
  */
-export const SnapshotPage = Schema.Union([
-  Schema.Struct({ ...snapshotPageFields, type: Schema.Literal("page"), meta: PageMeta }),
-  Schema.Struct({ ...snapshotPageFields, type: Schema.Literal("post"), meta: PostMeta }),
+export const PageListing = Schema.Union([
+  Schema.Struct({ id: PageId, path: PagePath, type: Schema.Literal("page"), meta: PageMeta }),
+  Schema.Struct({ id: PageId, path: PagePath, type: Schema.Literal("post"), meta: PostMeta }),
 ]);
+export type PageListing = typeof PageListing.Type;
+
+/** A page's entry in the manifest: its listing, and the page object it's stored as. */
+export const SnapshotPage = Schema.Union(
+  PageListing.members.map((member) => Schema.Struct({ ...member.fields, object: ContentHash })),
+);
 export type SnapshotPage = typeof SnapshotPage.Type;
 
 /**

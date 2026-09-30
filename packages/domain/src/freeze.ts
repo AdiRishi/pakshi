@@ -124,10 +124,10 @@ const placeholdersIn = (
 };
 
 /** The pages a value links to, wherever they sit in it. */
-const pageLinks = (value: unknown): ReadonlyArray<PageId> => {
+const pageLinks = (value: Json): ReadonlyArray<PageId> => {
   if (isPageRef(value)) return [value.id];
-  if (Array.isArray(value)) return value.flatMap(pageLinks);
-  return Predicate.isObject(value) ? Object.values(value).flatMap(pageLinks) : [];
+  if (Array.isArray(value)) return value.flatMap((item: Json) => pageLinks(item));
+  return isJsonObject(value) ? Object.values(value).flatMap((item) => pageLinks(item)) : [];
 };
 
 const brokenLinksIn = (
@@ -183,6 +183,44 @@ const mediaIn = (field: Field, value: Json | undefined): ReadonlyArray<MediaId> 
   );
 };
 
+/** The pages a site serves: every page that isn't unpublished. */
+const servedPages = (content: SiteContent) =>
+  Object.values(content.pages).filter((page) => page.status !== "unpublished");
+
+/** The blocks a site shows, placed on its served pages or in its header and footer. */
+const placedBlocks = (
+  content: SiteContent,
+): ReadonlyArray<{
+  readonly target: Target;
+  readonly title: string;
+  readonly blocks: Readonly<Record<BlockId, BlockInstance>>;
+}> => [
+  { target: "site", title: "Header and footer", blocks: content.parts.blocks },
+  ...servedPages(content).map((page) => ({
+    target: page.id,
+    title: page.meta.title || page.path,
+    blocks: page.blocks,
+  })),
+];
+
+/** The library images a site's served pages, header and footer show. Built-in placeholder images need no file. */
+export const shownMedia = (
+  content: SiteContent,
+  contracts: BlockContracts,
+): ReadonlyArray<MediaId> => {
+  const media = new Set<MediaId>();
+  for (const { blocks } of placedBlocks(content))
+    for (const block of Object.values(blocks)) {
+      const fields = contracts.get(block.type)?.fields ?? {};
+      for (const [name, field] of Object.entries(fields))
+        for (const id of mediaIn(field, block.props[name])) media.add(id);
+    }
+  for (const page of servedPages(content))
+    if (page.type === "post" && page.meta.cover) media.add(page.meta.cover.id);
+  for (const id of placeholderMedia.keys()) media.delete(id);
+  return Array.from(media);
+};
+
 /**
  * Freezes a draft's content, or lists everything pre-flight found to fix.
  * `previous` is the manifest of the release now live, whose addresses stay
@@ -193,22 +231,10 @@ export const freeze = (
   contracts: BlockContracts,
   previous: Pick<SnapshotManifest, "pages" | "gone">,
 ): FreezeResult => {
-  const pages = Object.values(content.pages).filter((page) => page.status !== "unpublished");
-  const placed: ReadonlyArray<{
-    readonly target: Target;
-    readonly title: string;
-    readonly blocks: Readonly<Record<BlockId, BlockInstance>>;
-  }> = [
-    { target: "site", title: "Header and footer", blocks: content.parts.blocks },
-    ...pages.map((page) => ({
-      target: page.id,
-      title: page.meta.title || page.path,
-      blocks: page.blocks,
-    })),
-  ];
-  const servedPages = new Set(pages.map((page) => page.id));
+  const pages = servedPages(content);
+  const served = new Set(pages.map((page) => page.id));
   const issues: ReadonlyArray<PreflightIssue> = [
-    ...placed.flatMap(({ target, title, blocks }) =>
+    ...placedBlocks(content).flatMap(({ target, title, blocks }) =>
       Object.entries(blocks).flatMap(([key, block]) => {
         const place = { target, title };
         const id = BlockId.make(key);
@@ -218,7 +244,7 @@ export const freeze = (
             ...incomplete,
           })),
           ...placeholdersIn(contracts, place, id, block),
-          ...brokenLinksIn(contracts, servedPages, place, id, block),
+          ...brokenLinksIn(contracts, served, place, id, block),
         ];
       }),
     ),
@@ -231,24 +257,14 @@ export const freeze = (
           field,
         })),
     ),
-    ...brokenMenuLinks(servedPages, "Main menu", content.parts.menus.main),
-    ...brokenMenuLinks(servedPages, "Footer menu", content.parts.menus.footer),
+    ...brokenMenuLinks(served, "Main menu", content.parts.menus.main),
+    ...brokenMenuLinks(served, "Footer menu", content.parts.menus.footer),
   ];
   if (issues.length > 0) return { ok: false, issues };
 
-  const servedPaths = new Set<string>(pages.map((page) => page.path));
+  const paths = new Set<string>(pages.map((page) => page.path));
   const gone = Array.from(
     new Set([...previous.gone, ...previous.pages.map((page) => page.path)]),
-  ).filter((path) => !servedPaths.has(path));
-  const media = new Set<MediaId>();
-  for (const { blocks } of placed)
-    for (const block of Object.values(blocks)) {
-      const fields = contracts.get(block.type)?.fields ?? {};
-      for (const [name, field] of Object.entries(fields))
-        for (const id of mediaIn(field, block.props[name])) media.add(id);
-    }
-  for (const page of pages)
-    if (page.type === "post" && page.meta.cover) media.add(page.meta.cover.id);
-  for (const id of placeholderMedia.keys()) media.delete(id);
-  return { ok: true, frozen: { pages, gone, media: Array.from(media) } };
+  ).filter((path) => !paths.has(path));
+  return { ok: true, frozen: { pages, gone, media: shownMedia(content, contracts) } };
 };

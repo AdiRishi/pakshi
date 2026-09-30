@@ -1,9 +1,7 @@
 import type { DraftSharing, ShareAccess } from "@repo/contracts/sharing";
 
 /** Who is opening a draft: a signed-in person, with whether they may edit the site's pages, or an anonymous visitor. */
-export type Visitor =
-  | { readonly id: string; readonly editsSite: boolean }
-  | { readonly id: null };
+export type Visitor = { readonly id: string; readonly editsSite: boolean } | { readonly id: null };
 
 const rank = { view: 1, edit: 2 } as const;
 
@@ -19,8 +17,7 @@ const widest = (grants: ReadonlyArray<ShareAccess>): ShareAccess | null =>
  * signed-in person, so a link shared for editing lets anonymous visitors view.
  */
 export const draftAccess = (sharing: DraftSharing, visitor: Visitor): ShareAccess | null => {
-  if (visitor.id === null)
-    return sharing.general.audience === "link" ? "view" : null;
+  if (visitor.id === null) return sharing.general.audience === "link" ? "view" : null;
   if (visitor.editsSite) return "edit";
   return widest([
     ...sharing.people

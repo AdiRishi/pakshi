@@ -1,78 +1,18 @@
+import { roleTitles } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { Person, Viewer } from "@repo/contracts/studio";
-import { roleTitles, Scope } from "@repo/contracts/access";
-import { type Access, authorize, Grant, Override } from "@repo/domain/access";
+import { type Access, authorize } from "@repo/domain/access";
 import { Effect, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
-const ScopeRow = Schema.Struct({
-  scope_kind: Schema.Literals(["organization", "brand", "site"]),
-  scope_id: Schema.NullOr(Schema.String),
-});
-
-const scopeOf = (row: typeof ScopeRow.Type) =>
-  Schema.decodeUnknownEffect(Scope)(
-    row.scope_kind === "organization"
-      ? { kind: "organization" }
-      : { kind: row.scope_kind, id: row.scope_id },
-  );
-
-const GrantRow = Schema.Struct({
-  ...ScopeRow.fields,
-  role: Grant.fields.role,
-  scope_name: Schema.NullOr(Schema.String),
-});
-
-const OverrideRow = Schema.Struct({
-  ...ScopeRow.fields,
-  permission: Override.fields.permission,
-  allowed: Schema.Literals([0, 1]),
-});
+import { loadAccess } from "./access.ts";
+import { waitingFor } from "./lists.ts";
 
 const SiteRow = Schema.Struct({
   id: SiteId,
   name: Schema.String,
   brand_id: BrandId,
   brand_name: Schema.String,
-});
-
-/** A person's grants and overrides, as `authorize` reads them. */
-export const loadAccess = Effect.fn("StudioApi.loadAccess")(function* (userId: string) {
-  const sql = yield* SqlClient.SqlClient;
-  const findGrants = SqlSchema.findAll({
-    Request: Schema.String,
-    Result: GrantRow,
-    execute: (user) => sql`
-      select g.role, g.scope_kind, g.scope_id, coalesce(b.name, s.name) as scope_name
-      from grants g
-      left join brands b on g.scope_kind = 'brand' and b.id = g.scope_id
-      left join sites s on g.scope_kind = 'site' and s.id = g.scope_id
-      where g.user_id = ${user}`,
-  });
-  const findOverrides = SqlSchema.findAll({
-    Request: Schema.String,
-    Result: OverrideRow,
-    execute: (user) => sql`
-      select permission, scope_kind, scope_id, allowed
-      from permission_overrides
-      where user_id = ${user}`,
-  });
-  const [grants, overrides] = yield* Effect.all([findGrants(userId), findOverrides(userId)], {
-    concurrency: "unbounded",
-  });
-  const access: Access = {
-    grants: yield* Effect.forEach(grants, (grant) =>
-      Effect.map(scopeOf(grant), (scope) => ({ role: grant.role, scope })),
-    ),
-    overrides: yield* Effect.forEach(overrides, (override) =>
-      Effect.map(scopeOf(override), (scope) => ({
-        permission: override.permission,
-        scope,
-        allowed: override.allowed === 1,
-      })),
-    ),
-  };
-  return { access, grants };
 });
 
 /** The sites a person can reach through any grant or override, before permissions are checked. */
@@ -107,7 +47,7 @@ const reachableSites = Effect.fn("StudioApi.reachableSites")(function* (access: 
   });
 });
 
-/** Who is signed in, what they hold, and the sites whose pages they can edit. */
+/** Who is signed in, what they hold, the sites whose pages they can edit, and how many approvals wait for them. */
 export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
   user: Person,
 ): Effect.fn.Return<Viewer, Schema.SchemaError | SqlError.SqlError, SqlClient.SqlClient> {
@@ -124,5 +64,6 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
         authorize(access, "page.edit", { kind: "site", id: site.id, brand: site.brand_id }),
       )
       .map((site) => ({ id: site.id, name: site.name, brand: site.brand_name })),
+    approvalsWaiting: (yield* waitingFor(user)).length,
   };
 });

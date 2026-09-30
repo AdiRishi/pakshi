@@ -1,6 +1,13 @@
 import { SqliteClient } from "@effect/sql-sqlite-do";
+import { Permission } from "@repo/contracts/access";
 import type { DraftName } from "@repo/contracts/draft";
-import { DraftId, type ReleaseId, SiteId } from "@repo/contracts/ids";
+import {
+  DraftId,
+  type ReleaseId,
+  SiteId,
+  type SnapshotId,
+  type SubmissionId,
+} from "@repo/contracts/ids";
 import {
   ClientMessage,
   ClientMessageJson,
@@ -12,17 +19,29 @@ import {
 } from "@repo/contracts/live";
 import type { Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
-import { DraftNotFound, NothingToRollBack } from "@repo/contracts/studio";
-import { Permission } from "@repo/contracts/access";
+import type { PagePath } from "@repo/contracts/page";
+import type { DraftSharing } from "@repo/contracts/sharing";
+import {
+  CannotDecide,
+  type Decision,
+  DraftNotFound,
+  NothingToRollBack,
+  SubmissionNotFound,
+} from "@repo/contracts/studio";
+import type { Workflow } from "@repo/contracts/workflow";
+import type { Approver } from "@repo/domain/approvals";
+import type { Visitor } from "@repo/domain/sharing";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, ManagedRuntime, Option, Schema } from "effect";
 import type { SqlError } from "effect/unstable/sql";
 import * as Migrator from "effect/unstable/sql/Migrator";
 import { type Connection, type ConnectionContext, Server, type WSMessage } from "partyserver";
 
+import { SiteApprovals } from "./site/approvals.ts";
 import { cloudflarePlatform } from "./site/cloudflare.ts";
 import { SiteDrafts, SiteIdentity } from "./site/drafts.ts";
 import { migrations } from "./site/migrations.ts";
+import { Outbox } from "./site/outbox.ts";
 import { LiveUpdates } from "./site/platform.ts";
 import { SiteReleases } from "./site/releases.ts";
 import { Site } from "./site/site.ts";
@@ -44,7 +63,12 @@ const decodeMessage = Schema.decodeUnknownOption(ClientMessageJson);
 const encodeMessage = Schema.encodeSync(ServerMessageJson);
 
 /** The failures SiteDoc's RPC methods report, which callers decode on their side. */
-export const SiteDocError = Schema.Union([DraftNotFound, NothingToRollBack]);
+export const SiteDocError = Schema.Union([
+  DraftNotFound,
+  NothingToRollBack,
+  SubmissionNotFound,
+  CannotDecide,
+]);
 export type SiteDocError = typeof SiteDocError.Type;
 
 /**
@@ -87,7 +111,8 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     const site = Schema.decodeSync(SiteId)(this.name);
     this.#runtime ??= ManagedRuntime.make(
       Site.layer.pipe(
-        Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer)),
+        Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer, SiteApprovals.layer)),
+        Layer.provideMerge(Outbox.layer),
         Layer.provide(Layer.effectDiscard(Migrator.make({})({ loader: migrations }))),
         Layer.provideMerge(SqliteClient.layer({ storage: this.ctx.storage })),
         Layer.provide(cloudflarePlatform(this.env, site)),
@@ -125,7 +150,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     );
   }
 
-  /** Delivers queued release copies to D1 soon, from the alarm, which retries when it fails. */
+  /** Delivers what the outbox holds soon, from the alarm, which retries when it fails. */
   async #deliverSoon() {
     if (await this.#run((site) => site.undelivered)) await this.ctx.storage.setAlarm(Date.now());
   }
@@ -209,7 +234,14 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
               ),
             ),
           Batch: async ({ batch }) => {
-            if (!state.permissions.includes("page.edit")) {
+            // A share can allow editing, and can be taken back while the connection is open.
+            const editsSite = state.permissions.includes("page.edit");
+            const access = editsSite
+              ? "edit"
+              : await this.#run((site) =>
+                  site.access(state.draft, { id: state.person.id, editsSite }),
+                );
+            if (access !== "edit") {
               const errors = [
                 {
                   op: 0,
@@ -269,6 +301,15 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
 
   // Calls from studio-api, which has checked the person may make them.
 
+  /** Runs a call that may queue outbox messages, and has them delivered soon, even if it fails partway. */
+  async #changing<A>(call: () => Promise<A>) {
+    try {
+      return await call();
+    } finally {
+      await this.#deliverSoon();
+    }
+  }
+
   live() {
     return this.#run((site) => site.live);
   }
@@ -286,11 +327,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   renameDraft(id: DraftId, name: DraftName) {
-    return this.#call((site) => site.renameDraft(id, name));
+    return this.#changing(() => this.#call((site) => site.renameDraft(id, name)));
   }
 
   closeDraft(by: Collaborator, id: DraftId) {
-    return this.#call((site) => site.closeDraft(by, id));
+    return this.#changing(() => this.#call((site) => site.closeDraft(by, id)));
   }
 
   viewDraft(id: DraftId) {
@@ -313,24 +354,57 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#call((site) => site.update(actor, id, resolutions, seen));
   }
 
-  // A release is recorded before KV is written, so delivery is scheduled
-  // even when the call fails after that: D1's copy is what lets the
-  // reconcile job see KV is behind.
-
-  async publish(actor: Collaborator, id: DraftId) {
-    try {
-      return await this.#call((site) => site.publish(actor, id));
-    } finally {
-      await this.#deliverSoon();
-    }
+  access(id: DraftId, visitor: Visitor) {
+    return this.#run((site) => site.access(id, visitor));
   }
 
-  async rollBack(actor: Collaborator) {
-    try {
-      return await this.#call((site) => site.rollBack(actor));
-    } finally {
-      await this.#deliverSoon();
-    }
+  shareDraft(id: DraftId, sharing: DraftSharing) {
+    return this.#changing(() => this.#call((site) => site.share(id, sharing)));
+  }
+
+  checkDraft(id: DraftId) {
+    return this.#call((site) => site.check(id));
+  }
+
+  // A release is recorded before KV is written, so delivery is scheduled
+  // even when a call fails after that: D1's copy is what lets the
+  // reconcile job see KV is behind.
+
+  submit(actor: Collaborator, id: DraftId, note: string, steps: Workflow, studio: string) {
+    return this.#changing(() => this.#call((site) => site.submit(actor, id, note, steps, studio)));
+  }
+
+  submission(id: SubmissionId) {
+    return this.#call((site) => site.submission(id));
+  }
+
+  review(id: SubmissionId) {
+    return this.#call((site) => site.review(id));
+  }
+
+  draftView(id: DraftId, path: PagePath) {
+    return this.#call((site) => site.draftView(id, path));
+  }
+
+  submissionView(id: SubmissionId, version: "submitted" | "live", path: PagePath) {
+    return this.#call((site) => site.submissionView(id, version, path));
+  }
+
+  decide(
+    approver: Approver,
+    id: SubmissionId,
+    snapshot: SnapshotId,
+    decision: Decision,
+    note: string,
+    studio: string,
+  ) {
+    return this.#changing(() =>
+      this.#call((site) => site.decide(approver, id, snapshot, decision, note, studio)),
+    );
+  }
+
+  rollBack(actor: Collaborator, studio: string) {
+    return this.#changing(() => this.#call((site) => site.rollBack(actor, studio)));
   }
 
   restore(by: Collaborator, release: ReleaseId, name: DraftName) {
@@ -338,8 +412,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   /** Writes the live release to KV and D1 again, for the reconcile job. */
-  async reconcile() {
-    await this.#run((site) => site.reconcile);
-    await this.#deliverSoon();
+  reconcile() {
+    return this.#changing(() => this.#run((site) => site.reconcile));
   }
 }

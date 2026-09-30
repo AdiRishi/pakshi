@@ -89,9 +89,10 @@ export type Resolutions = typeof Resolutions.Type;
 export const MergedChange = Schema.TaggedUnion({
   PageAdded: { place: Place },
   PageRemoved: { place: Place },
-  BlockAdded: { place: Place, block: Schema.String },
-  BlockRemoved: { place: Place, block: Schema.String },
-  BlockMoved: { place: Place, block: Schema.String },
-  ValueChanged: { place: Place, block: Schema.NullOr(Schema.String), field: Schema.String },
+  BlockAdded: { place: Place, block: NamedBlock },
+  BlockRemoved: { place: Place, block: NamedBlock },
+  BlockMoved: { place: Place, block: NamedBlock },
+  /** A value of a block, or of the page or site when `block` is null. */
+  ValueChanged: { place: Place, block: Schema.NullOr(NamedBlock), field: Schema.String },
 });
 export type MergedChange = typeof MergedChange.Type;
