@@ -22,6 +22,8 @@ export interface EditorServices {
   readonly siteCss: string;
   /** The color scheme the canvas and block previews show the theme in. */
   readonly scheme: "light" | "dark";
+  /** Alt text Pakshi suggests for an image where a block places it, or null. */
+  readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
 }
 
 const ServicesContext = createContext<EditorServices | null>(null);

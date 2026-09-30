@@ -156,10 +156,25 @@ class Merge {
     this.#contracts = contracts;
   }
 
-  /** Records a conflict, and returns the side kept for it: the one chosen, or the draft's. */
+  /**
+   * Records a conflict, and returns the side kept for it: the one chosen, or
+   * the draft's. Only a text value can be settled with a merged value.
+   */
   conflict(conflict: Conflict): Side {
     this.conflicts.push(conflict);
-    return this.#resolutions[conflict.key] ?? "draft";
+    const resolution = this.#resolutions[conflict.key];
+    return resolution === "live" ? "live" : "draft";
+  }
+
+  /** A block's text or rich text value, three ways. Its conflict may be settled with a merged value. */
+  text(spot: ValueSpot, sides: Sides<Json | undefined>): Json | undefined {
+    const { base, draft, live } = sides;
+    if (same(draft, live) || same(live, base) || same(draft, base)) return this.value(spot, sides);
+    const conflict: Conflict = { _tag: "Changed", ...spot, base, draft, live };
+    this.conflicts.push(conflict);
+    const resolution = this.#resolutions[conflict.key];
+    if (resolution === undefined || resolution === "draft") return draft;
+    return resolution === "live" ? live : resolution.merged;
   }
 
   /** One value, three ways. A missing value was never set, or was removed. */
@@ -175,7 +190,9 @@ class Merge {
       });
       return live;
     }
-    return this.conflict({ _tag: "Changed", ...spot, draft, live }) === "draft" ? draft : live;
+    return this.conflict({ _tag: "Changed", ...spot, base, draft, live }) === "draft"
+      ? draft
+      : live;
   }
 
   blockTitle(type: BlockType) {
@@ -351,6 +368,7 @@ const mergeContent = (
       place,
       block,
       field: field?.title ?? name,
+      name,
       kind: field === undefined ? "text" : valueKinds[field.kind],
     };
     const values: Sides<Json | undefined> = {
@@ -361,7 +379,9 @@ const mergeContent = (
     const value =
       field?.kind === "list"
         ? mergeList(merge, fieldSpot, values, field)
-        : merge.value(fieldSpot, values);
+        : field?.kind === "text" || field?.kind === "richText"
+          ? merge.text(fieldSpot, values)
+          : merge.value(fieldSpot, values);
     if (value !== undefined) props[name] = value;
   }
   const merged = { type: draft.type, variant, props };
@@ -389,8 +409,7 @@ const mergeList = (
       ? merged
       : "conflict";
   if (items === "conflict")
-    return merge.conflict({ _tag: "Changed", ...spot, draft: values.draft, live: values.live }) ===
-      "draft"
+    return merge.conflict({ _tag: "Changed", ...spot, ...values }) === "draft"
       ? values.draft
       : values.live;
   if (!same(items, values.draft) && same(values.draft, values.base))
@@ -721,8 +740,7 @@ const mergeMenu = (
   const items = mergeItems(sides);
   const spot = siteSpot(`menu/${name}`, title, "Items", "list");
   if (items === "conflict")
-    return merge.conflict({ _tag: "Changed", ...spot, draft: sides.draft, live: sides.live }) ===
-      "draft"
+    return merge.conflict({ _tag: "Changed", ...spot, ...sides }) === "draft"
       ? sides.draft
       : sides.live;
   if (!same(items, sides.draft) && same(sides.draft, sides.base))

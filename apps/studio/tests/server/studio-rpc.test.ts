@@ -80,6 +80,8 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     openDraft: unused,
     applyBatch: unused,
     draftUpdate: unused,
+    suggestMerge: unused,
+    suggestAltText: unused,
     updateDraft: unused,
     draftSharing: unused,
     shareDraft: unused,

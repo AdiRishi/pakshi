@@ -1,7 +1,15 @@
 import { Scope } from "@repo/contracts/access";
 import { DraftName } from "@repo/contracts/draft";
-import { DraftId, ReleaseId, SiteId, SnapshotId, SubmissionId } from "@repo/contracts/ids";
-import { Resolutions } from "@repo/contracts/merge";
+import {
+  BlockId,
+  DraftId,
+  MediaId,
+  ReleaseId,
+  SiteId,
+  SnapshotId,
+  SubmissionId,
+} from "@repo/contracts/ids";
+import { ConflictKey, Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
 import { DraftSharing } from "@repo/contracts/sharing";
 import { Decision } from "@repo/contracts/studio";
@@ -19,6 +27,10 @@ const forDraft = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: 
 /** Calls studio-api for the request this server function serves. */
 const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
   callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+
+/** Calls studio-api for a suggestion, which waits on a model, so it gets longer to answer. */
+const suggestion = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
+  callStudio({ binding: env.STUDIO_RPC, request: getRequest(), timeout: "90 seconds" }, use);
 
 /** A site's drafts, with the release that's live. */
 export const getSiteDrafts = createServerFn({ method: "GET" })
@@ -57,6 +69,24 @@ export const applyBatch = createServerFn({ method: "POST" })
     Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId, batch: Batch })),
   )
   .handler(({ data }) => studio((client) => client.applyBatch(data)));
+
+/** A merged value Pakshi suggests for a text conflict in a draft's update, or null. */
+export const suggestMerge = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, draft: DraftId, conflict: ConflictKey }),
+    ),
+  )
+  .handler(({ data }) => suggestion((client) => client.suggestMerge(data)));
+
+/** Alt text Pakshi suggests for an image a block of the draft places, or null. */
+export const suggestAltText = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, draft: DraftId, media: MediaId, block: BlockId }),
+    ),
+  )
+  .handler(({ data }) => suggestion((client) => client.suggestAltText(data)));
 
 /** A behind draft's merge with the live release, with the sides chosen so far. */
 export const getDraftUpdate = createServerFn({ method: "POST" })

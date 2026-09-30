@@ -63,6 +63,7 @@ import { ChatPanel } from "@/features/agent/chat-panel";
 import { standing } from "@/features/approvals/describe";
 import { DraftActions } from "@/features/drafts/draft-actions";
 import { draftImage } from "@/features/preview/address";
+import { suggestAltText } from "@/features/sites/functions";
 
 import { liveConnection } from "./live-connection";
 
@@ -378,6 +379,9 @@ export function EditorPage(props: {
       definitions={definitions}
       media={data.media}
       mediaSrc={mediaSrc}
+      suggestAltText={(media, block) =>
+        suggestAltText({ data: { site: props.site, draft: props.draft, media, block } })
+      }
       siteCss={siteCss}
       scheme={scheme}
       person={props.person}

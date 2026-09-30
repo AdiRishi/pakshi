@@ -104,6 +104,7 @@ export function EditorProvider(props: {
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
   readonly media: ReadonlyArray<MediaSummary>;
   readonly mediaSrc: (id: MediaId) => string;
+  readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
   readonly siteCss: string;
   readonly scheme: "light" | "dark";
   /** The person editing, as the others see them. */
@@ -141,10 +142,19 @@ export function EditorProvider(props: {
       definitions: props.definitions,
       media: props.media,
       mediaSrc: props.mediaSrc,
+      suggestAltText: props.suggestAltText,
       siteCss: props.siteCss,
       scheme: props.scheme,
     }),
-    [store, props.definitions, props.media, props.mediaSrc, props.siteCss, props.scheme],
+    [
+      store,
+      props.definitions,
+      props.media,
+      props.mediaSrc,
+      props.suggestAltText,
+      props.siteCss,
+      props.scheme,
+    ],
   );
 
   const ui = useMemo<EditorUi>(() => {

@@ -278,6 +278,16 @@ describe("a conflict", () => {
     expect(Array.isArray(images) && images.length).toBe(24);
   });
 
+  test("in a text field can be settled with a merged value, and says what both sides started from", () => {
+    const draft = edit(harbourDraft, [heading("Build a boat")]);
+    const live = edit(harbourDraft, [heading("Sail a boat")]);
+    const [conflict] = merge({ draft, live }).conflicts;
+    expect(conflict).toMatchObject({ _tag: "Changed", base: "Learn by building" });
+    if (conflict === undefined) throw new Error("There's a conflict.");
+    const merged = merge({ draft, live }, { [conflict.key]: { merged: "Build and sail a boat" } });
+    expect(block(merged.content, "b_hero")?.props["heading"]).toBe("Build and sail a boat");
+  });
+
   test("arises when both sides change one field differently, and keeps the side chosen", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
     const live = edit(harbourDraft, [heading("Sail a boat")]);

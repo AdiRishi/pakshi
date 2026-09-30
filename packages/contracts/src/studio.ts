@@ -17,7 +17,7 @@ import {
   SubmissionId,
 } from "./ids.ts";
 import { Collaborator } from "./live.ts";
-import { Conflict, MergedChange, Resolutions } from "./merge.ts";
+import { Conflict, ConflictKey, MergedChange, Resolutions } from "./merge.ts";
 import { Batch, BatchError } from "./ops.ts";
 import { PageDocument, PagePath } from "./page.ts";
 import { PreflightIssue } from "./publishing.ts";
@@ -460,6 +460,21 @@ class SignedInRpcs extends RpcGroup.make(
     /** `seen` is the live release the sides were chosen against. */
     payload: { ...forDraft, resolutions: Resolutions, seen: ReleaseId },
     success: UpdateOutcome,
+    error: draftError,
+  }),
+  /**
+   * A merged value a model suggests for a text or rich text conflict in
+   * updating a draft, or null when it has none that fits the field.
+   */
+  Rpc.make("suggestMerge", {
+    payload: { ...forDraft, conflict: ConflictKey },
+    success: Schema.NullOr(Schema.Json),
+    error: draftError,
+  }),
+  /** Alt text a model suggests for an image in the draft, for a person to check. */
+  Rpc.make("suggestAltText", {
+    payload: { ...forDraft, media: MediaId, block: BlockId },
+    success: Schema.NullOr(Schema.String),
     error: draftError,
   }),
   Rpc.make("draftSharing", { payload: forDraft, success: SharingView, error: draftError }),

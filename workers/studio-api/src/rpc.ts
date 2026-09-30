@@ -39,12 +39,21 @@ import { Cause, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
+import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { authFor } from "./auth.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
 import type { Outcome, SiteDocError } from "./site-doc.ts";
 import type { BatchResult } from "./site/drafts.ts";
 import type { DraftView, Opened, SubmissionReview, UpdatePreview } from "./site/site.ts";
-import { approverOn, findSite, siteFor, siteMedia, siteOf, standingOn } from "./sites.ts";
+import {
+  approverOn,
+  findSite,
+  inSiteLibrary,
+  siteFor,
+  siteMedia,
+  siteOf,
+  standingOn,
+} from "./sites.ts";
 import { describeViewer } from "./viewer.ts";
 import { saveWorkflow, siteWorkflow, workflowView } from "./workflows.ts";
 
@@ -359,6 +368,54 @@ const handlers = (env: StudioApiEnv) =>
                 const { doc } = yield* editableDraft(person, site, draft);
                 return yield* outcome(DraftNotFound, async (): Promise<Outcome<UpdateOutcome>> =>
                   doc.updateDraft(collaborator(person), draft, resolutions, seen),
+                );
+              }),
+            ),
+          ),
+        suggestMerge: ({ site, draft, conflict }) =>
+          SignedIn.use((person) =>
+            withCore("suggest a merge")(
+              Effect.gen(function* () {
+                const { found, doc } = yield* editableDraft(person, site, draft);
+                const [preview, view] = yield* Effect.all(
+                  [
+                    outcome(DraftNotFound, async (): Promise<Outcome<UpdatePreview>> =>
+                      doc.previewUpdate(draft, {}),
+                    ),
+                    outcome(DraftNotFound, async (): Promise<Outcome<DraftView>> =>
+                      doc.viewDraft(draft),
+                    ),
+                  ],
+                  { concurrency: "unbounded" },
+                );
+                const conflicting = preview.conflicts.find(
+                  (candidate) => candidate.key === conflict,
+                );
+                if (conflicting === undefined) return null;
+                return yield* mergeSuggestion(
+                  env,
+                  { site: found, person: person.id },
+                  view.draft,
+                  conflicting,
+                );
+              }),
+            ),
+          ),
+        suggestAltText: ({ site, draft, media, block }) =>
+          SignedIn.use((person) =>
+            withCore("suggest alt text")(
+              Effect.gen(function* () {
+                const { found, doc } = yield* editableDraft(person, site, draft);
+                if (!(yield* inSiteLibrary(found, media))) return null;
+                const view = yield* outcome(DraftNotFound, async (): Promise<Outcome<DraftView>> =>
+                  doc.viewDraft(draft),
+                );
+                return yield* altTextSuggestion(
+                  env,
+                  { site: found, person: person.id },
+                  view.draft,
+                  media,
+                  block,
                 );
               }),
             ),
