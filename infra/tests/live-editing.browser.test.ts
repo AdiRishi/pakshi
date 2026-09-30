@@ -8,20 +8,12 @@ import {
   test,
 } from "@playwright/test";
 
-const studioUrl = process.env.STUDIO_URL ?? "";
-const homePage = `${studioUrl}/sites/site_harbour/pages/pg_home`;
+import { newDraft, openInEditor, signedIn } from "./support/studio.ts";
 
-/** Someone signed in to Studio in their own browser, with the sample site's home page open. */
-const editing = async (browser: Browser, name: string) => {
-  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
-  const page = await context.newPage();
-  await page.goto(studioUrl);
-  await page.getByRole("link", { name: /^Continue with .* account$/ }).click();
-  await page.getByRole("button", { name }).click();
-  await expect(page.getByRole("heading", { name: `Hello, ${name.split(" ")[0]}` })).toBeVisible();
-  await page.goto(homePage);
-  const canvas = page.frameLocator("iframe[title^='Canvas']");
-  await expect(canvas.locator("[data-pakshi-block]").first()).toBeVisible();
+/** Someone signed in to Studio in their own browser, with a draft's home page open. */
+const editing = async (browser: Browser, name: string, draft: (page: Page) => Promise<string>) => {
+  const page = await signedIn(browser, name, { width: 1440, height: 1000 });
+  const canvas = await openInEditor(page, await draft(page), "pg_home");
   return { page, canvas };
 };
 
@@ -45,8 +37,12 @@ const stopTyping = (page: Page) => page.getByRole("button", { name: "Page settin
 test("two people edit one draft live, and every change is applied or its author is told", async ({
   browser,
 }) => {
-  const meera = await editing(browser, "Meera Kapoor");
-  const sam = await editing(browser, "Sam Okafor");
+  let draftUrl = "";
+  const meera = await editing(browser, "Meera Kapoor", async (page) => {
+    draftUrl = await newDraft(page, "site_harbour", "Live editing");
+    return draftUrl;
+  });
+  const sam = await editing(browser, "Sam Okafor", async () => draftUrl);
 
   // Each sees the other.
   await expect(
