@@ -137,8 +137,9 @@ export const pageView = (
   blocks: ReadonlyArray<BlockId> | undefined,
   typing: ReadonlyArray<TypingIn>,
 ): Json | null => {
+  // Models often send an empty list for "all of them".
   const chosen = (ids: ReadonlyArray<BlockId>) =>
-    blocks === undefined ? ids : ids.filter((id) => blocks.includes(id));
+    blocks === undefined || blocks.length === 0 ? ids : ids.filter((id) => blocks.includes(id));
   if (target === "site")
     return {
       target: "site",

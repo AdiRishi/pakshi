@@ -42,23 +42,22 @@ export const buildBlock = (
   const tree = placeholderTree(contracts, spec.type);
   const props = storedProps(contract.fields, spec.props ?? {});
   if (Result.isFailure(props)) return Result.fail(describe(props.failure));
+  const slotNames = contract.placement === "section" ? Object.keys(contract.slots) : [];
   const items = Result.all(
-    Object.entries(spec.items ?? {}).map(([slot, specs]) =>
-      Result.map(
-        Result.all(
-          specs.map((item): Result.Result<ItemTree, string> => {
-            const built = buildBlock(contracts, item);
-            return Result.map(built, ({ id, type, variant, props: itemProps }) => ({
-              id,
-              type,
-              variant,
-              props: itemProps,
-            }));
-          }),
-        ),
-        (built) => [slot, built] as const,
-      ),
-    ),
+    (spec.items ?? []).map((item): Result.Result<readonly [string, ItemTree], string> => {
+      const slot = item.slot ?? (slotNames.length === 1 ? slotNames[0] : undefined);
+      if (slot === undefined || !slotNames.includes(slot))
+        return Result.fail(
+          slotNames.length === 0
+            ? `A ${contract.title} has no items.`
+            : `Say which slot each item goes in: ${slotNames.join(" or ")}.`,
+        );
+      return Result.map(
+        buildBlock(contracts, item),
+        ({ id, type, variant, props: itemProps }) =>
+          [slot, { id, type, variant, props: itemProps }] as const,
+      );
+    }),
   );
   if (Result.isFailure(items)) return Result.fail(items.failure);
   let block: BlockTree = {
@@ -68,7 +67,18 @@ export const buildBlock = (
   };
   if (spec.surface !== undefined) block = { ...block, surface: spec.surface };
   if (items.success.length > 0)
-    block = { ...block, slots: { ...tree.slots, ...Object.fromEntries(items.success) } };
+    block = {
+      ...block,
+      slots: {
+        ...tree.slots,
+        ...Object.fromEntries(
+          slotNames.flatMap((slot) => {
+            const placed = items.success.flatMap(([into, item]) => (into === slot ? [item] : []));
+            return placed.length === 0 ? [] : [[slot, placed] as const];
+          }),
+        ),
+      },
+    };
   return Result.succeed(block);
 };
 

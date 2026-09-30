@@ -449,3 +449,9 @@ export const useShowBlock = () => {
 
 /** The page being edited. */
 export const usePage = () => useEditorState((state) => state.page);
+
+/** A block type's title at the version the draft pins, such as "Rich text" for `rich-text`. */
+export const useBlockTitle = () => {
+  const { definitions } = useServices();
+  return (type: BlockType) => definitions.get(type)?.title ?? type;
+};
