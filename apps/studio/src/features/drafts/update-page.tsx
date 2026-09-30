@@ -1,12 +1,19 @@
 import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
-import type { Conflict, ConflictKey, MergedChange, Side } from "@repo/contracts/merge";
+import type { Conflict, ConflictKey, MergedChange, Resolution, Side } from "@repo/contracts/merge";
 import { Badge } from "@repo/ui/components/badge";
 import { Button, buttonVariants } from "@repo/ui/components/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import { Progress } from "@repo/ui/components/progress";
-import { queryOptions, useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { Spinner } from "@repo/ui/components/spinner";
+import {
+  queryOptions,
+  useMutation,
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { ArrowLeftIcon, CheckIcon, GitMergeIcon } from "lucide-react";
+import { ArrowLeftIcon, CheckIcon, GitMergeIcon, SparklesIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 import { toast } from "sonner";
 
@@ -15,7 +22,7 @@ import { draftImage } from "@/features/preview/address";
 import { formatDay } from "@/lib/dates";
 
 import { releaseTitle } from "../releases/describe";
-import { getDraftUpdate, updateDraft } from "../sites/functions";
+import { getDraftUpdate, suggestMerge, updateDraft } from "../sites/functions";
 import { draftPagesQuery, siteDraftsQuery } from "../sites/queries";
 import { ConflictValue } from "./conflict-value";
 
@@ -130,15 +137,80 @@ const keepLabels = (conflict: Conflict): Record<Side, string> => {
   return { live: "Keep live", draft: "Keep this draft" };
 };
 
+/** Whether Pakshi can suggest a merged value for a conflict: a text field of a block both sides changed. */
+const suggestible = (conflict: Conflict): conflict is Extract<Conflict, { _tag: "Changed" }> =>
+  conflict._tag === "Changed" &&
+  conflict.block !== null &&
+  (conflict.kind === "text" || conflict.kind === "richText");
+
+/** The merged value Pakshi suggests for a text conflict, and the button that takes it. */
+function Suggestion(props: {
+  readonly site: SiteId;
+  readonly draft: DraftId;
+  readonly conflict: Extract<Conflict, { _tag: "Changed" }>;
+  readonly chosen: boolean;
+  readonly onChoose: (merged: Resolution) => void;
+  readonly image: (media: MediaId) => string;
+}) {
+  const suggestion = useQuery({
+    queryKey: ["sites", props.site, "drafts", props.draft, "suggestion", props.conflict.key],
+    queryFn: () =>
+      suggestMerge({
+        data: { site: props.site, draft: props.draft, conflict: props.conflict.key },
+      }),
+    staleTime: Number.POSITIVE_INFINITY,
+  });
+  return (
+    <div
+      className={`flex flex-col gap-3 rounded-lg border p-4 ${props.chosen ? "border-ring bg-accent" : "border-dashed"}`}
+    >
+      <span className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
+        <SparklesIcon aria-hidden className="size-3.5" />
+        Pakshi suggests
+      </span>
+      {suggestion.isPending ? (
+        <span className="flex items-center gap-2 text-sm text-muted-foreground">
+          <Spinner />
+          Combining both changes
+        </span>
+      ) : suggestion.data === null || suggestion.data === undefined ? (
+        <span className="text-sm text-muted-foreground">No suggestion for this one.</span>
+      ) : (
+        <>
+          <div className="min-w-0">
+            <ConflictValue kind={props.conflict.kind} value={suggestion.data} image={props.image} />
+          </div>
+          <Button
+            variant={props.chosen ? "secondary" : "outline"}
+            size="sm"
+            className="mt-auto self-start"
+            aria-pressed={props.chosen}
+            onClick={() => {
+              if (suggestion.data !== null && suggestion.data !== undefined)
+                props.onChoose({ merged: suggestion.data });
+            }}
+          >
+            {props.chosen && <CheckIcon aria-hidden />}
+            Use suggestion
+          </Button>
+        </>
+      )}
+    </div>
+  );
+}
+
 function ConflictCard(props: {
+  readonly site: SiteId;
+  readonly draft: DraftId;
   readonly conflict: Conflict;
   readonly number: number;
-  readonly chosen: Side | undefined;
-  readonly onChoose: (side: Side) => void;
+  readonly chosen: Resolution | undefined;
+  readonly onChoose: (resolution: Resolution) => void;
   readonly image: (media: MediaId) => string;
 }) {
   const titleId = useId();
   const keep = keepLabels(props.conflict);
+  const conflict = props.conflict;
   return (
     <section aria-labelledby={titleId}>
       <Card className={props.chosen === undefined ? "border-warning-foreground/40" : ""}>
@@ -161,7 +233,9 @@ function ConflictCard(props: {
             {props.chosen === undefined ? "Needs a decision" : "Decided"}
           </Badge>
         </CardHeader>
-        <CardContent className="grid gap-4 md:grid-cols-2">
+        <CardContent
+          className={`grid gap-4 ${suggestible(conflict) ? "md:grid-cols-3" : "md:grid-cols-2"}`}
+        >
           {(["live", "draft"] as const).map((side) => (
             <SideChoice
               key={side}
@@ -173,6 +247,18 @@ function ConflictCard(props: {
               <SideContent conflict={props.conflict} side={side} image={props.image} />
             </SideChoice>
           ))}
+          {suggestible(conflict) && (
+            <Suggestion
+              site={props.site}
+              draft={props.draft}
+              conflict={conflict}
+              chosen={
+                props.chosen !== undefined && props.chosen !== "draft" && props.chosen !== "live"
+              }
+              onChoose={props.onChoose}
+              image={props.image}
+            />
+          )}
         </CardContent>
       </Card>
     </section>
@@ -224,7 +310,7 @@ export function UpdatePage(props: { readonly site: SiteId; readonly draft: Draft
   const { data } = useSuspenseQuery(draftUpdateQuery(props.site, props.draft));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [chosen, setChosen] = useState<Record<ConflictKey, Side>>({});
+  const [chosen, setChosen] = useState<Record<ConflictKey, Resolution>>({});
   const conflicts = data.conflicts;
   const decided = conflicts.filter((conflict) => conflict.key in chosen).length;
   const remaining = conflicts.length - decided;
@@ -326,10 +412,14 @@ export function UpdatePage(props: { readonly site: SiteId; readonly draft: Draft
           {conflicts.map((conflict, index) => (
             <ConflictCard
               key={conflict.key}
+              site={props.site}
+              draft={props.draft}
               conflict={conflict}
               number={index + 1}
               chosen={chosen[conflict.key]}
-              onChoose={(side) => setChosen((current) => ({ ...current, [conflict.key]: side }))}
+              onChoose={(resolution) =>
+                setChosen((current) => ({ ...current, [conflict.key]: resolution }))
+              }
               image={draftImage(props.site, props.draft)}
             />
           ))}

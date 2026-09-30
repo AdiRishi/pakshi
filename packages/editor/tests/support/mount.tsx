@@ -64,6 +64,7 @@ export const openEditor = async (
       definitions={options.definitions ?? definitions}
       media={media}
       mediaSrc={() => pixel}
+      suggestAltText={async () => "Boats moored in the harbour at sunset"}
       siteCss={siteCss}
       scheme="light"
       person={meera}

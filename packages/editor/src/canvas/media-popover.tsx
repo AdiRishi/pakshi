@@ -13,6 +13,7 @@ import { Schema } from "effect";
 
 import { type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
 import { LibraryPicker } from "../library-picker.tsx";
+import { AltTextSuggestion } from "../settings/alt-text-suggestion.tsx";
 import { FieldControl, valueAt } from "../settings/controls.tsx";
 import { useCanvasRect } from "./anchor.tsx";
 
@@ -76,6 +77,7 @@ export function MediaPopover(props: {
           definition={field.parts.alt}
           value={chosen?.alt ?? ""}
         />
+        {chosen !== undefined && <AltTextSuggestion field={props.field} media={chosen.id} />}
         <p className="text-xs text-muted-foreground">
           Say what the image shows for people who can't see it. Leave it empty if the image is only
           decoration.

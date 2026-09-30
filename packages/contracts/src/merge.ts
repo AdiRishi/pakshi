@@ -51,7 +51,11 @@ export const Conflict = Schema.TaggedUnion({
     /** The block the value belongs to, or null for a value of the page or site. */
     block: Schema.NullOr(NamedBlock),
     field: Schema.String,
+    /** The field's name in the block's props, for a value of a block. */
+    name: Schema.optional(Schema.String),
     kind: ValueKind,
+    /** The value both sides started from, missing when it wasn't set. */
+    base: Schema.optional(Schema.Json),
     draft: Schema.optional(Schema.Json),
     live: Schema.optional(Schema.Json),
   },
@@ -81,8 +85,15 @@ export const Conflict = Schema.TaggedUnion({
 });
 export type Conflict = typeof Conflict.Type;
 
-/** The side kept for each conflict, by its key. */
-export const Resolutions = Schema.Record(ConflictKey, Side);
+/**
+ * How a conflict is settled: by keeping one side, or, for a text or rich
+ * text value both sides changed, with a merged value a person accepted.
+ */
+export const Resolution = Schema.Union([Side, Schema.Struct({ merged: Schema.Json })]);
+export type Resolution = typeof Resolution.Type;
+
+/** How each conflict is settled, by its key. */
+export const Resolutions = Schema.Record(ConflictKey, Resolution);
 export type Resolutions = typeof Resolutions.Type;
 
 /** A change from the live site that merged into a draft on its own. */

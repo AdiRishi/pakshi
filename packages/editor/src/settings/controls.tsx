@@ -25,6 +25,7 @@ import {
   useStore,
 } from "../context.tsx";
 import { FieldPresence } from "../participants.tsx";
+import { AltTextSuggestion } from "./alt-text-suggestion.tsx";
 import { FieldInput, FieldTextarea } from "./field-text.tsx";
 
 type Json = Schema.Json;
@@ -351,11 +352,14 @@ function MediaControl(props: ControlProps<KindOf<"media">>) {
         </Button>
       </div>
       {id !== null && (
-        <TextControl
-          field={{ ...props.field, path: [...props.field.path, "alt"] }}
-          definition={props.definition.parts.alt}
-          value={props.value?.alt ?? ""}
-        />
+        <>
+          <TextControl
+            field={{ ...props.field, path: [...props.field.path, "alt"] }}
+            definition={props.definition.parts.alt}
+            value={props.value?.alt ?? ""}
+          />
+          <AltTextSuggestion field={props.field} media={id} />
+        </>
       )}
     </ControlRow>
   );

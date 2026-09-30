@@ -20,3 +20,4 @@ export {
   Web,
   Workspace,
 } from "./workspace.ts";
+export { suggestAltText, suggestMerge } from "./suggestions.ts";
