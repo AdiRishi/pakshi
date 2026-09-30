@@ -114,11 +114,15 @@ export class Site extends Context.Service<
       id: DraftId,
       resolutions: Resolutions,
     ) => Effect.Effect<UpdatePreview, StorageError | DraftNotFound>;
-    /** Merges the live release into a draft, once every conflict has a side. */
+    /**
+     * Merges the live release into a draft, once every conflict has a side.
+     * The sides count only if they were chosen seeing the release still live.
+     */
     readonly update: (
       actor: Collaborator,
       id: DraftId,
       resolutions: Resolutions,
+      seen: ReleaseId,
     ) => Effect.Effect<UpdateOutcome, StorageError | DraftNotFound>;
     /**
      * Freezes a draft and makes it live. A draft that's behind merges first,
@@ -374,7 +378,8 @@ export class Site extends Context.Service<
             drafts.create({ name, by, base: liveReleaseOf(base), content }),
           );
         }),
-        renameDraft: (id, name) => inStorageTurn(drafts.rename(id, name)),
+        renameDraft: (id, name) =>
+          inStorageTurn(Effect.andThen(openDraft(id), drafts.rename(id, name))),
         closeDraft: (by, id) =>
           inStorageTurn(
             Effect.gen(function* () {
@@ -421,13 +426,21 @@ export class Site extends Context.Service<
               };
             }),
           ),
-        update: (actor, id, resolutions) =>
+        update: (actor, id, resolutions, seen) =>
           inReleaseTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              if (!isBehind(draft.base, liveReleaseOf(releaseOf(yield* liveRelease))))
+              const target = releaseOf(yield* liveRelease);
+              if (!isBehind(draft.base, liveReleaseOf(target)))
                 return UpdateOutcome.cases.Updated.make({});
-              const { result, resolved } = yield* merge(id, resolutions, actor);
+              // Sides chosen against another release may not mean the same against this one.
+              const { result, resolved } = yield* merge(
+                id,
+                resolutions,
+                target.id === seen ? actor : null,
+              );
+              if (target.id !== seen)
+                return UpdateOutcome.cases.Unresolved.make({ conflicts: result.conflicts });
               return resolved
                 ? UpdateOutcome.cases.Updated.make({})
                 : UpdateOutcome.cases.Unresolved.make({ conflicts: result.conflicts });
@@ -472,7 +485,8 @@ export class Site extends Context.Service<
               });
               yield* inStorageTurn(
                 Effect.gen(function* () {
-                  const edited = (yield* drafts.draft(id)).revision !== frozen.draft.revision;
+                  // Someone may have closed the draft while its snapshot was written.
+                  const edited = (yield* openDraft(id)).revision !== frozen.draft.revision;
                   yield* sql.withTransaction(
                     Effect.gen(function* () {
                       yield* releases.append(release);

@@ -309,20 +309,28 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#call((site) => site.previewUpdate(id, resolutions));
   }
 
-  updateDraft(actor: Collaborator, id: DraftId, resolutions: Resolutions) {
-    return this.#call((site) => site.update(actor, id, resolutions));
+  updateDraft(actor: Collaborator, id: DraftId, resolutions: Resolutions, seen: ReleaseId) {
+    return this.#call((site) => site.update(actor, id, resolutions, seen));
   }
 
+  // A release is recorded before KV is written, so delivery is scheduled
+  // even when the call fails after that: D1's copy is what lets the
+  // reconcile job see KV is behind.
+
   async publish(actor: Collaborator, id: DraftId) {
-    const outcome = await this.#call((site) => site.publish(actor, id));
-    await this.#deliverSoon();
-    return outcome;
+    try {
+      return await this.#call((site) => site.publish(actor, id));
+    } finally {
+      await this.#deliverSoon();
+    }
   }
 
   async rollBack(actor: Collaborator) {
-    const outcome = await this.#call((site) => site.rollBack(actor));
-    await this.#deliverSoon();
-    return outcome;
+    try {
+      return await this.#call((site) => site.rollBack(actor));
+    } finally {
+      await this.#deliverSoon();
+    }
   }
 
   restore(by: Collaborator, release: ReleaseId, name: DraftName) {
