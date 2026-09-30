@@ -9,6 +9,10 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status            |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 057 | One turn orders every change to submissions and the live release                   | 2026-10-01 | Accepted          |
+| 056 | A submission whose merge needs a person goes back to its draft                     | 2026-10-01 | Accepted          |
+| 055 | A draft's sharing lives with the draft in SiteDoc                                  | 2026-10-01 | Accepted          |
+| 054 | Studio serves previews from the draft itself                                       | 2026-10-01 | Accepted          |
 | 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted          |
 | 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Accepted          |
 | 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted          |
@@ -38,11 +42,11 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted          |
 | 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted          |
 | 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted          |
-| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Accepted          |
+| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Amended by 057    |
 | 023 | One-click rollback undoes only the latest publish                                  | 2026-09-29 | Accepted          |
 | 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted          |
 | 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted          |
-| 020 | Share drafts like documents                                                        | 2026-09-28 | Accepted          |
+| 020 | Share drafts like documents                                                        | 2026-09-28 | Amended by 054    |
 | 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Accepted          |
 | 018 | Media files never change                                                           | 2026-09-28 | Accepted          |
 | 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted          |
@@ -53,15 +57,53 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted          |
 | 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted          |
 | 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted          |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Accepted          |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054    |
 | 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Accepted          |
 | 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted          |
 | 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Accepted          |
 | 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025    |
 | 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted          |
-| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Accepted          |
+| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054    |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted          |
+
+## 057 — One turn orders every change to submissions and the live release [#decision-057]
+
+**Context.** The design had publishing check again, after its R2 writes, that the submission was still fully approved and based on the live release, because a Durable Object serves other requests while it waits on R2. `SiteDoc` already runs publishing, rollback and updates in its release turn, one at a time, while edits carry on in its storage turn.
+
+**Decision.** Submitting, deciding on a submission, publishing, rolling back, updating a draft and closing a draft all hold the release turn. Nothing else changes a submission or the live release, so neither can change while `SiteDoc` waits on R2, and publishing needs no second check.
+
+**Consequences.** Two final approvals, or two publishes, happen one after the other, and the second sees what the first did. Edits never wait for a publish.
+
+## 056 — A submission whose merge needs a person goes back to its draft [#decision-056]
+
+**Context.** When another draft publishes during review, `SiteDoc` merges each submission under review. A clean merge keeps its approvals. A merge with conflicts needs a person, but a submission is frozen, and the draft already has an update screen for settling conflicts.
+
+**Decision.** A submission whose merge has conflicts closes as needing an update, and its submitter is told. They update the draft on its update screen and submit again, which starts the workflow from its first step.
+
+**Rejected.** Settling conflicts on the submission itself, which needs a second update screen and a way to edit something frozen.
+
+**Consequences.** Conflicts are settled in one place. A submission is either current with the live release or closed.
+
+## 055 — A draft's sharing lives with the draft in SiteDoc [#decision-055]
+
+**Context.** The design kept draft shares in D1. `SiteDoc` checks sharing for every preview request and every live connection a share allows, and closing a draft should end its sharing at the same moment.
+
+**Decision.** `SiteDoc` stores each draft's sharing with the draft: the people it's shared with, and its general access, each with view or edit access. The outbox copies the people a draft is shared with to D1, for the "Shared with you" list.
+
+**Rejected.** Shares in D1 with `SiteDoc` told of each change, which keeps two stores in agreement.
+
+**Consequences.** Access checks read `SiteDoc`'s own storage. The D1 copy can lag by seconds, and only lists read it.
+
+## 054 — Studio serves previews from the draft itself [#decision-054]
+
+**Context.** The design served previews from `sites` on a preview domain of their own. Studio checked access and redirected with a signed token, `sites` swapped the token for a cookie, and an access counter in the preview's R2 object revoked old cookies. The preview host had to send people without a cookie to Studio, and Studio had to send them to the preview host, so each Worker needed the other's address. Locally, Workers get their ports when they start, so neither address exists before the other deploys. Most people who open a preview have Studio accounts, and the rest open a draft shared with anyone who has the link.
+
+**Decision.** Studio serves a draft's preview at `/preview/{site}/{draft}/{page path}`. On every request, `SiteDoc` checks the draft's sharing against the person viewing, or against an anonymous visitor, and returns the page from the draft's latest saved state. Studio renders it with the same block components and theme CSS as `sites` and the editor canvas. The random draft ID keeps the address unguessable.
+
+**Rejected.** A preview host with tokens, cookies and an access counter; previews on each site's own domain, which needs DNS and a certificate there for every preview.
+
+**Consequences.** There is no preview domain, token, cookie, access counter or preview snapshot in R2. Revoking access blocks the next request, and a preview never lags the draft. Draft content renders on Studio's origin, as it already does in the editor canvas, which is safe because editors can't add HTML, scripts or unsafe links. Studio's preview is one more renderer, so it has its own screenshot checks against `sites`.
 
 ## 053 — Drafts behind the live site merge on their own when no one needs to decide [#decision-053]
 

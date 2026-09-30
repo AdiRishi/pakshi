@@ -124,7 +124,7 @@ Nine journeys cover the product. Each one reuses the same few building blocks: d
 3. The submission follows the applicable approval workflow. Each step's approvers are notified, open the preview, and see what changed compared with the live site.
 4. When the last step approves, the draft publishes and is live within about a minute. With no steps, submitting publishes directly. Every other draft on the site is now behind (journey 5).
 5. If an approver requests changes, the submission closes with their note and the editor resubmits when ready. Editing can continue during review; later edits aren't part of the submission under review.
-6. If another draft publishes while this one is under review, the submission is updated automatically. A clean merge keeps its approvals. A merge that needed a person to resolve conflicts restarts the workflow.
+6. If another draft publishes while this one is under review, the submission is updated automatically. A clean merge keeps its approvals. If the merge has conflicts, the submission goes back to its draft: the editor updates the draft (journey 5) and submits it again, which restarts the workflow.
 
 **5. Update a draft that's behind** (editor)
 
@@ -229,7 +229,8 @@ stateDiagram-v2
   draft --> live: Submit, no steps
   review --> draft: Changes requested
   review --> merging: Another draft publishes
-  merging --> review: Clean keeps approvals, else restart
+  merging --> review: Clean, keeps approvals
+  merging --> draft: Conflicts, update and resubmit
   review --> live: Last step approves
   live --> draft: Edited after submitting
   live --> [*]: Draft closes
@@ -237,9 +238,9 @@ stateDiagram-v2
 
 - Workflows can be set on the organization, a brand or a site, and the nearest one applies. A workflow is an ordered list of any number of steps, including none. Each step names who can approve (roles or specific people) and how many approvals it needs.
 - Editing a workflow is a permission. The workflow editor is a simple list of steps.
-- An approver needs the approve permission on that site. Approving a change you edited needs the separate permission for it.
+- An approver needs the approve permission on that site. Approving a change you edited needs the separate permission for it. Each person's approval counts once per submission.
 - Submitting freezes the draft exactly as it will be published. Approvals apply to that frozen version only. Submitting the same draft again replaces its pending submission and restarts the workflow.
-- If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals; a merge that needed conflict resolution restarts the workflow.
+- If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals. A merge with conflicts sends the submission back to its draft, and submitting again restarts the workflow.
 - A submission publishes only if it's based on the current live release, so a final approval can never overwrite a release that went live during review.
 - Pre-flight must pass before submitting: no placeholders left, every required field filled and at its minimum length, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
 - A publish is live worldwide within about a minute. Every release is kept.
