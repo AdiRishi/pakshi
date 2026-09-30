@@ -1,4 +1,4 @@
-import type { DraftId, SiteId } from "@repo/contracts/ids";
+import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { Conflict, ConflictKey, MergedChange, Side } from "@repo/contracts/merge";
 import { Badge } from "@repo/ui/components/badge";
 import { Button, buttonVariants } from "@repo/ui/components/button";
@@ -11,6 +11,7 @@ import { type ReactNode, useId, useState } from "react";
 import { toast } from "sonner";
 
 import { describeChange } from "@/features/approvals/describe";
+import { draftImage } from "@/features/preview/address";
 import { formatDay } from "@/lib/dates";
 
 import { releaseTitle } from "../releases/describe";
@@ -91,11 +92,15 @@ function SideChoice(props: {
 }
 
 /** What one side of a conflict holds. */
-function SideContent(props: { readonly conflict: Conflict; readonly side: Side }) {
+function SideContent(props: {
+  readonly conflict: Conflict;
+  readonly side: Side;
+  readonly image: (media: MediaId) => string;
+}) {
   const { conflict, side } = props;
   switch (conflict._tag) {
     case "Changed":
-      return <ConflictValue kind={conflict.kind} value={conflict[side]} />;
+      return <ConflictValue kind={conflict.kind} value={conflict[side]} image={props.image} />;
     case "Removed":
       return conflict.removedOn === side ? (
         <span className="text-muted-foreground">Removed</span>
@@ -130,6 +135,7 @@ function ConflictCard(props: {
   readonly number: number;
   readonly chosen: Side | undefined;
   readonly onChoose: (side: Side) => void;
+  readonly image: (media: MediaId) => string;
 }) {
   const titleId = useId();
   const keep = keepLabels(props.conflict);
@@ -164,7 +170,7 @@ function ConflictCard(props: {
               keep={keep[side]}
               onChoose={() => props.onChoose(side)}
             >
-              <SideContent conflict={props.conflict} side={side} />
+              <SideContent conflict={props.conflict} side={side} image={props.image} />
             </SideChoice>
           ))}
         </CardContent>
@@ -324,6 +330,7 @@ export function UpdatePage(props: { readonly site: SiteId; readonly draft: Draft
               number={index + 1}
               chosen={chosen[conflict.key]}
               onChoose={(side) => setChosen((current) => ({ ...current, [conflict.key]: side }))}
+              image={draftImage(props.site, props.draft)}
             />
           ))}
         </main>

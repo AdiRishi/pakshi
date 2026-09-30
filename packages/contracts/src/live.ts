@@ -99,6 +99,11 @@ export const ServerMessage = Schema.TaggedUnion({
   PeerLeft: { connection: Schema.String },
   /** A release went live, sent to everyone on the site. Drafts that started from another are behind. */
   LiveChanged: { live: LiveRelease },
+  /**
+   * The person can no longer edit the draft, because its sharing changed.
+   * SiteDoc closes their connection after sending it.
+   */
+  AccessEnded: {},
   /** The draft was published or closed, sent to everyone in it. It takes no more changes. */
   DraftClosed: {
     by: Collaborator,

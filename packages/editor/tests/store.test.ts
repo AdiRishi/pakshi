@@ -499,6 +499,19 @@ describe("the draft's standing", () => {
     expect(store.getState().confirmed.lockfile).toEqual(fixtureDraft.lockfile);
   });
 
+  test("an editor whose sharing no longer lets them edit stops, and sees no later changes", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
+    siteDoc.announce({ _tag: "AccessEnded" });
+    await settle();
+    expect(store.getState().accessEnded).toBe(true);
+    siteDoc.commit(sam, [setHeading("Sam's heading")]);
+    await settle();
+    expect(serverHeading(siteDoc)).toBe("Sam's heading");
+    expect(headingOf(store)).toBe(original);
+  });
+
   test("publishing or closing the draft is shown to everyone in it", async () => {
     const siteDoc = fakeSiteDoc();
     const { store } = open(siteDoc);

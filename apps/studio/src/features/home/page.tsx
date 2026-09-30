@@ -24,7 +24,7 @@ import type { ReactNode } from "react";
 import { AppShell } from "@/components/app-shell";
 import { waitingStep } from "@/features/approvals/describe";
 import { homeQuery } from "@/features/approvals/queries";
-import { previewPath } from "@/features/drafts/share-dialog";
+import { previewPath } from "@/features/preview/address";
 import { formatMoment } from "@/lib/dates";
 
 /** A card of items under a heading, shown only when it has some. */

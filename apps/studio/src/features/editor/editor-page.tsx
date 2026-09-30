@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import type { DraftId, MediaId, PageId, SiteId } from "@repo/contracts/ids";
+import type { DraftId, PageId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { OpenedDraft, SiteAbilities } from "@repo/contracts/studio";
 import {
@@ -11,6 +11,7 @@ import {
   type Notice,
   presenceColorCount,
   type SaveStatus,
+  useAccessEnded,
   useBehind,
   useDraftClosure,
   useEditorStatus,
@@ -57,6 +58,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { standing } from "@/features/approvals/describe";
 import { DraftActions } from "@/features/drafts/draft-actions";
+import { draftImage } from "@/features/preview/address";
 
 import { liveConnection } from "./live-connection";
 
@@ -72,8 +74,6 @@ const blocksQuery = (lockfile: Parameters<typeof loadBlocks>[0]) =>
     queryFn: () => loadBlocks(lockfile),
     staleTime: Number.POSITIVE_INFINITY,
   });
-
-const mediaSrc = (id: MediaId) => `/media/${id}`;
 
 const themeValue = (name: string) =>
   getComputedStyle(document.documentElement).getPropertyValue(name).trim();
@@ -183,11 +183,34 @@ function Header(props: DraftContext) {
 
 /**
  * What happens when the draft stops taking changes: someone published or
- * closed it, or a merge moved it to block versions this editor didn't load.
+ * closed it, a merge moved it to block versions this editor didn't load, or
+ * its sharing no longer lets the person edit it.
  */
 function DraftStanding(props: DraftContext) {
   const closure = useDraftClosure();
   const outdated = useOutdated();
+  const accessEnded = useAccessEnded();
+  if (accessEnded)
+    return (
+      <AlertDialog open>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>You can no longer edit this draft</AlertDialogTitle>
+            <AlertDialogDescription>
+              Its sharing changed, and it's no longer shared with you for editing.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction
+              nativeButton={false}
+              render={<Link to="/" className={buttonVariants()} />}
+            >
+              Go to Studio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    );
   const who = closure === null || closure.by.id === props.person.id ? "You" : closure.by.name;
   if (outdated)
     return (
@@ -328,6 +351,7 @@ export function EditorPage(props: {
   const [scheme, setScheme] = useState<"light" | "dark">("light");
   const [colors] = useState(canvasColors);
   const [connection] = useState(() => liveConnection(props.site, props.draft));
+  const [mediaSrc] = useState(() => draftImage(props.site, props.draft));
   const context: DraftContext = {
     person: props.person,
     site: { id: props.site, name: data.draft.settings.name },

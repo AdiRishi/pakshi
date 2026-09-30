@@ -75,6 +75,8 @@ export interface EditorState {
    * editor didn't load, so it must open the draft again.
    */
   readonly outdated: boolean;
+  /** Whether the draft's sharing changed so the person can no longer edit it. */
+  readonly accessEnded: boolean;
 }
 
 /** How a draft stopped taking changes: who published or closed it, and the release it became. */
@@ -202,6 +204,7 @@ export class EditorStore {
       live: options.live,
       closed: null,
       outdated: false,
+      accessEnded: false,
     };
   }
 
@@ -469,8 +472,15 @@ export class EditorStore {
     this.#set({ outdated: true });
   }
 
+  /** Stops for good once the person can no longer edit the draft. */
+  #endAccess() {
+    this.#link?.close();
+    this.#link = null;
+    this.#set({ accessEnded: true });
+  }
+
   #received(message: ServerMessage) {
-    if (this.#state.outdated) return;
+    if (this.#state.outdated || this.#state.accessEnded) return;
     ServerMessage.match(message, {
       Synced: ({ catchUp, peers }) => {
         const confirmed = CatchUp.match(catchUp, {
@@ -511,6 +521,7 @@ export class EditorStore {
         this.#set({ peers: this.#state.peers.filter((peer) => peer.connection !== connection) }),
       LiveChanged: ({ live }) => this.#set({ live }),
       DraftClosed: ({ by, release }) => this.#set({ closed: { by, release } }),
+      AccessEnded: () => this.#endAccess(),
     });
   }
 

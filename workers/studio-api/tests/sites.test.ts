@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import { Effect } from "effect";
 
-import { canSeeMedia, siteFor, siteMedia } from "../src/sites.ts";
+import { inSiteLibrary, siteFor, siteMedia } from "../src/sites.ts";
 import { core } from "./support/core.ts";
 
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
@@ -54,14 +54,13 @@ it.effect("a site's images come from its own library and its brand's, newest fir
   }).pipe(Effect.provide(core)),
 );
 
-it.effect("a library image is visible only to people who can edit a site it belongs to", () =>
+it.effect("a site's drafts show only images in its own library or its brand's", () =>
   Effect.gen(function* () {
-    const sees = (user: string, media: string) => canSeeMedia(person(user), MediaId.make(media));
-    // The editor edits Library Events, in the City Libraries brand.
-    expect(yield* sees("user_editor", "med_logo")).toBe(true);
-    expect(yield* sees("user_editor", "med_reading")).toBe(false);
-    expect(yield* sees("user_editor", "med_trail")).toBe(false);
-    expect(yield* sees("user_org", "med_trail")).toBe(true);
-    expect(yield* sees("user_org", "med_missing")).toBe(false);
+    const events = { id: SiteId.make("site_a2"), brand: BrandId.make("brand_a") };
+    const shows = (media: string) => inSiteLibrary(events, MediaId.make(media));
+    expect(yield* shows("med_logo")).toBe(true);
+    expect(yield* shows("med_reading")).toBe(false);
+    expect(yield* shows("med_trail")).toBe(false);
+    expect(yield* shows("med_missing")).toBe(false);
   }).pipe(Effect.provide(core)),
 );

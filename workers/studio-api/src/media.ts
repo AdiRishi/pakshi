@@ -8,9 +8,7 @@ import type { SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
 import { authFor } from "./auth.ts";
-import { canSeeMedia, findSite, inSiteLibrary, siteOf, standingOn } from "./sites.ts";
-
-export const mediaBasePath = "/media";
+import { findSite, inSiteLibrary, siteOf, standingOn } from "./sites.ts";
 
 const notFound = () => new Response("Not found", { status: 404 });
 const signInFirst = () => new Response("Sign in to see this image.", { status: 401 });
@@ -42,25 +40,6 @@ const signedIn = (request: Request, env: StudioApiEnv) =>
 const answer = <E>(env: StudioApiEnv, program: Effect.Effect<Response, E, SqlClient.SqlClient>) =>
   Effect.runPromise(program.pipe(Effect.orDie, Effect.provide(D1Client.layer({ db: env.CORE }))));
 
-/**
- * A library image, for someone signed in to Studio who may see that
- * library, such as the editor's canvas showing a draft. An image they can't
- * see is answered like one that doesn't exist.
- */
-export const serveMedia = (request: Request, env: StudioApiEnv) =>
-  answer(
-    env,
-    Effect.gen(function* () {
-      const person = yield* signedIn(request, env);
-      if (person === null) return signInFirst();
-      const id = Schema.decodeOption(MediaId)(
-        new URL(request.url).pathname.slice(mediaBasePath.length + 1),
-      );
-      if (Option.isNone(id)) return notFound();
-      return (yield* canSeeMedia(person, id.value)) ? yield* image(env, id.value) : notFound();
-    }),
-  );
-
 /** The parts of `{base}/{site}/{thing}/_media/{media}`, or none when the path isn't one. */
 const imagePath = <A>(pathname: string, base: string, thing: Schema.Decoder<A>) => {
   const [site = "", id = "", segment = "", media = "", ...rest] = pathname
@@ -75,9 +54,9 @@ const imagePath = <A>(pathname: string, base: string, thing: Schema.Decoder<A>) 
 };
 
 /**
- * An image in a draft's preview, for anyone the draft is shared with,
- * signed in or not. Only images in the site's library or its brand's are
- * served, so a shared draft can't show anything else.
+ * An image in a draft, for its preview and its editor: for anyone who may
+ * open the draft, signed in or not. Only images in the site's library or its
+ * brand's are served, so a shared draft can't show anything else.
  */
 export const servePreviewMedia = (request: Request, env: StudioApiEnv) =>
   answer(
