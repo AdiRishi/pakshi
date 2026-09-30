@@ -1,11 +1,14 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/contracts/rpc/client";
 import {
+  CannotDecide,
   DraftNotFound,
   NothingToRollBack,
   NotPermitted,
   ReleaseNotFound,
+  ScopeNotFound,
   SiteNotFound,
+  SubmissionNotFound,
   StudioRpcs,
   studioSessionHeaders,
   StudioUnavailable,
@@ -30,11 +33,13 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     );
   if (Schema.is(ReleaseNotFound)(failure))
     return new AppRequestError("not_found", "This site has no such release.");
+  if (Schema.is(SubmissionNotFound)(failure))
+    return new AppRequestError("not_found", "This site has no such submission.");
+  if (Schema.is(ScopeNotFound)(failure))
+    return new AppRequestError("not_found", "There's nothing here that you can work on.");
   if (Schema.is(NotPermitted)(failure))
-    return new AppRequestError(
-      "forbidden",
-      `You don't have permission to ${failure.action} this site.`,
-    );
+    return new AppRequestError("forbidden", `You don't have permission to ${failure.action}.`);
+  if (Schema.is(CannotDecide)(failure)) return new AppRequestError("forbidden", failure.reason);
   if (Schema.is(NothingToRollBack)(failure))
     return new AppRequestError(
       "conflict",

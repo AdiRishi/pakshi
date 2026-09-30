@@ -43,18 +43,47 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
+import { standing } from "@/features/approvals/describe";
 import { formatDay, formatMoment } from "@/lib/dates";
 
 import { closeDraft, createDraft, renameDraft } from "../sites/functions";
 import { siteDraftsQuery } from "../sites/queries";
 import { SiteHeader } from "../sites/site-header";
 import { DraftNameDialog } from "./draft-name-dialog";
+import { previewPath } from "./share-dialog";
 
 /** Everyone who has changed a draft, or who started it when no one has yet. */
 const peopleOf = (draft: DraftSummary) =>
   (draft.people.length === 0 ? [draft.createdBy] : draft.people)
     .map((person) => person.name)
     .join(", ");
+
+/** Where a draft stands: in review or back from it, behind the live site, or up to date. */
+const statusOf = (draft: DraftSummary, behind: boolean) => {
+  const review = draft.review;
+  if (
+    review !== null &&
+    (review.status._tag === "InReview" ||
+      review.status._tag === "ChangesRequested" ||
+      review.status._tag === "NeedsUpdate")
+  )
+    return standing(review);
+  return behind
+    ? ({ label: "Behind: update needed", variant: "warning" } as const)
+    : ({ label: "Up to date", variant: "secondary" } as const);
+};
+
+/** Who a draft is shared with, in a few words. */
+const sharingOf = (draft: DraftSummary) => {
+  const { people, general } = draft.sharing;
+  const can = general.access === "edit" ? "can edit" : "can view";
+  if (general.audience === "link") return `Anyone with the link ${can}`;
+  if (general.audience === "organization") return `Everyone in the organization ${can}`;
+  if (people.length === 0) return "Site editors only";
+  return people.length === 1
+    ? `Shared with ${people[0]?.person.name}`
+    : `Shared with ${people.length} people`;
+};
 
 const lastActivity = (draft: DraftSummary) =>
   draft.lastEdit === null
@@ -75,6 +104,7 @@ function OpenDrafts(props: {
           <TableHead className="px-6">Draft</TableHead>
           <TableHead>People</TableHead>
           <TableHead>Status</TableHead>
+          <TableHead>Sharing</TableHead>
           <TableHead>Last activity</TableHead>
           <TableHead className="w-0 px-6">
             <span className="sr-only">Actions</span>
@@ -95,12 +125,11 @@ function OpenDrafts(props: {
             </TableCell>
             <TableCell className="text-muted-foreground">{peopleOf(draft)}</TableCell>
             <TableCell>
-              {props.behind(draft) ? (
-                <Badge variant="warning">Behind: update needed</Badge>
-              ) : (
-                <Badge variant="secondary">Up to date</Badge>
-              )}
+              <Badge variant={statusOf(draft, props.behind(draft)).variant}>
+                {statusOf(draft, props.behind(draft)).label}
+              </Badge>
             </TableCell>
+            <TableCell className="text-muted-foreground">{sharingOf(draft)}</TableCell>
             <TableCell className="text-muted-foreground">{lastActivity(draft)}</TableCell>
             <TableCell className="px-6">
               <DropdownMenu>
@@ -112,6 +141,13 @@ function OpenDrafts(props: {
                   <MoreHorizontalIcon />
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onClick={() =>
+                      window.open(previewPath(props.site, draft.id), "_blank", "noopener")
+                    }
+                  >
+                    Open preview
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => props.onRename(draft)}>Rename</DropdownMenuItem>
                   <DropdownMenuItem variant="destructive" onClick={() => props.onClose(draft)}>
                     Close without publishing

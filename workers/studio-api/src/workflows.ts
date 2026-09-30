@@ -104,6 +104,7 @@ export const workflowView = Effect.fn("StudioApi.workflowView")(function* (
     scope,
     name: described.name,
     own: Option.getOrNull(yield* ownSteps(scope)),
+    parent: above(scope, described.brand)[0] ?? null,
     inherited: yield* nearest(above(scope, described.brand)),
     can: { edit: authorize(access, "workflow.edit", described.resource) },
   };

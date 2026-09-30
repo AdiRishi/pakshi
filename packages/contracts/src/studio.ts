@@ -269,6 +269,8 @@ export const WorkflowView = Schema.Struct({
   scope: Scope,
   name: Schema.String,
   own: Schema.NullOr(Workflow),
+  /** The scope above this one, whose workflow applies when this one has none: a site's brand, a brand's organization. */
+  parent: Schema.NullOr(Scope),
   inherited: ResolvedWorkflow,
   can: Schema.Struct({ edit: Schema.Boolean }),
 });

@@ -14,13 +14,14 @@ import type { ReactNode } from "react";
 /** A site's name, what it's showing, and links to the site's sections. */
 export function SiteHeader(props: {
   readonly site: { readonly id: SiteId; readonly name: string };
-  readonly section: "drafts" | "releases";
+  readonly section: "drafts" | "releases" | "workflow";
   readonly description: string;
   readonly actions?: ReactNode;
 }) {
   const sections = [
     { key: "drafts", label: "Drafts", to: "/sites/$siteId" },
     { key: "releases", label: "Releases", to: "/sites/$siteId/releases" },
+    { key: "workflow", label: "Approval workflow", to: "/sites/$siteId/workflow" },
   ] as const;
   return (
     <header className="flex flex-col gap-3 bg-accent px-10 pt-6">

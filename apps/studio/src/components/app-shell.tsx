@@ -9,22 +9,17 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
 } from "@repo/ui/components/sidebar";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { HouseIcon, LogOutIcon } from "lucide-react";
+import { CircleCheckIcon, HouseIcon, LogOutIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
-
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? "")
-    .join("");
+import { initials } from "@/lib/initials";
 
 /** Studio's frame for a signed-in person: the navigation sidebar and the page beside it. */
 export function AppShell(props: { readonly viewer: Viewer; readonly children: ReactNode }) {
@@ -49,6 +44,22 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                     <HouseIcon />
                     Home
                   </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="lg"
+                    isActive={matchRoute({ to: "/approvals", fuzzy: true }) !== false}
+                    render={<Link to="/approvals" />}
+                  >
+                    <CircleCheckIcon />
+                    Approvals
+                  </SidebarMenuButton>
+                  {props.viewer.approvalsWaiting > 0 && (
+                    <SidebarMenuBadge>
+                      {props.viewer.approvalsWaiting}
+                      <span className="sr-only"> waiting for you</span>
+                    </SidebarMenuBadge>
+                  )}
                 </SidebarMenuItem>
               </SidebarMenu>
             </nav>
