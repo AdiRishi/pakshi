@@ -14,6 +14,18 @@ export const toolCallStream = [
   "[DONE]",
 ];
 
+/** Workers AI's stream for a reply of plain text, in one chunk. */
+export const textStream = (text: string) => [
+  JSON.stringify({
+    choices: [{ delta: { content: text, role: "assistant" }, finish_reason: "stop", index: 0 }],
+    created: 1790788667,
+    id: "chat_2",
+    model: "@cf/zai-org/glm-5.3-flash",
+    object: "chat.completion.chunk",
+  }),
+  "[DONE]",
+];
+
 /** Server-sent events as a response body, split at awkward places as a network would. */
 export const eventStream = (events: ReadonlyArray<string>) => {
   const text = events.map((event) => `data: ${event}\n\n`).join("");
