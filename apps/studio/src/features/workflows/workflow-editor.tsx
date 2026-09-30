@@ -244,9 +244,10 @@ function ParentLink(props: { readonly parent: Scope | null }) {
 export function WorkflowEditor(props: { readonly view: WorkflowView }) {
   const { view } = props;
   const queryClient = useQueryClient();
-  const [own, setOwn] = useState<Workflow | null>(view.own);
-  const [tried, setTried] = useState(false);
   const parent = parentOf[view.scope.kind];
+  // With nothing above it, a scope has steps of its own even before it saves any.
+  const [own, setOwn] = useState<Workflow | null>(parent === null ? (view.own ?? []) : view.own);
+  const [tried, setTried] = useState(false);
   const save = useMutation({
     mutationFn: (steps: Workflow | null) => saveWorkflow({ data: { scope: view.scope, steps } }),
     onSuccess: async (saved) => {
