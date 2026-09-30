@@ -50,6 +50,11 @@ export interface SiteData {
   readonly media: (id: MediaId) => ResolvedMedia | undefined;
   readonly pagePath: (id: PageId) => string | undefined;
   readonly form: (id: FormId) => FormDefinition | undefined;
+  /**
+   * Set when the page shows a preview rather than the live site: its forms
+   * don't send, and the blocks in `changed` are marked for review.
+   */
+  readonly preview: { readonly changed: ReadonlySet<BlockId> } | null;
 }
 
 const SiteDataContext = createContext<SiteData | null>(null);
@@ -172,6 +177,7 @@ const useField = (field: FieldPath) => {
 export const Root = (options: RootProps) => {
   const { id, surface } = useBlockFrame();
   const editing = useContext(FieldEditingContext);
+  const preview = useContext(SiteDataContext)?.preview ?? null;
   const element = options.as ?? "section";
   if (editing !== null)
     return (
@@ -181,7 +187,11 @@ export const Root = (options: RootProps) => {
     );
   const Element = element;
   return (
-    <Element data-surface={surface} className={options.className}>
+    <Element
+      data-surface={surface}
+      data-pakshi-changed={preview?.changed.has(id) || undefined}
+      className={options.className}
+    >
       {options.children}
     </Element>
   );
@@ -306,7 +316,7 @@ export const FormView = (options: {
 }) => {
   const { block } = useField(options.field);
   const definition = useForm(options.value.id);
-  const privacyHref = useSiteData().pagePath;
+  const { pagePath: privacyHref, preview } = useSiteData();
   if (definition === undefined) return null;
   const inputId = (id: string) => `${block}-${id}`;
   return (
@@ -389,6 +399,8 @@ export const FormView = (options: {
       })}
       <button
         type="submit"
+        // A disabled default button also stops Enter from submitting the form.
+        disabled={preview !== null}
         className="text-body self-start rounded-md bg-primary px-6 py-3 text-primary-foreground shadow-card transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         {definition.submitLabel}
