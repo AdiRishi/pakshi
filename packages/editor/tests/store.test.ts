@@ -473,6 +473,30 @@ describe("the draft's standing", () => {
     });
     await settle();
     expect(store.getState().outdated).toBe(true);
+    // Nothing more is applied with the old block versions, or sent.
+    siteDoc.commitFromSite(sam, { id: BatchId.make("bat_after"), ops: [setHeading("After")] });
+    store.run([setHeading("Mine")]);
+    await settle();
+    expect(store.getState().confirmed.revision).toBe(0);
+    expect(serverHeading(siteDoc)).toBe("After");
+  });
+
+  test("a whole draft caught up to on other block versions asks for the draft to be opened again", async () => {
+    const upgraded = { ...fixtureDraft, lockfile: { ...fixtureDraft.lockfile, hero: 2 } };
+    const siteDoc = fakeSiteDoc({ draft: upgraded });
+    const store = new EditorStore({
+      draft: { ...fixtureDraft, revision: 5 },
+      live: fixtureDraft.base,
+      page,
+      contracts: definitions,
+      person: meera,
+      connection: siteDoc.connection(meera),
+      onNotice: () => undefined,
+    });
+    store.connect();
+    await settle();
+    expect(store.getState().outdated).toBe(true);
+    expect(store.getState().confirmed.lockfile).toEqual(fixtureDraft.lockfile);
   });
 
   test("publishing or closing the draft is shown to everyone in it", async () => {

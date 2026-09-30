@@ -458,14 +458,30 @@ export class EditorStore {
     this.#set({ peers: [] });
   }
 
+  /**
+   * Stops for good once a merge moved the draft to block versions this
+   * editor didn't load: nothing more is applied with the old versions, and
+   * nothing more is sent, until the person opens the draft again.
+   */
+  #outdate() {
+    this.#link?.close();
+    this.#link = null;
+    this.#set({ outdated: true });
+  }
+
   #received(message: ServerMessage) {
+    if (this.#state.outdated) return;
     ServerMessage.match(message, {
       Synced: ({ catchUp, peers }) => {
         const confirmed = CatchUp.match(catchUp, {
           Batches: ({ batches }) =>
             batches.reduce((draft, batch) => this.#confirm(draft, batch), this.#state.confirmed),
-          Draft: ({ draft }) => draft,
+          Draft: ({ draft }) => {
+            if (!Equal.equals(draft.lockfile, this.#state.confirmed.lockfile)) this.#outdate();
+            return draft;
+          },
         });
+        if (this.#state.outdated) return;
         this.#synced = true;
         this.#showRemote({ confirmed, view: this.#replay(confirmed).view, peers });
         this.#flush();
@@ -500,10 +516,10 @@ export class EditorStore {
 
   /** The confirmed draft after a committed batch, and this person's batch taken out of the pending ones. */
   #confirm(draft: Draft, batch: CommittedBatch) {
-    if (batch.revision <= draft.revision) return draft;
+    if (this.#state.outdated || batch.revision <= draft.revision) return draft;
     const rebase = batch.ops.findLast((op) => op.op === "rebase");
     if (rebase !== undefined && !Equal.equals(rebase.lockfile, draft.lockfile)) {
-      this.#set({ outdated: true });
+      this.#outdate();
       return draft;
     }
     const applied = applyOps(draft, batch.ops, this.contracts);
@@ -523,6 +539,7 @@ export class EditorStore {
     }
     const mine = this.#pending.some((pending) => pending.batch.id === batch.id);
     const next = this.#confirm(confirmed, batch);
+    if (this.#state.outdated) return;
     if (mine && skipped.length > 0)
       this.#onNotice({
         title: "Some of that couldn't be undone.",
