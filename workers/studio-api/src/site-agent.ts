@@ -421,10 +421,14 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     const { site, draft, person } = who.value;
     const id = SourceId.make(randomId("src"));
     const object = `sources/${site}/${draft}/${person.id}/${id}`;
-    const converted = await toMarkdown(this.env, {
-      name: file.name,
-      blob: new Blob([await file.arrayBuffer()], { type }),
-    });
+    // Plain text and Markdown are read as they are; Workers AI converts the rest.
+    const converted =
+      type === "text/plain" || type === "text/markdown"
+        ? { ok: true as const, markdown: await file.text() }
+        : await toMarkdown(this.env, {
+            name: file.name,
+            blob: new Blob([await file.arrayBuffer()], { type }),
+          });
     if (!converted.ok)
       return new Response("Pakshi couldn't read that file. Try a PDF or .docx.", { status: 422 });
     await this.env.CONTENT.put(object, file.stream(), { httpMetadata: { contentType: type } });

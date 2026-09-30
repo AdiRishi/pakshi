@@ -31,6 +31,9 @@ export interface ModelChoice {
 
 export type Task = keyof typeof models;
 
+/** The most a model call may write, reasoning included. */
+const maxOutputTokens = 16_384;
+
 /**
  * What AI Gateway records with each request, for cost tracking. The gateway
  * keeps five entries at most.
@@ -157,7 +160,12 @@ export const languageModel = (send: SendToModel, tags: Omit<CostTags, "task">, t
   const choice = models[task];
   return OpenAiLanguageModel.layer({
     model: choice.model,
-    config: { reasoning_effort: choice.reasoningEffort, strictJsonSchema: false },
+    // Workers AI's own default cuts long answers, such as a site plan, short.
+    config: {
+      reasoning_effort: choice.reasoningEffort,
+      max_output_tokens: maxOutputTokens,
+      strictJsonSchema: false,
+    },
   }).pipe(
     Layer.provide(OpenAiClient.layer({ apiUrl: "https://workers-ai.invalid/v1" })),
     Layer.provide(Layer.succeed(HttpClient.HttpClient)(gatewayClient(send, tags, task))),

@@ -39,7 +39,9 @@
     "@playwright/test": "catalog:",
     "@repo/blocks": "workspace:*",
     "@repo/tsconfig": "workspace:*",
+    "@types/ws": "catalog:",
     "typescript": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "ws": "catalog:"
   }
 }
