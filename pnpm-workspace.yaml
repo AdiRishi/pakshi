@@ -7,6 +7,7 @@ packages:
   - workers/*
 
 catalog:
+  "@effect/ai-openai-compat": 4.0.0-rc.117
   "@alchemy.run/frontend-frameworks": 2.0.0-beta.79
   "@astrojs/react": 7.0.0
   "@axe-core/playwright": 4.13.0
@@ -97,6 +98,7 @@ minimumReleaseAge: 1440
 # each other with caret ranges, so a fresh resolve can mix them. Hold every
 # Effect package, direct or transitive, to the catalog's version.
 overrides:
+  "@effect/ai-openai-compat": "catalog:"
   "@effect/platform-node": "catalog:"
   "@effect/platform-node-shared": "catalog:"
   "@effect/sql-d1": "catalog:"

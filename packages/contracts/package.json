@@ -8,6 +8,10 @@
       "types": "./src/access.ts",
       "default": "./src/access.ts"
     },
+    "./agent": {
+      "types": "./src/agent.ts",
+      "default": "./src/agent.ts"
+    },
     "./app": {
       "types": "./src/app.ts",
       "default": "./src/app.ts"
@@ -60,13 +64,13 @@
       "types": "./src/rpc/server.ts",
       "default": "./src/rpc/server.ts"
     },
-    "./site": {
-      "types": "./src/site.ts",
-      "default": "./src/site.ts"
-    },
     "./sharing": {
       "types": "./src/sharing.ts",
       "default": "./src/sharing.ts"
+    },
+    "./site": {
+      "types": "./src/site.ts",
+      "default": "./src/site.ts"
     },
     "./snapshot": {
       "types": "./src/snapshot.ts",
