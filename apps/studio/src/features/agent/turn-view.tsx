@@ -1,5 +1,6 @@
 import type { Activity, Part, SitePlan, Turn } from "@repo/contracts/agent";
 import type { PreflightIssue } from "@repo/contracts/publishing";
+import { useBlockTitle } from "@repo/editor";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import { Spinner } from "@repo/ui/components/spinner";
@@ -106,6 +107,7 @@ function PlanCard(props: {
   readonly status: "proposed" | "building" | "replaced";
   readonly onBuild: () => void;
 }) {
+  const blockTitle = useBlockTitle();
   const sections = props.plan.pages.reduce((count, page) => count + page.sections.length, 0);
   return (
     <section
@@ -139,7 +141,7 @@ function PlanCard(props: {
             <ol className="flex flex-col gap-0.5 text-xs text-muted-foreground">
               {page.sections.map((section, index) => (
                 <li key={`${section.type}-${index}`}>
-                  <span className="font-medium text-foreground">{section.type}</span>:{" "}
+                  <span className="font-medium text-foreground">{blockTitle(section.type)}</span>:{" "}
                   {section.purpose}
                 </li>
               ))}

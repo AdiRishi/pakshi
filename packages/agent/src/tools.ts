@@ -34,10 +34,27 @@ const List = Schema.Union([
   Schema.Struct({ block: BlockId, slot: Schema.String }),
 ]).annotate({ description: "\"root\" for the page's sections, or a section's slot of items" });
 
+/**
+ * An object in a tool call, or the same object written as a JSON string,
+ * which models often send for nested objects.
+ */
+const objectOrJson = <
+  S extends Schema.Top & { readonly DecodingServices: never; readonly EncodingServices: never },
+>(
+  schema: S,
+) => Schema.Union([schema, Schema.fromJsonString(schema)]);
+
+const Props = objectOrJson(Schema.JsonObject);
+
 const NewItem = Schema.Struct({
   type: BlockType,
   variant: Schema.optionalKey(Schema.String),
-  props: Schema.optionalKey(Schema.JsonObject),
+  props: Schema.optionalKey(Props),
+  slot: Schema.optionalKey(
+    Schema.String.annotate({
+      description: "The slot it goes in. Leave out for the section's only slot",
+    }),
+  ),
 });
 
 /**
@@ -49,13 +66,14 @@ export const NewBlock = Schema.Struct({
   variant: Schema.optionalKey(Schema.String),
   surface: Schema.optionalKey(Surface),
   props: Schema.optionalKey(
-    Schema.JsonObject.annotate({
-      description: "Field values; rich text is Markdown. Leave out what you don't know",
+    Props.annotate({
+      description:
+        "Field values as an object; rich text is Markdown. Leave out what you don't know",
     }),
   ),
   items: Schema.optionalKey(
-    Schema.Record(Schema.String, Schema.Array(NewItem)).annotate({
-      description: "The items in each slot, replacing the placeholder items",
+    objectOrJson(Schema.Array(NewItem)).annotate({
+      description: "The section's items, in order, replacing its placeholder items",
     }),
   ),
 });
@@ -104,7 +122,9 @@ export const GetPage = Tool.make("get_page", {
     "A page's address, meta and the full content of its sections, or of the ones chosen. Rich text is Markdown",
   parameters: Schema.Struct({
     page: Target,
-    blocks: Schema.optionalKey(Schema.Array(BlockId)),
+    blocks: Schema.optionalKey(
+      Schema.Array(BlockId).annotate({ description: "Leave out for every section" }),
+    ),
   }),
   success: Json,
   failure: Problems,
@@ -272,13 +292,6 @@ export const AgentTools = Toolkit.make(
   PrepareSubmission,
   RequestBlock,
 );
-
-/** Tools that change the draft. Repeated failures of these end the agent's attempts. */
-export const editingTools: ReadonlySet<string> = new Set([
-  ApplyOps.name,
-  InsertSection.name,
-  CreatePage.name,
-]);
 
 /** Tools after which the agent waits for the person, so the turn ends. */
 export const waitingTools: ReadonlySet<string> = new Set([AskUser.name, ProposePlan.name]);

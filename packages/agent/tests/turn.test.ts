@@ -21,9 +21,12 @@ const turnWith = (
     const { state, layer } = yield* Effect.promise(() => desk(harbourDraft, options));
     const model = scriptedModel(script);
     const chat = yield* Chat.empty;
-    const status = yield* runTurn({ chat, system: "You edit pages.", message }).pipe(
-      Effect.provide(Layer.merge(layer, model.layer)),
-    );
+    const status = yield* runTurn({
+      chat,
+      system: "You edit pages.",
+      message,
+      afterStep: Effect.void,
+    }).pipe(Effect.provide(Layer.merge(layer, model.layer)));
     return { status, state, calls: model.calls };
   });
 
@@ -96,6 +99,60 @@ describe("a turn", () => {
       }),
   );
 
+  it.effect("takes a section's fields written as a JSON string, as models often send them", () =>
+    Effect.gen(function* () {
+      const { state } = yield* turnWith([
+        {
+          calls: [
+            {
+              name: "insert_section",
+              params: {
+                page: "pg_home",
+                after: null,
+                section: { type: "rich-text", props: JSON.stringify({ heading: "Visit us" }) },
+              },
+            },
+          ],
+        },
+      ]);
+      const first = state.draft.pages[home]?.root[0];
+      expect(
+        first === undefined ? undefined : state.draft.pages[home]?.blocks[first]?.props["heading"],
+      ).toBe("Visit us");
+    }),
+  );
+
+  it.effect("adds a section with the items it's given, in its only slot", () =>
+    Effect.gen(function* () {
+      const { state } = yield* turnWith([
+        {
+          calls: [
+            {
+              name: "insert_section",
+              params: {
+                page: "pg_home",
+                after: "b_hero",
+                section: {
+                  type: "feature-grid",
+                  props: { heading: "What you'll do" },
+                  items: [
+                    { type: "feature-item", props: { title: "Plane", body: "Shape the hull." } },
+                    { type: "feature-item", props: { title: "Sail", body: "Launch on Friday." } },
+                  ],
+                },
+              },
+            },
+          ],
+        },
+      ]);
+      const page = state.draft.pages[home];
+      const grid = page?.root[1] === undefined ? undefined : page.blocks[page.root[1]];
+      expect(
+        (grid?.slots?.["items"] ?? []).map((item) => page?.blocks[item]?.props["title"]),
+      ).toEqual(["Plane", "Sail"]);
+    }),
+  );
+
   it.effect(
     "returns refused changes to the model, and after two repairs has it explain instead",
     () =>
@@ -151,9 +208,12 @@ describe("a turn", () => {
       const model = scriptedModel([
         { calls: [{ name: "apply_ops", params: heading("Sail away") }] },
       ]);
-      yield* runTurn({ chat: yield* Chat.empty, system: "", message: "Go" }).pipe(
-        Effect.provide(Layer.merge(layer, model.layer)),
-      );
+      yield* runTurn({
+        chat: yield* Chat.empty,
+        system: "",
+        message: "Go",
+        afterStep: Effect.void,
+      }).pipe(Effect.provide(Layer.merge(layer, model.layer)));
       expect(state.commits).toEqual([]);
       expect(JSON.stringify(model.calls[1]?.prompt)).toContain("Meera Kapoor is typing");
     }),

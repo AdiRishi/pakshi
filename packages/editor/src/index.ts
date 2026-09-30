@@ -13,6 +13,7 @@ export {
   EditorSettings,
   useAccessEnded,
   useBehind,
+  useBlockTitle,
   useDeselect,
   useDraftClosure,
   useEditorStatus,

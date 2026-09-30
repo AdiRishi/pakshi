@@ -3,7 +3,7 @@ import { Effect, Ref, Stream } from "effect";
 import { type AiError, type Chat, Prompt } from "effect/unstable/ai";
 
 import { agentHandlers } from "./handlers.ts";
-import { AgentTools, editingTools, waitingTools } from "./tools.ts";
+import { AgentTools, waitingTools } from "./tools.ts";
 import { Turn } from "./workspace.ts";
 
 /*
@@ -16,14 +16,14 @@ import { Turn } from "./workspace.ts";
 /** The most model calls a turn makes. Building a site takes one per section. */
 const maxSteps = 60;
 
-/** Refused changes in a row after which the agent stops trying: the first attempt and two repairs. */
+/** Refused tool calls in a row after which the agent stops trying: the first attempt and two repairs. */
 const attempts = 3;
 
 const giveUp = Prompt.make([
   {
     role: "user",
     content:
-      "Your last changes were refused three times in a row. Don't try again. Tell me in plain language what went wrong and what I could do about it.",
+      "Your last three tool calls were refused. Don't try again. Tell me in plain language what went wrong and what I could do about it.",
   },
 ]);
 
@@ -61,6 +61,8 @@ export const runTurn = Effect.fn("Agent.runTurn")(
     readonly chat: Chat.Chat;
     readonly system: string;
     readonly message: string;
+    /** Runs after each model call and its tools, so a turn cut off later keeps what it got through. */
+    readonly afterStep: Effect.Effect<void>;
   }) {
     const turn = yield* Turn;
     const tools = yield* AgentTools;
@@ -69,6 +71,7 @@ export const runTurn = Effect.fn("Agent.runTurn")(
     let refused = 0;
     let givenUp = false;
     let texts = 0;
+    let thoughts = 0;
     for (let step = 0; step < maxSteps; step++) {
       let calls = 0;
       let waiting = false;
@@ -93,6 +96,26 @@ export const runTurn = Effect.fn("Agent.runTurn")(
                 const id = textIds.get(part.id);
                 return id === undefined ? Effect.void : turn.write(id, part.delta);
               }
+              case "reasoning-start": {
+                thoughts += 1;
+                return turn.show({
+                  _tag: "Activity",
+                  id: `${turn.id}_thinking${thoughts}`,
+                  label: "Thinking",
+                  status: "running",
+                  changed: false,
+                  at: null,
+                });
+              }
+              case "reasoning-end":
+                return turn.show({
+                  _tag: "Activity",
+                  id: `${turn.id}_thinking${thoughts}`,
+                  label: "Thought it through",
+                  status: "done",
+                  changed: false,
+                  at: null,
+                });
               case "tool-params-start":
                 return turn.show({
                   _tag: "Activity",
@@ -105,23 +128,29 @@ export const runTurn = Effect.fn("Agent.runTurn")(
               case "tool-result": {
                 calls += 1;
                 if (waitingTools.has(part.name) && !part.isFailure) waiting = true;
-                if (editingTools.has(part.name)) refused = part.isFailure ? refused + 1 : 0;
-                return part.isFailure
-                  ? turn.show({
-                      _tag: "Activity",
-                      id: part.id,
-                      label: words(part.name)[1],
-                      status: "failed",
-                      changed: false,
-                      at: null,
-                    })
-                  : Effect.void;
+                refused = part.isFailure ? refused + 1 : 0;
+                if (!part.isFailure) return Effect.void;
+                return Effect.andThen(
+                  Effect.logInfo("The agent's tool call was refused", {
+                    tool: part.name,
+                    result: part.result,
+                  }),
+                  turn.show({
+                    _tag: "Activity",
+                    id: part.id,
+                    label: words(part.name)[1],
+                    status: "failed",
+                    changed: false,
+                    at: null,
+                  }),
+                );
               }
               default:
                 return Effect.void;
             }
           }),
         );
+      yield* options.afterStep;
       if (waiting || calls === 0) break;
       if (refused >= attempts && !givenUp) {
         givenUp = true;

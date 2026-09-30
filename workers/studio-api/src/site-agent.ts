@@ -347,17 +347,15 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
         typing,
         sources: attached,
       });
+      const saveHistory = Effect.flatMap(Effect.orDie(chat.exportJson), (json) =>
+        Effect.orDie(conversation.savePrompt(json)),
+      );
       return yield* runTurn({
         chat,
         system: systemPrompt(contracts, yield* conversation.brief),
         message: `${context}\n\n${message.text}`,
-      }).pipe(
-        Effect.ensuring(
-          Effect.flatMap(Effect.orDie(chat.exportJson), (json) =>
-            Effect.orDie(conversation.savePrompt(json)),
-          ),
-        ),
-      );
+        afterStep: saveHistory,
+      }).pipe(Effect.ensuring(saveHistory));
     }).pipe(Effect.provide(services));
 
     working.done = this.#conversation()
