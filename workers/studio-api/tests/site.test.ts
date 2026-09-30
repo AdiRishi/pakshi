@@ -1,6 +1,6 @@
-import { expect, it } from "@effect/vitest";
+import { describe, expect, it } from "@effect/vitest";
 import { type Draft, DraftName } from "@repo/contracts/draft";
-import { BlockId, type DraftId, PageId } from "@repo/contracts/ids";
+import { BlockId, type DraftId, PageId, TurnId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { ConflictKey, Side } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
@@ -629,3 +629,39 @@ it.effect("a preview shows the draft's latest saved page, and a review marks wha
     }),
   ),
 );
+
+describe("the agent's turns", () => {
+  const turn = TurnId.make("turn_one");
+
+  it.effect("commit as the person, held to completeness", () =>
+    withSite((site) =>
+      Effect.gen(function* () {
+        const { id } = yield* site.createDraft(sam, name("Agent edits"));
+        expect(yield* site.applyAgentBatch(sam, id, setHeading(""), turn)).toMatchObject({
+          status: "rejected",
+          errors: [{ rule: "incomplete" }],
+        });
+        expect(
+          yield* site.applyAgentBatch(sam, id, setHeading("Build a boat"), turn),
+        ).toMatchObject({ status: "committed", commit: { batch: { actor: sam, turn } } });
+        expect((yield* site.summary(id)).people).toEqual([sam]);
+      }),
+    ),
+  );
+
+  it.effect("undo as one step, passing over what the person changed since", () =>
+    withSite((site) =>
+      Effect.gen(function* () {
+        const { id } = yield* site.createDraft(sam, name("Agent edits"));
+        yield* site.applyAgentBatch(sam, id, setHeading("Build a boat"), turn);
+        yield* site.applyAgentBatch(sam, id, setIntro("Why come"), turn);
+        yield* site.applyBatch(sam, id, setIntro("Why you'll love it"));
+        expect(yield* site.undoTurn(sam, id, turn)).toEqual({ status: "undone", kept: true });
+        const draft = yield* opened(site, id);
+        expect(heading(draft)).toBe("Learn by building");
+        expect(heading(draft, "b_intro")).toBe("Why you'll love it");
+        expect(yield* site.undoTurn(sam, id, turn)).toEqual({ status: "nothing" });
+      }),
+    ),
+  );
+});

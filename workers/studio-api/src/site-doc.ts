@@ -7,11 +7,13 @@ import {
   SiteId,
   type SnapshotId,
   type SubmissionId,
+  type TurnId,
 } from "@repo/contracts/ids";
 import {
   ClientMessage,
   ClientMessageJson,
   Collaborator,
+  type Focus,
   type Peer,
   Presence,
   ServerMessage,
@@ -91,6 +93,19 @@ interface LiveState extends LiveAuthorization {
 
 type LiveConnection = Connection<LiveState>;
 
+/** A field someone is typing in, which the agent leaves alone. */
+export interface TypingIn extends Focus {
+  readonly person: Collaborator;
+}
+
+/** The agent working in a draft for a person, as others see it. */
+interface AgentPeer extends Peer {
+  readonly draft: DraftId;
+}
+
+/** The connection ID the agent working for a person has in presence. It holds no socket. */
+const agentConnection = (person: Collaborator) => `agent:${person.id}`;
+
 /**
  * A site's drafts, releases and live connections. Other code reaches it
  * through PartyServer's `getServerByName`, named by site ID.
@@ -105,6 +120,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
 
   #runtime: ManagedRuntime.ManagedRuntime<Site, never> | undefined;
   #messages: Promise<unknown> = Promise.resolve();
+  /**
+   * The agents working in drafts, by connection ID. They're kept in memory
+   * only: each agent says where it is again with every change it makes.
+   */
+  readonly #agents = new Map<string, AgentPeer>();
 
   /** The site's services over this object's storage, built the first time they're used. */
   #site() {
@@ -177,7 +197,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     const state = connection.state;
     return state === null
       ? null
-      : { connection: connection.id, person: state.person, presence: state.presence };
+      : { connection: connection.id, person: state.person, agent: false, presence: state.presence };
   }
 
   override async onStart() {
@@ -223,12 +243,16 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
             this.#run((site) =>
               site.sync(state.draft, revision, (catchUp) =>
                 Effect.sync(() => {
-                  const peers = Array.from(this.getConnections<LiveState>(state.draft)).flatMap(
+                  const people = Array.from(this.getConnections<LiveState>(state.draft)).flatMap(
                     (other) => {
                       const peer = other.id === connection.id ? null : this.#peerOf(other);
                       return peer === null ? [] : [peer];
                     },
                   );
+                  const agents = Array.from(this.#agents.values()).flatMap(({ draft, ...peer }) =>
+                    draft === state.draft ? [peer] : [],
+                  );
+                  const peers = [...people, ...agents];
                   this.#send(connection, ServerMessage.cases.Synced.make({ catchUp, peers }));
                 }),
               ),
@@ -374,6 +398,74 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
           connection.close(1008, "No longer shared for editing");
         }
       return outcome;
+    });
+  }
+
+  // Calls from a person's agent, which studio-api let them talk to.
+
+  /**
+   * Commits a batch the agent made for a person in one turn, if the person
+   * may still edit the draft, and shows the agent where it made the change.
+   */
+  async applyAgentBatch(
+    by: { readonly person: Collaborator; readonly editsSite: boolean },
+    id: DraftId,
+    batch: Batch,
+    turn: TurnId,
+    presence: Presence,
+  ) {
+    const access = by.editsSite
+      ? "edit"
+      : await this.#run((site) => site.access(id, { id: by.person.id, editsSite: false }));
+    if (access !== "edit")
+      return {
+        ok: true as const,
+        value: {
+          status: "rejected" as const,
+          errors: [
+            {
+              op: 0,
+              path: [],
+              rule: "permission" as const,
+              message: "The person can no longer edit this draft.",
+            },
+          ],
+        },
+      };
+    const outcome = await this.#call((site) => site.applyAgentBatch(by.person, id, batch, turn));
+    if (outcome.ok && outcome.value.status === "committed")
+      this.agentPresence(by.person, id, presence);
+    return outcome;
+  }
+
+  undoTurn(by: Collaborator, id: DraftId, turn: TurnId) {
+    return this.#call((site) => site.undoTurn(by, id, turn));
+  }
+
+  /** Shows the agent working for a person at a place in a draft, or with null, gone from it. */
+  agentPresence(person: Collaborator, draft: DraftId, presence: Presence | null) {
+    const connection = agentConnection(person);
+    const text =
+      presence === null
+        ? encodeMessage(ServerMessage.cases.PeerLeft.make({ connection }))
+        : encodeMessage(
+            ServerMessage.cases.PeerChanged.make({
+              peer: { connection, person, agent: true, presence },
+            }),
+          );
+    if (presence === null) this.#agents.delete(connection);
+    else this.#agents.set(connection, { connection, person, agent: true, presence, draft });
+    for (const other of this.getConnections(draft)) other.send(text);
+  }
+
+  /** The fields people in a draft are typing in now. */
+  typingIn(draft: DraftId): ReadonlyArray<TypingIn> {
+    return Array.from(this.getConnections<LiveState>(draft)).flatMap((connection) => {
+      const presence = connection.state?.presence;
+      const person = connection.state?.person;
+      return presence?.typing === true && presence.focus !== null && person !== undefined
+        ? [{ ...presence.focus, person }]
+        : [];
     });
   }
 

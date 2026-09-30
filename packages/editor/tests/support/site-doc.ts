@@ -101,6 +101,7 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
   const peerOf = (socket: Socket): Peer => ({
     connection: socket.id,
     person: socket.person,
+    agent: false,
     presence: socket.presence,
   });
 
@@ -118,7 +119,13 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
     if (!result.ok) return { status: "rejected", errors: result.errors } as const;
     draft = result.draft;
     writes = result.writes;
-    const committed = { id: batch.id, revision: draft.revision, actor, ops: result.ops };
+    const committed = {
+      id: batch.id,
+      revision: draft.revision,
+      actor,
+      turn: null,
+      ops: result.ops,
+    };
     log.push(committed);
     known.set(batch.id, draft.revision);
     broadcast({

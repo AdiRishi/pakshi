@@ -9,6 +9,7 @@ import {
   ReleaseId,
   type SiteId,
   SnapshotId,
+  TurnId,
 } from "@repo/contracts/ids";
 import { CatchUp, Collaborator, type Commit } from "@repo/contracts/live";
 import { type Batch, type BatchError, Op } from "@repo/contracts/ops";
@@ -69,6 +70,7 @@ const BatchRow = Schema.Struct({
   revision: Schema.Int,
   actor: Schema.String,
   actor_name: Schema.String,
+  turn: Schema.NullOr(TurnId),
   ops: json(Ops),
 });
 
@@ -100,9 +102,27 @@ export type BatchResult =
 
 /**
  * Who a batch comes from: a person, whose batches are held to what people
- * may change, or the site itself, merging a release in or publishing.
+ * may change; the agent, working for a person in one turn of their
+ * conversation; or the site itself, merging a release in or publishing.
  */
-export type Origin = "person" | "site";
+export type Origin =
+  | { readonly _tag: "Person" }
+  | { readonly _tag: "Agent"; readonly turn: TurnId }
+  | { readonly _tag: "Site" };
+
+export const byPerson: Origin = { _tag: "Person" };
+export const bySite: Origin = { _tag: "Site" };
+
+/**
+ * Who the draft's writes record for a batch. The agent's writes belong to
+ * its turn rather than to the person it works for, so undoing the turn
+ * passes over what the person changed since, as it does for anyone else.
+ */
+const writer = (actor: Collaborator, origin: Origin) =>
+  origin._tag === "Agent" ? `agent:${origin.turn}` : actor.id;
+
+/** The ID of the batch that undoes an agent's turn, the same each time, so undoing a turn twice undoes it once. */
+export const turnUndoId = (turn: TurnId) => BatchId.make(`bat_undo${turn.slice("turn_".length)}`);
 
 type StorageError = SqlError.SqlError | Schema.SchemaError;
 
@@ -177,6 +197,11 @@ export class SiteDrafts extends Context.Service<
     ) => Effect.Effect<ReadonlyArray<Collaborator>, StorageError>;
     /** Whether a person changed the draft after a revision. */
     readonly editedSince: (id: DraftId, revision: number) => Effect.Effect<boolean, StorageError>;
+    /** The ops that undo what an agent's turn committed to a draft, in the order to apply them. */
+    readonly turnInverse: (
+      id: DraftId,
+      turn: TurnId,
+    ) => Effect.Effect<ReadonlyArray<Op>, StorageError>;
   }
 >()("Pakshi/StudioApi/SiteDrafts") {
   static readonly layer = Layer.effect(
@@ -224,9 +249,18 @@ export class SiteDrafts extends Context.Service<
         Request: Schema.Struct({ draft: DraftId, revision: Schema.Int }),
         Result: BatchRow,
         execute: ({ draft, revision }) => sql`
-          select id, revision, actor, actor_name, ops from batches
+          select id, revision, actor, actor_name, turn, ops from batches
           where draft_id = ${draft} and revision > ${revision}
           order by revision limit ${catchUpLimit + 1}`,
+      });
+
+      const findTurnInverses = SqlSchema.findAll({
+        Request: Schema.Struct({ draft: DraftId, turn: TurnId, undo: BatchId }),
+        Result: Schema.Struct({ inverse: json(Ops) }),
+        execute: ({ draft, turn, undo }) => sql`
+          select inverse from batches
+          where draft_id = ${draft} and turn = ${turn} and id != ${undo}
+          order by revision desc`,
       });
 
       const findEditorsUpTo = SqlSchema.findAll({
@@ -350,11 +384,14 @@ export class SiteDrafts extends Context.Service<
                 set actor = excluded.actor, revision = excluded.revision`;
             for (const key of committed.writesChange.removed)
               yield* sql`delete from writes where draft_id = ${next.id} and key = ${key}`;
+            // The agent's batches are the person's edits, for approving your own changes.
             yield* sql`insert into batches
-              (id, draft_id, actor, actor_name, committed_at, revision, ops, inverse, origin)
+              (id, draft_id, actor, actor_name, committed_at, revision, ops, inverse, origin, turn)
               values (${batch.id}, ${next.id}, ${actor.id}, ${actor.name},
                 ${now()}, ${next.revision},
-                ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)}, ${origin})`;
+                ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)},
+                ${origin._tag === "Site" ? "site" : "person"},
+                ${origin._tag === "Agent" ? origin.turn : null})`;
           }),
         );
 
@@ -411,6 +448,7 @@ export class SiteDrafts extends Context.Service<
               id: row.id,
               revision: row.revision,
               actor: { id: row.actor, name: row.actor_name },
+              turn: row.turn,
               ops: row.ops,
             })),
           });
@@ -431,7 +469,7 @@ export class SiteDrafts extends Context.Service<
                 "closed",
                 "This draft was published or closed, so it takes no more changes.",
               );
-            if (origin === "person" && batch.ops.some((op) => op.op === "rebase"))
+            if (origin._tag !== "Site" && batch.ops.some((op) => op.op === "rebase"))
               return rejected("system", "Only Pakshi moves a draft onto another release.");
             const { draft, writes, contracts: pinned } = yield* load(id);
             // A merge can move the draft to other block versions, which its ops are checked against.
@@ -440,7 +478,14 @@ export class SiteDrafts extends Context.Service<
             const contracts = Equal.equals(lockfile, draft.lockfile)
               ? pinned
               : yield* Effect.promise(() => loadBlocks(lockfile));
-            const committed = commitBatch(draft, writes, actor.id, batch, contracts);
+            const committed = commitBatch(
+              draft,
+              writes,
+              writer(actor, origin),
+              batch,
+              contracts,
+              origin._tag === "Agent" ? "complete" : "draft",
+            );
             if (!committed.ok) return { status: "rejected", errors: committed.errors };
             yield* store(draft, committed, actor, batch, origin);
             loaded.set(id, { draft: committed.draft, writes: committed.writes, contracts });
@@ -451,6 +496,7 @@ export class SiteDrafts extends Context.Service<
                   id: batch.id,
                   revision: committed.draft.revision,
                   actor,
+                  turn: origin._tag === "Agent" ? origin.turn : null,
                   ops: committed.ops,
                 },
                 skipped: committed.skipped,
@@ -489,6 +535,10 @@ export class SiteDrafts extends Context.Service<
         editors: (id, revision) => findEditorsUpTo({ draft: id, revision }),
         editedSince: (id, revision) =>
           Effect.map(findEditedSince({ draft: id, revision }), Option.isSome),
+        turnInverse: (id, turn) =>
+          Effect.map(findTurnInverses({ draft: id, turn, undo: turnUndoId(turn) }), (rows) =>
+            rows.flatMap((row) => row.inverse),
+          ),
       });
     }),
   );

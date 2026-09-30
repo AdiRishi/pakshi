@@ -4,7 +4,7 @@ import { Batch, type Op } from "@repo/contracts/ops";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { commitBatch, type Writes } from "../src/commit.ts";
+import { type Checks, commitBatch, type Writes } from "../src/commit.ts";
 import { contracts, harbourDraft } from "./support/draft.ts";
 
 type WireOp = typeof Op.Encoded;
@@ -17,10 +17,15 @@ const session = () => {
   let draft: Draft = harbourDraft;
   let writes: Writes = new Map();
   let batches = 0;
-  const commit = (actor: string, ops: ReadonlyArray<WireOp>, undo = false) => {
+  const commit = (
+    actor: string,
+    ops: ReadonlyArray<WireOp>,
+    undo = false,
+    checks: Checks = "draft",
+  ) => {
     batches += 1;
     const batch = Schema.decodeSync(Batch)({ id: `bat_${batches}`, ops, undo });
-    const result = commitBatch(draft, writes, actor, batch, contracts);
+    const result = commitBatch(draft, writes, actor, batch, contracts, checks);
     if (result.ok) {
       draft = result.draft;
       writes = result.writes;
@@ -127,6 +132,66 @@ describe("a batch", () => {
       },
     ]);
     expect(result.replaced).toEqual([{ actor: meera, op: 0 }]);
+  });
+});
+
+describe("a batch held to completeness", () => {
+  test("may not clear a required field, though a person's batch may", () => {
+    const { commit } = session();
+    expect(commit(meera, [setHeading("")], false, "complete")).toEqual({
+      ok: false,
+      errors: [expect.objectContaining({ op: 0, rule: "incomplete", path: ["b_hero", "heading"] })],
+    });
+    expect(commit(meera, [setHeading("")]).ok).toBe(true);
+  });
+
+  test("may not insert a block with a required field too short", () => {
+    const { commit } = session();
+    const withShortHeading = {
+      ...insertQuote,
+      block: { ...insertQuote.block, props: { heading: "" } },
+    };
+    expect(commit(meera, [withShortHeading], false, "complete")).toEqual({
+      ok: false,
+      errors: [
+        expect.objectContaining({ op: 0, rule: "incomplete", path: ["b_quote", "heading"] }),
+      ],
+    });
+  });
+
+  test("isn't refused for a field it didn't write that someone left incomplete", () => {
+    const { commit, committed } = session();
+    committed(sam, [setHeading("")]);
+    const result = commit(
+      meera,
+      [
+        {
+          op: "setProp",
+          target: "pg_home",
+          block: "b_hero",
+          path: ["cta", "label"],
+          value: "Join",
+        },
+      ],
+      false,
+      "complete",
+    );
+    expect(result.ok).toBe(true);
+  });
+
+  test("may not empty a page's title", () => {
+    const { commit } = session();
+    expect(
+      commit(
+        meera,
+        [{ op: "setMeta", page: "pg_home", field: "title", value: " " }],
+        false,
+        "complete",
+      ),
+    ).toEqual({
+      ok: false,
+      errors: [expect.objectContaining({ rule: "incomplete", path: ["title"] })],
+    });
   });
 });
 

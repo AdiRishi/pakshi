@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { Draft } from "./draft.ts";
-import { BatchId, BlockId, PageId, ReleaseId } from "./ids.ts";
+import { BatchId, BlockId, PageId, ReleaseId, TurnId } from "./ids.ts";
 import { Batch, BatchError, Op, PropPath, Target } from "./ops.ts";
 import { LiveRelease } from "./snapshot.ts";
 
@@ -32,19 +32,27 @@ export const Presence = Schema.Struct({
 });
 export type Presence = typeof Presence.Type;
 
-/** Someone else connected to the draft. Their presence is null until their editor says where they are. */
+/**
+ * Someone else connected to the draft, or the agent working in it for
+ * `person`. Their presence is null until their editor says where they are.
+ */
 export const Peer = Schema.Struct({
   connection: Schema.String,
   person: Collaborator,
+  agent: Schema.Boolean,
   presence: Schema.NullOr(Presence),
 });
 export type Peer = typeof Peer.Type;
 
-/** A batch as SiteDoc committed it: the ops that applied, and the revision they took the draft to. */
+/**
+ * A batch as SiteDoc committed it: the ops that applied, and the revision
+ * they took the draft to. A batch the agent made for `actor` names its turn.
+ */
 export const CommittedBatch = Schema.Struct({
   id: BatchId,
   revision: Schema.Int,
   actor: Collaborator,
+  turn: Schema.NullOr(TurnId),
   ops: Schema.Array(Op),
 });
 export type CommittedBatch = typeof CommittedBatch.Type;

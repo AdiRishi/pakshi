@@ -77,6 +77,26 @@ const contractOf = (contracts: BlockContracts, block: BlockInstance) => {
   return contract;
 };
 
+/** The fields of a block's props that its version's complete schema refuses, with what's wrong. */
+export const incompleteProps = (
+  contract: BlockContract,
+  props: BlockInstance["props"],
+): ReadonlyArray<Pick<Incomplete, "path" | "field" | "message">> => {
+  const result = SchemaParser.decodeResult(completeSchema(contract))(props, { errors: "all" });
+  if (result._tag === "Success") return [];
+  return formatIssues(result.failure).issues.map((issue) => {
+    const path = propPath(
+      contract.fields,
+      props,
+      (issue.path ?? []).map((key) =>
+        Predicate.isNumber(key) ? key : String(Predicate.isObject(key) ? key.key : key),
+      ),
+    );
+    const [name = ""] = path;
+    return { path, field: contract.fields[name]?.title ?? contract.title, message: issue.message };
+  });
+};
+
 const incompleteIn = (
   contracts: BlockContracts,
   place: Place,
@@ -84,27 +104,11 @@ const incompleteIn = (
   block: BlockInstance,
 ): ReadonlyArray<Incomplete> => {
   const contract = contractOf(contracts, block);
-  const result = SchemaParser.decodeResult(completeSchema(contract))(block.props, {
-    errors: "all",
-  });
-  if (result._tag === "Success") return [];
-  return formatIssues(result.failure).issues.map((issue) => {
-    const path = propPath(
-      contract.fields,
-      block.props,
-      (issue.path ?? []).map((key) =>
-        Predicate.isNumber(key) ? key : String(Predicate.isObject(key) ? key.key : key),
-      ),
-    );
-    const [name = ""] = path;
-    return {
-      place,
-      block: { id, title: contract.title },
-      path,
-      field: contract.fields[name]?.title ?? contract.title,
-      message: issue.message,
-    };
-  });
+  return incompleteProps(contract, block.props).map((incomplete) => ({
+    place,
+    block: { id, title: contract.title },
+    ...incomplete,
+  }));
 };
 
 const placeholdersIn = (
