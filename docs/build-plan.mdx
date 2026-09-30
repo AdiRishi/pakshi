@@ -159,11 +159,11 @@ Changes reach production through the workflows owners set, and drafts are shared
 **Build:**
 
 - [Approval workflows](/product-spec#approvals-and-publishing) on the organization, a brand or a site, and the workflow editor as a list of steps.
-- Submissions and approval progress in `SiteDoc`, with the D1 copy, stale-approval rejection, and the re-check after publishing's R2 writes.
-- [Pre-flight](/product-spec#approvals-and-publishing) at submission.
+- Submissions and approval progress in `SiteDoc`, with the D1 copy, stale-approval rejection, and the release turn that orders them with publishing ([decision 057](/decision-log#decision-057)).
+- [Pre-flight](/product-spec#approvals-and-publishing) at submission. Its check for a form notification address comes with forms in checkpoint 9, which adds the setting.
 - The Approvals screen with the preview and what changed, and approval notifications through Email Service.
-- [Sharing](/product-spec#sharing-and-previews) with people, the organization or anyone with the link, with view or edit access.
-- [Previews](/technical-design#publishing-serving-and-previews): the fixed R2 key, the preview domain, the token-to-cookie exchange, and the access counter.
+- [Sharing](/product-spec#sharing-and-previews) with people, the organization or anyone with the link, with view or edit access, stored with the draft in `SiteDoc` ([decision 055](/decision-log#decision-055)).
+- [Previews](/technical-design#publishing-serving-and-previews) served by Studio, which checks the draft's sharing on every request ([decision 054](/decision-log#decision-054)), with screenshot checks against `sites`.
 
 **Demo:** an editor shares a draft by link, submits it, and it goes through a two-step workflow to live; meanwhile another draft publishes and the submission updates itself.
 
@@ -231,7 +231,7 @@ Everything else a real site needs.
 
 **Build:**
 
-- [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap and preview rejection, notification emails with retry, the submissions screen, CSV export and deletion by email.
+- [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap, notification emails with retry, pre-flight's check for a notification address, the submissions screen, CSV export and deletion by email.
 - The [media library](/product-spec#media): brand and site libraries, uploads from the library and from the editor's media popover, Cloudflare Images, alt text, and retention.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
