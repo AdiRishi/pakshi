@@ -14,17 +14,28 @@ type Suggesting =
 
 /**
  * Asks Pakshi for alt text for an image field's image, and shows it for the
- * person to use or leave. Nothing changes until they use it.
+ * person to use or leave. Nothing changes until they use it. A suggestion
+ * belongs to the image and field it was asked for, so it's dropped when
+ * either changes, even if it arrives after.
  */
 export function AltTextSuggestion(props: { readonly field: FieldTarget; readonly media: MediaId }) {
   const { suggestAltText } = useServices();
   const store = useStore();
-  const [suggesting, setSuggesting] = useState<Suggesting>({ status: "idle" });
+  const { target, block, path } = props.field;
+  const image = JSON.stringify([target, block, path, props.media]);
+  const [asked, setAsked] = useState<{ readonly image: string; readonly suggesting: Suggesting }>({
+    image,
+    suggesting: { status: "idle" },
+  });
+  const suggesting: Suggesting = asked.image === image ? asked.suggesting : { status: "idle" };
+  const setSuggesting = (next: Suggesting) => setAsked({ image, suggesting: next });
+  const settle = (next: Suggesting) =>
+    setAsked((current) => (current.image === image ? { image, suggesting: next } : current));
   const ask = () => {
     setSuggesting({ status: "asking" });
-    suggestAltText(props.media, props.field.block).then(
-      (text) => setSuggesting(text === null ? { status: "none" } : { status: "suggested", text }),
-      () => setSuggesting({ status: "none" }),
+    suggestAltText(props.media, block).then(
+      (text) => settle(text === null ? { status: "none" } : { status: "suggested", text }),
+      () => settle({ status: "none" }),
     );
   };
   switch (suggesting.status) {
@@ -63,9 +74,9 @@ export function AltTextSuggestion(props: { readonly field: FieldTarget; readonly
                 store.run([
                   {
                     op: "setProp",
-                    target: props.field.target,
-                    block: props.field.block,
-                    path: [...props.field.path, "alt"],
+                    target,
+                    block,
+                    path: [...path, "alt"],
                     value: suggesting.text,
                   },
                 ]);

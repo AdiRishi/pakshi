@@ -153,7 +153,16 @@ function Suggestion(props: {
   readonly image: (media: MediaId) => string;
 }) {
   const suggestion = useQuery({
-    queryKey: ["sites", props.site, "drafts", props.draft, "suggestion", props.conflict.key],
+    queryKey: [
+      "sites",
+      props.site,
+      "drafts",
+      props.draft,
+      "suggestion",
+      props.conflict.key,
+      // A newer live release changes a conflict's values but not its key.
+      [props.conflict.base, props.conflict.draft, props.conflict.live],
+    ],
     queryFn: () =>
       suggestMerge({
         data: { site: props.site, draft: props.draft, conflict: props.conflict.key },
