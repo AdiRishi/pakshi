@@ -44,6 +44,8 @@ export const StudioApi = Effect.gen(function* () {
     name: workerName("studio-api", config.stage),
     main: "../workers/studio-api/src/index.ts",
     workersDev: false,
+    // The reconcile job, which has each site's SiteDoc rewrite a KV entry that differs from D1.
+    crons: ["*/5 * * * *"],
     env,
   });
 });

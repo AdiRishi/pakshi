@@ -71,6 +71,7 @@ it.prop(
     const editors = [meera, sam, jonah].map((person) => {
       const store = new EditorStore({
         draft: fixtureDraft,
+        live: fixtureDraft.base,
         page,
         contracts: definitions,
         person,

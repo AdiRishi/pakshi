@@ -17,7 +17,10 @@ import { Route as MediaMediaIdRouteImport } from './routes/media/$mediaId'
 import { Route as SignInStartRouteImport } from './routes/sign-in_.start'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as AuthedSitesSiteIdIndexRouteImport } from './routes/_authed/sites/$siteId/index'
-import { Route as AuthedSitesSiteIdPagesPageIdRouteImport } from './routes/_authed/sites/$siteId/pages/$pageId'
+import { Route as AuthedSitesSiteIdReleasesRouteImport } from './routes/_authed/sites/$siteId/releases'
+import { Route as AuthedSitesSiteIdDraftsDraftIdIndexRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/index'
+import { Route as AuthedSitesSiteIdDraftsDraftIdUpdateRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/update'
+import { Route as AuthedSitesSiteIdDraftsDraftIdPagesPageIdRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/pages/$pageId'
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
@@ -58,10 +61,28 @@ const AuthedSitesSiteIdIndexRoute = AuthedSitesSiteIdIndexRouteImport.update({
   path: '/sites/$siteId/',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedSitesSiteIdPagesPageIdRoute =
-  AuthedSitesSiteIdPagesPageIdRouteImport.update({
-    id: '/sites/$siteId/pages/$pageId',
-    path: '/sites/$siteId/pages/$pageId',
+const AuthedSitesSiteIdReleasesRoute =
+  AuthedSitesSiteIdReleasesRouteImport.update({
+    id: '/sites/$siteId/releases',
+    path: '/sites/$siteId/releases',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedSitesSiteIdDraftsDraftIdIndexRoute =
+  AuthedSitesSiteIdDraftsDraftIdIndexRouteImport.update({
+    id: '/sites/$siteId/drafts/$draftId/',
+    path: '/sites/$siteId/drafts/$draftId/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedSitesSiteIdDraftsDraftIdUpdateRoute =
+  AuthedSitesSiteIdDraftsDraftIdUpdateRouteImport.update({
+    id: '/sites/$siteId/drafts/$draftId/update',
+    path: '/sites/$siteId/drafts/$draftId/update',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute =
+  AuthedSitesSiteIdDraftsDraftIdPagesPageIdRouteImport.update({
+    id: '/sites/$siteId/drafts/$draftId/pages/$pageId',
+    path: '/sites/$siteId/drafts/$draftId/pages/$pageId',
     getParentRoute: () => AuthedRoute,
   } as any)
 
@@ -72,8 +93,11 @@ export interface FileRoutesByFullPath {
   '/media/$mediaId': typeof MediaMediaIdRoute
   '/sign-in/start': typeof SignInStartRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
-  '/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
+  '/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
+  '/sites/$siteId/drafts/$draftId/': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
+  '/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
@@ -82,8 +106,11 @@ export interface FileRoutesByTo {
   '/sign-in/start': typeof SignInStartRoute
   '/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/sites/$siteId': typeof AuthedSitesSiteIdIndexRoute
-  '/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
+  '/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
+  '/sites/$siteId/drafts/$draftId': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
+  '/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -94,8 +121,11 @@ export interface FileRoutesById {
   '/sign-in_/start': typeof SignInStartRoute
   '/_authed/': typeof AuthedIndexRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
+  '/_authed/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/_authed/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
-  '/_authed/sites/$siteId/pages/$pageId': typeof AuthedSitesSiteIdPagesPageIdRoute
+  '/_authed/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
+  '/_authed/sites/$siteId/drafts/$draftId/': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
+  '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -106,8 +136,11 @@ export interface FileRouteTypes {
     | '/media/$mediaId'
     | '/sign-in/start'
     | '/api/auth/$'
+    | '/sites/$siteId/releases'
     | '/sites/$siteId/'
-    | '/sites/$siteId/pages/$pageId'
+    | '/sites/$siteId/drafts/$draftId/update'
+    | '/sites/$siteId/drafts/$draftId/'
+    | '/sites/$siteId/drafts/$draftId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/sign-in'
@@ -116,8 +149,11 @@ export interface FileRouteTypes {
     | '/sign-in/start'
     | '/'
     | '/api/auth/$'
+    | '/sites/$siteId/releases'
     | '/sites/$siteId'
-    | '/sites/$siteId/pages/$pageId'
+    | '/sites/$siteId/drafts/$draftId/update'
+    | '/sites/$siteId/drafts/$draftId'
+    | '/sites/$siteId/drafts/$draftId/pages/$pageId'
   id:
     | '__root__'
     | '/_authed'
@@ -127,8 +163,11 @@ export interface FileRouteTypes {
     | '/sign-in_/start'
     | '/_authed/'
     | '/api/auth/$'
+    | '/_authed/sites/$siteId/releases'
     | '/_authed/sites/$siteId/'
-    | '/_authed/sites/$siteId/pages/$pageId'
+    | '/_authed/sites/$siteId/drafts/$draftId/update'
+    | '/_authed/sites/$siteId/drafts/$draftId/'
+    | '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -198,11 +237,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesSiteIdIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/sites/$siteId/pages/$pageId': {
-      id: '/_authed/sites/$siteId/pages/$pageId'
-      path: '/sites/$siteId/pages/$pageId'
-      fullPath: '/sites/$siteId/pages/$pageId'
-      preLoaderRoute: typeof AuthedSitesSiteIdPagesPageIdRouteImport
+    '/_authed/sites/$siteId/releases': {
+      id: '/_authed/sites/$siteId/releases'
+      path: '/sites/$siteId/releases'
+      fullPath: '/sites/$siteId/releases'
+      preLoaderRoute: typeof AuthedSitesSiteIdReleasesRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$siteId/drafts/$draftId/': {
+      id: '/_authed/sites/$siteId/drafts/$draftId/'
+      path: '/sites/$siteId/drafts/$draftId'
+      fullPath: '/sites/$siteId/drafts/$draftId/'
+      preLoaderRoute: typeof AuthedSitesSiteIdDraftsDraftIdIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$siteId/drafts/$draftId/update': {
+      id: '/_authed/sites/$siteId/drafts/$draftId/update'
+      path: '/sites/$siteId/drafts/$draftId/update'
+      fullPath: '/sites/$siteId/drafts/$draftId/update'
+      preLoaderRoute: typeof AuthedSitesSiteIdDraftsDraftIdUpdateRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId': {
+      id: '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId'
+      path: '/sites/$siteId/drafts/$draftId/pages/$pageId'
+      fullPath: '/sites/$siteId/drafts/$draftId/pages/$pageId'
+      preLoaderRoute: typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRouteImport
       parentRoute: typeof AuthedRoute
     }
   }
@@ -210,14 +270,23 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedSitesSiteIdReleasesRoute: typeof AuthedSitesSiteIdReleasesRoute
   AuthedSitesSiteIdIndexRoute: typeof AuthedSitesSiteIdIndexRoute
-  AuthedSitesSiteIdPagesPageIdRoute: typeof AuthedSitesSiteIdPagesPageIdRoute
+  AuthedSitesSiteIdDraftsDraftIdUpdateRoute: typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
+  AuthedSitesSiteIdDraftsDraftIdIndexRoute: typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
+  AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute: typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedSitesSiteIdReleasesRoute: AuthedSitesSiteIdReleasesRoute,
   AuthedSitesSiteIdIndexRoute: AuthedSitesSiteIdIndexRoute,
-  AuthedSitesSiteIdPagesPageIdRoute: AuthedSitesSiteIdPagesPageIdRoute,
+  AuthedSitesSiteIdDraftsDraftIdUpdateRoute:
+    AuthedSitesSiteIdDraftsDraftIdUpdateRoute,
+  AuthedSitesSiteIdDraftsDraftIdIndexRoute:
+    AuthedSitesSiteIdDraftsDraftIdIndexRoute,
+  AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute:
+    AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute,
 }
 
 const AuthedRouteWithChildren =

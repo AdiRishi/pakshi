@@ -11,7 +11,9 @@ import {
   ServerMessage,
 } from "@repo/contracts/live";
 import type { Batch, BatchError, Op, PropPath, Target } from "@repo/contracts/ops";
+import type { LiveRelease } from "@repo/contracts/snapshot";
 import { applyEach, applyOps, type BlockContracts } from "@repo/domain/document";
+import { Equal } from "effect";
 
 import { describeErrors, type Notice, partChanged } from "./notices.ts";
 
@@ -64,7 +66,19 @@ export interface EditorState {
   readonly canRedo: boolean;
   /** Everyone else connected to the draft. */
   readonly peers: ReadonlyArray<Peer>;
+  /** The release the site serves. The draft is behind when it started from another. */
+  readonly live: LiveRelease;
+  /** Who published or closed the draft, once someone has; it takes no more changes. */
+  readonly closed: DraftClosure | null;
+  /**
+   * Whether a merge moved the draft to other block versions, which this
+   * editor didn't load, so it must open the draft again.
+   */
+  readonly outdated: boolean;
 }
+
+/** How a draft stopped taking changes: who published or closed it, and the release it became. */
+export type DraftClosure = Omit<Extract<ServerMessage, { _tag: "DraftClosed" }>, "_tag">;
 
 interface Pending {
   readonly batch: Batch;
@@ -165,6 +179,7 @@ export class EditorStore {
 
   constructor(options: {
     readonly draft: Draft;
+    readonly live: LiveRelease;
     readonly page: PageId;
     readonly contracts: BlockContracts;
     readonly person: Collaborator;
@@ -184,6 +199,9 @@ export class EditorStore {
       canUndo: false,
       canRedo: false,
       peers: [],
+      live: options.live,
+      closed: null,
+      outdated: false,
     };
   }
 
@@ -475,12 +493,19 @@ export class EditorStore {
         }),
       PeerLeft: ({ connection }) =>
         this.#set({ peers: this.#state.peers.filter((peer) => peer.connection !== connection) }),
+      LiveChanged: ({ live }) => this.#set({ live }),
+      DraftClosed: ({ by, release }) => this.#set({ closed: { by, release } }),
     });
   }
 
   /** The confirmed draft after a committed batch, and this person's batch taken out of the pending ones. */
   #confirm(draft: Draft, batch: CommittedBatch) {
     if (batch.revision <= draft.revision) return draft;
+    const rebase = batch.ops.findLast((op) => op.op === "rebase");
+    if (rebase !== undefined && !Equal.equals(rebase.lockfile, draft.lockfile)) {
+      this.#set({ outdated: true });
+      return draft;
+    }
     const applied = applyOps(draft, batch.ops, this.contracts);
     if (!applied.ok) throw new Error("SiteDoc committed a batch the document module rejects.");
     this.#pending = this.#pending.filter((pending) => pending.batch.id !== batch.id);

@@ -26,6 +26,7 @@ const open = () => {
   const siteDoc = fakeSiteDoc();
   const store = new EditorStore({
     draft: fixtureDraft,
+    live: fixtureDraft.base,
     page,
     contracts: definitions,
     person: meera,

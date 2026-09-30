@@ -44,6 +44,7 @@ export const DraftName = Schema.Trim.check(
   Schema.isMinLength(1, { message: "Give the draft a name" }),
   Schema.isMaxLength(80, { message: "Use at most 80 characters" }),
 );
+export type DraftName = typeof DraftName.Type;
 
 /** A draft that's behind started from a release that's no longer live, so it must merge before it's published. */
 export const isBehind = (base: LiveRelease, live: LiveRelease) => base.release !== live.release;

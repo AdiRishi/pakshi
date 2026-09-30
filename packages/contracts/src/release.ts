@@ -4,10 +4,21 @@ import { DraftId, ReleaseId, SnapshotId } from "./ids.ts";
 import { Collaborator } from "./live.ts";
 import type { LiveRelease } from "./snapshot.ts";
 
+/**
+ * A moment as an ISO 8601 string in UTC. Values cross Durable Object RPC by
+ * structured clone, which keeps strings but not the prototypes of date types.
+ */
+export const Timestamp = Schema.String.check(
+  Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/),
+).pipe(Schema.brand("Timestamp"));
+export type Timestamp = typeof Timestamp.Type;
+
+export const now = () => Timestamp.make(new Date().toISOString());
+
 const releaseFields = {
   id: ReleaseId,
   snapshot: SnapshotId,
-  at: Schema.DateTimeUtcFromString,
+  at: Timestamp,
 };
 
 /**

@@ -40,7 +40,8 @@ const TopNode = Schema.Union([
   Schema.Struct({ type: Schema.Literal("orderedList"), content: Schema.Array(ListItem_) }),
 ]);
 
-const RichTextDocument = Schema.Struct({
+/** A rich text value of any field, before its field's marks and nodes are checked. */
+export const RichTextDocument = Schema.Struct({
   type: Schema.Literal("doc"),
   content: Schema.Array(TopNode),
 });

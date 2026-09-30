@@ -1,6 +1,8 @@
-import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
+import { isBehind } from "@repo/contracts/draft";
+import { BatchId, BlockId, BlockType, PageId, ReleaseId, SnapshotId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
+import { LiveRelease } from "@repo/contracts/snapshot";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import type { Notice } from "../src/notices.ts";
@@ -34,6 +36,7 @@ const open = (siteDoc: ReturnType<typeof fakeSiteDoc>, person: Collaborator = me
   const notices: Array<Notice> = [];
   const store = new EditorStore({
     draft: fixtureDraft,
+    live: fixtureDraft.base,
     page,
     contracts: definitions,
     person,
@@ -411,5 +414,73 @@ describe("presence", () => {
     expect(theirs.store.getState().peers[0]?.presence?.typing).toBe(true);
     await settle();
     expect(theirs.store.getState().peers[0]?.presence?.typing).toBe(false);
+  });
+});
+
+describe("the draft's standing", () => {
+  const release = LiveRelease.make({
+    release: ReleaseId.make("rel_next"),
+    snapshot: SnapshotId.make("snap_next"),
+  });
+
+  test("a release going live leaves the draft behind, until a merge moves it onto that release", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
+    siteDoc.announce({ _tag: "LiveChanged", live: release });
+    await settle();
+    expect(isBehind(store.getState().confirmed.base, store.getState().live)).toBe(true);
+    const { base: _, ...values } = fixtureDraft;
+    siteDoc.commitFromSite(sam, {
+      id: BatchId.make("bat_merge"),
+      ops: [
+        {
+          op: "rebase",
+          base: release,
+          lockfile: values.lockfile,
+          theme: values.theme,
+          settings: values.settings,
+          forms: values.forms,
+          menus: values.parts.menus,
+        },
+        setHeading("Merged from live"),
+      ],
+    });
+    await settle();
+    expect(store.getState().confirmed.base).toEqual(release);
+    expect(isBehind(store.getState().confirmed.base, store.getState().live)).toBe(false);
+    expect(headingOf(store)).toBe("Merged from live");
+    expect(store.getState().canUndo).toBe(false);
+  });
+
+  test("a merge to other block versions asks for the draft to be opened again", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
+    siteDoc.commitFromSite(sam, {
+      id: BatchId.make("bat_upgrade"),
+      ops: [
+        {
+          op: "rebase",
+          base: release,
+          lockfile: { ...fixtureDraft.lockfile, hero: 2 },
+          theme: fixtureDraft.theme,
+          settings: fixtureDraft.settings,
+          forms: fixtureDraft.forms,
+          menus: fixtureDraft.parts.menus,
+        },
+      ],
+    });
+    await settle();
+    expect(store.getState().outdated).toBe(true);
+  });
+
+  test("publishing or closing the draft is shown to everyone in it", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
+    siteDoc.announce({ _tag: "DraftClosed", by: sam, release: release.release });
+    await settle();
+    expect(store.getState().closed).toEqual({ by: sam, release: release.release });
   });
 });

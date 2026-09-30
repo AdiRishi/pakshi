@@ -1,37 +1,100 @@
-import { SiteId } from "@repo/contracts/ids";
+import { DraftName } from "@repo/contracts/draft";
+import { DraftId, ReleaseId, SiteId } from "@repo/contracts/ids";
+import { Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
-import { Schema } from "effect";
+import { type Effect, Schema } from "effect";
 
-import { callStudio } from "@/server/studio-rpc";
+import { callStudio, type StudioClient } from "@/server/studio-rpc";
 
 const forSite = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId }));
+const forDraft = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId }));
 
-/** A site's pages and posts, as its draft has them. */
-export const getSitePages = createServerFn({ method: "GET" })
+/** Calls studio-api for the request this server function serves. */
+const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
+  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+
+/** A site's drafts, with the release that's live. */
+export const getSiteDrafts = createServerFn({ method: "GET" })
   .validator(forSite)
-  .handler(({ data }) =>
-    callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, (studio) =>
-      studio.sitePages({ site: data.site }),
-    ),
-  );
+  .handler(({ data }) => studio((client) => client.siteDrafts(data)));
 
-/** A site's draft and the images it can place, for the editor. */
-export const getEditorDraft = createServerFn({ method: "GET" })
-  .validator(forSite)
-  .handler(({ data }) =>
-    callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, (studio) =>
-      studio.editorDraft({ site: data.site }),
-    ),
-  );
+/** Starts a draft of what's live. */
+export const createDraft = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, name: DraftName })))
+  .handler(({ data }) => studio((client) => client.createDraft(data)));
 
-/** Sends a batch of edit operations to the site's draft. */
+export const renameDraft = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId, name: DraftName })),
+  )
+  .handler(({ data }) => studio((client) => client.renameDraft(data)));
+
+/** Closes a draft without publishing it. */
+export const closeDraft = createServerFn({ method: "POST" })
+  .validator(forDraft)
+  .handler(({ data }) => studio((client) => client.closeDraft(data)));
+
+/** A draft's pages and posts. */
+export const getDraftPages = createServerFn({ method: "GET" })
+  .validator(forDraft)
+  .handler(({ data }) => studio((client) => client.draftPages(data)));
+
+/** A draft for the editor, brought up to date first when that needs no one. */
+export const openDraft = createServerFn({ method: "GET" })
+  .validator(forDraft)
+  .handler(({ data }) => studio((client) => client.openDraft(data)));
+
+/** Sends a batch of edit operations to a draft. */
 export const applyBatch = createServerFn({ method: "POST" })
-  .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, batch: Batch })))
+  .validator(
+    Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId, batch: Batch })),
+  )
+  .handler(({ data }) => studio((client) => client.applyBatch(data)));
+
+/** A behind draft's merge with the live release, with the sides chosen so far. */
+export const getDraftUpdate = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, draft: DraftId, resolutions: Resolutions }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.draftUpdate(data)));
+
+/** Merges the live release into a draft, once every conflict has a side. */
+export const updateDraft = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, draft: DraftId, resolutions: Resolutions }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.updateDraft(data)));
+
+/** Freezes a draft and makes it live. Writing its snapshot can take a while on a large site. */
+export const publishDraft = createServerFn({ method: "POST" })
+  .validator(forDraft)
   .handler(({ data }) =>
-    callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, (studio) =>
-      studio.applyBatch({ site: data.site, batch: data.batch }),
+    callStudio(
+      { binding: env.STUDIO_RPC, request: getRequest(), timeout: "60 seconds" },
+      (client) => client.publishDraft(data),
     ),
   );
+
+/** Every release of a site, newest first. */
+export const getSiteReleases = createServerFn({ method: "GET" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.siteReleases(data)));
+
+/** Undoes the latest publish. */
+export const rollBack = createServerFn({ method: "POST" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.rollBack(data)));
+
+/** Starts a draft holding an earlier release's content. */
+export const restoreRelease = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, release: ReleaseId, name: DraftName })),
+  )
+  .handler(({ data }) => studio((client) => client.restoreRelease(data)));

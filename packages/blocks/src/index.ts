@@ -60,8 +60,8 @@ export {
 } from "./placeholders.ts";
 export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
-export type { RichTextDocument, RichTextMark, RichTextNode } from "./rich-text.ts";
-export { richTextLines } from "./rich-text.ts";
+export type { RichTextMark, RichTextNode } from "./rich-text.ts";
+export { RichTextDocument, richTextLines } from "./rich-text.ts";
 export { loadBlock, loadBlocks, loadBlockVersions, renderBlock, renderPage } from "./render.tsx";
 export type { PageEntry } from "./site-data.ts";
 export { siteData } from "./site-data.ts";

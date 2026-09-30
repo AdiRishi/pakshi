@@ -1,10 +1,15 @@
+import { D1Client } from "@effect/sql-d1";
 import { liveBasePath } from "@repo/contracts/live";
+import { routingKeys } from "@repo/contracts/snapshot";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { WorkerEntrypoint } from "cloudflare:workers";
+import { Effect } from "effect";
+import { getServerByName } from "partyserver";
 
 import { authBasePath, authFor } from "./auth.ts";
 import { serveLive } from "./live.ts";
 import { mediaBasePath, serveMedia } from "./media.ts";
+import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
 
 export { SiteAgent } from "./site-agent.ts";
@@ -32,5 +37,18 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
     if (request.method === "GET" && url.pathname.startsWith(`${mediaBasePath}/`))
       return serveMedia(request, this.env);
     return Response.json({ code: "not_found", message: "Route not found." }, { status: 404 });
+  }
+
+  /** The reconcile job, on the cron schedule infra sets. */
+  override async scheduled() {
+    const reconciled = await Effect.runPromise(
+      reconcileSites(
+        (site) => this.env.ROUTING.get(routingKeys.site(site)),
+        (site) =>
+          Effect.promise(async () => (await getServerByName(this.env.SITE_DOC, site)).reconcile()),
+      ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
+    );
+    if (reconciled.length > 0)
+      console.warn("KV didn't serve the live release, so SiteDoc wrote it again", reconciled);
   }
 }

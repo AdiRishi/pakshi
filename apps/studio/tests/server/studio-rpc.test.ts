@@ -18,6 +18,8 @@ const sam = { id: "user_sam", name: "Sam Okafor", email: "sam.okafor@pakshi.test
 
 type Behaviour = "answer" | "unavailable" | "defect" | "hang";
 
+const onlyViewer = "These tests call only viewer.";
+
 /** A stand-in studio-api serving the real contract. Its only valid session cookie is `session=sam`. */
 const fakeStudioApi = (behaviour: Behaviour) => {
   const seen: Array<string | undefined> = [];
@@ -55,9 +57,19 @@ const fakeStudioApi = (behaviour: Behaviour) => {
           return Effect.never;
       }
     },
-    sitePages: () => Effect.die(new Error("These tests call only viewer.")),
-    editorDraft: () => Effect.die(new Error("These tests call only viewer.")),
-    applyBatch: () => Effect.die(new Error("These tests call only viewer.")),
+    siteDrafts: () => Effect.die(new Error(onlyViewer)),
+    createDraft: () => Effect.die(new Error(onlyViewer)),
+    renameDraft: () => Effect.die(new Error(onlyViewer)),
+    closeDraft: () => Effect.die(new Error(onlyViewer)),
+    draftPages: () => Effect.die(new Error(onlyViewer)),
+    openDraft: () => Effect.die(new Error(onlyViewer)),
+    applyBatch: () => Effect.die(new Error(onlyViewer)),
+    draftUpdate: () => Effect.die(new Error(onlyViewer)),
+    updateDraft: () => Effect.die(new Error(onlyViewer)),
+    publishDraft: () => Effect.die(new Error(onlyViewer)),
+    siteReleases: () => Effect.die(new Error(onlyViewer)),
+    rollBack: () => Effect.die(new Error(onlyViewer)),
+    restoreRelease: () => Effect.die(new Error(onlyViewer)),
   });
   const server = rpcWebHandler(StudioRpcs, Layer.mergeAll(handlers, session));
   return { seen, binding: { fetch: (request: Request) => server.handler(request) } };
