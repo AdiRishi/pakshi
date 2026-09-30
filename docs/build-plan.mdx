@@ -182,12 +182,12 @@ The agent builds and edits sites through the same path as people.
 
 **Build:**
 
-- [`SiteAgent`](/technical-design#the-agent) on `AIChatAgent`, with routing limited to `SiteAgent`, the trusted user header, and the acting user stored per turn.
-- The chat panel through `studio-api`, including `/get-messages`.
+- [`SiteAgent`](/technical-design#the-agent) on PartyServer and Effect AI, one per person and draft, reached only through `studio-api`'s agent route with the trusted user header ([decision 058](/decision-log#decision-058), [decision 061](/decision-log#decision-061)).
+- The chat panel through `studio-api`: it catches up on the conversation when it connects and follows each turn as it streams.
 - In the editor: [the agent's changes highlighted](/editor#with-the-agent) as they land, the selected block passed to the agent, and undo of an agent turn from the chat panel.
-- Every agent tool, the cacheable context prefix, structured validation errors with two repair attempts, and presence as the agent acting for its user.
+- Every agent tool, including `propose_plan` ([decision 060](/decision-log#decision-060)), the recipes `get_recipe` and `create_page` read, the cacheable context prefix, structured validation errors with two repair attempts, and presence as the agent acting for its user.
 - Source uploads with `toMarkdown`, `fetch_url` with its limits, alt text suggestions, and merge suggestions for text conflicts.
-- AI Gateway with cost tags and per-brand spend limits.
+- AI Gateway with cost tags and one spend limit for the product ([decision 059](/decision-log#decision-059)).
 - The eval suite, run in CI whenever prompts, models or block contracts change.
 
 **Demo:** describe a small site in chat, confirm the plan, and watch the agent build it section by section while another person watches the same draft.
@@ -198,7 +198,7 @@ The agent builds and edits sites through the same path as people.
 - The eval suite passes, with no successful prompt injection.
 - A request routed at `SiteDoc` through the agent route is refused, and so is a client-sent trusted header.
 - The agent can't submit or publish, and can't reach submissions.
-- A brand past its spend limit gets a clear message instead of a model call.
+- When AI Gateway refuses a request because the spend limit is reached, the person gets a clear message.
 
 **Proves:** the agent on a cheap model, and the chat path.
 
