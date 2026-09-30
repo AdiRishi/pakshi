@@ -171,6 +171,7 @@ export function DraftPage(props: {
   const [tab, setTab] = useState<PageType>("page");
   const [creating, setCreating] = useState<PageType | null>(null);
   const [renaming, setRenaming] = useState<PageSummary | null>(null);
+  const [submitting, setSubmitting] = useState(false);
   const behind = isBehind(data.draft.base, data.live);
   const review = data.draft.review;
   const byType = (type: PageType) => data.pages.filter((page) => page.type === type);
@@ -236,6 +237,8 @@ export function DraftPage(props: {
               draft={{ id: props.draft, name: data.draft.name }}
               can={data.can}
               onPublished={() => navigate({ to: "/sites/$siteId", params: { siteId: props.site } })}
+              submitting={submitting}
+              onSubmittingChange={setSubmitting}
             />
           </div>
         </div>

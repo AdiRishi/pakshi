@@ -38,6 +38,7 @@ import {
   BreadcrumbSeparator,
 } from "@repo/ui/components/breadcrumb";
 import { Button, buttonVariants } from "@repo/ui/components/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
@@ -45,10 +46,12 @@ import { Link } from "@tanstack/react-router";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
+  ListTreeIcon,
   LoaderIcon,
   MonitorIcon,
   MoonIcon,
   SmartphoneIcon,
+  SparklesIcon,
   SunIcon,
   TabletIcon,
 } from "lucide-react";
@@ -56,6 +59,7 @@ import { type ReactNode, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
+import { ChatPanel } from "@/features/agent/chat-panel";
 import { standing } from "@/features/approvals/describe";
 import { DraftActions } from "@/features/drafts/draft-actions";
 import { draftImage } from "@/features/preview/address";
@@ -101,6 +105,8 @@ const saveCopy: Readonly<Record<SaveStatus, { readonly label: string; readonly i
 
 interface DraftContext {
   readonly person: Collaborator;
+  readonly submitting: boolean;
+  readonly onSubmittingChange: (open: boolean) => void;
   readonly site: { readonly id: SiteId; readonly name: string };
   readonly draft: { readonly id: DraftId; readonly name: string };
   readonly can: SiteAbilities;
@@ -175,6 +181,8 @@ function Header(props: DraftContext) {
           draft={props.draft}
           can={props.can}
           onPublished={() => Promise.resolve()}
+          submitting={props.submitting}
+          onSubmittingChange={props.onSubmittingChange}
         />
       </div>
     </header>
@@ -352,8 +360,11 @@ export function EditorPage(props: {
   const [colors] = useState(canvasColors);
   const [connection] = useState(() => liveConnection(props.site, props.draft));
   const [mediaSrc] = useState(() => draftImage(props.site, props.draft));
+  const [submitting, setSubmitting] = useState(false);
   const context: DraftContext = {
     person: props.person,
+    submitting,
+    onSubmittingChange: setSubmitting,
     site: { id: props.site, name: data.draft.settings.name },
     draft: { id: props.draft, name: data.summary.name },
     can: data.can,
@@ -378,10 +389,35 @@ export function EditorPage(props: {
         <DraftStanding {...context} />
         <div className="flex min-h-0 flex-1">
           <aside
-            aria-label="Structure"
-            className="flex w-80 shrink-0 flex-col overflow-y-auto border-r bg-card"
+            aria-label="Assistant and outline"
+            className="flex w-80 shrink-0 flex-col border-r bg-card"
           >
-            <EditorOutline />
+            <Tabs defaultValue="agent" className="min-h-0 flex-1 gap-0">
+              <TabsList variant="line" className="w-full shrink-0 justify-start border-b px-3">
+                <TabsTrigger value="agent" className="flex-none">
+                  <SparklesIcon />
+                  Ask Pakshi
+                </TabsTrigger>
+                <TabsTrigger value="outline" className="flex-none">
+                  <ListTreeIcon />
+                  Outline
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent
+                value="agent"
+                keepMounted
+                className="flex min-h-0 flex-1 flex-col data-hidden:hidden"
+              >
+                <ChatPanel
+                  site={props.site}
+                  draft={context.draft}
+                  onSubmit={() => setSubmitting(true)}
+                />
+              </TabsContent>
+              <TabsContent value="outline" className="min-h-0 flex-1 overflow-y-auto">
+                <EditorOutline />
+              </TabsContent>
+            </Tabs>
           </aside>
           <main aria-label="Page canvas" className="flex min-w-0 flex-1 flex-col bg-muted">
             <CanvasToolbar width={width} onWidth={setWidth} scheme={scheme} onScheme={setScheme} />

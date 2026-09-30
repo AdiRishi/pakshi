@@ -8,13 +8,14 @@ import type { StudioApiEnv } from "@repo/infra/worker-bindings";
  */
 export const sendThroughGateway =
   (env: StudioApiEnv): SendToModel =>
-  ({ model, inputs, tags, signal }) =>
-    env.AI.gateway(env.AI_GATEWAY).run(
-      {
-        provider: "workers-ai",
-        endpoint: model,
-        headers: { "Content-Type": "application/json", "cf-aig-metadata": tags },
-        query: inputs,
-      },
-      { signal },
-    );
+  async ({ model, inputs, tags, signal }) => {
+    // Models are chosen by name in configuration, which the binding's types
+    // can't match to a model, so they don't know a raw response is asked for.
+    const response = await env.AI.run(model, inputs, {
+      gateway: { id: env.AI_GATEWAY, metadata: tags },
+      returnRawResponse: true,
+      signal,
+    });
+    if (!(response instanceof Response)) throw new Error("Workers AI didn't return its response.");
+    return response;
+  };

@@ -36,8 +36,10 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
     const { siteId, draftId, pageId } = Route.useParams();
     const opened = Route.useLoaderData();
     const { user } = Route.useRouteContext().viewer;
+    // Each page opens in an editor of its own.
     return (
       <EditorPage
+        key={pageId}
         site={siteId}
         draft={draftId}
         page={pageId}
