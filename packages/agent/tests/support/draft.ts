@@ -57,6 +57,7 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
             heading: "Learn by building",
             body: paragraph("Five days of workshops."),
             image: { $ref: "media", id: "med_harbour", alt: "Boats in the harbour" },
+            cta: { label: "Register", link: "https://harbour.example/register" },
           },
         },
         b_about: {

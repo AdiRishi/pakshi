@@ -39,6 +39,12 @@ A site's `SiteDoc` takes the release KV serves as its first and owns the live
 release from then on, so on a running dev stack a changed fixture reaches its
 site only after `pnpm dev:destroy`.
 
+The agent calls Workers AI through the stage's AI Gateway even under
+`pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and
+AI Gateway permissions, and its calls cost money. After changing the agent's
+prompts, tools or models, or a block contract or recipe, run its evals with
+`pnpm --filter @repo/agent evals` (`packages/agent/evals/README.md`).
+
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
 

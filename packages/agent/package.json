@@ -10,8 +10,9 @@
     }
   },
   "scripts": {
+    "evals": "vitest run --config evals/vitest.config.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests && tsc --noEmit -p evals"
   },
   "dependencies": {
     "@effect/ai-openai-compat": "catalog:",

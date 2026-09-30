@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import type { Part } from "@repo/contracts/agent";
+import type { Part, Selected } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import { BatchId, PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids";
 import type { Op } from "@repo/contracts/ops";
@@ -38,7 +38,13 @@ const person = { id: "user_sam", name: "Sam Okafor" };
 /** The services a turn runs with, over a draft in memory. */
 export const desk = async (
   draft: Draft,
-  options: { readonly links?: ReadonlyArray<string> } = {},
+  options: {
+    readonly links?: ReadonlyArray<string>;
+    readonly selected?: Selected;
+    readonly sources?: ReadonlyArray<{ readonly name: string; readonly markdown: string }>;
+    /** Web pages by address, as Markdown. */
+    readonly pages?: Readonly<Record<string, string>>;
+  } = {},
 ) => {
   const contracts = await loadBlocks(draft.lockfile);
   const state: Desk = {
@@ -47,8 +53,10 @@ export const desk = async (
     typing: [],
     commits: [],
     parts: [],
-    sources: new Map(),
-    pages: new Map(),
+    sources: new Map(
+      (options.sources ?? []).map((source, index) => [`src_${index + 1}`, source] as const),
+    ),
+    pages: new Map(Object.entries(options.pages ?? {})),
     requests: [],
   };
   const turn = TurnId.make("turn_test");
@@ -106,7 +114,7 @@ export const desk = async (
       id: turn,
       person,
       page: PageId.make("pg_home"),
-      selected: null,
+      selected: options.selected ?? null,
       links: new Set(options.links ?? []),
       show: (part) =>
         Effect.sync(() => {
