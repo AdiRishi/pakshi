@@ -1,10 +1,11 @@
 import { describe, expect, it } from "@effect/vitest";
 import { BlockId, PageId } from "@repo/contracts/ids";
-import { Effect, Layer } from "effect";
+import { Deferred, Effect, Fiber, Layer } from "effect";
 import { AiError, Chat } from "effect/unstable/ai";
 
 import { AgentTools } from "../src/tools.ts";
 import { runTurn } from "../src/turn.ts";
+import { Workspace } from "../src/workspace.ts";
 import { harbourDraft } from "./support/draft.ts";
 import { type Reply, scriptedModel } from "./support/model.ts";
 import { desk } from "./support/workspace.ts";
@@ -249,6 +250,55 @@ describe("a turn", () => {
       expect(state.commits).toEqual([]);
       expect(JSON.stringify(model.calls[1]?.prompt)).toContain("Meera Kapoor is typing");
     }),
+  );
+
+  it.effect(
+    "stopped while a change is on its way to the draft, still shows the change to undo",
+    () =>
+      Effect.gen(function* () {
+        const { state, layer } = yield* Effect.promise(() => desk(harbourDraft));
+        const sending = yield* Deferred.make<void>();
+        const { promise: landed, resolve: land } = Promise.withResolvers<void>();
+        // Like SiteDoc's RPC, the commit goes ahead whether or not anyone waits for it.
+        const inFlight = Layer.effect(Workspace)(
+          Workspace.use((workspace) =>
+            Effect.succeed(
+              Workspace.of({
+                ...workspace,
+                commit: (ops, at) =>
+                  Deferred.succeed(sending, undefined).pipe(
+                    Effect.andThen(
+                      Effect.forkDetach(
+                        Effect.andThen(
+                          Effect.promise(() => landed),
+                          workspace.commit(ops, at),
+                        ),
+                      ),
+                    ),
+                    Effect.flatMap(Fiber.join),
+                  ),
+              }),
+            ),
+          ),
+        ).pipe(Layer.provide(layer));
+        const model = scriptedModel([
+          { calls: [{ name: "apply_ops", params: heading("Sail away") }] },
+        ]);
+        const turn = yield* runTurn({
+          chat: yield* Chat.empty,
+          system: "",
+          message: "Go",
+          afterStep: Effect.void,
+        }).pipe(Effect.provide(Layer.mergeAll(layer, inFlight, model.layer)), Effect.forkChild);
+        yield* Deferred.await(sending);
+        const stopping = yield* Effect.forkChild(Fiber.interrupt(turn));
+        yield* Effect.yieldNow;
+        land();
+        yield* Fiber.join(stopping);
+        yield* Effect.promise(() => landed);
+        expect(state.commits).toHaveLength(1);
+        expect(state.parts).toMatchObject([{ _tag: "Activity", changed: true }]);
+      }),
   );
 
   it.effect("fetches only addresses the person gave", () =>
