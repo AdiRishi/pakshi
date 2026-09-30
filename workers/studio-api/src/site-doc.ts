@@ -103,6 +103,12 @@ interface AgentPeer extends Peer {
   readonly draft: DraftId;
 }
 
+/** The person an agent works for, and whether they edit the site's pages rather than a shared draft. */
+interface AgentPrincipal {
+  readonly person: Collaborator;
+  readonly editsSite: boolean;
+}
+
 /** The connection ID the agent working for a person has in presence. It holds no socket. */
 const agentConnection = (person: Collaborator) => `agent:${person.id}`;
 
@@ -408,16 +414,13 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
    * may still edit the draft, and shows the agent where it made the change.
    */
   async applyAgentBatch(
-    by: { readonly person: Collaborator; readonly editsSite: boolean },
+    by: AgentPrincipal,
     id: DraftId,
     batch: Batch,
     turn: TurnId,
     presence: Presence,
   ) {
-    const access = by.editsSite
-      ? "edit"
-      : await this.#run((site) => site.access(id, { id: by.person.id, editsSite: false }));
-    if (access !== "edit")
+    if (!(await this.#agentMayEdit(by, id)))
       return {
         ok: true as const,
         value: {
@@ -438,8 +441,19 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return outcome;
   }
 
-  undoTurn(by: Collaborator, id: DraftId, turn: TurnId) {
-    return this.#call((site) => site.undoTurn(by, id, turn));
+  /** Undoes a turn the agent made for a person, if the person may still edit the draft. */
+  async undoTurn(by: AgentPrincipal, id: DraftId, turn: TurnId) {
+    if (!(await this.#agentMayEdit(by, id)))
+      return { ok: true as const, value: { status: "refused" as const } };
+    return this.#call((site) => site.undoTurn(by.person, id, turn));
+  }
+
+  /** Whether the person an agent works for may edit a draft now, since a share can end mid-conversation. */
+  async #agentMayEdit(by: AgentPrincipal, id: DraftId) {
+    const access = await this.#run((site) =>
+      site.access(id, { id: by.person.id, editsSite: by.editsSite }),
+    );
+    return access === "edit";
   }
 
   /** Shows the agent working for a person at a place in a draft, or with null, gone from it. */

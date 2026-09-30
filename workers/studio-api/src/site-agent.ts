@@ -386,9 +386,13 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       return;
     }
     const doc = await getServerByName(this.env.SITE_DOC, who.site);
-    const outcome = await doc.undoTurn({ id: who.person.id, name: who.person.name }, who.draft, id);
-    if (!outcome.ok) {
-      this.#send(connection, { _tag: "Notice", message: "The draft was published or closed." });
+    const outcome = await doc.undoTurn(
+      { person: { id: who.person.id, name: who.person.name }, editsSite: who.editsSite },
+      who.draft,
+      id,
+    );
+    if (!outcome.ok || outcome.value.status === "refused") {
+      this.#send(connection, { _tag: "Notice", message: "You can no longer edit this draft." });
       return;
     }
     await this.#saveTurn({ ...turn, undone: true });

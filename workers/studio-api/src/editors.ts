@@ -20,11 +20,11 @@ export interface Editor {
 }
 
 /**
- * Who is asking, at `${basePath}/{site}/{draft}` and below, to edit a draft:
- * someone signed in to Studio, through Studio's own origin, who may edit it
- * through `page.edit` on the site or a share. Anything else gets the response
- * refusing it. Browsers send cookies with a WebSocket or form post from any
- * page, so the origin must be Studio's.
+ * Who is asking, at `${basePath}/{site}/{draft}` and below, to edit an open
+ * draft: someone signed in to Studio, through Studio's own origin, who may
+ * edit it through `page.edit` on the site or a share. Anything else gets the
+ * response refusing it. Browsers send cookies with a WebSocket or form post
+ * from any page, so the origin must be Studio's.
  */
 export const editorOf = async (
   request: Request,
@@ -56,10 +56,8 @@ export const editorOf = async (
   if (Option.isNone(found)) return notFound;
   const { permissions } = found.value.standing;
   const editsSite = permissions.includes("page.edit");
-  if (!editsSite) {
-    const doc = await getServerByName(env.SITE_DOC, site.value);
-    if ((await doc.access(draft.value, { id, editsSite })) !== "edit") return notFound;
-  }
+  const doc = await getServerByName(env.SITE_DOC, site.value);
+  if ((await doc.access(draft.value, { id, editsSite })) !== "edit") return notFound;
   return Result.succeed({
     person,
     site: { id: found.value.site.id, brand: found.value.site.brand },
