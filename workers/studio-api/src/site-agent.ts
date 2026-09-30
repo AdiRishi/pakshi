@@ -197,6 +197,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
           const question = turn?.parts.find((found) => found.id === part);
           if (turn === undefined || question?._tag !== "Question" || question.answer !== null)
             return;
+          if (this.#busy(connection)) return;
           await this.#saveTurn(withPart(turn, { ...question, answer }));
           await this.#startTurn(connection, who, {
             text: answer,
@@ -211,6 +212,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
             .find((found) => found.id === id)
             ?.parts.find((found) => found.id === part);
           if (plan?._tag !== "Plan" || plan.status !== "proposed") return;
+          if (this.#busy(connection)) return;
           for (const turn of turns) {
             const proposed = turn.parts.filter(
               (found) => found._tag === "Plan" && found.status === "proposed",
@@ -263,6 +265,16 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     });
   }
 
+  /** Whether a turn is under way, which the person is told, since the conversation takes one at a time. */
+  #busy(connection: AgentConnection) {
+    if (this.#working === null) return false;
+    this.#send(connection, {
+      _tag: "Notice",
+      message: "Pakshi is still working on your last message. Stop it first, or wait.",
+    });
+    return true;
+  }
+
   /** Starts a turn for a person's message, unless one is under way. */
   async #startTurn(
     connection: AgentConnection,
@@ -274,13 +286,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       readonly selected: Selected | null;
     },
   ) {
-    if (this.#working !== null) {
-      this.#send(connection, {
-        _tag: "Notice",
-        message: "Pakshi is still working on your last message. Stop it first, or wait.",
-      });
-      return;
-    }
+    if (this.#busy(connection)) return;
     const [turns, attached] = await Promise.all([
       this.#run((conversation) => conversation.turns),
       this.#run((conversation) => conversation.sources),
