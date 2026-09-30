@@ -70,6 +70,8 @@ export interface PlatformState {
   readonly manifests: Map<SnapshotId, SnapshotManifest>;
   /** What KV serves for the site. */
   routing: Option.Option<LiveRelease>;
+  /** Whether writes to KV fail. */
+  routingDown: boolean;
   /** D1's copy of the site's releases. */
   readonly index: Map<string, IndexedRelease>;
   /** Messages to live connections: to one draft's, or with `null`, everyone's. */
@@ -121,6 +123,7 @@ export const platform = Effect.fn("platform")(function* () {
     pages,
     manifests,
     routing: Option.some(harbourLive),
+    routingDown: false,
     index: new Map(),
     sent: [],
     manifestGate: null,
@@ -150,7 +153,10 @@ export const platform = Effect.fn("platform")(function* () {
     }),
     Layer.succeed(Routing)({
       read: Effect.sync(() => state.routing),
-      write: (live) => Effect.sync(() => void (state.routing = Option.some(live))),
+      write: (live) =>
+        state.routingDown
+          ? Effect.die(new Error("KV is unavailable"))
+          : Effect.sync(() => void (state.routing = Option.some(live))),
     }),
     Layer.succeed(MediaLibrary)({
       files: (ids) =>

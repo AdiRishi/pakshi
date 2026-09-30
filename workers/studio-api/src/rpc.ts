@@ -32,7 +32,7 @@ import { authFor } from "./auth.ts";
 import type { Outcome, SiteDocError } from "./site-doc.ts";
 import type { BatchResult } from "./site/drafts.ts";
 import type { DraftView, Opened, UpdatePreview } from "./site/site.ts";
-import { siteFor, siteMedia } from "./sites.ts";
+import { siteFor, siteMedia, siteOf } from "./sites.ts";
 import { describeViewer } from "./viewer.ts";
 
 const unavailable = (operation: string) => (cause: Cause.YieldableError) =>
@@ -120,12 +120,20 @@ const handlers = (env: StudioApiEnv) =>
         const found = yield* siteFor(person, site, "page.edit");
         return { found, doc: yield* siteDoc(env, site) };
       });
-      const permitted = (
-        permissions: ReadonlyArray<Permission>,
+      /**
+       * A site the signed-in person may take an action on, with its SiteDoc.
+       * Someone who holds other permissions there is told they can't do this.
+       */
+      const permitted = Effect.fn("StudioRpc.permitted")(function* (
+        person: Person,
+        site: SiteId,
         permission: Permission,
         action: string,
-      ) =>
-        permissions.includes(permission) ? Effect.void : Effect.fail(new NotPermitted({ action }));
+      ) {
+        const found = yield* siteOf(person, site);
+        if (!found.permissions.includes(permission)) return yield* new NotPermitted({ action });
+        return { found, doc: yield* siteDoc(env, site) };
+      });
 
       return StudioRpcs.of({
         viewer: () =>
@@ -283,13 +291,13 @@ const handlers = (env: StudioApiEnv) =>
               }),
             ),
           ),
-        updateDraft: ({ site, draft, resolutions }) =>
+        updateDraft: ({ site, draft, resolutions, seen }) =>
           SignedIn.use((person) =>
             withCore("update draft")(
               Effect.gen(function* () {
                 const { doc } = yield* editable(person, site);
                 return yield* outcome(DraftNotFound, async (): Promise<Outcome<UpdateOutcome>> =>
-                  doc.updateDraft(collaborator(person), draft, resolutions),
+                  doc.updateDraft(collaborator(person), draft, resolutions, seen),
                 );
               }),
             ),
@@ -298,8 +306,7 @@ const handlers = (env: StudioApiEnv) =>
           SignedIn.use((person) =>
             withCore("publish draft")(
               Effect.gen(function* () {
-                const { found, doc } = yield* editable(person, site);
-                yield* permitted(found.permissions, "site.publish", "publish");
+                const { doc } = yield* permitted(person, site, "site.publish", "publish");
                 return yield* outcome(DraftNotFound, async (): Promise<Outcome<PublishOutcome>> =>
                   doc.publish(collaborator(person), draft),
                 );
@@ -325,8 +332,7 @@ const handlers = (env: StudioApiEnv) =>
           SignedIn.use((person) =>
             withCore("roll back")(
               Effect.gen(function* () {
-                const { found, doc } = yield* editable(person, site);
-                yield* permitted(found.permissions, "site.rollback", "roll back");
+                const { doc } = yield* permitted(person, site, "site.rollback", "roll back");
                 return yield* outcome(NothingToRollBack, async (): Promise<Outcome<Release>> =>
                   doc.rollBack(collaborator(person)),
                 );

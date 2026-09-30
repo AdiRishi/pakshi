@@ -244,11 +244,15 @@ export function UpdatePage(props: { readonly site: SiteId; readonly draft: Draft
 
   const finish = useMutation({
     mutationFn: () =>
-      updateDraft({ data: { site: props.site, draft: props.draft, resolutions: chosen } }),
+      updateDraft({
+        data: { site: props.site, draft: props.draft, resolutions: chosen, seen: data.to.id },
+      }),
     onSuccess: async (outcome) => {
       if (outcome._tag === "Unresolved") {
+        // Sides chosen against the release that was live may not fit the one that is now.
+        setChosen({});
         toast.warning("The live site changed again", {
-          description: "Check the conflicts below, then finish the update.",
+          description: "Choose a side for each conflict again, then finish the update.",
         });
         await queryClient.invalidateQueries({
           queryKey: draftUpdateQuery(props.site, props.draft).queryKey,

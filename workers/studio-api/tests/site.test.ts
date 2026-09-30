@@ -248,10 +248,12 @@ it.effect("a conflicting draft needs an update, which finishes once each conflic
       expect(preview.conflicts).toEqual([
         expect.objectContaining({ _tag: "Changed", draft: "Sail a boat", live: "Build a boat" }),
       ]);
-      expect((yield* site.update(meera, second.id, {}))._tag).toBe("Unresolved");
+      expect((yield* site.update(meera, second.id, {}, preview.to.id))._tag).toBe("Unresolved");
       const choice: Record<ConflictKey, Side> = {};
       for (const conflict of preview.conflicts) choice[conflict.key] = "draft";
-      expect(yield* site.update(meera, second.id, choice)).toEqual({ _tag: "Updated" });
+      expect(yield* site.update(meera, second.id, choice, preview.to.id)).toEqual({
+        _tag: "Updated",
+      });
       expect(heading(yield* opened(site, second.id))).toBe("Sail a boat");
     }),
   ),
@@ -299,6 +301,78 @@ it.effect("reconciling writes the live release to KV again, and queues its copy 
       expect(state.routing).toEqual(Option.some(harbourLive));
       yield* site.deliverOutbox;
       expect(Array.from(state.index.keys())).toEqual([harbourLive.release]);
+    }),
+  ),
+);
+
+it.effect("a draft closed while it's being published doesn't go live", () =>
+  withSite((site, state) =>
+    Effect.gen(function* () {
+      const { id } = yield* site.createDraft(sam, name("Heading"));
+      yield* site.applyBatch(sam, id, setHeading("Build a boat"));
+      const gate = yield* Deferred.make<void>();
+      state.manifestGate = gate;
+      const publishing = yield* Effect.forkChild(Effect.flip(site.publish(sam, id)));
+      yield* Deferred.await(state.manifestWriting);
+      yield* site.closeDraft(meera, id);
+      yield* Deferred.succeed(gate, undefined);
+      expect((yield* Fiber.join(publishing))._tag).toBe("DraftNotFound");
+      expect((yield* site.summary(id)).status).toBe("closed");
+      expect(state.routing).toEqual(Option.some(harbourLive));
+      expect((yield* site.releases).length).toBe(1);
+    }),
+  ),
+);
+
+it.effect("a closed draft can't be renamed", () =>
+  withSite((site) =>
+    Effect.gen(function* () {
+      const { id } = yield* site.createDraft(sam, name("Heading"));
+      yield* site.closeDraft(sam, id);
+      expect((yield* Effect.flip(site.renameDraft(id, name("Other"))))._tag).toBe("DraftNotFound");
+      expect((yield* site.summary(id)).name).toBe("Heading");
+    }),
+  ),
+);
+
+it.effect("sides chosen against a release that's no longer live are asked for again", () =>
+  withSite((site) =>
+    Effect.gen(function* () {
+      const first = yield* site.createDraft(sam, name("First"));
+      const behind = yield* site.createDraft(meera, name("Behind"));
+      const third = yield* site.createDraft(sam, name("Third"));
+      yield* site.applyBatch(meera, behind.id, setHeading("Sail a boat"));
+      yield* site.applyBatch(sam, first.id, setHeading("Build a boat"));
+      yield* published(site, first.id);
+      const preview = yield* site.previewUpdate(behind.id, {});
+      const choice: Record<ConflictKey, Side> = {};
+      for (const conflict of preview.conflicts) choice[conflict.key] = "draft";
+      // Another release goes live while Meera decides.
+      yield* site.applyBatch(sam, third.id, setIntro("Why come"));
+      yield* published(site, third.id);
+      const outcome = yield* site.update(meera, behind.id, choice, preview.to.id);
+      expect(outcome._tag).toBe("Unresolved");
+      expect((yield* site.summary(behind.id)).base.release).toBe(preview.from.id);
+    }),
+  ),
+);
+
+it.effect("a release whose KV write fails still reaches D1, so reconciling can repair KV", () =>
+  withSite((site, state) =>
+    Effect.gen(function* () {
+      yield* site.deliverOutbox;
+      const { id } = yield* site.createDraft(sam, name("Heading"));
+      yield* site.applyBatch(sam, id, setHeading("Build a boat"));
+      state.routingDown = true;
+      yield* Effect.exit(site.publish(sam, id));
+      expect(state.routing).toEqual(Option.some(harbourLive));
+      expect(yield* site.undelivered).toBe(true);
+      yield* site.deliverOutbox;
+      const live = yield* site.live;
+      expect(state.index.has(live.id)).toBe(true);
+      state.routingDown = false;
+      yield* site.reconcile;
+      expect(state.routing).toEqual(Option.some(liveReleaseOf(live)));
     }),
   ),
 );

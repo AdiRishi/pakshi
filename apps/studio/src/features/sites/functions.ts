@@ -63,11 +63,11 @@ export const getDraftUpdate = createServerFn({ method: "POST" })
   )
   .handler(({ data }) => studio((client) => client.draftUpdate(data)));
 
-/** Merges the live release into a draft, once every conflict has a side. */
+/** Merges the live release into a draft, once every conflict has a side chosen seeing that release. */
 export const updateDraft = createServerFn({ method: "POST" })
   .validator(
     Schema.toStandardSchemaV1(
-      Schema.Struct({ site: SiteId, draft: DraftId, resolutions: Resolutions }),
+      Schema.Struct({ site: SiteId, draft: DraftId, resolutions: Resolutions, seen: ReleaseId }),
     ),
   )
   .handler(({ data }) => studio((client) => client.updateDraft(data)));

@@ -166,7 +166,10 @@ export type DraftUpdate = typeof DraftUpdate.Type;
 export const UpdateOutcome = Schema.TaggedUnion({
   /** The draft now starts from the live release. */
   Updated: {},
-  /** Conflicts still need a side. The live site may have moved on, so these are current. */
+  /**
+   * Conflicts still need a side, or the live site moved on since the sides
+   * were chosen and they need choosing again. These conflicts are current.
+   */
   Unresolved: { conflicts: Schema.Array(Conflict) },
 });
 export type UpdateOutcome = typeof UpdateOutcome.Type;
@@ -237,7 +240,8 @@ export class StudioRpcs extends RpcGroup.make(
     error: draftError,
   }),
   Rpc.make("updateDraft", {
-    payload: { ...forDraft, resolutions: Resolutions },
+    /** `seen` is the live release the sides were chosen against. */
+    payload: { ...forDraft, resolutions: Resolutions, seen: ReleaseId },
     success: UpdateOutcome,
     error: draftError,
   }),

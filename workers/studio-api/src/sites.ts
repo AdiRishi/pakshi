@@ -10,14 +10,11 @@ import { loadAccess } from "./viewer.ts";
 const SiteRow = Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId });
 
 /**
- * A site the person may act on with this permission. A site they can't reach
- * fails the same way as one that doesn't exist.
+ * A site the person holds any permission on, with the permissions they hold
+ * there. A site they hold none on fails the same way as one that doesn't
+ * exist, so IDs reveal nothing.
  */
-export const siteFor = Effect.fn("StudioApi.siteFor")(function* (
-  person: Person,
-  site: SiteId,
-  permission: Permission,
-) {
+export const siteOf = Effect.fn("StudioApi.siteOf")(function* (person: Person, site: SiteId) {
   const sql = yield* SqlClient.SqlClient;
   const found = yield* SqlSchema.findOneOption({
     Request: SiteId,
@@ -27,13 +24,23 @@ export const siteFor = Effect.fn("StudioApi.siteFor")(function* (
   if (Option.isNone(found)) return yield* new SiteNotFound({ site });
   const { access } = yield* loadAccess(person.id);
   const resource = { kind: "site", id: found.value.id, brand: found.value.brand_id } as const;
-  if (!authorize(access, permission, resource)) return yield* new SiteNotFound({ site });
-  return {
-    id: found.value.id,
-    name: found.value.name,
-    brand: found.value.brand_id,
-    permissions: permissionsOn(access, resource),
-  };
+  const permissions = permissionsOn(access, resource);
+  if (permissions.length === 0) return yield* new SiteNotFound({ site });
+  return { id: found.value.id, name: found.value.name, brand: found.value.brand_id, permissions };
+});
+
+/**
+ * A site the person may act on with this permission. A site they can't reach
+ * that way fails the same way as one that doesn't exist.
+ */
+export const siteFor = Effect.fn("StudioApi.siteFor")(function* (
+  person: Person,
+  site: SiteId,
+  permission: Permission,
+) {
+  const found = yield* siteOf(person, site);
+  if (!found.permissions.includes(permission)) return yield* new SiteNotFound({ site });
+  return found;
 });
 
 const MediaRow = Schema.Struct({
