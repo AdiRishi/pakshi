@@ -189,6 +189,8 @@ These rules must each hold, and each has a test:
 
 **Presence:** the editor publishes the person's selected block, focused field and typing state, and draws other people's as outlines labelled with their names. The agent appears as the agent acting for its user.
 
+**Merges and publishing:** a merge reaches the editor as a remote batch led by a `rebase`, like any other change. If it moves the draft to block versions the editor didn't load, the editor asks the person to open the draft again. When someone publishes or closes the draft, everyone in it is told, and it takes no more changes; when another draft goes live, the editor shows that this one is behind.
+
 **Reconnecting:** after a reconnect, the editor resends its unconfirmed batches. If `SiteDoc` sends a fresh copy of the draft instead, the editor replays its pending batches over it.
 
 ### Undo

@@ -23,7 +23,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [2. Editing content](#2-editing-content)
 - [x] [3. Editing structure](#3-editing-structure)
 - [x] [4. Live co-editing](#4-live-co-editing)
-- [ ] [5. Publishing and merging](#5-publishing-and-merging)
+- [x] [5. Publishing and merging](#5-publishing-and-merging)
 - [ ] [6. Approvals, sharing and previews](#6-approvals-sharing-and-previews)
 - [ ] [7. The agent](#7-the-agent)
 - [ ] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
@@ -144,11 +144,11 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 **Done when:**
 
 - Scripted merge cases produce the expected valid result for every conflict type, the non-conflicts (identical changes, additions on both sides), site-level parts, and sides on different block versions.
-- A publish and a rollback are each live on a production platform subdomain within 60 seconds.
 - Two publishes started at once on one site happen one after the other.
 - The reconcile job restores a KV entry that was changed by hand.
-- After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
 - A draft edited after it was submitted stays open after publishing, and keeps only its later edits.
+
+The checks that a publish and a rollback are live on a production platform subdomain within 60 seconds, and that no cached page links to CSS or JavaScript a `sites` deploy removed, moved to checkpoint 9, which builds domains and needs production ([decision 052](/decision-log#decision-052)).
 
 **Proves:** the three-way merge.
 
@@ -235,7 +235,7 @@ Everything else a real site needs.
 - The [media library](/product-spec#media): brand and site libraries, uploads from the library and from the editor's media popover, Cloudflare Images, alt text, and retention.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
-- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check. Serving from a custom domain is also what turns on the page cache ([decision 027](/decision-log#decision-027)).
+- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check, and every site's platform subdomain in production. Serving from a custom domain is also what turns on the page cache ([decision 027](/decision-log#decision-027)).
 - [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window.
 
 **Demo:** build a site with a registration form on a custom subdomain, submit the form, see the notification, and export the submission.
@@ -245,6 +245,8 @@ Everything else a real site needs.
 - A form post lands only in that site's `SiteSubmissions` and sends its notification.
 - Flooding one site's form leaves another site's forms working.
 - A custom hostname serves over HTTPS in production.
+- A publish and a rollback are each live on a production platform subdomain within 60 seconds.
+- After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
 - An unpublished page returns 410 and leaves the sitemap and menus.
 - A deleted site stops serving at once, and an org admin can restore it within 30 days.
 
