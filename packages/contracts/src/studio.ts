@@ -366,10 +366,15 @@ export const PreviewPage = Schema.TaggedUnion({
 });
 export type PreviewPage = typeof PreviewPage.Type;
 
-/** A page of a submission, or of the live release beside it, with the blocks the submission changed. */
-export const ReviewPage = Schema.Struct({
-  view: SiteView,
-  changed: Schema.Array(BlockId),
+/**
+ * A page of a submission, or of the live release beside it, with the blocks
+ * the submission changed, or word that the submission no longer has the
+ * snapshot asked for.
+ */
+export const ReviewPage = Schema.TaggedUnion({
+  Page: { view: SiteView, changed: Schema.Array(BlockId) },
+  /** A release merged into the submission since the reviewer loaded it. */
+  Changed: {},
 });
 export type ReviewPage = typeof ReviewPage.Type;
 
@@ -504,6 +509,8 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("reviewPage", {
     payload: {
       ...forSubmission,
+      /** The submission snapshot the reviewer is looking at, so the page shown is the one they decide on. */
+      snapshot: SnapshotId,
       version: Schema.Literals(["submitted", "live"]),
       path: PagePath,
     },

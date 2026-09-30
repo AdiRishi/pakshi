@@ -386,8 +386,13 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#call((site) => site.draftView(id, path));
   }
 
-  submissionView(id: SubmissionId, version: "submitted" | "live", path: PagePath) {
-    return this.#call((site) => site.submissionView(id, version, path));
+  submissionView(
+    id: SubmissionId,
+    snapshot: SnapshotId,
+    version: "submitted" | "live",
+    path: PagePath,
+  ) {
+    return this.#call((site) => site.submissionView(id, snapshot, version, path));
   }
 
   decide(

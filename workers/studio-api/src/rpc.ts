@@ -515,14 +515,14 @@ const handlers = (env: StudioApiEnv) =>
               }),
             ),
           ),
-        reviewPage: ({ site, submission, version, path }) =>
+        reviewPage: ({ site, submission, snapshot, version, path }) =>
           SignedIn.use((person) =>
             withCore("review page")(
               Effect.gen(function* () {
                 yield* siteOf(person, site);
                 const doc = yield* siteDoc(env, site);
                 return yield* outcome(SubmissionNotFound, async (): Promise<Outcome<ReviewPage>> =>
-                  doc.submissionView(submission, version, path),
+                  doc.submissionView(submission, snapshot, version, path),
                 );
               }),
             ),

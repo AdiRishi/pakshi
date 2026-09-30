@@ -32,22 +32,23 @@ const doctype = "<!doctype html>";
 /**
  * Pages link to each other, and frozen block versions to the home page, by
  * their address on the site. Inside a preview those addresses sit under the
- * preview's own, so the page's links are moved there. React writes every
+ * preview's own, so `address` says where each goes. React writes every
  * attribute as `name="value"` and escapes quotes in text, so this finds
  * link addresses only.
  */
-const underBase = (markup: string, base: string) =>
-  markup.replaceAll(' href="/', ` href="${base}/`);
+const linksTo = (markup: string, address: (path: string) => string) =>
+  markup.replaceAll(/ href="(\/[^"]*)"/g, (_, path: string) => ` href="${address(path)}"`);
 
 /**
  * A page of a site as its own document, rendered with the same blocks and
- * theme as `sites`, under `base`. Its links stay under `base`, and its
- * images load from there too.
+ * theme as `sites`. Its images load from under `base`, and `address` says
+ * where each of its links to the site's pages goes.
  */
 export const siteDocument = async (
   view: SiteView,
   options: {
     readonly base: string;
+    readonly address: (path: string) => string;
     readonly bar: Parameters<typeof PreviewBar>[0] | null;
     /** Blocks to mark as changed, for a review. */
     readonly changed: ReadonlyArray<BlockId>;
@@ -110,13 +111,22 @@ export const siteDocument = async (
           />,
         );
   return new Response(
-    `${doctype}<html lang="en">${head}<body>${bar}${underBase(body, options.base)}</body></html>`,
+    `${doctype}<html lang="en">${head}<body>${bar}${linksTo(body, options.address)}</body></html>`,
     { status: page === null ? 404 : 200, headers: privateHeaders },
   );
 };
 
-/** Studio's answer for a preview or review that isn't there, or isn't open to the visitor. */
-export const unavailableDocument = (title: string, description: string) =>
+/**
+ * Studio's answer for a preview or review that isn't there, isn't open to
+ * the visitor, or has changed. Its action opens in the whole window, since a
+ * review shows in a frame.
+ */
+export const unavailableDocument = (page: {
+  readonly title: string;
+  readonly description: string;
+  readonly status: number;
+  readonly action: { readonly label: string; readonly href: string };
+}) =>
   new Response(
     doctype +
       renderToStaticMarkup(
@@ -125,25 +135,29 @@ export const unavailableDocument = (title: string, description: string) =>
             <meta charSet="utf-8" />
             <meta name="viewport" content="width=device-width, initial-scale=1" />
             <meta name="robots" content="noindex, nofollow" />
-            <title>{`${title} · Pakshi`}</title>
+            <title>{`${page.title} · Pakshi`}</title>
             <link rel="stylesheet" href={appCss} />
           </head>
           <body>
             <Empty className="min-h-screen">
               <EmptyHeader>
                 <EmptyTitle>
-                  <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
+                  <h1 className="text-2xl font-semibold tracking-tight">{page.title}</h1>
                 </EmptyTitle>
-                <EmptyDescription>{description}</EmptyDescription>
+                <EmptyDescription>{page.description}</EmptyDescription>
               </EmptyHeader>
               <EmptyContent>
-                <a href="/" className={buttonVariants({ variant: "outline" })}>
-                  Go to Studio
+                <a
+                  href={page.action.href}
+                  target="_top"
+                  className={buttonVariants({ variant: "outline" })}
+                >
+                  {page.action.label}
                 </a>
               </EmptyContent>
             </Empty>
           </body>
         </html>,
       ),
-    { status: 404, headers: privateHeaders },
+    { status: page.status, headers: privateHeaders },
   );

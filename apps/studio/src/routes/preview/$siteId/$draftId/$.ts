@@ -9,10 +9,13 @@ import { siteDocument, unavailableDocument } from "@/features/preview/render";
 import { callStudio } from "@/server/studio-rpc";
 
 const notShared = () =>
-  unavailableDocument(
-    "This preview isn't available",
-    "The draft was published or closed, or it isn't shared with you. Ask whoever sent the link.",
-  );
+  unavailableDocument({
+    title: "This preview isn't available",
+    description:
+      "The draft was published or closed, or it isn't shared with you. Ask whoever sent the link.",
+    status: 404,
+    action: { label: "Go to Studio", href: "/" },
+  });
 
 /**
  * A draft's preview, for anyone it's shared with, signed in or not: each
@@ -45,6 +48,7 @@ export const Route = createFileRoute("/preview/$siteId/$draftId/$")({
             const base = `${previewBasePath}/${preview.site.id}/${preview.draft.id}`;
             return siteDocument(preview.view, {
               base,
+              address: (path) => `${base}${path}`,
               bar: {
                 title: `Preview of the "${preview.draft.name}" draft, ${preview.site.name}`,
                 notes: ["Shows the latest saved changes", "Forms don't send in previews"],
