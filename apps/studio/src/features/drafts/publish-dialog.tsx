@@ -72,24 +72,31 @@ export function PublishDialog(props: {
   readonly onNeedsUpdate: () => Promise<void>;
 }) {
   const [incomplete, setIncomplete] = useState<ReadonlyArray<Incomplete>>([]);
+  // Closing forgets the last attempt: its fields may be filled in, or its error gone, by the next.
+  const close = () => {
+    setIncomplete([]);
+    publish.reset();
+    props.onOpenChange(false);
+  };
   const publish = useMutation({
     mutationFn: () => publishDraft({ data: { site: props.site, draft: props.draft.id } }),
+    onMutate: () => setIncomplete([]),
     onSuccess: async (outcome) => {
       switch (outcome._tag) {
         case "Published":
-          props.onOpenChange(false);
+          close();
           return props.onPublished(outcome.release);
         case "Incomplete":
           return setIncomplete(outcome.incomplete);
         case "NeedsUpdate":
-          props.onOpenChange(false);
+          close();
           return props.onNeedsUpdate();
       }
     },
   });
 
   return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
+    <Dialog open={props.open} onOpenChange={(open) => (open ? props.onOpenChange(true) : close())}>
       <DialogContent className="sm:max-w-xl">
         <DialogHeader>
           <DialogTitle>Publish "{props.draft.name}"</DialogTitle>
@@ -103,7 +110,7 @@ export function PublishDialog(props: {
         )}
         {publish.error !== null && <FieldError>{publish.error.message}</FieldError>}
         <DialogFooter>
-          <Button variant="outline" onClick={() => props.onOpenChange(false)}>
+          <Button variant="outline" onClick={close}>
             Cancel
           </Button>
           <Button disabled={publish.isPending} onClick={() => publish.mutate()}>

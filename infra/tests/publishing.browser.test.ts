@@ -84,8 +84,14 @@ test("two drafts publish one after the other through an update, and a rollback u
   await sam.getByRole("button", { name: "Publish" }).click();
   await sam.getByRole("dialog").getByRole("button", { name: "Publish" }).click();
   await expect(sam.getByText("Summer copy is published")).toBeVisible();
-  await expect.poll(() => liveHome(sam)).toContain(`${visible} every afternoon`);
-  expect(await liveHome(sam)).toContain("Places are limited soon");
+  await expect
+    .poll(async () => {
+      const html = await liveHome(sam);
+      return (
+        html.includes(`${visible} every afternoon`) && html.includes("Places are limited soon")
+      );
+    })
+    .toBe(true);
 
   // Meera rolls back Sam's publish, and her release is live again.
   await meera.goto(`${new URL(meeraDraft).origin}/sites/site_harbour/releases`);
