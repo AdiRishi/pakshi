@@ -1,0 +1,47 @@
+diff --git a/bin/exec.js b/bin/exec.js
+index 37c52045c5430a4cc2fdbb2d2e549176b326c4aa..c1cbb06ed08bdaa132eb99a4fc68fd662f049bc5 100644
+--- a/bin/exec.js
++++ b/bin/exec.js
+@@ -7166,7 +7166,8 @@ const make = (stack, options = {}) => Effect.gen(function* () {
+ 			if (hasModeSwitched(mode, oldState)) return resourceExpr;
+ 			const oldProps = oldState.status === "updating" ? oldState.old.props : oldState.props;
+ 			const oldBindings = dedupeBindings(oldState.bindings ?? []);
+-			const newBindings = dedupeBindings(stack.bindings[resource.FQN] ?? []);
++			const bindings = stack.bindings[resource.FQN] ?? [];
++			const newBindings = dedupeBindings(combinedCycleMembers.has(resource.FQN) ? bindings : yield* resolveInput(bindings));
+ 			const diff = yield* provider.diff ? provider.diff({
+ 				id: resource.LogicalId,
+ 				fqn: resource.FQN,
+diff --git a/lib/Plan.js b/lib/Plan.js
+index 5370eeff04025209f70670dd162ef6fa6ce28e04..0a75908d957caa97a0f23b8e49a966d28b616231 100644
+--- a/lib/Plan.js
++++ b/lib/Plan.js
+@@ -390,7 +390,10 @@ Effect.gen(function* () {
+                 // diffs that hash/compare the arrays never churn on
+                 // registration-order flips (or on legacy unsorted state).
+                 const oldBindings = dedupeBindings(oldState.bindings ?? []);
+-                const newBindings = dedupeBindings(stack.bindings[resource.FQN] ?? []);
++                const bindings = stack.bindings[resource.FQN] ?? [];
++                const newBindings = dedupeBindings(combinedCycleMembers.has(resource.FQN)
++                    ? bindings
++                    : yield* resolveInput(bindings));
+                 const diff = yield* provider.diff
+                     ? provider
+                         .diff({
+diff --git a/src/Plan.ts b/src/Plan.ts
+index 33ae5c615915fa18a7bb64ca0d8d3ada8fd83400..255f7167c181cc2cf92055802a2b7d951ed36496 100644
+--- a/src/Plan.ts
++++ b/src/Plan.ts
+@@ -743,8 +743,11 @@ export const make = <A>(
+               // diffs that hash/compare the arrays never churn on
+               // registration-order flips (or on legacy unsorted state).
+               const oldBindings = dedupeBindings(oldState.bindings ?? []);
++              const bindings = stack.bindings[resource.FQN] ?? [];
+               const newBindings = dedupeBindings(
+-                stack.bindings[resource.FQN] ?? [],
++                combinedCycleMembers.has(resource.FQN)
++                  ? bindings
++                  : yield* resolveInput(bindings),
+               );
+ 
+               const diff = yield* provider.diff

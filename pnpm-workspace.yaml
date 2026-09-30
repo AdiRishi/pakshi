@@ -106,3 +106,12 @@ overrides:
 peerDependencyRules:
   allowedVersions:
     "capnp-es@0.0.16>typescript": "7"
+
+patchedDependencies:
+  # A Worker's local `url` changes between `alchemy dev` runs, but the planner
+  # handed downstream bindings the previous run's value whenever the Worker's
+  # own bindings held Outputs, so studio-api kept a stale test identity
+  # provider address. Backports the planner change from
+  # https://github.com/alchemy-run/alchemy/pull/1379 (in its three copies:
+  # src, lib and the bundled bin/exec.js). Remove when upgrading past beta.79.
+  alchemy@2.0.0-beta.79: patches/alchemy@2.0.0-beta.79.patch
