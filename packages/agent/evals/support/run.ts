@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import type { Selected, SitePlan } from "@repo/contracts/agent";
+import type { Part, Selected, SitePlan } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import { PageId, SourceId } from "@repo/contracts/ids";
 import { Effect, Layer } from "effect";
@@ -12,6 +12,23 @@ import { desk } from "../../tests/support/workspace.ts";
 import { restGateway } from "./gateway.ts";
 
 const person = { id: "user_eval", name: "Sam Okafor" };
+
+/** What the agent did and said in a conversation, in one line. */
+const transcript = (parts: ReadonlyArray<Part>) =>
+  parts
+    .flatMap((part) => {
+      switch (part._tag) {
+        case "Activity":
+          return [`[${part.label}]`];
+        case "Text":
+          return part.text.trim() === "" ? [] : [`"${part.text.trim()}"`];
+        case "Question":
+          return [`[asked: ${part.question}]`];
+        default:
+          return [`[${part._tag}]`];
+      }
+    })
+    .join(" ");
 
 /**
  * One conversation with the real model against a draft in memory: each
@@ -61,5 +78,9 @@ export const converse = (options: {
         }).pipe(Effect.provide(Layer.merge(layer, model))),
       );
     }
+    // Every conversation's transcript goes in the report, so a failed task shows what happened.
+    process.stdout.write(
+      `\n> ${options.messages.join(" / ")}\n  ${statuses.join(", ")}: ${transcript(state.parts)}\n`,
+    );
     return { state, statuses, contracts };
   });

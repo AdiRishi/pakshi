@@ -89,30 +89,38 @@ test("the agent route reaches only the signed-in person's own conversation", asy
   expect(own).toMatchObject({ _tag: "Synced", sources: [{ name: "notes.md" }] });
 });
 
-test("the agent edits a draft for its person while someone else watches, and a turn undoes whole", async ({
-  browser,
-}) => {
-  const meera = await signedIn(browser, "Meera Kapoor", { width: 1440, height: 1000 });
-  const draftUrl = await newDraft(meera, "site_harbour", "Agent edit");
-  const canvas = await openInEditor(meera, draftUrl, "pg_home");
-  const sam = await signedIn(browser, "Sam Okafor", { width: 1440, height: 1000 });
-  const watching = await openInEditor(sam, draftUrl, "pg_home");
-  const before = await heading(canvas, "b_hero").textContent();
+// These tests call the real model, which costs money, so they run only when asked for.
+test.describe("with the real model", () => {
+  test.skip(
+    process.env["PAKSHI_AGENT_TESTS"] !== "1",
+    "Set PAKSHI_AGENT_TESTS=1 to run tests that call the model.",
+  );
 
-  await meera
-    .getByLabel("Message Pakshi")
-    .fill("Change the hero heading to 'Build a boat in five days'.");
-  await meera.getByLabel("Message Pakshi").press("Enter");
+  test("the agent edits a draft for its person while someone else watches, and a turn undoes whole", async ({
+    browser,
+  }) => {
+    const meera = await signedIn(browser, "Meera Kapoor", { width: 1440, height: 1000 });
+    const draftUrl = await newDraft(meera, "site_harbour", "Agent edit");
+    const canvas = await openInEditor(meera, draftUrl, "pg_home");
+    const sam = await signedIn(browser, "Sam Okafor", { width: 1440, height: 1000 });
+    const watching = await openInEditor(sam, draftUrl, "pg_home");
+    const before = await heading(canvas, "b_hero").textContent();
 
-  // The change reaches both canvases, and Sam sees who made it.
-  await expect(heading(watching, "b_hero")).toHaveText("Build a boat in five days", {
-    timeout: 120_000,
+    await meera
+      .getByLabel("Message Pakshi")
+      .fill("Change the hero heading to 'Build a boat in five days'.");
+    await meera.getByLabel("Message Pakshi").press("Enter");
+
+    // The change reaches both canvases, and Sam sees who made it.
+    await expect(heading(watching, "b_hero")).toHaveText("Build a boat in five days", {
+      timeout: 120_000,
+    });
+    await expect(heading(canvas, "b_hero")).toHaveText("Build a boat in five days");
+    const changes = meera.getByRole("region", { name: "Changes" });
+    await expect(changes).toContainText("1 change to the draft", { timeout: 120_000 });
+
+    await changes.getByRole("button", { name: "Undo" }).click();
+    await expect(heading(watching, "b_hero")).toHaveText(before ?? "");
+    await expect(changes.getByText("Undone")).toBeVisible();
   });
-  await expect(heading(canvas, "b_hero")).toHaveText("Build a boat in five days");
-  const changes = meera.getByRole("region", { name: "Changes" });
-  await expect(changes).toContainText("1 change to the draft", { timeout: 120_000 });
-
-  await changes.getByRole("button", { name: "Undo" }).click();
-  await expect(heading(watching, "b_hero")).toHaveText(before ?? "");
-  await expect(changes.getByText("Undone")).toBeVisible();
 });

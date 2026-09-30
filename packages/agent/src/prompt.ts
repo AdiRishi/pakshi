@@ -55,7 +55,7 @@ export const systemPrompt = (contracts: BlockContracts, brief: SitePlan | null) 
     `Recipes for kinds of pages:\n${recipeIndex()}`,
     brief === null
       ? "There's no agreed plan yet."
-      : `The plan the person agreed, which is your brief:\n${JSON.stringify(brief)}`,
+      : `The person chose to build this plan, which is your brief. When they ask you to build it, build it now without proposing it again:\n${JSON.stringify(brief)}`,
   ].join("\n\n");
 
 /** What the agent is told with each of the person's messages: the draft now, and where they are. */

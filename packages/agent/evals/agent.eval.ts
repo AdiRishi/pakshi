@@ -233,7 +233,6 @@ const brief: SitePlan = {
       ],
     },
     {
-      page: null,
       title: "Visit",
       path: "/visit",
       recipe: "information",
@@ -287,7 +286,10 @@ const asking: ReadonlyArray<Task> = [
   task(
     "asks which heading when a request could mean several",
     Effect.map(
-      converse({ draft: harbourDraft, messages: ["Change the heading to something catchier."] }),
+      converse({
+        draft: harbourDraft,
+        messages: ["Change the section heading to something catchier."],
+      }),
       ({ state }) =>
         outcome(
           asked(state.parts) && !changed(state.parts),

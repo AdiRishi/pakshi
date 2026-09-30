@@ -1,22 +1,9 @@
 name: Agent evals
 
-# The evals call the real model through AI Gateway, so they run only when
-# what the agent reads or does changes: its prompts, tools and model
-# choices, and the block contracts and recipes it builds with.
+# The evals call the real model through AI Gateway and cost money on every
+# run, so they run only when someone starts them from the Actions tab, such
+# as after changing the agent's prompts, tools or models.
 on:
-  pull_request:
-    paths:
-      - "packages/agent/**"
-      - "packages/blocks/src/**"
-      - "packages/contracts/src/agent.ts"
-      - "packages/contracts/src/ops.ts"
-  push:
-    branches: [main]
-    paths:
-      - "packages/agent/**"
-      - "packages/blocks/src/**"
-      - "packages/contracts/src/agent.ts"
-      - "packages/contracts/src/ops.ts"
   workflow_dispatch:
 
 permissions:
