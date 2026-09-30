@@ -35,6 +35,10 @@ the editor canvas renders every fixture exactly as `sites` does
 (`infra/src/fixture-sites.ts`). The first holds every section and item fixture;
 the others exist because a site shows only one header and one footer fixture.
 
+A site's `SiteDoc` takes the release KV serves as its first and owns the live
+release from then on, so on a running dev stack a changed fixture reaches its
+site only after `pnpm dev:destroy`.
+
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
 

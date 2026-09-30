@@ -9,6 +9,13 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status            |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ----------------- |
+| 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted          |
+| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Accepted          |
+| 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted          |
+| 050 | A site's first release is the one KV serves                                        | 2026-09-30 | Accepted          |
+| 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts         | 2026-09-30 | Accepted          |
+| 048 | A rollback is a release of the snapshot that was live before                       | 2026-09-30 | Accepted          |
+| 047 | A merge commits as a batch of ops, led by a system-only rebase                     | 2026-09-30 | Accepted          |
 | 046 | Someone typing in a replaced field is told when they stop                          | 2026-09-30 | Accepted          |
 | 045 | Remote changes wait for composition, and the canvas keeps the view in place        | 2026-09-30 | Accepted          |
 | 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted          |
@@ -55,6 +62,66 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Accepted          |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted          |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted          |
+
+## 053 — Drafts behind the live site merge on their own when no one needs to decide [#decision-053]
+
+**Context.** The design requires a behind draft to be updated the next time someone opens it and before it's submitted. The Studio designs show an update screen for settling conflicts, but most merges have none, and sending people through a screen with nothing to decide adds a step for nothing.
+
+**Decision.** Opening a behind draft in the editor, or publishing it, merges the live release in when the merge has no conflicts, and carries on. Only a merge with conflicts sends the person to the update screen. The drafts list and the editor show a draft as behind until then.
+
+**Consequences.** Two publishes started at once both succeed, one after the other, when they don't conflict. The update screen is always a screen with decisions on it.
+
+## 052 — Publishing's production checks move to checkpoint 9, with domains [#decision-052]
+
+**Context.** Checkpoint 5 asked that a publish and a rollback be live on a production platform subdomain within 60 seconds, and that no cached page link to CSS or JavaScript a `sites` deploy removed. There's no production stack yet, and nothing builds the platform subdomain. The page cache works only on a custom domain ([decision 027](#decision-027)), and dev serves `sites` through Vite, so there's no deploy to observe locally either.
+
+**Decision.** Both checks move to checkpoint 9, which builds custom domains and the platform subdomain and needs production anyway. Checkpoint 5 proves in the dev stack that the next request serves a new release, and the page cache key already holds the release and the Worker version.
+
+**Consequences.** Nothing in checkpoint 5 has run against Cloudflare's network. Checkpoint 9 sets up production before its own checks.
+
+## 051 — The outbox copies to D1 only what something reads [#decision-051]
+
+**Context.** The design has `SiteDoc` keep the page and draft index and audit entries in D1 through its outbox. In checkpoint 5 the reconcile job reads release rows, and nothing yet reads the index or the audit log.
+
+**Decision.** The outbox is a general queue of copies, written in the same transaction as the change and delivered by the alarm. For now it carries release rows. The page and draft index arrive with the dashboards that read them, and audit entries with the audit log in checkpoint 10.
+
+**Consequences.** D1 holds every site's releases, which the reconcile job compares with KV.
+
+## 050 — A site's first release is the one KV serves [#decision-050]
+
+**Context.** `SiteDoc` becomes the source of truth for the live release and the only writer of KV's `site → release` entry. Non-production stages seed their sites by writing snapshots and KV directly, at deploy time, where no Durable Object can be reached.
+
+**Decision.** A `SiteDoc` that has recorded no release takes the one KV serves as its first, recorded as imported, and owns the site's live release from then on.
+
+**Rejected.** A non-production studio-api route that publishes the seed through `SiteDoc`, which needs studio-api reachable from the deploy-time seed.
+
+**Consequences.** On a running dev stack whose `SiteDoc`s have started, a changed fixture reaches its site only after `pnpm dev:destroy`, since the reconcile job puts KV back to what `SiteDoc` recorded. Test stages are fresh each time.
+
+## 049 — Items in lists and menus merge by ID, and clashing addresses are conflicts [#decision-049]
+
+**Context.** The design merges by block ID and field. A gallery's images or a menu's links are one field, so two people changing different images would conflict. And a merge of two valid sides can still be invalid: a page added on each side can take the same address.
+
+**Decision.** Lists inside props and menus merge item by item and field by field, with the same ordering rules as blocks; anything that conflicts inside a list makes the whole list the conflict. Two pages that end up with one address are a conflict, where keeping one side's page removes the other's from the draft. Every conflict has a key naming what it's about, so a side chosen for it still applies when the merge is worked out again after more edits.
+
+**Consequences.** Merges need a person less often, and a merged draft is always one `applyOps` accepts.
+
+## 048 — A rollback is a release of the snapshot that was live before [#decision-048]
+
+**Context.** Rollback makes the release before the latest publish live again. The Releases screen in the Studio designs lists a rollback as its own entry, with who did it and when, and offers no rollback of a rollback.
+
+**Decision.** Rolling back records a new release of the snapshot that was live before the latest publish, naming the publish it undid. Only a publish can be rolled back, so a rollback can't be repeated to walk further back.
+
+**Consequences.** A site's history is one list of releases, the latest live. Drafts that started from the rolled-back release are behind, like after any publish.
+
+## 047 — A merge commits as a batch of ops, led by a system-only rebase [#decision-047]
+
+**Context.** People may be editing a draft while it's updated, so a merge has to reach their editors, the batch log and the `writes` table like any change. Ops cover pages and blocks, but not the draft's base release, lockfile, theme, settings, forms or menus, which only a merge changes so far.
+
+**Decision.** A merge's result becomes one batch of ordinary ops against the draft, led by a `rebase` op that moves the draft onto the release and sets those site-wide values. Only `SiteDoc` makes one: a person's batch that carries it is refused. Publishing a draft that someone edited meanwhile commits a `rebase` too, so the draft starts from the release it just became. An editor that receives a merge to block versions it didn't load asks the person to open the draft again. When menus get their editing screen in checkpoint 9, they get ops of their own and leave `rebase`.
+
+**Rejected.** Replacing the draft wholesale, which would lose who wrote each part, and with it undo's rule and the notices when a change is replaced.
+
+**Consequences.** Broadcast, catch-up, undo and history need nothing new for merges, and someone whose field a merge replaces is told.
 
 ## 046 — Someone typing in a replaced field is told when they stop [#decision-046]
 
