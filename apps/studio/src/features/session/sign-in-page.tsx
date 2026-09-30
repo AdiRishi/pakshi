@@ -12,7 +12,12 @@ import { CircleAlertIcon } from "lucide-react";
 
 import { Logo } from "@/components/logo";
 
-export function SignInPage(props: { readonly organizationName: string; readonly failed: boolean }) {
+export function SignInPage(props: {
+  readonly organizationName: string;
+  readonly failed: boolean;
+  /** Where to go once signed in. */
+  readonly back: string;
+}) {
   return (
     <div className="flex min-h-screen bg-card">
       <section
@@ -43,7 +48,11 @@ export function SignInPage(props: { readonly organizationName: string; readonly 
               </Alert>
             )}
             <a
-              href="/sign-in/start"
+              href={
+                props.back === "/"
+                  ? "/sign-in/start"
+                  : `/sign-in/start?redirect=${encodeURIComponent(props.back)}`
+              }
               className={buttonVariants({ size: "lg", className: "h-11 w-full font-bold" })}
             >
               Continue with {props.organizationName} account
