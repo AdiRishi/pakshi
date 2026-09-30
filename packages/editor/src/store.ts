@@ -149,6 +149,8 @@ export class EditorStore {
   readonly #wrote = new Set<string>();
   /** The field being typed in, whose undo step is still growing. */
   #burst: string | null = null;
+  /** The values the current burst of typing writes, by `valueKey`. */
+  #burstValues = new Set<string>();
   /** Someone replaced what the person is typing: told when the typing stops, unless they type over it. */
   #replacedWhileTyping: { readonly key: string; readonly notice: Notice } | null = null;
   #burstTimer: ReturnType<typeof setTimeout> | undefined;
@@ -206,7 +208,9 @@ export class EditorStore {
   };
 
   #showRemote(next: Partial<Omit<EditorState, "status" | "canUndo" | "canRedo">>) {
-    for (const listener of this.#beforeRemote) listener();
+    // Listeners note what's on screen for the render that follows, so only a new view warrants it.
+    if (next.view !== undefined && next.view !== this.#state.view)
+      for (const listener of this.#beforeRemote) listener();
     this.#set(next);
   }
 
@@ -260,8 +264,12 @@ export class EditorStore {
     const last = this.#undo.at(-1);
     if (extending && last !== undefined) this.#undo[this.#undo.length - 1] = { ...last, redo: ops };
     else this.#undo.push({ undo: result.inverse, redo: ops });
+    if (burst !== this.#burst) this.#burstValues = new Set();
     this.#burst = burst;
-    if (burst !== null && this.#replacedWhileTyping?.key === burst)
+    const written = ops.flatMap((op) => valueKey(op) ?? []);
+    if (burst !== null) for (const key of written) this.#burstValues.add(key);
+    const typingOver = this.#replacedWhileTyping;
+    if (typingOver !== null && written.some((key) => overlaps(key, typingOver.key)))
       this.#replacedWhileTyping = null;
     this.#redo = [];
     if (burst !== null) this.#typed();
@@ -273,6 +281,7 @@ export class EditorStore {
   /** Ends the current burst of typing, so the next keystroke starts a new undo step. */
   endBurst() {
     this.#burst = null;
+    this.#burstValues = new Set();
     this.#stopTyping();
     this.#tellReplacedWhileTyping();
     this.endBurstBatch();
@@ -286,6 +295,7 @@ export class EditorStore {
   cancelBurst() {
     if (this.#burst === null) return;
     this.#burst = null;
+    this.#burstValues = new Set();
     this.#stopTyping();
     this.#tellReplacedWhileTyping();
     this.#pending = this.#pending.map((pending) => ({ ...pending, burst: null }));
@@ -499,12 +509,10 @@ export class EditorStore {
       if (person !== this.person.id || op === undefined || !this.#wroteHere(op)) continue;
       if (this.#willReplace(op)) continue;
       const part = partChanged(op, confirmed, this.contracts);
-      if (op.op === "setProp" && fieldKey(op.target, op.block, op.path) === this.#burst)
+      const key = valueKey(op);
+      if (key !== null && Array.from(this.#burstValues).some((typed) => overlaps(typed, key)))
         // They're still typing there: they're told when they stop, unless they type over it.
-        this.#replacedWhileTyping = {
-          key: this.#burst,
-          notice: replacedNotice(batch.actor.name, [part]),
-        };
+        this.#replacedWhileTyping = { key, notice: replacedNotice(batch.actor.name, [part]) };
       else parts.push(part);
     }
     if (parts.length > 0) this.#onNotice(replacedNotice(batch.actor.name, parts));
@@ -522,15 +530,17 @@ export class EditorStore {
     return key !== null && Array.from(this.#wrote).some((written) => overlaps(written, key));
   }
 
-  /** Whether a batch of the person's that SiteDoc hasn't confirmed writes the same field, so it will win. */
+  /** Whether a batch of the person's that SiteDoc hasn't confirmed writes the same value, so it will win. */
   #willReplace(op: Op) {
-    if (op.op !== "setProp") return false;
-    const key = fieldKey(op.target, op.block, op.path);
-    return this.#pending.some(({ batch }) =>
-      batch.ops.some(
-        (pending) =>
-          pending.op === "setProp" && fieldKey(pending.target, pending.block, pending.path) === key,
-      ),
+    const key = valueKey(op);
+    return (
+      key !== null &&
+      this.#pending.some(({ batch }) =>
+        batch.ops.some((pending) => {
+          const pendingKey = valueKey(pending);
+          return pendingKey !== null && overlaps(pendingKey, key);
+        }),
+      )
     );
   }
 

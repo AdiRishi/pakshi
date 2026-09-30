@@ -1,4 +1,5 @@
 import { BlockId, BlockType } from "@repo/contracts/ids";
+import type { ServerMessage } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup } from "vitest-browser-react";
@@ -6,7 +7,7 @@ import { userEvent } from "vitest/browser";
 
 import { insertOp, moveOp } from "../src/structure.ts";
 import { home, openEditor } from "./support/mount.tsx";
-import { definitions, fakeSiteDoc, fixtureDraft, sam } from "./support/site-doc.ts";
+import { definitions, fakeSiteDoc, fixtureDraft, meera, sam } from "./support/site-doc.ts";
 
 /*
  * The rules for other people's changes, from the editor spec: each one
@@ -202,6 +203,47 @@ describe("other people's changes", () => {
     expect(Math.abs((block?.getBoundingClientRect().top ?? 0) - (before ?? 0))).toBeLessThan(1);
   });
 
+  test("leave the view where the person scrolled it after a reconnect that missed nothing", async () => {
+    const siteDoc = fakeSiteDoc();
+    const canvas = (await openEditor({ siteDoc })).canvas();
+    const view = canvas.defaultView;
+    if (view === null) throw new Error("The canvas has no window.");
+    view.scrollTo(0, 200);
+    siteDoc.drop(meera);
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    view.scrollTo(0, 600);
+    const title = document.querySelector<HTMLInputElement>("aside[aria-label='Settings'] input");
+    title?.focus();
+    await userEvent.keyboard("!");
+    await expect.poll(() => siteDoc.draft().pages[home]?.meta.title).toBe("Home!");
+    expect(view.scrollY).toBe(600);
+  });
+
+  test("wait for an input method in a settings field, then apply around what it composed", async () => {
+    const siteDoc = fakeSiteDoc();
+    await openEditor({ siteDoc });
+    const title = document.querySelector<HTMLInputElement>("aside[aria-label='Settings'] input");
+    if (title === null) throw new Error("The settings panel shows no page title.");
+    title.focus();
+    title.setSelectionRange(4, 4);
+    title.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
+    // What an input method does as it composes: the text changes, and input fires.
+    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(
+      title,
+      "Home 夏",
+    );
+    title.dispatchEvent(new InputEvent("input", { bubbles: true, data: " 夏", isComposing: true }));
+    siteDoc.commit(sam, [{ op: "setMeta", page: home, field: "title", value: "Our Home" }]);
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    expect(title.value).toBe("Home 夏");
+    expect(siteDoc.log().map((batch) => batch.actor.id)).toEqual([sam.id]);
+    title.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: " 夏" }));
+    expect(title.value).toBe("Our Home 夏");
+    await expect
+      .poll(() => siteDoc.draft().pages[home]?.meta.title, { timeout: 3000 })
+      .toBe("Our Home 夏");
+  });
+
   test("never enter the person's undo, in the editor or in a rich text field", async () => {
     const siteDoc = fakeSiteDoc();
     const canvas = (await openEditor({ siteDoc })).canvas();
@@ -248,5 +290,37 @@ describe("other people's presence", () => {
     expect(outline?.bottom).toBeGreaterThan(heading.bottom);
     link.close();
     await expect.poll(mark).toBeNull();
+  });
+
+  test("tells others which field someone is typing in from the settings panel", async () => {
+    const siteDoc = fakeSiteDoc();
+    const canvas = (await openEditor({ siteDoc })).canvas();
+    const seen: Array<ServerMessage> = [];
+    const link = siteDoc.connection(sam).open({
+      onOpen: () => link.send({ _tag: "Sync", revision: 0 }),
+      onMessage: (message) => seen.push(message),
+      onClose: () => undefined,
+    });
+    canvas.querySelector<HTMLElement>(`[data-pakshi-block='${hero}']`)?.click();
+    const control = await expect
+      .poll(() => document.getElementById(`pakshi-control-${home}-${hero}-heading`))
+      .toBeTruthy()
+      .then(() => document.getElementById(`pakshi-control-${home}-${hero}-heading`));
+    control?.focus();
+    await userEvent.keyboard("!");
+    const meeraNow = () =>
+      seen
+        .flatMap((message) =>
+          message._tag === "PeerChanged" && message.peer.person.id === meera.id
+            ? [message.peer.presence]
+            : [],
+        )
+        .at(-1);
+    await expect.poll(meeraNow).toEqual({
+      page: home,
+      focus: { target: home, block: hero, path: ["heading"] },
+      typing: true,
+    });
+    link.close();
   });
 });

@@ -267,6 +267,31 @@ describe("other people's changes", () => {
     ]);
   });
 
+  test("two people typing in the page's title are each told once, when they stop", async () => {
+    const siteDoc = fakeSiteDoc();
+    const mine = open(siteDoc, meera);
+    const theirs = open(siteDoc, sam);
+    const setTitle = (value: string): Op => ({ op: "setMeta", page, field: "title", value });
+    const typingInTitle = `meta:${page}:title`;
+    for (const title of ["M", "Me", "Mee"]) {
+      mine.store.run([setTitle(title)], typingInTitle);
+      await vi.advanceTimersByTimeAsync(350);
+      theirs.store.run([setTitle(title.replace("M", "S"))], typingInTitle);
+      await vi.advanceTimersByTimeAsync(350);
+    }
+    await settle();
+    expect(mine.notices).toEqual([]);
+    expect(theirs.notices).toEqual([]);
+    mine.store.endBurst();
+    theirs.store.endBurst();
+    // Sam's was the last write, so only Meera lost hers.
+    expect(siteDoc.draft().pages[page]?.meta.title).toBe("See");
+    expect(mine.notices).toEqual([
+      expect.objectContaining({ title: "Sam Okafor replaced your change." }),
+    ]);
+    expect(theirs.notices).toEqual([]);
+  });
+
   test("typing over someone's replacement tells them instead", async () => {
     const siteDoc = fakeSiteDoc();
     const mine = open(siteDoc, meera);

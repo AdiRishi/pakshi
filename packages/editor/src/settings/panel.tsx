@@ -152,9 +152,9 @@ function MetaText(props: {
     <Field data-invalid={errors.length > 0 || undefined}>
       <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
       {props.multiline === true ? (
-        <FieldTextarea {...shared} onChange={(event) => change(event.target.value)} />
+        <FieldTextarea {...shared} onValue={change} />
       ) : (
-        <FieldInput {...shared} onChange={(event) => change(event.target.value)} />
+        <FieldInput {...shared} onValue={change} />
       )}
       <FieldDescription>
         {props.description} {props.value.length} of {props.max} characters.
@@ -265,7 +265,7 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
             id={altId}
             value={cover.alt ?? ""}
             maxLength={250}
-            onChange={(event) => set({ ...cover, alt: event.target.value }, burst)}
+            onValue={(alt) => set({ ...cover, alt }, burst)}
             onBlur={endBurst}
           />
           <FieldDescription>
