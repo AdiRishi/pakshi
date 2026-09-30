@@ -2,8 +2,8 @@ import { expect, it } from "@effect/vitest";
 import { Effect, Schema, Stream } from "effect";
 import { LanguageModel, Tool, Toolkit } from "effect/unstable/ai";
 
-import { languageModel, type ModelRequest } from "../src/model.ts";
-import { eventStream, toolCallStream } from "./support/workers-ai.ts";
+import { languageModel, type ModelRequest, openAiStream } from "../src/model.ts";
+import { eventStream, textStream, toolCallStream } from "./support/workers-ai.ts";
 
 const SetHeading = Tool.make("set_heading", {
   parameters: Schema.Struct({ block: Schema.String, heading: Schema.String }),
@@ -11,6 +11,13 @@ const SetHeading = Tool.make("set_heading", {
 });
 const tools = Toolkit.make(SetHeading);
 const handlers = tools.toLayer({ set_heading: () => Effect.succeed({ ok: true }) });
+
+/** The part of an OpenAI chunk that carries the reply's text. */
+const Chunk = Schema.Struct({
+  choices: Schema.Array(
+    Schema.Struct({ delta: Schema.Struct({ content: Schema.optional(Schema.String) }) }),
+  ),
+});
 
 const tags = { brand: "brand_harbour", site: "site_harbour", person: "user_sam" };
 
@@ -47,3 +54,18 @@ it.effect("a tool call streamed by Workers AI reaches the agent whole, with its 
     ]);
   }).pipe(Effect.provide(handlers)),
 );
+
+it("streams read at once keep their text whole, even split within a character", async () => {
+  const replies = ["é".repeat(60), "ü".repeat(60)];
+  const read = async (text: string) => {
+    const events = (await new Response(openAiStream(eventStream(textStream(text)))).text())
+      .split("\n\n")
+      .map((event) => event.replace(/^data: /, ""))
+      .filter((data) => data !== "" && data !== "[DONE]");
+    return events
+      .map((data) => Schema.decodeUnknownSync(Chunk)(JSON.parse(data)))
+      .flatMap((chunk) => chunk.choices.map((choice) => choice.delta.content ?? ""))
+      .join("");
+  };
+  expect(await Promise.all(replies.map(read))).toEqual(replies);
+});

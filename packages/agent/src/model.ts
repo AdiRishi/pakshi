@@ -52,7 +52,6 @@ export interface ModelRequest {
 export type SendToModel = (request: ModelRequest) => Promise<Response>;
 
 const encoder = new TextEncoder();
-const decoder = new TextDecoder();
 
 /** A request the provider makes: Workers AI's inputs for a model, with the model's name. */
 const ModelCall = Schema.fromJsonString(
@@ -105,6 +104,7 @@ const toOpenAiEvent = (
 /** Workers AI's server-sent events rewritten as OpenAI's. */
 export const openAiStream = (body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> => {
   const last = { id: "", model: "", created: 0 };
+  const decoder = new TextDecoder();
   let buffer = "";
   const emit = (controller: TransformStreamDefaultController<Uint8Array>, event: string) => {
     const data = event.startsWith("data:") ? event.slice(5).trim() : null;
@@ -137,7 +137,7 @@ export const gatewayClient = (send: SendToModel, tags: Omit<CostTags, "task">, t
       try: async () => {
         const body = request.body;
         if (body._tag !== "Uint8Array") throw new Error("A model call carries a JSON body.");
-        const { model, ...inputs } = decodeCall(decoder.decode(body.body));
+        const { model, ...inputs } = decodeCall(new TextDecoder().decode(body.body));
         const response = await send({
           model,
           inputs,
