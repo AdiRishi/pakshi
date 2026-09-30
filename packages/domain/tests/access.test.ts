@@ -1,14 +1,8 @@
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { describe, expect, test } from "vitest";
 
-import {
-  type Access,
-  authorize,
-  type DefaultRole,
-  type Permission,
-  type Resource,
-  type Scope,
-} from "../src/access.ts";
+import type { DefaultRole, Permission, Scope } from "@repo/contracts/access";
+import { type Access, authorize, type Resource } from "../src/access.ts";
 
 const brandA = BrandId.make("brand_a");
 const brandB = BrandId.make("brand_b");

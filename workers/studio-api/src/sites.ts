@@ -1,7 +1,8 @@
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { type Person, SiteNotFound } from "@repo/contracts/studio";
-import { authorize, type Permission, permissionsOn } from "@repo/domain/access";
+import type { Permission } from "@repo/contracts/access";
+import { authorize, permissionsOn } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 

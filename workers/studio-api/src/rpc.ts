@@ -22,7 +22,7 @@ import {
   Unauthenticated,
   type UpdateOutcome,
 } from "@repo/contracts/studio";
-import type { Permission } from "@repo/domain/access";
+import type { Permission } from "@repo/contracts/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Cause, Effect, Layer, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";

@@ -30,6 +30,10 @@ export type SnapshotId = typeof SnapshotId.Type;
 export const DraftId = prefixed("dr").pipe(Schema.brand("DraftId"));
 export type DraftId = typeof DraftId.Type;
 
+/** A draft submitted for approval. */
+export const SubmissionId = prefixed("sub").pipe(Schema.brand("SubmissionId"));
+export type SubmissionId = typeof SubmissionId.Type;
+
 /** A batch of edit operations. Its sender creates the ID, so a batch sent twice applies once. */
 export const BatchId = prefixed("bat").pipe(Schema.brand("BatchId"));
 export type BatchId = typeof BatchId.Type;

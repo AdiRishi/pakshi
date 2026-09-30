@@ -8,6 +8,10 @@
       "types": "./src/access.ts",
       "default": "./src/access.ts"
     },
+    "./approvals": {
+      "types": "./src/approvals.ts",
+      "default": "./src/approvals.ts"
+    },
     "./commit": {
       "types": "./src/commit.ts",
       "default": "./src/commit.ts"
@@ -27,6 +31,10 @@
     "./rebase": {
       "types": "./src/rebase.ts",
       "default": "./src/rebase.ts"
+    },
+    "./sharing": {
+      "types": "./src/sharing.ts",
+      "default": "./src/sharing.ts"
     }
   },
   "scripts": {

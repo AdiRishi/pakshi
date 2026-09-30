@@ -1,30 +1,6 @@
-import { BrandId, SiteId } from "@repo/contracts/ids";
+import { DefaultRole, Permission, Scope } from "@repo/contracts/access";
+import type { BrandId, SiteId } from "@repo/contracts/ids";
 import { Schema } from "effect";
-
-/** Every action Pakshi checks. Studio, the API, the agent and live editing all ask about these. */
-export const Permission = Schema.Literals([
-  "org.settings.edit",
-  "roles.manage",
-  "brand.create",
-  "brand.delete",
-  "brand.theme.edit",
-  "site.create",
-  "site.delete",
-  "site.settings.edit",
-  "members.manage",
-  "workflow.edit",
-  "page.edit",
-  "draft.share",
-  "site.publish",
-  "site.approve",
-  "site.approve_own",
-  "site.rollback",
-  "blocks.upgrade",
-  "blocks.request",
-  "submissions.read",
-  "submissions.export",
-]);
-export type Permission = typeof Permission.Type;
 
 const siteWork = [
   "page.edit",
@@ -43,47 +19,21 @@ const siteAdministration = [
   "submissions.export",
 ] as const satisfies ReadonlyArray<Permission>;
 
-export const DefaultRole = Schema.Literals([
-  "org-admin",
-  "brand-admin",
-  "site-admin",
-  "editor",
-  "approver",
-  "submissions-viewer",
-]);
-export type DefaultRole = typeof DefaultRole.Type;
-
+/** The permissions each default role holds. */
 export const defaultRoles = {
-  "org-admin": { title: "Org admin", permissions: Permission.literals },
-  "brand-admin": {
-    title: "Brand admin",
-    permissions: [
-      ...siteAdministration,
-      "brand.theme.edit",
-      "site.create",
-      "site.delete",
-      "workflow.edit",
-    ],
-  },
-  "site-admin": { title: "Site admin", permissions: siteAdministration },
-  editor: { title: "Editor", permissions: siteWork },
-  approver: { title: "Approver", permissions: ["site.approve"] },
-  "submissions-viewer": {
-    title: "Submissions viewer",
-    permissions: ["submissions.read", "submissions.export"],
-  },
-} as const satisfies Record<
-  DefaultRole,
-  { readonly title: string; readonly permissions: ReadonlyArray<Permission> }
->;
-
-/** Where a grant or override applies. Grants and overrides reach everything below their scope. */
-export const Scope = Schema.Union([
-  Schema.Struct({ kind: Schema.Literal("organization") }),
-  Schema.Struct({ kind: Schema.Literal("brand"), id: BrandId }),
-  Schema.Struct({ kind: Schema.Literal("site"), id: SiteId }),
-]);
-export type Scope = typeof Scope.Type;
+  "org-admin": Permission.literals,
+  "brand-admin": [
+    ...siteAdministration,
+    "brand.theme.edit",
+    "site.create",
+    "site.delete",
+    "workflow.edit",
+  ],
+  "site-admin": siteAdministration,
+  editor: siteWork,
+  approver: ["site.approve"],
+  "submissions-viewer": ["submissions.read", "submissions.export"],
+} as const satisfies Record<DefaultRole, ReadonlyArray<Permission>>;
 
 /** The thing being acted on. A site names its brand, because a brand's grants reach its sites. */
 export type Resource =
@@ -139,10 +89,16 @@ export const authorize = (access: Access, permission: Permission, resource: Reso
   return access.grants.some(
     (grant) =>
       reach(grant.scope, resource) !== null &&
-      defaultRoles[grant.role].permissions.some((held) => held === permission),
+      defaultRoles[grant.role].some((held) => held === permission),
   );
 };
 
 /** Every permission a person holds on this thing. */
 export const permissionsOn = (access: Access, resource: Resource) =>
   Permission.literals.filter((permission) => authorize(access, permission, resource));
+
+/** The roles a person holds through grants that cover this thing. */
+export const rolesOn = (access: Access, resource: Resource) =>
+  DefaultRole.literals.filter((role) =>
+    access.grants.some((grant) => grant.role === role && reach(grant.scope, resource) !== null),
+  );
