@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 062 | The agent's evals run on demand, never as routine                                  | 2026-10-01 | Accepted            |
 | 061 | One conversation per person per draft                                              | 2026-10-01 | Accepted            |
 | 060 | The agent proposes a site plan with a tool, and the plan becomes its brief         | 2026-10-01 | Accepted            |
 | 059 | One spend limit on AI Gateway for the whole product                                | 2026-10-01 | Accepted            |
@@ -70,6 +71,14 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 062 — The agent's evals run on demand, never as routine [#decision-062]
+
+**Context.** The design ran the eval suite in CI whenever prompts, models or block contracts changed. Every run calls the model through AI Gateway, so every run costs money, and a change to any block would start one.
+
+**Decision.** The evals stay in `packages/agent/evals` and run only when someone starts them: with `pnpm --filter @repo/agent evals`, or the `Agent evals` workflow run by hand. `pnpm test` doesn't include them, and the browser test that has the agent edit a draft runs only with `PAKSHI_AGENT_TESTS=1`.
+
+**Consequences.** Checking the agent against the real model is a deliberate step after changing its prompts, tools or models, not a gate every change passes.
 
 ## 061 — One conversation per person per draft [#decision-061]
 

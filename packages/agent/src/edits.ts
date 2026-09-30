@@ -283,7 +283,7 @@ export const describeOps = (
       case "setPath":
         return `Changed the address to ${first.path}`;
       case "createPage":
-        return `Created ${pageName(first.page)}`;
+        return `Created the ${pageName(first.page)} page`;
       case "deletePage":
       case "rebase":
         return "Changed the draft";
@@ -291,7 +291,8 @@ export const describeOps = (
   })();
   const more =
     ops.length > 1 ? `, and ${ops.length - 1} more change${ops.length > 2 ? "s" : ""}` : "";
-  return `${line} on ${where}${more}`;
+  // A new page is where the change is, so it isn't named twice.
+  return first.op === "createPage" ? `${line}${more}` : `${line} on ${where}${more}`;
 };
 
 /** The block an op puts the agent at, for presence and the chat panel's "show on page". */

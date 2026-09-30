@@ -41,9 +41,11 @@ site only after `pnpm dev:destroy`.
 
 The agent calls Workers AI through the stage's AI Gateway even under
 `pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and
-AI Gateway permissions, and its calls cost money. After changing the agent's
-prompts, tools or models, or a block contract or recipe, run its evals with
-`pnpm --filter @repo/agent evals` (`packages/agent/evals/README.md`).
+AI Gateway permissions, and its calls cost money. Its evals
+(`pnpm --filter @repo/agent evals`) call the real model too, so run them only
+when a change needs checking against it, never as routine
+(`packages/agent/evals/README.md`). The browser test that has the agent edit a
+draft runs only with `PAKSHI_AGENT_TESTS=1`.
 
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.

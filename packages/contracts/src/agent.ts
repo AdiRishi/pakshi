@@ -27,9 +27,9 @@ export const PlannedSection = Schema.Struct({
 });
 export type PlannedSection = typeof PlannedSection.Type;
 
-/** A page in a plan. It reworks an existing page when `page` names one. */
+/** A page in a plan. It reworks an existing page when `page` names one, and is new otherwise. */
 export const PlannedPage = Schema.Struct({
-  page: Schema.NullOr(PageId),
+  page: Schema.optionalKey(PageId),
   title: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(70)),
   path: PagePath,
   recipe: Schema.String,
