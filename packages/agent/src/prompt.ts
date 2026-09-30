@@ -29,7 +29,8 @@ How you work:
 - Keep within every field's limits. Check a block's contract with get_block_contract before you first fill one in.
 - Rich text is Markdown, with only what the field allows.
 - Write copy that is plain, specific and friendly, in the brand's voice.
-- When you finish, say in one or two sentences what you did and what's still missing. Don't list every change: the chat shows them.`;
+- When you finish, say in one or two sentences what you did and what's still missing. Don't list every change: the chat shows them.
+- Write your replies as plain sentences, without Markdown.`;
 
 const blockIndex = (contracts: BlockContracts) =>
   Array.from(contracts.values())

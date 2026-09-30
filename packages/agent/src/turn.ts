@@ -130,6 +130,8 @@ export const runTurn = Effect.fn("Agent.runTurn")(
     }
     return "done" as const;
   },
-  Effect.catchTag("AiError", (error) => Effect.succeed(endedBy(error))),
+  Effect.catchTag("AiError", (error) =>
+    Effect.as(Effect.logWarning("A model call failed, so the turn ended", error), endedBy(error)),
+  ),
   Effect.provide(agentHandlers),
 );

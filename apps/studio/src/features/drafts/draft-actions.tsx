@@ -22,9 +22,11 @@ export function DraftActions(props: {
   readonly can: SiteAbilities;
   /** After the draft publishes, which closes it unless it was edited meanwhile. */
   readonly onPublished: () => Promise<void>;
+  /** Whether the submit dialog is open, which the agent's chat can open too. */
+  readonly submitting: boolean;
+  readonly onSubmittingChange: (open: boolean) => void;
 }) {
   const [sharing, setSharing] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const refresh = () =>
@@ -47,7 +49,7 @@ export function DraftActions(props: {
         Preview
       </a>
       {props.can.publish && (
-        <Button onClick={() => setSubmitting(true)}>
+        <Button onClick={() => props.onSubmittingChange(true)}>
           <SendIcon />
           Submit
         </Button>
@@ -56,8 +58,8 @@ export function DraftActions(props: {
       <SubmitDialog
         site={props.site}
         draft={props.draft}
-        open={submitting}
-        onOpenChange={setSubmitting}
+        open={props.submitting}
+        onOpenChange={props.onSubmittingChange}
         onSubmitted={async () => {
           toast.success(`${props.draft.name} is sent for approval`, {
             description:
