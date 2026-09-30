@@ -5,7 +5,7 @@ import { type Browser, expect, type FrameLocator, type Page, test } from "@playw
 
 import { fixtureSites, fixturesPath } from "../src/fixture-sites.ts";
 import { differingPixels } from "./support/pixels.ts";
-import { newDraft, signedIn } from "./support/studio.ts";
+import { newDraft, showOutline, signedIn } from "./support/studio.ts";
 
 const sitesUrl = new URL(process.env.SITES_URL ?? "http://localhost");
 
@@ -255,6 +255,7 @@ test("a section dragged by its handle in the canvas moves, and undo puts it back
   await studio.setViewportSize({ width: 1440, height: 2000 });
   await studio.goto(`${await draftOf(studio, "site_harbour")}/pages/pg_home`);
   const frame = studio.frameLocator("iframe[title^='Canvas']");
+  await showOutline(studio);
   const sections = () =>
     studio
       .getByRole("tree", { name: "Page outline" })
