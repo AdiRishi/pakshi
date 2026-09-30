@@ -13,7 +13,7 @@ import {
 import type { Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
 import { DraftNotFound, NothingToRollBack } from "@repo/contracts/studio";
-import { Permission } from "@repo/domain/access";
+import { Permission } from "@repo/contracts/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, ManagedRuntime, Option, Schema } from "effect";
 import type { SqlError } from "effect/unstable/sql";

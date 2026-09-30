@@ -1,6 +1,7 @@
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { Person, Viewer } from "@repo/contracts/studio";
-import { type Access, authorize, defaultRoles, Grant, Override, Scope } from "@repo/domain/access";
+import { roleTitles, Scope } from "@repo/contracts/access";
+import { type Access, authorize, Grant, Override } from "@repo/domain/access";
 import { Effect, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -115,7 +116,7 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
   return {
     user: { id: user.id, name: user.name, email: user.email },
     roles: grants.map((grant) => ({
-      role: defaultRoles[grant.role].title,
+      role: roleTitles[grant.role],
       scope: grant.scope_name ?? "Organization",
     })),
     sites: sites
