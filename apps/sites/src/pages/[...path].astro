@@ -1,9 +1,8 @@
 ---
 import "@repo/blocks/site.css";
-import { renderPage, siteData } from "@repo/blocks";
+import { renderPage, siteData, SitePage } from "@repo/blocks";
 import { themeCss } from "@repo/tokens";
 
-import { SitePage } from "../components/SitePage.tsx";
 import { loadManifest, loadPage } from "../lib/snapshot.ts";
 
 const { site } = Astro.locals;

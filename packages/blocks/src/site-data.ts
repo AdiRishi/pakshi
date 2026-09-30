@@ -76,5 +76,6 @@ export const siteData = (site: {
     media: (id) => placeholderMedia.get(id) ?? site.media(id),
     pagePath: (id) => paths.get(id),
     form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),
+    preview: null,
   };
 };
