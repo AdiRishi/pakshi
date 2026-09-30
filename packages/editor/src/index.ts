@@ -11,6 +11,7 @@ export {
   EditorCanvas,
   EditorProvider,
   EditorSettings,
+  useAccessEnded,
   useBehind,
   useDeselect,
   useDraftClosure,

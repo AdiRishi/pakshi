@@ -44,13 +44,13 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 import { standing } from "@/features/approvals/describe";
+import { previewPath } from "@/features/preview/address";
 import { formatDay, formatMoment } from "@/lib/dates";
 
 import { closeDraft, createDraft, renameDraft } from "../sites/functions";
 import { siteDraftsQuery } from "../sites/queries";
 import { SiteHeader } from "../sites/site-header";
 import { DraftNameDialog } from "./draft-name-dialog";
-import { previewPath } from "./share-dialog";
 
 /** Everyone who has changed a draft, or who started it when no one has yet. */
 const peopleOf = (draft: DraftSummary) =>

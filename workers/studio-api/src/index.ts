@@ -9,7 +9,7 @@ import { getServerByName } from "partyserver";
 
 import { authBasePath, authFor } from "./auth.ts";
 import { serveLive } from "./live.ts";
-import { mediaBasePath, serveMedia, servePreviewMedia, serveReviewMedia } from "./media.ts";
+import { servePreviewMedia, serveReviewMedia } from "./media.ts";
 import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
 
@@ -25,8 +25,8 @@ export class StudioRpc extends WorkerEntrypoint<StudioApiEnv> {
 
 /**
  * Sign-in, which Studio forwards unchanged because OAuth needs real HTTP
- * redirects and cookies, the editor's live connections, and images for the
- * editor's canvas, previews and reviews. studio-api has no public address;
+ * redirects and cookies, the editor's live connections, and the images of
+ * drafts and submissions. studio-api has no public address;
  * only Studio's service bindings reach it.
  */
 export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
@@ -35,8 +35,6 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
     if (url.pathname.startsWith(`${authBasePath}/`))
       return authFor(this.env, url.origin).handler(request);
     if (url.pathname.startsWith(`${liveBasePath}/`)) return serveLive(request, this.env);
-    if (request.method === "GET" && url.pathname.startsWith(`${mediaBasePath}/`))
-      return serveMedia(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${previewBasePath}/`))
       return servePreviewMedia(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${reviewBasePath}/`))

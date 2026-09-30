@@ -1,6 +1,5 @@
 import type { DraftId, SiteId } from "@repo/contracts/ids";
 import type { Audience, DraftSharing, ShareAccess } from "@repo/contracts/sharing";
-import { previewBasePath } from "@repo/contracts/studio";
 import { Avatar, AvatarFallback } from "@repo/ui/components/avatar";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -24,6 +23,7 @@ import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/r
 import { CheckIcon, CopyIcon, XIcon } from "lucide-react";
 import { useState } from "react";
 
+import { previewPath } from "@/features/preview/address";
 import { initials } from "@/lib/initials";
 
 import { PersonPicker } from "../people/person-picker";
@@ -41,9 +41,6 @@ const organizationQuery = queryOptions({
   queryFn: () => getOrganizationName(),
   staleTime: Number.POSITIVE_INFINITY,
 });
-
-/** A draft's preview link, which Studio serves at its own address. */
-export const previewPath = (site: SiteId, draft: DraftId) => `${previewBasePath}/${site}/${draft}/`;
 
 function AccessSelect(props: {
   readonly label: string;

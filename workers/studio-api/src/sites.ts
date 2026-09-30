@@ -2,7 +2,7 @@ import type { Permission } from "@repo/contracts/access";
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { type Person, SiteNotFound } from "@repo/contracts/studio";
-import { authorize, permissionsOn, rolesOn } from "@repo/domain/access";
+import { permissionsOn, rolesOn } from "@repo/domain/access";
 import type { Approver } from "@repo/domain/approvals";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
@@ -109,29 +109,4 @@ export const inSiteLibrary = Effect.fn("StudioApi.inSiteLibrary")(function* (
   const rows = yield* sql`select 1 from media
     where id = ${media} and (site_id = ${site.id} or brand_id = ${site.brand})`;
   return rows.length > 0;
-});
-
-/**
- * Whether a person may see a library image: one in a site's library to
- * people who can edit that site, one in a brand's library to people who can
- * edit any site in the brand. An image in no library is seen by no one.
- */
-export const canSeeMedia = Effect.fn("StudioApi.canSeeMedia")(function* (
-  person: Person,
-  media: MediaId,
-) {
-  const sql = yield* SqlClient.SqlClient;
-  const sites = yield* SqlSchema.findAll({
-    Request: MediaId,
-    Result: Schema.Struct({ id: SiteId, brand_id: BrandId }),
-    execute: (id) => sql`
-      select s.id, s.brand_id from media m
-      join sites s on s.id = m.site_id or s.brand_id = m.brand_id
-      where m.id = ${id}`,
-  })(media);
-  if (sites.length === 0) return false;
-  const { access } = yield* loadAccess(person.id);
-  return sites.some((site) =>
-    authorize(access, "page.edit", { kind: "site", id: site.id, brand: site.brand_id }),
-  );
 });

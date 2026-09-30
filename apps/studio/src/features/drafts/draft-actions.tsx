@@ -7,7 +7,9 @@ import { EyeIcon, SendIcon, UsersIcon } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-import { previewPath, ShareDialog } from "./share-dialog";
+import { previewPath } from "@/features/preview/address";
+
+import { ShareDialog } from "./share-dialog";
 import { SubmitDialog } from "./submit-dialog";
 
 /**

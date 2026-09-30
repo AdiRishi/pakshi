@@ -401,6 +401,9 @@ export const useDraftClosure = () => useEditorState((state) => state.closed);
 /** Whether the draft must be opened again, because a merge moved it to other block versions. */
 export const useOutdated = () => useEditorState((state) => state.outdated);
 
+/** Whether the draft's sharing changed so the person can no longer edit it. */
+export const useAccessEnded = () => useEditorState((state) => state.accessEnded);
+
 /** The title of the page being edited, as the draft has it now. */
 export const usePageTitle = () =>
   useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");

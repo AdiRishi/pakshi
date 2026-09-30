@@ -358,8 +358,23 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#run((site) => site.access(id, visitor));
   }
 
+  /** Replaces a draft's sharing, and disconnects anyone it no longer lets edit the draft. */
   shareDraft(id: DraftId, sharing: DraftSharing) {
-    return this.#changing(() => this.#call((site) => site.share(id, sharing)));
+    return this.#changing(async () => {
+      const outcome = await this.#call((site) => site.share(id, sharing));
+      if (outcome.ok)
+        for (const connection of this.getConnections<LiveState>(id)) {
+          const state = connection.state;
+          if (state === null || state.permissions.includes("page.edit")) continue;
+          const access = await this.#run((site) =>
+            site.access(id, { id: state.person.id, editsSite: false }),
+          );
+          if (access === "edit") continue;
+          this.#send(connection, ServerMessage.cases.AccessEnded.make({}));
+          connection.close(1008, "No longer shared for editing");
+        }
+      return outcome;
+    });
   }
 
   checkDraft(id: DraftId) {

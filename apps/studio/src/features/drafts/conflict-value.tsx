@@ -1,4 +1,5 @@
 import { RichTextDocument, richTextLines } from "@repo/blocks";
+import type { MediaId } from "@repo/contracts/ids";
 import type { ValueKind } from "@repo/contracts/merge";
 import { ExternalUrl, Link, MediaRef } from "@repo/contracts/references";
 import { Option, Predicate, Schema } from "effect";
@@ -15,8 +16,12 @@ const isUrl = Schema.is(ExternalUrl);
 
 const linkText = (link: Link) => (isUrl(link) ? link : "A page on this site");
 
-/** A value as the field kind that shows it, if it is one. */
-const shown = (kind: ValueKind, value: Schema.Json): ReactNode => {
+/** A value as the field kind that shows it, if it is one. `image` says where an image loads from. */
+const shown = (
+  kind: ValueKind,
+  value: Schema.Json,
+  image: (media: MediaId) => string,
+): ReactNode => {
   switch (kind) {
     case "media":
       return Option.match(asMedia(value), {
@@ -24,7 +29,7 @@ const shown = (kind: ValueKind, value: Schema.Json): ReactNode => {
         onSome: (media) => (
           <span className="flex flex-col gap-2">
             <img
-              src={`/media/${media.id}`}
+              src={image(media.id)}
               alt={media.alt ?? ""}
               className="aspect-video w-full rounded-md object-cover"
             />
@@ -93,11 +98,12 @@ const shown = (kind: ValueKind, value: Schema.Json): ReactNode => {
 export function ConflictValue(props: {
   readonly kind: ValueKind;
   readonly value: Schema.Json | undefined;
+  readonly image: (media: MediaId) => string;
 }) {
   if (props.value === undefined)
     return <span className="text-muted-foreground italic">Removed</span>;
   return (
-    shown(props.kind, props.value) ?? (
+    shown(props.kind, props.value, props.image) ?? (
       <span className="text-muted-foreground">A different version</span>
     )
   );

@@ -1,6 +1,17 @@
+import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
 import { PagePath } from "@repo/contracts/page";
-import { mediaSegment } from "@repo/contracts/studio";
+import { mediaSegment, previewBasePath } from "@repo/contracts/studio";
 import { Option, Schema } from "effect";
+
+/** A draft's preview link, which Studio serves at its own address. */
+export const previewPath = (site: SiteId, draft: DraftId) => `${previewBasePath}/${site}/${draft}/`;
+
+/**
+ * Where a draft's images load from: under its preview, for anyone who may
+ * open the draft, the editor included.
+ */
+export const draftImage = (site: SiteId, draft: DraftId) => (media: MediaId) =>
+  `${previewBasePath}/${site}/${draft}/${mediaSegment}/${media}`;
 
 /**
  * What the rest of a preview's or review's address asks for: one of its
