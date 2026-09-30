@@ -60,7 +60,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** The later write to a field wins, and its earlier writer is told. When two people type in one field, each batch replaces the other person's, several times a second. A notice for each would be noise, but staying quiet while someone types left whoever stopped second never knowing they'd lost.
 
-**Decision.** A person whose write is replaced is told at once, unless they have an unconfirmed write to that field, which will replace it in turn. If they're still typing in the field, the notice waits until they stop, and is dropped if they type over the replacement, because then the other person is told.
+**Decision.** A person whose write is replaced is told at once, unless they have an unconfirmed write to that field, which will replace it in turn. Only writes made since they opened the editor count: `SiteDoc` remembers every writer, but a change to something they wrote on an earlier visit isn't news to them. If they're still typing in the field, the notice waits until they stop, and is dropped if they type over the replacement, because then the other person is told.
 
 **Consequences.** Whoever ends up replaced hears it once. The typing marker in presence remains the way people avoid typing in one field together.
 

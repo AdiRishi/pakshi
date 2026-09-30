@@ -241,6 +241,17 @@ describe("other people's changes", () => {
     expect(theirs.notices).toEqual([]);
   });
 
+  test("a person isn't told about replacements of what they wrote before opening the editor", async () => {
+    const siteDoc = fakeSiteDoc();
+    siteDoc.commit(meera, [setHeading("Mine, from yesterday")]);
+    const mine = open(siteDoc, meera);
+    await settle();
+    siteDoc.commit(sam, [setHeading("Theirs")]);
+    await settle();
+    expect(headingOf(mine.store)).toBe("Theirs");
+    expect(mine.notices).toEqual([]);
+  });
+
   test("someone still typing in a field that was replaced is told when they stop", async () => {
     const siteDoc = fakeSiteDoc();
     const mine = open(siteDoc, meera);
