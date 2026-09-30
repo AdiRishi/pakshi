@@ -219,6 +219,11 @@ export const BatchRule = Schema.Literals([
   "system",
   /** The draft was published or closed, so it takes no more changes. */
   "closed",
+  /**
+   * A required value is empty or shorter than its minimum. Only the agent's
+   * batches are held to this, so it fills a field in rather than leaving it empty.
+   */
+  "incomplete",
 ]);
 export type BatchRule = typeof BatchRule.Type;
 

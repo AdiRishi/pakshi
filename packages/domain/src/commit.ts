@@ -1,5 +1,6 @@
 import type { Draft } from "@repo/contracts/draft";
-import type { Batch, BatchError, Op } from "@repo/contracts/ops";
+import { BlockId } from "@repo/contracts/ids";
+import type { Batch, BatchError, Op, Target } from "@repo/contracts/ops";
 
 import {
   type ApplyResult,
@@ -8,6 +9,7 @@ import {
   type BlockContracts,
   type Step,
 } from "./document.ts";
+import { incompleteProps } from "./freeze.ts";
 
 /*
  * How SiteDoc commits a batch to a draft that several people edit at once.
@@ -181,6 +183,79 @@ const record = (writes: Writes, actor: string, revision: number, steps: Readonly
   return { writes: next, change: { set: Array.from(set), removed: Array.from(removed) } };
 };
 
+/** A block an op wrote to, and the field it wrote, or null when it placed the whole block. */
+interface Written {
+  readonly target: Target;
+  readonly block: BlockId;
+  readonly field: string | null;
+}
+
+/** The blocks and fields an op gave values to. */
+const writtenBy = (op: Op): ReadonlyArray<Written> => {
+  switch (op.op) {
+    case "setProp":
+      return [{ target: op.target, block: op.block, field: op.path[0] ?? null }];
+    case "insertBlock":
+      return [op.block, ...Object.values(op.block.slots ?? {}).flat()].map((block) => ({
+        target: op.page,
+        block: block.id,
+        field: null,
+      }));
+    case "createPage":
+      return Object.keys(op.page.blocks).map((block) => ({
+        target: op.page.id,
+        block: BlockId.make(block),
+        field: null,
+      }));
+    default:
+      return [];
+  }
+};
+
+/** What an op left incomplete in the draft the batch made, as errors naming the op. */
+const incompleteAfter = (
+  draft: Draft,
+  steps: ReadonlyArray<Step>,
+  contracts: BlockContracts,
+): ReadonlyArray<BatchError> =>
+  steps.flatMap(({ op }, index) => [
+    ...writtenBy(op).flatMap(({ target, block, field }) => {
+      const holder = target === "site" ? draft.parts : draft.pages[target];
+      const instance = holder?.blocks[block];
+      const contract = instance === undefined ? undefined : contracts.get(instance.type);
+      // Later ops in the batch may have removed it.
+      if (instance === undefined || contract === undefined) return [];
+      return incompleteProps(contract, instance.props)
+        .filter((incomplete) => field === null || incomplete.path[0] === field)
+        .map((incomplete) => ({
+          op: index,
+          path: [block, ...incomplete.path],
+          rule: "incomplete" as const,
+          message: `${incomplete.field}: ${incomplete.message}`,
+        }));
+    }),
+    ...(op.op === "setMeta" &&
+    (op.field === "title" || op.field === "description") &&
+    (draft.pages[op.page]?.meta[op.field].trim() ?? "") === ""
+      ? [
+          {
+            op: index,
+            path: [op.field],
+            rule: "incomplete" as const,
+            message: `Fill in the ${op.field}`,
+          },
+        ]
+      : []),
+  ]);
+
+/**
+ * How a batch is checked. People's batches are held to the limits enforced
+ * while typing, so someone can clear a field and retype it. The agent's are
+ * also held to completeness, so it fills a field in instead of leaving it
+ * empty or too short.
+ */
+export type Checks = "draft" | "complete";
+
 /**
  * Commits a batch for `actor`, taking the draft to its next revision. A batch
  * applies all or nothing. An undo batch applies each op that still applies
@@ -192,6 +267,7 @@ export const commitBatch = (
   actor: string,
   batch: Batch,
   contracts: BlockContracts,
+  checks: Checks = "draft",
 ): CommitResult => {
   const commit = (
     applied: Pick<Extract<ApplyResult, { ok: true }>, "draft" | "inverse" | "steps">,
@@ -222,5 +298,10 @@ export const commitBatch = (
     return commit(applied, applied.skipped);
   }
   const applied = applyOps(draft, batch.ops, contracts);
-  return applied.ok ? commit(applied, []) : applied;
+  if (!applied.ok) return applied;
+  if (checks === "complete") {
+    const errors = incompleteAfter(applied.draft, applied.steps, contracts);
+    if (errors.length > 0) return { ok: false, errors };
+  }
+  return commit(applied, []);
 };

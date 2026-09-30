@@ -38,6 +38,10 @@ export type SubmissionId = typeof SubmissionId.Type;
 export const BatchId = prefixed("bat").pipe(Schema.brand("BatchId"));
 export type BatchId = typeof BatchId.Type;
 
+/** One turn of a conversation with the agent: a person's message and everything the agent did for it. */
+export const TurnId = prefixed("turn").pipe(Schema.brand("TurnId"));
+export type TurnId = typeof TurnId.Type;
+
 /** An item in a list inside a block's props, such as one image in a gallery. */
 export const ItemId = prefixed("it").pipe(Schema.brand("ItemId"));
 export type ItemId = typeof ItemId.Type;

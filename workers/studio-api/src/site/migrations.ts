@@ -91,4 +91,10 @@ export const migrations = Migrator.fromRecord({
     )`;
     yield* sql`create index submissions_by_draft on submissions (draft_id)`;
   }),
+  "0005_agent": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // The agent's turn a batch belongs to, so a turn can be undone as one step.
+    yield* sql`alter table batches add column turn text`;
+    yield* sql`create index batches_by_turn on batches (draft_id, turn)`;
+  }),
 });

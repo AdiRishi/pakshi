@@ -8,6 +8,7 @@ import {
   ReleaseId,
   SnapshotId,
   SubmissionId,
+  type TurnId,
 } from "@repo/contracts/ids";
 import { type CatchUp, type Collaborator, ServerMessage } from "@repo/contracts/live";
 import type { Conflict, MergedChange, Resolutions } from "@repo/contracts/merge";
@@ -48,7 +49,16 @@ import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 
 import { SiteApprovals, type Stored } from "./approvals.ts";
-import { type BatchResult, type DraftInfo, SiteDrafts, SiteIdentity } from "./drafts.ts";
+import {
+  type BatchResult,
+  byPerson,
+  bySite,
+  type DraftInfo,
+  type Origin,
+  SiteDrafts,
+  SiteIdentity,
+  turnUndoId,
+} from "./drafts.ts";
 import { type IndexedRelease, Outbox, type Notification } from "./outbox.ts";
 import { LiveUpdates, MediaLibrary, OutboxDelivery, Routing, Snapshots } from "./platform.ts";
 import { SiteReleases } from "./releases.ts";
@@ -73,6 +83,15 @@ export interface UpdatePreview {
   readonly conflicts: ReadonlyArray<Conflict>;
   readonly changes: ReadonlyArray<MergedChange>;
 }
+
+/**
+ * What undoing an agent's turn did: undid it, keeping any part someone had
+ * changed since, or found nothing left to undo, because it committed nothing
+ * or was undone already.
+ */
+export type TurnUndo =
+  | { readonly status: "undone"; readonly kept: boolean }
+  | { readonly status: "nothing" };
 
 /** An open draft, and how the drafts list sums it up. */
 export interface DraftView {
@@ -165,6 +184,25 @@ export class Site extends Context.Service<
       id: DraftId,
       batch: Batch,
     ) => Effect.Effect<BatchResult, StorageError | DraftNotFound>;
+    /**
+     * Commits a batch the agent made for `actor` in one turn of their
+     * conversation, held to completeness as well as the draft's rules.
+     */
+    readonly applyAgentBatch: (
+      actor: Collaborator,
+      id: DraftId,
+      batch: Batch,
+      turn: TurnId,
+    ) => Effect.Effect<BatchResult, StorageError | DraftNotFound>;
+    /**
+     * Undoes everything an agent's turn committed, except parts someone has
+     * changed since. Undoing a turn again changes nothing.
+     */
+    readonly undoTurn: (
+      actor: Collaborator,
+      id: DraftId,
+      turn: TurnId,
+    ) => Effect.Effect<TurnUndo, StorageError | DraftNotFound>;
     readonly previewUpdate: (
       id: DraftId,
       resolutions: Resolutions,
@@ -366,7 +404,7 @@ export class Site extends Context.Service<
         actor: Collaborator,
         id: DraftId,
         batch: Batch,
-        origin: "person" | "site",
+        origin: Origin,
       ) {
         const result = yield* drafts.commit(actor, id, batch, origin);
         if (result.status === "committed")
@@ -388,7 +426,7 @@ export class Site extends Context.Service<
             id: BatchId.make(randomId("bat")),
             ops: rebaseOps(draft, content, onto, contracts),
           };
-          const result = yield* commit(actor, id, batch, "site");
+          const result = yield* commit(actor, id, batch, bySite);
           if (result.status !== "committed")
             return yield* Effect.die(`SiteDoc couldn't move ${id} onto ${onto.release}.`);
         });
@@ -834,7 +872,26 @@ export class Site extends Context.Service<
         }),
         sync: (id, revision, reply) =>
           inStorageTurn(Effect.flatMap(drafts.catchUp(id, revision), reply)),
-        applyBatch: (actor, id, batch) => inStorageTurn(commit(actor, id, batch, "person")),
+        applyBatch: (actor, id, batch) => inStorageTurn(commit(actor, id, batch, byPerson)),
+        applyAgentBatch: (actor, id, batch, turn) =>
+          inStorageTurn(commit(actor, id, batch, { _tag: "Agent", turn })),
+        undoTurn: (actor, id, turn) =>
+          inStorageTurn(
+            Effect.gen(function* () {
+              const ops = yield* drafts.turnInverse(id, turn);
+              if (ops.length === 0) return { status: "nothing" } as const;
+              const result = yield* commit(
+                actor,
+                id,
+                { id: turnUndoId(turn), ops, undo: true },
+                { _tag: "Agent", turn },
+              );
+              // An undo batch never breaks a rule: it passes over the ops that no longer apply.
+              return result.status === "committed"
+                ? ({ status: "undone", kept: result.commit.skipped.length > 0 } as const)
+                : ({ status: "nothing" } as const);
+            }),
+          ),
         previewUpdate: (id, resolutions) =>
           inReleaseTurn(
             Effect.gen(function* () {
