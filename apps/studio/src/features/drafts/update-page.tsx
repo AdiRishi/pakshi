@@ -179,15 +179,15 @@ const describeChange = (change: MergedChange) => {
     case "PageRemoved":
       return "Page removed";
     case "BlockAdded":
-      return `Added ${change.block}`;
+      return `Added ${change.block.title}`;
     case "BlockRemoved":
-      return `Removed ${change.block}`;
+      return `Removed ${change.block.title}`;
     case "BlockMoved":
-      return `Moved ${change.block}`;
+      return `Moved ${change.block.title}`;
     case "ValueChanged":
       return change.block === null
         ? `Changed ${change.field}`
-        : `${change.field} in ${change.block}`;
+        : `${change.field} in ${change.block.title}`;
   }
 };
 

@@ -2,28 +2,20 @@ import { Release } from "@repo/contracts/release";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
+import { type IndexedRelease, Outbox } from "./outbox.ts";
+
 /*
  * A site's releases, in its SiteDoc's SQLite storage: the source of truth for
  * what the site serves. D1 keeps a copy for queries across sites, fed through
- * an outbox written in the same transaction as each release.
+ * the outbox in the same transaction as each release.
  */
-
-/** A release as D1 keeps it: with its place in the site's history, whose last release is live. */
-export const IndexedRelease = Schema.Struct({ seq: Schema.Int, release: Release });
-export type IndexedRelease = typeof IndexedRelease.Type;
 
 const ReleaseRow = Schema.Struct({
   seq: Schema.Int,
   release: Schema.fromJsonString(Release),
 });
 
-const OutboxRow = Schema.Struct({
-  id: Schema.Int,
-  message: Schema.fromJsonString(IndexedRelease),
-});
-
 const encodeRelease = Schema.encodeSync(Schema.fromJsonString(Release));
-const encodeIndexed = Schema.encodeSync(Schema.fromJsonString(IndexedRelease));
 
 type StorageError = SqlError.SqlError | Schema.SchemaError;
 
@@ -38,18 +30,13 @@ export class SiteReleases extends Context.Service<
     readonly append: (release: Release) => Effect.Effect<IndexedRelease, StorageError>;
     /** Queues a release's copy for D1 again. */
     readonly resend: (release: IndexedRelease) => Effect.Effect<void, StorageError>;
-    /** The copies D1 hasn't received yet, oldest first, each with its outbox ID. */
-    readonly outbox: Effect.Effect<
-      ReadonlyArray<{ readonly id: number; readonly message: IndexedRelease }>,
-      StorageError
-    >;
-    readonly delivered: (id: number) => Effect.Effect<void, StorageError>;
   }
 >()("Pakshi/StudioApi/SiteReleases") {
   static readonly layer = Layer.effect(
     SiteReleases,
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const outbox = yield* Outbox;
       const findAll = SqlSchema.findAll({
         Request: Schema.Void,
         Result: ReleaseRow,
@@ -60,13 +47,7 @@ export class SiteReleases extends Context.Service<
         Result: ReleaseRow,
         execute: () => sql`select seq, release from releases order by seq desc limit 1`,
       });
-      const findOutbox = SqlSchema.findAll({
-        Request: Schema.Void,
-        Result: OutboxRow,
-        execute: () => sql`select id, message from outbox order by id`,
-      });
-      const send = (message: IndexedRelease) =>
-        sql`insert into outbox (message) values (${encodeIndexed(message)})`;
+      const send = (release: IndexedRelease) => outbox.send({ _tag: "Release", release });
 
       return SiteReleases.of({
         history: findAll(undefined),
@@ -82,9 +63,7 @@ export class SiteReleases extends Context.Service<
               return latest.value;
             }),
           ),
-        resend: (release) => Effect.asVoid(send(release)),
-        outbox: findOutbox(undefined),
-        delivered: (id) => Effect.asVoid(sql`delete from outbox where id = ${id}`),
+        resend: send,
       });
     }),
   );

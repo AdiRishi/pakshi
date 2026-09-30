@@ -31,8 +31,11 @@ export const Release = Schema.TaggedUnion({
   Imported: releaseFields,
   Published: {
     ...releaseFields,
+    /** Who made it live: whoever gave the final approval, or submitted it when no one had to. */
     by: Collaborator,
     draft: Schema.Struct({ id: DraftId, name: Schema.String }),
+    submittedBy: Collaborator,
+    approvedBy: Schema.Array(Collaborator),
   },
   RolledBack: { ...releaseFields, by: Collaborator, undid: ReleaseId },
 });

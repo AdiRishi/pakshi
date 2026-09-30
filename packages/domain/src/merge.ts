@@ -170,7 +170,7 @@ class Merge {
       this.changes.push({
         _tag: "ValueChanged",
         place: spot.place,
-        block: spot.block?.title ?? null,
+        block: spot.block ?? null,
         field: spot.field,
       });
       return live;
@@ -397,7 +397,7 @@ const mergeList = (
     merge.changes.push({
       _tag: "ValueChanged",
       place: spot.place,
-      block: spot.block?.title ?? null,
+      block: spot.block ?? null,
       field: spot.field,
     });
   return values.draft === undefined && values.live === undefined ? undefined : items;
@@ -536,7 +536,7 @@ const mergeBlocks = (merge: Merge, sides: PageSides, place: Place) => {
       else if (same(subtree(sides.base, id), subtree(sides[keptOn], id))) {
         keep = false;
         if (removedOn === "live")
-          merge.changes.push({ _tag: "BlockRemoved", place, block: named(id).title });
+          merge.changes.push({ _tag: "BlockRemoved", place, block: named(id) });
       } else
         keep =
           merge.conflict({
@@ -554,7 +554,7 @@ const mergeBlocks = (merge: Merge, sides: PageSides, place: Place) => {
   const kept = new Set(Array.from(ids).filter(decide));
   for (const id of kept)
     if (!has("base", id) && has("live", id) && !has("draft", id))
-      merge.changes.push({ _tag: "BlockAdded", place, block: named(id).title });
+      merge.changes.push({ _tag: "BlockAdded", place, block: named(id) });
 
   // The list each block goes in. A block that moved to a list whose section
   // is gone goes back to the other side's list.
@@ -594,7 +594,7 @@ const mergeBlocks = (merge: Merge, sides: PageSides, place: Place) => {
       );
     if (merged === "conflict") throw new Error("A preferred side always gives an order.");
     for (const id of merged.moved)
-      merge.changes.push({ _tag: "BlockMoved", place, block: named(id).title });
+      merge.changes.push({ _tag: "BlockMoved", place, block: named(id) });
     return merged.order;
   };
 
@@ -813,3 +813,7 @@ export const mergeSites = (
   };
   return { content, conflicts: merge.conflicts, changes: merge.changes };
 };
+
+/** What changed from one site's content to another's, as merging the second into the first reports it. */
+export const changesBetween = (from: SiteContent, to: SiteContent, library: BlockLibrary) =>
+  mergeSites({ base: from, draft: from, live: to }, library, {}).changes;

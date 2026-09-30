@@ -15,7 +15,12 @@ const signedIn = (id: string) => ({ id, editsSite: false });
 
 describe("draft access", () => {
   test("people who may edit the site's pages can edit every draft", () => {
-    expect(draftAccess(shared({ audience: "people", access: "view" }), { id: "user_sam", editsSite: true })).toBe("edit");
+    expect(
+      draftAccess(shared({ audience: "people", access: "view" }), {
+        id: "user_sam",
+        editsSite: true,
+      }),
+    ).toBe("edit");
   });
 
   test("a draft shared with named people is open to them alone", () => {

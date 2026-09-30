@@ -142,7 +142,13 @@ describe("freezing", () => {
       parts: {
         ...draft.parts,
         menus: {
-          main: [{ id: MenuItemId.make("mi_about"), label: "About", target: { $ref: "page", id: PageId.make("pg_about") } }],
+          main: [
+            {
+              id: MenuItemId.make("mi_about"),
+              label: "About",
+              target: { $ref: "page", id: PageId.make("pg_about") },
+            },
+          ],
           footer: [],
         },
       },

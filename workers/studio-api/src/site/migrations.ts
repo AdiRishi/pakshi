@@ -72,4 +72,23 @@ export const migrations = Migrator.fromRecord({
       message text not null
     )`;
   }),
+  "0004_approvals": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // Whether a person or SiteDoc made each batch. Only people's batches
+    // count as editing a draft.
+    yield* sql`alter table batches add column origin text not null default 'person'`;
+    yield* sql`alter table drafts add column sharing text not null
+      default '{"people":[],"general":{"audience":"people","access":"view"}}'`;
+    // Drafts submitted for approval. Each keeps the draft revision it froze,
+    // and the snapshot it froze to, which a draft edited after submitting
+    // is merged against when the submission publishes.
+    yield* sql`create table submissions (
+      id text primary key,
+      draft_id text not null references drafts (id),
+      revision integer not null,
+      frozen_snapshot text not null,
+      submission text not null
+    )`;
+    yield* sql`create index submissions_by_draft on submissions (draft_id)`;
+  }),
 });

@@ -14,16 +14,18 @@ import { harbour } from "@repo/tokens";
 import { Deferred, Effect, Layer, Option, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
 
+import { SiteApprovals } from "../../src/site/approvals.ts";
 import { SiteDrafts, SiteIdentity } from "../../src/site/drafts.ts";
 import { migrations } from "../../src/site/migrations.ts";
+import { type IndexedRelease, Outbox, type OutboxMessage } from "../../src/site/outbox.ts";
 import {
   LiveUpdates,
   MediaLibrary,
-  ReleaseIndex,
+  OutboxDelivery,
   Routing,
   Snapshots,
 } from "../../src/site/platform.ts";
-import { type IndexedRelease, SiteReleases } from "../../src/site/releases.ts";
+import { SiteReleases } from "../../src/site/releases.ts";
 import { Site } from "../../src/site/site.ts";
 
 export const site = SiteId.make("site_harbour");
@@ -74,6 +76,8 @@ export interface PlatformState {
   routingDown: boolean;
   /** D1's copy of the site's releases. */
   readonly index: Map<string, IndexedRelease>;
+  /** Every outbox message delivered, oldest first. */
+  readonly delivered: Array<OutboxMessage>;
   /** Messages to live connections: to one draft's, or with `null`, everyone's. */
   readonly sent: Array<{ readonly draft: DraftId | null; readonly message: ServerMessage }>;
   /** Holds each manifest write until opened, to act while a publish is under way. */
@@ -125,6 +129,7 @@ export const platform = Effect.fn("platform")(function* () {
     routing: Option.some(harbourLive),
     routingDown: false,
     index: new Map(),
+    delivered: [],
     sent: [],
     manifestGate: null,
     manifestWriting: yield* Deferred.make<void>(),
@@ -170,8 +175,13 @@ export const platform = Effect.fn("platform")(function* () {
           ),
         ),
     }),
-    Layer.succeed(ReleaseIndex)({
-      record: (indexed) => Effect.sync(() => void state.index.set(indexed.release.id, indexed)),
+    Layer.succeed(OutboxDelivery)({
+      deliver: (message) =>
+        Effect.sync(() => {
+          state.delivered.push(message);
+          if (message._tag === "Release")
+            state.index.set(message.release.release.id, message.release);
+        }),
     }),
     Layer.succeed(LiveUpdates)({
       send: (draft, message) => Effect.sync(() => void state.sent.push({ draft, message })),
@@ -189,14 +199,15 @@ export const storage = Layer.effectDiscard(Migrator.make({})({ loader: migration
 /** The Site service as a freshly started SiteDoc builds it, over the storage and platform given. */
 export const siteService = <R>(
   platformLayer: Layer.Layer<
-    Snapshots | Routing | MediaLibrary | ReleaseIndex | LiveUpdates,
+    Snapshots | Routing | MediaLibrary | OutboxDelivery | LiveUpdates,
     never,
     R
   >,
 ) =>
   Layer.fresh(
     Site.layer.pipe(
-      Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer)),
+      Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer, SiteApprovals.layer)),
+      Layer.provideMerge(Outbox.layer),
       Layer.provide(platformLayer),
     ),
   );

@@ -1,36 +1,67 @@
 import { loadBlockVersions } from "@repo/blocks";
 import { type Draft, type DraftName, isBehind, type SiteContent } from "@repo/contracts/draft";
-import { BatchId, type DraftId, randomId, ReleaseId, SnapshotId } from "@repo/contracts/ids";
+import {
+  BatchId,
+  type DraftId,
+  type PageId,
+  randomId,
+  ReleaseId,
+  SnapshotId,
+  SubmissionId,
+} from "@repo/contracts/ids";
 import { type CatchUp, type Collaborator, ServerMessage } from "@repo/contracts/live";
 import type { Conflict, MergedChange, Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
-import { PageDocument } from "@repo/contracts/page";
+import { PageDocument, type PagePath } from "@repo/contracts/page";
+import type { PreflightIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
-import { contentHash, type LiveRelease, type SnapshotManifest } from "@repo/contracts/snapshot";
+import type { DraftSharing, ShareAccess } from "@repo/contracts/sharing";
 import {
+  contentHash,
+  type LiveRelease,
+  type PageListing,
+  type SnapshotManifest,
+} from "@repo/contracts/snapshot";
+import {
+  CannotDecide,
+  type Decision,
+  DecisionOutcome,
   DraftNotFound,
   type DraftSummary,
   NothingToRollBack,
-  PublishOutcome,
+  type PageSummary,
+  type ReviewPage,
+  type SiteView,
+  type SubmissionNotFound,
+  SubmitOutcome,
   UpdateOutcome,
 } from "@repo/contracts/studio";
-import { freeze } from "@repo/domain/freeze";
-import { contractsAt, isResolved, mergeSites } from "@repo/domain/merge";
+import { currentStep, type Submission } from "@repo/contracts/submission";
+import type { Workflow } from "@repo/contracts/workflow";
+import { type Approver, eligibility } from "@repo/domain/approvals";
+import type { BlockContracts } from "@repo/domain/document";
+import { type Frozen, freeze, shownMedia } from "@repo/domain/freeze";
+import { changesBetween, contractsAt, isResolved, mergeSites } from "@repo/domain/merge";
 import { rebaseOps } from "@repo/domain/rebase";
+import { draftAccess, type Visitor } from "@repo/domain/sharing";
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 
-import { type BatchResult, SiteDrafts } from "./drafts.ts";
-import { LiveUpdates, MediaLibrary, ReleaseIndex, Routing, Snapshots } from "./platform.ts";
-import { type IndexedRelease, SiteReleases } from "./releases.ts";
+import { SiteApprovals, type Stored } from "./approvals.ts";
+import { type BatchResult, type DraftInfo, SiteDrafts, SiteIdentity } from "./drafts.ts";
+import { type IndexedRelease, Outbox, type Notification } from "./outbox.ts";
+import { LiveUpdates, MediaLibrary, OutboxDelivery, Routing, Snapshots } from "./platform.ts";
+import { SiteReleases } from "./releases.ts";
 
 /*
- * A site's drafts and releases, as SiteDoc runs them. Two turns keep them in
- * order. Every change to storage, and the message that tells people about
- * it, happens in the storage turn, so messages leave in the order changes
- * are made. Publishing, rolling back and updating a draft also hold the
- * release turn throughout, so they happen one after another, while the
- * storage turn is free for edits during their slow reads and writes of R2.
+ * A site's drafts, submissions and releases, as SiteDoc runs them. Two turns
+ * keep them in order. Every change to storage, and the message that tells
+ * people about it, happens in the storage turn, so messages leave in the
+ * order changes are made. Anything that changes a submission or the live
+ * release also holds the release turn throughout: submitting, deciding,
+ * publishing, rolling back, updating and closing a draft happen one after
+ * another, while the storage turn is free for edits during their slow reads
+ * and writes of R2.
  */
 
 type StorageError = SqlError.SqlError | Schema.SchemaError;
@@ -53,12 +84,38 @@ export type Opened =
   | { readonly _tag: "Ready"; readonly draft: Draft; readonly summary: DraftSummary }
   | { readonly _tag: "NeedsUpdate" };
 
+/** A submission, what it changes compared with the live site, and its pages. */
+export interface SubmissionReview {
+  readonly submission: Submission;
+  readonly changes: ReadonlyArray<MergedChange>;
+  readonly pages: ReadonlyArray<PageSummary>;
+}
+
 const encodePage = Schema.encodeSync(PageDocument);
 
 /** How many snapshots' content a SiteDoc keeps in memory. */
 const keptSnapshots = 4;
 
 const releaseOf = (indexed: IndexedRelease) => indexed.release;
+
+/** A page as the page list shows it, from a draft's page or a manifest's entry. */
+const listingOf = (page: PageListing): PageListing =>
+  page.type === "post"
+    ? { id: page.id, path: page.path, type: page.type, meta: page.meta }
+    : { id: page.id, path: page.path, type: page.type, meta: page.meta };
+
+const summaryOf = (page: PageListing): PageSummary => ({
+  id: page.id,
+  type: page.type,
+  path: page.path,
+  title: page.meta.title,
+});
+
+/** Everyone whose approval counted, once each, in the order they gave it. */
+const approversOf = (submission: Submission) =>
+  Array.from(
+    new Map(submission.approvals.map((approval) => [approval.by.id, approval.by])).values(),
+  );
 
 export class Site extends Context.Service<
   Site,
@@ -78,18 +135,16 @@ export class Site extends Context.Service<
       id: DraftId,
       name: DraftName,
     ) => Effect.Effect<void, StorageError | DraftNotFound>;
-    /** Closes an open draft without publishing it, and tells everyone in it. */
+    /**
+     * Closes an open draft without publishing it, withdraws its submission
+     * under review, and tells everyone in it.
+     */
     readonly closeDraft: (
       by: Collaborator,
       id: DraftId,
     ) => Effect.Effect<void, StorageError | DraftNotFound>;
     /** An open draft as it stands, behind or not. */
-    readonly view: (
-      id: DraftId,
-    ) => Effect.Effect<
-      { readonly draft: Draft; readonly summary: DraftSummary },
-      StorageError | DraftNotFound
-    >;
+    readonly view: (id: DraftId) => Effect.Effect<DraftView, StorageError | DraftNotFound>;
     /**
      * An open draft for the editor. A draft that's behind is updated first
      * when its merge is clean; otherwise someone has to settle its conflicts.
@@ -124,18 +179,75 @@ export class Site extends Context.Service<
       resolutions: Resolutions,
       seen: ReleaseId,
     ) => Effect.Effect<UpdateOutcome, StorageError | DraftNotFound>;
+    /** What a visitor may do with a draft, going by its sharing. A closed draft allows nothing. */
+    readonly access: (
+      id: DraftId,
+      visitor: Visitor,
+    ) => Effect.Effect<ShareAccess | null, StorageError>;
+    /** Replaces how an open draft is shared. */
+    readonly share: (
+      id: DraftId,
+      sharing: DraftSharing,
+    ) => Effect.Effect<DraftSummary, StorageError | DraftNotFound>;
+    /** What pre-flight finds in a draft now, and whether it's behind. */
+    readonly check: (id: DraftId) => Effect.Effect<
+      {
+        readonly issues: ReadonlyArray<PreflightIssue>;
+        readonly behind: boolean;
+      },
+      StorageError | DraftNotFound
+    >;
     /**
-     * Freezes a draft and makes it live. A draft that's behind merges first,
-     * unless that needs a person. A draft edited while it was being published
-     * stays open with those edits, now starting from the release it became.
+     * Freezes a draft for approval through a workflow's steps, replacing any
+     * submission of it still under review. With no steps, it publishes. A
+     * draft that's behind merges first, unless that needs a person.
+     * `studio` is Studio's address, for links in the emails it sends.
      */
-    readonly publish: (
+    readonly submit: (
       actor: Collaborator,
       id: DraftId,
-    ) => Effect.Effect<PublishOutcome, StorageError | DraftNotFound>;
+      note: string,
+      steps: Workflow,
+      studio: string,
+    ) => Effect.Effect<SubmitOutcome, StorageError | DraftNotFound>;
+    readonly submission: (
+      id: SubmissionId,
+    ) => Effect.Effect<Submission, StorageError | SubmissionNotFound>;
+    /** A submission with what it changes compared with the live site. */
+    readonly review: (
+      id: SubmissionId,
+    ) => Effect.Effect<SubmissionReview, StorageError | SubmissionNotFound>;
+    /** A page of an open draft as it stands, for its preview, with the draft's name. */
+    readonly draftView: (
+      id: DraftId,
+      path: PagePath,
+    ) => Effect.Effect<
+      { readonly name: DraftName; readonly view: SiteView },
+      StorageError | DraftNotFound
+    >;
+    /** A page of a submission, or of the live release beside it, with the blocks the submission changed. */
+    readonly submissionView: (
+      id: SubmissionId,
+      version: "submitted" | "live",
+      path: PagePath,
+    ) => Effect.Effect<ReviewPage, StorageError | SubmissionNotFound>;
+    /**
+     * Approves a submission's current step, or requests changes. `snapshot`
+     * is the one the approver saw: a decision on a submission that changed
+     * since is refused. The last approval publishes.
+     */
+    readonly decide: (
+      approver: Approver,
+      id: SubmissionId,
+      snapshot: SnapshotId,
+      decision: Decision,
+      note: string,
+      studio: string,
+    ) => Effect.Effect<DecisionOutcome, StorageError | SubmissionNotFound | CannotDecide>;
     /** Makes the release that was live before the latest publish live again. */
     readonly rollBack: (
       actor: Collaborator,
+      studio: string,
     ) => Effect.Effect<Release, StorageError | NothingToRollBack>;
     /** A new draft holding an earlier release's content, to publish through the workflow. */
     readonly restore: (
@@ -145,9 +257,9 @@ export class Site extends Context.Service<
     ) => Effect.Effect<Option.Option<DraftSummary>, StorageError>;
     /** Writes the live release to KV, and its copy to D1, again. */
     readonly reconcile: Effect.Effect<void, StorageError>;
-    /** Whether D1 has release copies still to receive. */
+    /** Whether the outbox holds anything still to deliver. */
     readonly undelivered: Effect.Effect<boolean, StorageError>;
-    /** Sends D1 every release copy it hasn't received. */
+    /** Delivers everything in the outbox, oldest first. */
     readonly deliverOutbox: Effect.Effect<void, StorageError>;
   }
 >()("Pakshi/StudioApi/Site") {
@@ -155,12 +267,15 @@ export class Site extends Context.Service<
     Site,
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const { site } = yield* SiteIdentity;
       const drafts = yield* SiteDrafts;
       const releases = yield* SiteReleases;
+      const approvals = yield* SiteApprovals;
+      const outbox = yield* Outbox;
       const snapshots = yield* Snapshots;
       const routing = yield* Routing;
       const media = yield* MediaLibrary;
-      const index = yield* ReleaseIndex;
+      const delivery = yield* OutboxDelivery;
       const live = yield* LiveUpdates;
       const storageTurn = yield* Semaphore.make(1);
       const releaseTurn = yield* Semaphore.make(1);
@@ -185,7 +300,7 @@ export class Site extends Context.Service<
 
       const liveRelease = Effect.flatMap(releases.live, (latest) =>
         Option.isSome(latest)
-          ? Effect.succeed(latest.value)
+          ? Effect.succeed(releaseOf(latest.value))
           : Effect.die(
               "This site has never been published, so it has nothing to start a draft from.",
             ),
@@ -221,10 +336,24 @@ export class Site extends Context.Service<
         return content;
       });
 
+      /** Loads every version of each block the contents pin, and the ones between. */
+      const libraryFor = (sides: ReadonlyArray<SiteContent>) =>
+        Effect.promise(() => loadBlockVersions(sides.map((side) => side.lockfile)));
+
       const openDraft = Effect.fn("Site.openDraft")(function* (id: DraftId) {
-        const summary = yield* drafts.summary(id);
-        if (summary.status !== "open") return yield* new DraftNotFound({ draft: id });
+        const info = yield* drafts.summary(id);
+        if (info.status !== "open") return yield* new DraftNotFound({ draft: id });
         return yield* drafts.draft(id);
+      });
+
+      const withReview = (info: DraftInfo, latest: ReadonlyMap<DraftId, Submission>) => ({
+        ...info,
+        review: latest.get(info.id) ?? null,
+      });
+
+      const summary = Effect.fn("Site.summary")(function* (id: DraftId) {
+        const info = yield* drafts.summary(id);
+        return withReview(info, yield* approvals.latest);
       });
 
       /** Commits a batch and tells everyone in the draft. Runs in the storage turn. */
@@ -246,7 +375,7 @@ export class Site extends Context.Service<
         id: DraftId,
         content: SiteContent,
         onto: LiveRelease,
-        contracts: ReturnType<typeof contractsAt>,
+        contracts: BlockContracts,
       ) =>
         Effect.gen(function* () {
           const draft = yield* drafts.draft(id);
@@ -270,20 +399,16 @@ export class Site extends Context.Service<
         resolutions: Resolutions,
         committer: Collaborator | null,
       ) {
-        const target = releaseOf(yield* liveRelease);
+        const target = yield* liveRelease;
         const base = (yield* openDraft(id)).base;
         const [from, to] = yield* Effect.all(
           [contentOf(base.snapshot), contentOf(target.snapshot)],
-          {
-            concurrency: "unbounded",
-          },
+          { concurrency: "unbounded" },
         );
         return yield* inStorageTurn(
           Effect.gen(function* () {
             const draft = yield* drafts.draft(id);
-            const library = yield* Effect.promise(() =>
-              loadBlockVersions([from.lockfile, draft.lockfile, to.lockfile]),
-            );
+            const library = yield* libraryFor([from, draft, to]);
             const result = mergeSites({ base: from, draft, live: to }, library, resolutions);
             const resolved = isResolved(result, resolutions);
             if (committer !== null && resolved)
@@ -305,7 +430,7 @@ export class Site extends Context.Service<
         id: DraftId,
       ) {
         const draft = yield* openDraft(id);
-        const target = releaseOf(yield* liveRelease);
+        const target = yield* liveRelease;
         if (!isBehind(draft.base, liveReleaseOf(target))) return true;
         const { resolved } = yield* merge(id, {}, actor);
         return resolved;
@@ -325,9 +450,10 @@ export class Site extends Context.Service<
         yield* routing.write(liveReleaseOf(release));
       });
 
+      /** Writes frozen content to R2 as a snapshot, reusing the page objects `previous` already has. */
       const writeSnapshot = Effect.fn("Site.writeSnapshot")(function* (
-        draft: Draft,
-        frozen: Extract<ReturnType<typeof freeze>, { ok: true }>["frozen"],
+        content: SiteContent,
+        frozen: Frozen,
         previous: SnapshotManifest,
       ) {
         const files = yield* media.files(frozen.media);
@@ -341,58 +467,354 @@ export class Site extends Context.Service<
             Effect.gen(function* () {
               const hash = yield* Effect.promise(() => contentHash(encodePage(page)));
               if (!written.has(hash)) yield* snapshots.writePage(hash, page);
-              return { page, hash };
+              return { ...listingOf(page), object: hash };
             }),
           { concurrency: "unbounded" },
         );
         const manifest: SnapshotManifest = {
           schema: "pakshi.snapshot/1",
           id: SnapshotId.make(randomId("snap")),
-          site: draft.site,
-          settings: draft.settings,
-          parts: draft.parts,
-          forms: draft.forms,
-          lockfile: draft.lockfile,
-          theme: draft.theme,
+          site,
+          settings: content.settings,
+          parts: content.parts,
+          forms: content.forms,
+          lockfile: content.lockfile,
+          theme: content.theme,
           media: Object.fromEntries(files),
-          pages: pages.map(({ page, hash }) =>
-            page.type === "post"
-              ? { id: page.id, path: page.path, type: page.type, meta: page.meta, object: hash }
-              : { id: page.id, path: page.path, type: page.type, meta: page.meta, object: hash },
-          ),
+          pages,
           gone: frozen.gone,
         };
         yield* snapshots.writeManifest(manifest);
         return manifest;
       });
 
+      /** Records a change to a submission, with the notification it calls for, in one transaction. */
+      const recordSubmission = (
+        stored: Stored,
+        notification: Notification | null,
+        studio: string,
+      ) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            yield* approvals.record(stored);
+            if (notification !== null)
+              yield* outbox.send({
+                _tag: "Notify",
+                notification,
+                submission: stored.submission,
+                studio,
+              });
+          }),
+        );
+
+      /**
+       * A submission merged with a release that went live during its review,
+       * with the merged snapshot written, or null when the merge needs a
+       * person. A merge that leaves anything for pre-flight to find needs one
+       * too. Runs in the release turn.
+       */
+      const mergeSubmission = Effect.fn("Site.mergeSubmission")(function* (
+        stored: Stored,
+        target: Release,
+      ) {
+        const submission = stored.submission;
+        const [base, submitted, current] = yield* Effect.all(
+          [
+            contentOf(submission.base.snapshot),
+            contentOf(submission.snapshot),
+            contentOf(target.snapshot),
+          ],
+          { concurrency: "unbounded" },
+        );
+        const library = yield* libraryFor([base, submitted, current]);
+        const result = mergeSites({ base, draft: submitted, live: current }, library, {});
+        if (result.conflicts.length > 0) return null;
+        const previous = yield* snapshots.manifest(target.snapshot);
+        const frozen = freeze(
+          result.content,
+          contractsAt(library, result.content.lockfile),
+          previous,
+        );
+        if (!frozen.ok) return null;
+        const manifest = yield* writeSnapshot(result.content, frozen.frozen, previous);
+        contents.set(manifest.id, result.content);
+        return {
+          ...stored,
+          submission: { ...submission, snapshot: manifest.id, base: liveReleaseOf(target) },
+        } satisfies Stored;
+      });
+
+      /** Sends a submission back to its draft, whose update needs a person. */
+      const needsUpdate = (stored: Stored, studio: string) => {
+        const submission: Submission = {
+          ...stored.submission,
+          status: { _tag: "NeedsUpdate", at: now() },
+        };
+        return Effect.as(
+          inStorageTurn(
+            recordSubmission({ ...stored, submission }, { _tag: "NeedsUpdate" }, studio),
+          ),
+          submission,
+        );
+      };
+
+      /**
+       * Merges every submission under review that isn't based on the live
+       * release. A clean merge keeps its approvals; one that needs a person
+       * sends the submission back to its draft. Runs in the release turn.
+       */
+      const mergeUnderReview = Effect.fn("Site.mergeUnderReview")(function* (studio: string) {
+        const target = yield* liveRelease;
+        for (const stored of yield* approvals.inReview) {
+          if (stored.submission.base.release === target.id) continue;
+          const merged = yield* mergeSubmission(stored, target);
+          if (merged === null) yield* needsUpdate(stored, studio);
+          else yield* inStorageTurn(recordSubmission(merged, null, studio));
+        }
+      });
+
+      /**
+       * Makes an approved submission live. Its draft closes, unless someone
+       * edited it after submitting: then it stays open with those edits,
+       * merged onto the new release against what was frozen, so they're all
+       * that stays. Runs in the release turn, with the submission based on
+       * the live release.
+       */
+      const publishSubmission = Effect.fn("Site.publishSubmission")(function* (
+        actor: Collaborator,
+        stored: Stored,
+        studio: string,
+      ) {
+        const submission = stored.submission;
+        const id = submission.draft.id;
+        const release = Release.cases.Published.make({
+          id: ReleaseId.make(randomId("rel")),
+          snapshot: submission.snapshot,
+          at: now(),
+          by: actor,
+          draft: submission.draft,
+          submittedBy: submission.submittedBy,
+          approvedBy: approversOf(submission),
+        });
+        const [frozen, published] = yield* Effect.all(
+          [contentOf(stored.frozen), contentOf(submission.snapshot)],
+          { concurrency: "unbounded" },
+        );
+        yield* inStorageTurn(
+          Effect.gen(function* () {
+            const edited = yield* drafts.editedSince(id, stored.revision);
+            yield* sql.withTransaction(
+              Effect.gen(function* () {
+                yield* releases.append(release);
+                yield* recordSubmission(
+                  {
+                    ...stored,
+                    submission: {
+                      ...submission,
+                      status: { _tag: "Published", release: release.id, at: release.at },
+                    },
+                  },
+                  { _tag: "Published" },
+                  studio,
+                );
+                if (!edited) {
+                  yield* drafts.close(id, "published");
+                  return;
+                }
+                const draft = yield* drafts.draft(id);
+                const library = yield* libraryFor([frozen, draft, published]);
+                const result = mergeSites({ base: frozen, draft, live: published }, library, {});
+                // Otherwise the draft stays behind, and someone settles its update.
+                if (result.conflicts.length === 0)
+                  yield* moveOnto(
+                    actor,
+                    id,
+                    result.content,
+                    liveReleaseOf(release),
+                    contractsAt(library, result.content.lockfile),
+                  );
+              }),
+            );
+            if (!edited)
+              yield* live.send(
+                id,
+                ServerMessage.cases.DraftClosed.make({ by: actor, release: release.id }),
+              );
+            yield* goLive(release);
+          }).pipe(
+            // Closing a draft withdraws its submission, so a submission's draft is open.
+            Effect.catchTag("DraftNotFound", Effect.die),
+          ),
+        );
+        yield* mergeUnderReview(studio);
+        return release;
+      });
+
+      /** A page of a snapshot, and what it reads from the rest of the site. */
+      const snapshotView = Effect.fn("Site.snapshotView")(function* (
+        snapshot: SnapshotId,
+        path: PagePath,
+      ) {
+        const manifest = yield* snapshots.manifest(snapshot);
+        const entry = manifest.pages.find((page) => page.path === path);
+        const page = entry === undefined ? null : yield* snapshots.page(entry.object);
+        return {
+          settings: manifest.settings,
+          parts: manifest.parts,
+          forms: manifest.forms,
+          lockfile: manifest.lockfile,
+          theme: manifest.theme,
+          pages: manifest.pages.map(listingOf),
+          media: manifest.media,
+          page,
+        } satisfies SiteView;
+      });
+
+      /** The blocks on a page that differ between two versions of a site, on one side of the change. */
+      const changedBlocks = (
+        changes: ReadonlyArray<MergedChange>,
+        page: PageId | undefined,
+        side: "submitted" | "live",
+      ) =>
+        changes.flatMap((change) => {
+          if (change.place.target !== page) return [];
+          switch (change._tag) {
+            case "BlockAdded":
+            case "BlockMoved":
+              return side === "submitted" ? [change.block.id] : [];
+            case "BlockRemoved":
+              return side === "live" ? [change.block.id] : [];
+            case "ValueChanged":
+              return change.block === null ? [] : [change.block.id];
+            case "PageAdded":
+            case "PageRemoved":
+              return [];
+          }
+        });
+
+      /** What a submission changes compared with the live site. */
+      const changesOf = Effect.fn("Site.changesOf")(function* (submission: Submission) {
+        const target = yield* liveRelease;
+        const [current, submitted] = yield* Effect.all(
+          [contentOf(target.snapshot), contentOf(submission.snapshot)],
+          { concurrency: "unbounded" },
+        );
+        return changesBetween(current, submitted, yield* libraryFor([current, submitted]));
+      });
+
+      const decisionOn = Effect.fn("Site.decisionOn")(function* (
+        approver: Approver,
+        id: SubmissionId,
+        snapshot: SnapshotId,
+        decision: Decision,
+        note: string,
+        studio: string,
+      ): Effect.fn.Return<DecisionOutcome, StorageError | SubmissionNotFound | CannotDecide> {
+        const stored = yield* approvals.get(id);
+        const submission = stored.submission;
+        if (submission.status._tag !== "InReview")
+          return DecisionOutcome.cases.Closed.make({ submission });
+        if (submission.snapshot !== snapshot)
+          return DecisionOutcome.cases.Stale.make({ submission });
+        const allowed = eligibility(submission, approver);
+        if (!allowed.ok) return yield* new CannotDecide({ reason: allowed.reason });
+        const at = now();
+        if (decision === "request-changes") {
+          const returned: Submission = {
+            ...submission,
+            status: { _tag: "ChangesRequested", by: approver.person, at, note },
+          };
+          yield* inStorageTurn(
+            recordSubmission(
+              { ...stored, submission: returned },
+              { _tag: "ChangesRequested" },
+              studio,
+            ),
+          );
+          return DecisionOutcome.cases.Recorded.make({ submission: returned });
+        }
+        const approved: Stored = {
+          ...stored,
+          submission: {
+            ...submission,
+            approvals: [
+              ...submission.approvals,
+              { step: allowed.step, by: approver.person, at, note },
+            ],
+          },
+        };
+        const next = currentStep(approved.submission);
+        if (next !== null) {
+          yield* inStorageTurn(
+            recordSubmission(
+              approved,
+              next === allowed.step ? null : { _tag: "StepStarted" },
+              studio,
+            ),
+          );
+          return DecisionOutcome.cases.Recorded.make({ submission: approved.submission });
+        }
+        // The last approval. A release that went live since merges in first.
+        const target = yield* liveRelease;
+        const ready =
+          approved.submission.base.release === target.id
+            ? approved
+            : yield* mergeSubmission(approved, target);
+        if (ready === null)
+          return DecisionOutcome.cases.Recorded.make({
+            submission: yield* needsUpdate(approved, studio),
+          });
+        const release = yield* publishSubmission(approver.person, ready, studio);
+        return DecisionOutcome.cases.Published.make({ release });
+      });
+
       return Site.of({
-        live: Effect.map(liveRelease, releaseOf),
+        live: liveRelease,
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
-        drafts: drafts.list,
-        summary: drafts.summary,
+        drafts: Effect.gen(function* () {
+          const [infos, latest] = yield* Effect.all([drafts.list, approvals.latest]);
+          return infos.map((info) => withReview(info, latest));
+        }),
+        summary,
         createDraft: Effect.fn("Site.createDraft")(function* (by, name) {
-          const base = releaseOf(yield* liveRelease);
+          const base = yield* liveRelease;
           const content = yield* contentOf(base.snapshot);
-          return yield* inStorageTurn(
+          const info = yield* inStorageTurn(
             drafts.create({ name, by, base: liveReleaseOf(base), content }),
           );
+          return { ...info, review: null };
         }),
         renameDraft: (id, name) =>
           inStorageTurn(Effect.andThen(openDraft(id), drafts.rename(id, name))),
         closeDraft: (by, id) =>
-          inStorageTurn(
-            Effect.gen(function* () {
-              yield* openDraft(id);
-              yield* drafts.close(id, "closed");
-              yield* live.send(id, ServerMessage.cases.DraftClosed.make({ by, release: null }));
-            }),
+          inReleaseTurn(
+            inStorageTurn(
+              Effect.gen(function* () {
+                yield* openDraft(id);
+                const at = now();
+                yield* sql.withTransaction(
+                  Effect.gen(function* () {
+                    yield* drafts.close(id, "closed");
+                    for (const stored of yield* approvals.inReview)
+                      if (stored.submission.draft.id === id)
+                        yield* approvals.record({
+                          ...stored,
+                          submission: {
+                            ...stored.submission,
+                            status: { _tag: "Withdrawn", by, at },
+                          },
+                        });
+                  }),
+                );
+                yield* live.send(id, ServerMessage.cases.DraftClosed.make({ by, release: null }));
+              }),
+            ),
           ),
         view: (id) =>
           inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              return { draft, summary: yield* drafts.summary(id) };
+              return { draft, summary: yield* summary(id) };
             }),
           ),
         open: Effect.fn("Site.open")(function* (by, id) {
@@ -401,7 +823,7 @@ export class Site extends Context.Service<
           return yield* inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              return { _tag: "Ready", draft, summary: yield* drafts.summary(id) } as const;
+              return { _tag: "Ready", draft, summary: yield* summary(id) } as const;
             }),
           );
         }),
@@ -430,7 +852,7 @@ export class Site extends Context.Service<
           inReleaseTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              const target = releaseOf(yield* liveRelease);
+              const target = yield* liveRelease;
               if (!isBehind(draft.base, liveReleaseOf(target)))
                 return UpdateOutcome.cases.Updated.make({});
               // Sides chosen against another release may not mean the same against this one.
@@ -446,118 +868,189 @@ export class Site extends Context.Service<
                 : UpdateOutcome.cases.Unresolved.make({ conflicts: result.conflicts });
             }),
           ),
-        publish: (actor, id) =>
+        access: Effect.fn("Site.access")(function* (id, visitor) {
+          const info = yield* Effect.option(drafts.summary(id));
+          if (Option.isNone(info) || info.value.status !== "open") return null;
+          return draftAccess(info.value.sharing, visitor);
+        }),
+        share: (id, sharing) =>
+          inStorageTurn(
+            Effect.gen(function* () {
+              yield* openDraft(id);
+              yield* drafts.share(id, sharing);
+              return yield* summary(id);
+            }),
+          ),
+        check: Effect.fn("Site.check")(function* (id) {
+          const target = yield* liveRelease;
+          const previous = yield* snapshots.manifest(target.snapshot);
+          return yield* inStorageTurn(
+            Effect.gen(function* () {
+              const draft = yield* openDraft(id);
+              const frozen = freeze(draft, yield* drafts.contracts(id), previous);
+              return {
+                issues: frozen.ok ? [] : frozen.issues,
+                behind: isBehind(draft.base, liveReleaseOf(target)),
+              };
+            }),
+          );
+        }),
+        submit: (actor, id, note, steps, studio) =>
           inReleaseTurn(
-            Effect.gen(function* (): Effect.fn.Return<
-              PublishOutcome,
-              StorageError | DraftNotFound
-            > {
+            Effect.gen(function* (): Effect.fn.Return<SubmitOutcome, StorageError | DraftNotFound> {
               if (!(yield* updateIfClean(actor, id)))
-                return PublishOutcome.cases.NeedsUpdate.make({});
-              const previous = releaseOf(yield* liveRelease);
-              const previousManifest = yield* snapshots.manifest(previous.snapshot);
-              const frozen = yield* inStorageTurn(
+                return SubmitOutcome.cases.NeedsUpdate.make({});
+              const target = yield* liveRelease;
+              const previous = yield* snapshots.manifest(target.snapshot);
+              const { draft, name, frozen } = yield* inStorageTurn(
                 Effect.gen(function* () {
                   const draft = yield* openDraft(id);
                   return {
                     draft,
-                    result: freeze(draft, yield* drafts.contracts(id), previousManifest),
+                    name: (yield* drafts.summary(id)).name,
+                    frozen: freeze(draft, yield* drafts.contracts(id), previous),
                   };
                 }),
               );
-              if (!frozen.result.ok)
-                return PublishOutcome.cases.Incomplete.make({
-                  incomplete: frozen.result.incomplete,
-                });
-              // Edits keep arriving while the snapshot is written.
-              const manifest = yield* writeSnapshot(
-                frozen.draft,
-                frozen.result.frozen,
-                previousManifest,
-              );
-              const summary = yield* drafts.summary(id);
-              const release = Release.cases.Published.make({
-                id: ReleaseId.make(randomId("rel")),
-                snapshot: manifest.id,
-                at: now(),
-                by: actor,
-                draft: { id, name: summary.name },
-              });
+              if (!frozen.ok) return SubmitOutcome.cases.Blocked.make({ issues: frozen.issues });
+              // Edits keep arriving while the snapshot is written; they aren't part of it.
+              const manifest = yield* writeSnapshot(draft, frozen.frozen, previous);
+              contents.set(manifest.id, draft);
+              const stored: Stored = {
+                submission: {
+                  id: SubmissionId.make(randomId("sub")),
+                  site,
+                  draft: { id, name },
+                  snapshot: manifest.id,
+                  base: draft.base,
+                  submittedBy: actor,
+                  submittedAt: now(),
+                  editedBy: yield* drafts.editors(id, draft.revision),
+                  note,
+                  steps,
+                  approvals: [],
+                  status: { _tag: "InReview" },
+                },
+                revision: draft.revision,
+                frozen: manifest.id,
+              };
               yield* inStorageTurn(
-                Effect.gen(function* () {
-                  // Someone may have closed the draft while its snapshot was written.
-                  const edited = (yield* openDraft(id)).revision !== frozen.draft.revision;
-                  yield* sql.withTransaction(
-                    Effect.gen(function* () {
-                      yield* releases.append(release);
-                      if (!edited) {
-                        yield* drafts.close(id, "published");
-                        return;
-                      }
-                      // What was frozen is live now, so only the later edits stay in the draft.
-                      const current = yield* drafts.draft(id);
-                      yield* moveOnto(
-                        actor,
-                        id,
-                        current,
-                        liveReleaseOf(release),
-                        yield* drafts.contracts(id),
-                      );
-                    }),
-                  );
-                  if (!edited)
-                    yield* live.send(
-                      id,
-                      ServerMessage.cases.DraftClosed.make({ by: actor, release: release.id }),
+                sql.withTransaction(
+                  Effect.gen(function* () {
+                    for (const earlier of yield* approvals.inReview)
+                      if (earlier.submission.draft.id === id)
+                        yield* approvals.record({
+                          ...earlier,
+                          submission: {
+                            ...earlier.submission,
+                            status: { _tag: "Replaced", at: stored.submission.submittedAt },
+                          },
+                        });
+                    yield* recordSubmission(
+                      stored,
+                      steps.length > 0 ? { _tag: "StepStarted" } : null,
+                      studio,
                     );
-                  yield* goLive(release);
-                }),
+                  }),
+                ),
               );
-              return PublishOutcome.cases.Published.make({ release });
+              if (steps.length > 0)
+                return SubmitOutcome.cases.Submitted.make({ submission: stored.submission });
+              const release = yield* publishSubmission(actor, stored, studio);
+              return SubmitOutcome.cases.Published.make({ release });
             }),
           ),
-        rollBack: (actor) =>
+        submission: (id) => Effect.map(approvals.get(id), (stored) => stored.submission),
+        review: Effect.fn("Site.review")(function* (id) {
+          const { submission } = yield* approvals.get(id);
+          const manifest = yield* snapshots.manifest(submission.snapshot);
+          return {
+            submission,
+            changes: yield* changesOf(submission),
+            pages: manifest.pages.map(summaryOf),
+          };
+        }),
+        draftView: (id, path) =>
+          inStorageTurn(
+            Effect.gen(function* () {
+              const draft = yield* openDraft(id);
+              const served = Object.values(draft.pages).filter(
+                (page) => page.status !== "unpublished",
+              );
+              const files = yield* media.files(shownMedia(draft, yield* drafts.contracts(id)));
+              const view: SiteView = {
+                settings: draft.settings,
+                parts: draft.parts,
+                forms: draft.forms,
+                lockfile: draft.lockfile,
+                theme: draft.theme,
+                pages: served.map(listingOf),
+                media: Object.fromEntries(files),
+                page: served.find((page) => page.path === path) ?? null,
+              };
+              return { name: (yield* drafts.summary(id)).name, view };
+            }),
+          ),
+        submissionView: Effect.fn("Site.submissionView")(function* (id, version, path) {
+          const { submission } = yield* approvals.get(id);
+          const target = yield* liveRelease;
+          const view = yield* snapshotView(
+            version === "submitted" ? submission.snapshot : target.snapshot,
+            path,
+          );
+          const changes = yield* changesOf(submission);
+          return { view, changed: changedBlocks(changes, view.page?.id, version) };
+        }),
+        decide: (approver, id, snapshot, decision, note, studio) =>
+          inReleaseTurn(decisionOn(approver, id, snapshot, decision, note, studio)),
+        rollBack: (actor, studio) =>
           inReleaseTurn(
-            inStorageTurn(
-              Effect.gen(function* () {
-                const history = yield* releases.history;
-                const [before, latest] = history.slice(-2).map(releaseOf);
-                if (latest?._tag !== "Published" || before === undefined)
-                  return yield* new NothingToRollBack({});
-                const release = Release.cases.RolledBack.make({
-                  id: ReleaseId.make(randomId("rel")),
-                  snapshot: before.snapshot,
-                  at: now(),
-                  by: actor,
-                  undid: latest.id,
-                });
-                yield* releases.append(release);
-                yield* goLive(release);
-                return release;
-              }),
-            ),
+            Effect.gen(function* () {
+              const release = yield* inStorageTurn(
+                Effect.gen(function* () {
+                  const history = yield* releases.history;
+                  const [before, latest] = history.slice(-2).map(releaseOf);
+                  if (latest?._tag !== "Published" || before === undefined)
+                    return yield* new NothingToRollBack({});
+                  const release = Release.cases.RolledBack.make({
+                    id: ReleaseId.make(randomId("rel")),
+                    snapshot: before.snapshot,
+                    at: now(),
+                    by: actor,
+                    undid: latest.id,
+                  });
+                  yield* releases.append(release);
+                  yield* goLive(release);
+                  return release;
+                }),
+              );
+              yield* mergeUnderReview(studio);
+              return release;
+            }),
           ),
         restore: Effect.fn("Site.restore")(function* (by, id, name) {
           const restored = yield* findRelease(id);
           if (Option.isNone(restored)) return Option.none();
-          const base = releaseOf(yield* liveRelease);
+          const base = yield* liveRelease;
           const content = yield* contentOf(restored.value.snapshot);
-          return Option.some(
-            yield* inStorageTurn(drafts.create({ name, by, base: liveReleaseOf(base), content })),
+          const info = yield* inStorageTurn(
+            drafts.create({ name, by, base: liveReleaseOf(base), content }),
           );
+          return Option.some({ ...info, review: null });
         }),
         reconcile: inStorageTurn(
           Effect.gen(function* () {
-            const latest = yield* liveRelease;
-            yield* routing.write(liveReleaseOf(latest.release));
-            yield* releases.resend(latest);
+            const latest = yield* releases.live;
+            if (Option.isNone(latest)) return;
+            yield* routing.write(liveReleaseOf(latest.value.release));
+            yield* releases.resend(latest.value);
           }),
         ),
-        undelivered: Effect.map(releases.outbox, (rows) => rows.length > 0),
+        undelivered: Effect.map(outbox.pending, (rows) => rows.length > 0),
         deliverOutbox: Effect.gen(function* () {
-          for (const { id, message } of yield* releases.outbox) {
-            yield* index.record(message);
-            yield* releases.delivered(id);
+          for (const { id, message } of yield* outbox.pending) {
+            yield* delivery.deliver(message);
+            yield* outbox.delivered(id);
           }
         }),
       });

@@ -12,7 +12,12 @@ const jonah = { id: "user_jonah", name: "Jonah Reyes" };
 const meera = { id: "user_meera", name: "Meera Kapoor" };
 const priya = { id: "user_priya", name: "Priya Shah" };
 
-const approvers: WorkflowStep = { name: "Communications team", roles: ["approver"], people: [], required: 1 };
+const approvers: WorkflowStep = {
+  name: "Communications team",
+  roles: ["approver"],
+  people: [],
+  required: 1,
+};
 const manager = (people: ReadonlyArray<Collaborator>, required = 1): WorkflowStep => ({
   name: "Library manager",
   roles: [],
@@ -66,7 +71,9 @@ describe("deciding on a submission", () => {
   test("someone who edited the draft needs the permission to approve their own changes", () => {
     const submission = inReview([manager([sam])]);
     expect(eligibility(submission, approver(sam, [])).ok).toBe(false);
-    expect(eligibility(submission, approver(sam, [], ["site.approve", "site.approve_own"]))).toEqual({
+    expect(
+      eligibility(submission, approver(sam, [], ["site.approve", "site.approve_own"])),
+    ).toEqual({
       ok: true,
       step: 0,
     });

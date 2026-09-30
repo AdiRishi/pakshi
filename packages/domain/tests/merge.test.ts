@@ -133,7 +133,7 @@ describe("changes on one side", () => {
       {
         _tag: "ValueChanged",
         place: { target: home, title: "Harbour Summer School" },
-        block: "Feature",
+        block: { id: "b_workshops", title: "Feature" },
         field: "Title",
       },
     ]);
@@ -416,7 +416,7 @@ describe("site-level parts", () => {
       {
         _tag: "ValueChanged",
         place: { target: "site", title: "Footer" },
-        block: "Footer",
+        block: { id: "b_footer", title: "Footer" },
         field: "Background",
       },
     ]);

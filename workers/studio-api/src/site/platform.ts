@@ -9,7 +9,7 @@ import type {
 } from "@repo/contracts/snapshot";
 import { Context, type Effect, type Option } from "effect";
 
-import type { IndexedRelease } from "./releases.ts";
+import type { OutboxMessage } from "./outbox.ts";
 
 /*
  * What a SiteDoc reaches outside its own storage. Each is a service, so the
@@ -46,11 +46,14 @@ export class MediaLibrary extends Context.Service<
   }
 >()("Pakshi/StudioApi/MediaLibrary") {}
 
-/** D1's copy of every site's releases. Recording one again changes nothing. */
-export class ReleaseIndex extends Context.Service<
-  ReleaseIndex,
-  { readonly record: (release: IndexedRelease) => Effect.Effect<void> }
->()("Pakshi/StudioApi/ReleaseIndex") {}
+/**
+ * Where outbox messages go: D1's copies of releases, submissions and shares,
+ * and notification emails. Delivering a copy again changes nothing.
+ */
+export class OutboxDelivery extends Context.Service<
+  OutboxDelivery,
+  { readonly deliver: (message: OutboxMessage) => Effect.Effect<void> }
+>()("Pakshi/StudioApi/OutboxDelivery") {}
 
 /** Everyone connected to the site: those in one draft, or with `null`, everyone. */
 export class LiveUpdates extends Context.Service<

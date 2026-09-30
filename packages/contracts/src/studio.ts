@@ -1,15 +1,41 @@
+import { ResolvedTheme } from "@repo/tokens";
 import { Context, Schema } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
+import { Scope } from "./access.ts";
 import { Draft, DraftName } from "./draft.ts";
-import { DraftId, MediaId, PageId, ReleaseId, SiteId } from "./ids.ts";
+import { FormDefinition } from "./form.ts";
+import {
+  BlockId,
+  DraftId,
+  FormId,
+  MediaId,
+  PageId,
+  ReleaseId,
+  SiteId,
+  SnapshotId,
+  SubmissionId,
+} from "./ids.ts";
 import { Collaborator } from "./live.ts";
 import { Conflict, MergedChange, Resolutions } from "./merge.ts";
 import { Batch, BatchError } from "./ops.ts";
-import { PagePath } from "./page.ts";
-import { Incomplete } from "./publishing.ts";
+import { PageDocument, PagePath } from "./page.ts";
+import { PreflightIssue } from "./publishing.ts";
 import { Release, Timestamp } from "./release.ts";
-import { LiveRelease, MediaFile } from "./snapshot.ts";
+import { DraftSharing, ShareAccess } from "./sharing.ts";
+import { SiteParts, SiteSettings } from "./site.ts";
+import { LiveRelease, Lockfile, MediaFile, PageListing } from "./snapshot.ts";
+import { Submission } from "./submission.ts";
+import { Workflow } from "./workflow.ts";
+
+/**
+ * Where Studio serves a draft's preview, at `${previewBasePath}/{site}/{draft}/{page path}`,
+ * and a submission for its approvers, at `${reviewBasePath}/{site}/{submission}/{page path}`.
+ * Each serves its images under its own `/${mediaSegment}/{media}`, which no page path can take.
+ */
+export const previewBasePath = "/preview";
+export const reviewBasePath = "/review";
+export const mediaSegment = "_media";
 
 /** Better Auth's ID for the organization's identity provider, used by sign-in on both sides. */
 export const identityProviderId = "organization";
@@ -34,14 +60,28 @@ export class StudioUnavailable extends Schema.TaggedError<StudioUnavailable>()(
 /** The signed-in person, which every Studio handler can read. */
 export class SignedIn extends Context.Service<SignedIn, Person>()("Pakshi/SignedIn") {}
 
+/** The person viewing a preview, or null for someone who isn't signed in. */
+export class Visitor extends Context.Service<Visitor, Person | null>()("Pakshi/Visitor") {}
+
+/** Studio's own address, as the browser reached it, for links studio-api sends people. */
+export class StudioAddress extends Context.Service<StudioAddress, string>()(
+  "Pakshi/StudioAddress",
+) {}
+
 /**
  * Checks the session cookie Studio forwards and provides the signed-in person.
  * Handlers never take the person or the cookie as an argument.
  */
-export class StudioSession extends RpcMiddleware.Service<StudioSession, { provides: SignedIn }>()(
-  "Pakshi/StudioSession",
-  { error: Schema.Union([Unauthenticated, StudioUnavailable]) },
-) {}
+export class StudioSession extends RpcMiddleware.Service<
+  StudioSession,
+  { provides: SignedIn | StudioAddress }
+>()("Pakshi/StudioSession", { error: Schema.Union([Unauthenticated, StudioUnavailable]) }) {}
+
+/** Like StudioSession, for calls anyone may make: it provides the visitor, signed in or not. */
+export class VisitorSession extends RpcMiddleware.Service<
+  VisitorSession,
+  { provides: Visitor | StudioAddress }
+>()("Pakshi/VisitorSession", { error: StudioUnavailable }) {}
 
 /** The headers Studio forwards on every call, for the session middleware. */
 export const studioSessionHeaders = { cookie: "cookie", origin: "x-studio-origin" } as const;
@@ -50,6 +90,8 @@ export const Viewer = Schema.Struct({
   user: Person,
   roles: Schema.Array(Schema.Struct({ role: Schema.String, scope: Schema.String })),
   sites: Schema.Array(Schema.Struct({ id: SiteId, name: Schema.String, brand: Schema.String })),
+  /** How many submissions are waiting for this person's decision. */
+  approvalsWaiting: Schema.Int,
 });
 export type Viewer = typeof Viewer.Type;
 
@@ -96,11 +138,21 @@ export const DraftSummary = Schema.Struct({
   people: Schema.Array(Collaborator),
   /** When the draft was published or closed. */
   closedAt: Schema.NullOr(Timestamp),
+  sharing: DraftSharing,
+  /** The draft's latest submission for approval, whatever became of it. */
+  review: Schema.NullOr(Submission),
 });
 export type DraftSummary = typeof DraftSummary.Type;
 
-/** What the person may do on the site, beyond editing its drafts. */
-export const SiteAbilities = Schema.Struct({ publish: Schema.Boolean, rollBack: Schema.Boolean });
+/**
+ * What the person may do on the site, beyond editing its drafts. Submitting
+ * publishes when the site's workflow has no steps, so `publish` covers both.
+ */
+export const SiteAbilities = Schema.Struct({
+  publish: Schema.Boolean,
+  rollBack: Schema.Boolean,
+  share: Schema.Boolean,
+});
 export type SiteAbilities = typeof SiteAbilities.Type;
 
 const SiteName = Schema.Struct({ id: SiteId, name: Schema.String });
@@ -174,14 +226,150 @@ export const UpdateOutcome = Schema.TaggedUnion({
 });
 export type UpdateOutcome = typeof UpdateOutcome.Type;
 
-export const PublishOutcome = Schema.TaggedUnion({
+/** The workflow that applies to a site, and the scope it's set on, or null when none is set anywhere. */
+export const ResolvedWorkflow = Schema.Struct({
+  steps: Workflow,
+  from: Schema.NullOr(Schema.Literals(["site", "brand", "organization"])),
+});
+export type ResolvedWorkflow = typeof ResolvedWorkflow.Type;
+
+/** What submitting a draft now would meet: pre-flight's findings, whether it's behind, and who reviews it. */
+export const SubmissionCheck = Schema.Struct({
+  issues: Schema.Array(PreflightIssue),
+  behind: Schema.Boolean,
+  workflow: ResolvedWorkflow,
+});
+export type SubmissionCheck = typeof SubmissionCheck.Type;
+
+export const SubmitOutcome = Schema.TaggedUnion({
+  Submitted: { submission: Submission },
+  /** The workflow has no steps, so submitting published the draft. */
   Published: { release: Release },
-  /** Fields still incomplete. Nothing was published. */
-  Incomplete: { incomplete: Schema.Array(Incomplete) },
+  /** Pre-flight found things to fix. Nothing was submitted. */
+  Blocked: { issues: Schema.Array(PreflightIssue) },
   /** The draft is behind, and merging the live release needs a person. */
   NeedsUpdate: {},
 });
-export type PublishOutcome = typeof PublishOutcome.Type;
+export type SubmitOutcome = typeof SubmitOutcome.Type;
+
+/** A draft's sharing, as the share dialog shows it. */
+export const SharingView = Schema.Struct({
+  draft: Schema.Struct({ id: DraftId, name: DraftName }),
+  owner: Collaborator,
+  sharing: DraftSharing,
+  can: Schema.Struct({ share: Schema.Boolean }),
+});
+export type SharingView = typeof SharingView.Type;
+
+/**
+ * A scope's approval workflow: its own steps, or null when it uses the one
+ * above it, and the one it would use then.
+ */
+export const WorkflowView = Schema.Struct({
+  scope: Scope,
+  name: Schema.String,
+  own: Schema.NullOr(Workflow),
+  inherited: ResolvedWorkflow,
+  can: Schema.Struct({ edit: Schema.Boolean }),
+});
+export type WorkflowView = typeof WorkflowView.Type;
+
+/** A submission with the site it's for. */
+export const SubmissionItem = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  submission: Submission,
+});
+export type SubmissionItem = typeof SubmissionItem.Type;
+
+/** The Approvals screen: what waits for the person, what they sent, and what's finished. */
+export const Approvals = Schema.Struct({
+  waiting: Schema.Array(SubmissionItem),
+  sent: Schema.Array(SubmissionItem),
+  finished: Schema.Array(SubmissionItem),
+});
+export type Approvals = typeof Approvals.Type;
+
+/** Whether the person may decide on a submission now, and on which step, or why not. */
+export const Decidable = Schema.Union([
+  Schema.Struct({ ok: Schema.Literal(true), step: Schema.Int }),
+  Schema.Struct({ ok: Schema.Literal(false), reason: Schema.String }),
+]);
+export type Decidable = typeof Decidable.Type;
+
+/** A submission as its review screen shows it: what changed compared with the live site, and the pages to look at. */
+export const Review = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  submission: Submission,
+  changes: Schema.Array(MergedChange),
+  pages: Schema.Array(PageSummary),
+  decidable: Decidable,
+});
+export type Review = typeof Review.Type;
+
+export const Decision = Schema.Literals(["approve", "request-changes"]);
+export type Decision = typeof Decision.Type;
+
+export const DecisionOutcome = Schema.TaggedUnion({
+  /** The decision counts. The submission may have moved to its next step, or back to its draft. */
+  Recorded: { submission: Submission },
+  /** It was the last approval, and the submission is live. */
+  Published: { release: Release },
+  /** The submission changed since it was loaded. Nothing was recorded. */
+  Stale: { submission: Submission },
+  /** The submission is no longer under review. Nothing was recorded. */
+  Closed: { submission: Submission },
+});
+export type DecisionOutcome = typeof DecisionOutcome.Type;
+
+/** A draft someone shared with the person. */
+export const SharedDraft = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  draft: Schema.Struct({ id: DraftId, name: DraftName }),
+  access: ShareAccess,
+});
+export type SharedDraft = typeof SharedDraft.Type;
+
+export const Home = Schema.Struct({
+  waiting: Schema.Array(SubmissionItem),
+  shared: Schema.Array(SharedDraft),
+});
+export type Home = typeof Home.Type;
+
+/** Everything a page of a site renders from: the page, and what it reads from the rest of the site. */
+export const SiteView = Schema.Struct({
+  settings: SiteSettings,
+  parts: SiteParts,
+  forms: Schema.Record(FormId, FormDefinition),
+  lockfile: Lockfile,
+  theme: ResolvedTheme,
+  pages: Schema.Array(PageListing),
+  media: Schema.Record(MediaId, MediaFile),
+  /** The page at the address asked for, or null when no page is served there. */
+  page: Schema.NullOr(PageDocument),
+});
+export type SiteView = typeof SiteView.Type;
+
+export const PreviewPage = Schema.TaggedUnion({
+  Page: {
+    site: Schema.Struct({ id: SiteId, name: Schema.String }),
+    draft: Schema.Struct({ id: DraftId, name: DraftName }),
+    /** What the visitor may do with the draft. */
+    access: ShareAccess,
+    view: SiteView,
+  },
+  /** The draft isn't shared with anyone who has the link, and the visitor isn't signed in. */
+  SignIn: {},
+  /** No open draft here is shared with the visitor. */
+  NotFound: {},
+});
+export type PreviewPage = typeof PreviewPage.Type;
+
+/** A page of a submission, or of the live release beside it, with the blocks the submission changed. */
+export const ReviewPage = Schema.Struct({
+  view: SiteView,
+  changed: Schema.Array(BlockId),
+});
+export type ReviewPage = typeof ReviewPage.Type;
 
 /** A site's releases, newest first. */
 export const SiteReleases = Schema.Struct({
@@ -191,10 +379,24 @@ export const SiteReleases = Schema.Struct({
 });
 export type SiteReleases = typeof SiteReleases.Type;
 
+/** The site has no submission with this ID. */
+export class SubmissionNotFound extends Schema.TaggedError<SubmissionNotFound>()(
+  "SubmissionNotFound",
+  { submission: SubmissionId },
+) {}
+
 /** No open draft on the site has this ID. */
 export class DraftNotFound extends Schema.TaggedError<DraftNotFound>()("DraftNotFound", {
   draft: DraftId,
 }) {}
+
+/** The person can't decide on this submission now, for the reason given. */
+export class CannotDecide extends Schema.TaggedError<CannotDecide>()("CannotDecide", {
+  reason: Schema.String,
+}) {}
+
+/** There's no organization, brand or site here that the person can see. */
+export class ScopeNotFound extends Schema.TaggedError<ScopeNotFound>()("ScopeNotFound", {}) {}
 
 /** The person may work on the site, but not do this. */
 export class NotPermitted extends Schema.TaggedError<NotPermitted>()("NotPermitted", {
@@ -215,10 +417,18 @@ export class ReleaseNotFound extends Schema.TaggedError<ReleaseNotFound>()("Rele
 const siteError = Schema.Union([StudioUnavailable, SiteNotFound]);
 const draftError = Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound]);
 const forDraft = { site: SiteId, draft: DraftId };
+const forSubmission = { site: SiteId, submission: SubmissionId };
 
-/** Everything Studio asks of studio-api. */
-export class StudioRpcs extends RpcGroup.make(
+/** Everything Studio asks of studio-api for someone signed in. */
+class SignedInRpcs extends RpcGroup.make(
   Rpc.make("viewer", { success: Viewer, error: StudioUnavailable }),
+  Rpc.make("home", { success: Home, error: StudioUnavailable }),
+  /** People in the organization whose name or email contains the text, for sharing and workflows. */
+  Rpc.make("people", {
+    payload: { search: Schema.String },
+    success: Schema.Array(Person),
+    error: StudioUnavailable,
+  }),
   Rpc.make("siteDrafts", { payload: { site: SiteId }, success: SiteDrafts, error: siteError }),
   Rpc.make("createDraft", {
     payload: { site: SiteId, name: DraftName },
@@ -245,9 +455,20 @@ export class StudioRpcs extends RpcGroup.make(
     success: UpdateOutcome,
     error: draftError,
   }),
-  Rpc.make("publishDraft", {
+  Rpc.make("draftSharing", { payload: forDraft, success: SharingView, error: draftError }),
+  Rpc.make("shareDraft", {
+    payload: { ...forDraft, sharing: DraftSharing },
+    success: SharingView,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound, NotPermitted]),
+  }),
+  Rpc.make("submissionCheck", {
     payload: forDraft,
-    success: PublishOutcome,
+    success: SubmissionCheck,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound, NotPermitted]),
+  }),
+  Rpc.make("submitDraft", {
+    payload: { ...forDraft, note: Schema.String.check(Schema.isMaxLength(1000)) },
+    success: SubmitOutcome,
     error: Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound, NotPermitted]),
   }),
   Rpc.make("siteReleases", { payload: { site: SiteId }, success: SiteReleases, error: siteError }),
@@ -261,4 +482,53 @@ export class StudioRpcs extends RpcGroup.make(
     success: DraftSummary,
     error: Schema.Union([StudioUnavailable, SiteNotFound, ReleaseNotFound]),
   }),
+  Rpc.make("workflow", {
+    payload: { scope: Scope },
+    success: WorkflowView,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound]),
+  }),
+  /** Sets a scope's own workflow, or with null, has it use the one above it. */
+  Rpc.make("saveWorkflow", {
+    payload: { scope: Scope, steps: Schema.NullOr(Workflow) },
+    success: WorkflowView,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
+  }),
+  Rpc.make("approvals", { success: Approvals, error: StudioUnavailable }),
+  Rpc.make("review", {
+    payload: forSubmission,
+    success: Review,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, SubmissionNotFound]),
+  }),
+  Rpc.make("reviewPage", {
+    payload: {
+      ...forSubmission,
+      version: Schema.Literals(["submitted", "live"]),
+      path: PagePath,
+    },
+    success: ReviewPage,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, SubmissionNotFound]),
+  }),
+  Rpc.make("decide", {
+    /** `snapshot` is the submission snapshot the approver saw. */
+    payload: {
+      ...forSubmission,
+      snapshot: SnapshotId,
+      decision: Decision,
+      note: Schema.String.check(Schema.isMaxLength(1000)),
+    },
+    success: DecisionOutcome,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, SubmissionNotFound, CannotDecide]),
+  }),
 ).middleware(StudioSession) {}
+
+/** What Studio asks of studio-api for anyone, signed in or not. */
+class VisitorRpcs extends RpcGroup.make(
+  Rpc.make("previewPage", {
+    payload: { ...forDraft, path: PagePath },
+    success: PreviewPage,
+    error: StudioUnavailable,
+  }),
+).middleware(VisitorSession) {}
+
+/** Everything Studio asks of studio-api. */
+export class StudioRpcs extends SignedInRpcs.merge(VisitorRpcs) {}

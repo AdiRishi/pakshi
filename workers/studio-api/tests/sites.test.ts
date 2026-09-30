@@ -22,6 +22,7 @@ it.effect("an editor reaches the site they edit, with what they may do there", (
         "blocks.upgrade",
         "blocks.request",
       ],
+      roles: ["editor"],
     });
   }).pipe(Effect.provide(core)),
 );

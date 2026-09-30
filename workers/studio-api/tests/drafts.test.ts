@@ -5,12 +5,13 @@ import { Batch } from "@repo/contracts/ops";
 import { Effect, Layer, Schema } from "effect";
 
 import { SiteDrafts } from "../src/site/drafts.ts";
+import { Outbox } from "../src/site/outbox.ts";
 import { harbourLive, home, platform, storage } from "./support/site.ts";
 
 /** The site's drafts as a freshly started SiteDoc sees them, over the same storage. */
 const drafts = Effect.provide(
   SiteDrafts.use((service) => Effect.succeed(service)),
-  Layer.fresh(SiteDrafts.layer),
+  Layer.fresh(SiteDrafts.layer).pipe(Layer.provide(Outbox.layer)),
 );
 
 const summerLaunch = Schema.decodeSync(DraftName)("Summer launch");
