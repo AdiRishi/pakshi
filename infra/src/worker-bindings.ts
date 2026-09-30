@@ -7,6 +7,7 @@ import type * as Redacted from "effect/Redacted";
 
 import type { SiteSubmissions } from "../../workers/sites-api/src/index.ts";
 import type { SiteAgent, SiteDoc } from "../../workers/studio-api/src/index.ts";
+import type { agentGateway } from "./agent.ts";
 import type { DataPlane } from "./data-plane.ts";
 import type { DeploymentConfig } from "./deployment-config.ts";
 import type { IdentityProvider } from "./identity.ts";
@@ -37,6 +38,7 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
   sitesApi: Effect.Success<typeof SitesApi>,
   sitesApiWorkerName: string,
   identity: IdentityProvider,
+  gateway: Effect.Success<typeof agentGateway>,
 ) {
   const authSecret = yield* Alchemy.makeRandom("AuthSecret");
   return {
@@ -48,6 +50,9 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
     // deletes the class and everything it stored.
     SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),
     SITE_AGENT: Cloudflare.DurableObject<SiteAgent>("SiteAgent"),
+    /** Workers AI, which the agent calls through the gateway below. */
+    AI: Cloudflare.Workers.AI(),
+    AI_GATEWAY: gateway.gatewayId,
     // Alchemy's local runtime can't resolve a Worker reference inside a
     // Durable Object binding, so the class is bound by sites-api's fixed name.
     SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions", {

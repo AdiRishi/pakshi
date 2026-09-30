@@ -1,6 +1,7 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
 
+import { agentGateway } from "./agent.ts";
 import { workerCompatibility, workerObservability } from "./cloudflare-config.ts";
 import { dataPlane } from "./data-plane.ts";
 import { deploymentConfig, workerName } from "./deployment-config.ts";
@@ -29,7 +30,7 @@ export const SitesApi = Effect.gen(function* () {
   });
 });
 
-/** Domain logic, sign-in, and the SiteDoc and SiteAgent Durable Objects. */
+/** Domain logic, sign-in, the agent, and the SiteDoc and SiteAgent Durable Objects. */
 export const StudioApi = Effect.gen(function* () {
   const config = yield* deploymentConfig();
   const env = yield* studioApiBindings(
@@ -38,6 +39,7 @@ export const StudioApi = Effect.gen(function* () {
     yield* SitesApi,
     workerName("sites-api", config.stage),
     yield* identityProvider,
+    yield* agentGateway,
   );
   return yield* Cloudflare.Worker("StudioApi", {
     ...workerDefaults,
