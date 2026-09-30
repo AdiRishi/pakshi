@@ -216,20 +216,40 @@ export const unknownMedia = (draft: Draft, ops: ReadonlyArray<Op>) => {
     .filter((id) => !known.has(id));
 };
 
-/** People typing in fields the ops change, which the agent leaves alone. */
-export const typedOver = (typing: ReadonlyArray<TypingIn>, ops: ReadonlyArray<Op>) =>
-  ops.flatMap((op) => {
-    if (op.op !== "setProp") return [];
-    return typing.flatMap((field) =>
-      field.target === op.target &&
-      field.block === op.block &&
-      (field.path === undefined || field.path[0] === op.path[0])
-        ? [
-            `${field.person.name} is typing in ${op.block} ${op.path.join(".")}. Leave it alone for now.`,
-          ]
-        : [],
-    );
-  });
+/** Whether an op changes or removes the field someone is typing in. */
+const overwrites = (draft: Draft, op: Op, field: TypingIn) => {
+  switch (op.op) {
+    case "setProp":
+      return (
+        field.target === op.target &&
+        field.block === op.block &&
+        (field.path === undefined || field.path[0] === op.path[0])
+      );
+    case "removeBlock": {
+      const slots = draft.pages[op.page]?.blocks[op.block]?.slots ?? {};
+      return (
+        field.target === op.page &&
+        (field.block === op.block ||
+          Object.values(slots).some((items) => items.includes(field.block)))
+      );
+    }
+    case "deletePage":
+      return field.target === op.page;
+    default:
+      return false;
+  }
+};
+
+/** People typing in fields the ops change or remove, which the agent leaves alone. */
+export const typedOver = (draft: Draft, typing: ReadonlyArray<TypingIn>, ops: ReadonlyArray<Op>) =>
+  ops.flatMap((op) =>
+    typing
+      .filter((field) => overwrites(draft, op, field))
+      .map(
+        (field) =>
+          `${field.person.name} is typing in ${[field.block, ...(field.path ?? [])].join(" ")}. Leave it alone for now.`,
+      ),
+  );
 
 /** Why the document module refused a batch, in words the agent can act on. */
 export const describeErrors = (ops: ReadonlyArray<Op>, errors: ReadonlyArray<BatchError>) =>
