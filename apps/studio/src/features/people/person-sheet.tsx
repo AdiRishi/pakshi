@@ -293,7 +293,11 @@ export function PersonSheet(props: {
               ) : (
                 <ItemGroup className="gap-2">
                   {member.grants.map((grant) => (
-                    <Item key={`${grant.role.id}:${scopeKey(grant.scope)}`} variant="outline">
+                    <Item
+                      key={`${grant.role.id}:${scopeKey(grant.scope)}`}
+                      render={<li />}
+                      variant="outline"
+                    >
                       <ItemContent>
                         <ItemTitle>{grant.role.name}</ItemTitle>
                         <ItemDescription>{describeScope(grant.scope)}</ItemDescription>
@@ -358,6 +362,7 @@ export function PersonSheet(props: {
                   {member.overrides.map((override) => (
                     <Item
                       key={`${override.permission}:${scopeKey(override.scope)}`}
+                      render={<li />}
                       variant="outline"
                     >
                       <ItemContent>

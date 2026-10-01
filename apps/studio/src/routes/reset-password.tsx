@@ -65,7 +65,7 @@ export const Route = createFileRoute("/reset-password")({
               }
         }
         footer={
-          <Link to={usable ? "/sign-in" : "/forgot-password"} className="text-primary underline">
+          <Link to={usable ? "/sign-in" : "/forgot-password"} className="text-link underline">
             {usable ? "Back to sign in" : "Ask for another link"}
           </Link>
         }

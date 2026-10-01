@@ -101,7 +101,9 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
           </SidebarGroup>
           {(can.invite || can.manageRoles || can.readAudit) && (
             <SidebarGroup>
-              <SidebarGroupLabel id={organizationLabel}>Organization</SidebarGroupLabel>
+              <SidebarGroupLabel id={organizationLabel} className="text-muted-foreground">
+                Organization
+              </SidebarGroupLabel>
               <nav aria-labelledby={organizationLabel}>
                 <SidebarMenu>
                   {can.invite && (
