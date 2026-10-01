@@ -22,6 +22,32 @@
         }
       }
     ],
-    "summary": "Five days of hands-on workshops for anyone who wants to learn by building."
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Five days of "
+            },
+            {
+              "type": "text",
+              "text": "hands-on workshops",
+              "marks": [
+                {
+                  "type": "bold"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": " for anyone who wants to learn by building."
+            }
+          ]
+        }
+      ]
+    }
   }
 }

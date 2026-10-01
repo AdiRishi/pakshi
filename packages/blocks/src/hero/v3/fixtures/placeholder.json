@@ -25,6 +25,32 @@
         }
       }
     ],
-    "summary": "Use a sentence or two to say what's here and who it's for. Most visitors read this far, then decide whether to stay."
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Use a sentence or two to say what's here and who it's for. "
+            },
+            {
+              "type": "text",
+              "text": "Most visitors read this far",
+              "marks": [
+                {
+                  "type": "bold"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": ", then decide whether to stay."
+            }
+          ]
+        }
+      ]
+    }
   }
 }

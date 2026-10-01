@@ -97,11 +97,3 @@ export const richTextSchema = (
       return issues;
     }),
   );
-
-/**
- * The text of a stored rich text value, one paragraph or heading to a line,
- * for a block version whose field holds plain text where the version before
- * held rich text.
- */
-export const plainText = (value: Schema.Json) =>
-  richTextLines(Schema.decodeUnknownSync(RichTextDocument)(value)).join("\n");
