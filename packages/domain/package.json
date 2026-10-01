@@ -44,6 +44,10 @@
       "types": "./src/merge.ts",
       "default": "./src/merge.ts"
     },
+    "./metrics": {
+      "types": "./src/metrics.ts",
+      "default": "./src/metrics.ts"
+    },
     "./rebase": {
       "types": "./src/rebase.ts",
       "default": "./src/rebase.ts"

@@ -82,6 +82,7 @@ import {
   scopeMembers,
   setOverrideFor,
 } from "./members.ts";
+import { successMetrics } from "./metrics.ts";
 import { mailerFor } from "./notifications.ts";
 import { organizationName } from "./organization.ts";
 import { deleteRole, rolesView, saveRole } from "./roles.ts";
@@ -340,6 +341,8 @@ const handlers = (env: StudioApiEnv) =>
           SignedIn.use((person) => withCore("audit filters")(auditFilters(person))),
         exportAudit: ({ query }) =>
           SignedIn.use((person) => withCore("export audit log")(exportAudit(person, query))),
+        successMetrics: ({ since }) =>
+          SignedIn.use((person) => withCore("success metrics")(successMetrics(person, since))),
         roles: () => SignedIn.use((person) => withCore("roles")(rolesView(person))),
         saveRole: ({ role, ...details }) =>
           SignedIn.use((person) => withCore("save role")(saveRole(person, role, details))),

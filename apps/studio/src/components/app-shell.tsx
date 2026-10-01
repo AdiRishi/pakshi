@@ -19,6 +19,7 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
   BlocksIcon,
   CircleCheckIcon,
+  GaugeIcon,
   HistoryIcon,
   HouseIcon,
   LogOutIcon,
@@ -134,6 +135,18 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                       >
                         <HistoryIcon />
                         Audit log
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  {can.readAudit && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        size="lg"
+                        isActive={matchRoute({ to: "/metrics", fuzzy: true }) !== false}
+                        render={<Link to="/metrics" />}
+                      >
+                        <GaugeIcon />
+                        Metrics
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   )}
