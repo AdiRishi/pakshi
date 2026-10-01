@@ -2,9 +2,10 @@ import { D1Client } from "@effect/sql-d1";
 import { accountsBasePath, authBasePath } from "@repo/contracts/accounts";
 import { agentBasePath } from "@repo/contracts/agent";
 import { liveBasePath } from "@repo/contracts/live";
-import { routingKeys } from "@repo/contracts/snapshot";
+import { objectKeys, routingKeys } from "@repo/contracts/snapshot";
 import {
   brandMediaBasePath,
+  mediaUploadPath,
   previewBasePath,
   reviewBasePath,
   siteMediaBasePath,
@@ -20,9 +21,17 @@ import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
 import { serveLive } from "./live.ts";
-import { serveBrandMedia, servePreviewMedia, serveReviewMedia, serveSiteMedia } from "./media.ts";
+import { retainImages } from "./media-retention.ts";
+import {
+  serveBrandMedia,
+  servePreviewMedia,
+  serveReviewMedia,
+  serveSiteMedia,
+  serveUpload,
+} from "./media.ts";
 import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
+import { schedules } from "./schedules.ts";
 
 export { SiteAgent } from "./site-agent.ts";
 export { SiteDoc } from "./site-doc.ts";
@@ -48,6 +57,7 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
     if (url.pathname.startsWith(`${accountsBasePath}/`)) return serveAccounts(request, this.env);
     if (url.pathname.startsWith(`${liveBasePath}/`)) return serveLive(request, this.env);
     if (url.pathname.startsWith(`${agentBasePath}/`)) return serveAgent(request, this.env);
+    if (url.pathname === mediaUploadPath) return serveUpload(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${previewBasePath}/`))
       return servePreviewMedia(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${reviewBasePath}/`))
@@ -60,11 +70,27 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
   }
 
   /**
-   * The scheduled jobs, on the cron schedule infra sets: the reconcile job,
-   * offering brand revisions again to sites that missed them, and asking
-   * sites that haven't reported their block versions for them.
+   * The scheduled jobs, on the schedules infra sets. Often: the reconcile
+   * job, offering brand revisions again to sites that missed them, and asking
+   * sites that haven't reported their block versions for them. Daily: keeping
+   * library images while they're used.
    */
-  override async scheduled() {
+  override async scheduled(controller: ScheduledController) {
+    if (controller.cron === schedules.daily) {
+      const deleted = await Effect.runPromise(
+        retainImages(
+          (site) =>
+            Effect.tryPromise(async () =>
+              (await (await getServerByName(this.env.SITE_DOC, site)).imagesInUse()).map(
+                ({ media }) => media,
+              ),
+            ),
+          (media) => Effect.promise(() => this.env.CONTENT.delete(objectKeys.media(media))),
+        ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
+      );
+      if (deleted.length > 0) console.info("Deleted library images nothing used", deleted);
+      return;
+    }
     const [reconciled, offered] = await Effect.runPromise(
       Effect.all([
         reconcileSites(

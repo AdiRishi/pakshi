@@ -3,7 +3,7 @@ import { blockKey, latestLockfile } from "@repo/blocks";
 import { renderingChanges } from "@repo/blocks/rendering-changes";
 import type { Permission } from "@repo/contracts/access";
 import type { Draft } from "@repo/contracts/draft";
-import type { DraftId, SiteId } from "@repo/contracts/ids";
+import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
@@ -85,6 +85,8 @@ import {
   createSite,
   findSite,
   inSiteLibrary,
+  libraryImages,
+  libraryOf,
   siteFor,
   siteMedia,
   siteOf,
@@ -372,6 +374,54 @@ const handlers = (env: StudioApiEnv) =>
                     doc.saveSettings(collaborator(person), changes, seen, studio),
                 );
                 return yield* settingsView({ ...found, name: view.settings.name }, view);
+              }),
+            ),
+          ),
+        mediaLibrary: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("media library")(
+              Effect.gen(function* () {
+                const found = yield* siteOf(person, site);
+                const doc = yield* siteDoc(env, site);
+                const inUse = yield* Effect.tryPromise(() => doc.imagesInUse());
+                const pages = new Map(inUse.map(({ media, pages }) => [media, pages]));
+                const usedOn = (media: MediaId) => pages.get(media) ?? [];
+                const brand = yield* describeScope({ kind: "brand", id: found.brand }).pipe(
+                  Effect.catchTag("ScopeNotFound", Effect.die),
+                );
+                const { access } = yield* loadAccess(person.id);
+                return {
+                  site: { id: found.id, name: found.name },
+                  brand: { id: found.brand, name: brand.name },
+                  siteImages: yield* libraryImages({ kind: "site", id: found.id }, usedOn),
+                  brandImages: yield* libraryImages({ kind: "brand", id: found.brand }, usedOn),
+                  can: {
+                    editSite: found.permissions.includes("page.edit"),
+                    editBrand: authorize(access, "brand.theme.edit", {
+                      kind: "brand",
+                      id: found.brand,
+                    }),
+                  },
+                };
+              }),
+            ),
+          ),
+        saveAltText: ({ site, media, alt }) =>
+          SignedIn.use((person) =>
+            withCore("save alt text")(
+              Effect.gen(function* () {
+                const sql = yield* SqlClient.SqlClient;
+                const found = yield* siteOf(person, site);
+                const library = yield* libraryOf(found, media);
+                if (library === null) return yield* new ImageNotFound({});
+                const { access } = yield* loadAccess(person.id);
+                const allowed =
+                  library === "site"
+                    ? found.permissions.includes("page.edit")
+                    : authorize(access, "brand.theme.edit", { kind: "brand", id: found.brand });
+                if (!allowed)
+                  return yield* new NotPermitted({ action: "change this image's alt text" });
+                yield* sql`update media set alt = ${alt.trim()} where id = ${media}`;
               }),
             ),
           ),

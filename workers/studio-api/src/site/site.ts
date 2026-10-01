@@ -14,6 +14,7 @@ import {
   type BlockType,
   type DraftId,
   type FormId,
+  type MediaId,
   PageId,
   randomId,
   ReleaseId,
@@ -63,7 +64,12 @@ import {
 import { currentStep, type Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import { type Approver, eligibility } from "@repo/domain/approvals";
-import { type BlockContracts, formsUsedBy } from "@repo/domain/document";
+import {
+  type BlockContracts,
+  formsUsedBy,
+  imagesOnPage,
+  imagesUsedBy,
+} from "@repo/domain/document";
 import { type Frozen, freeze, shownMedia } from "@repo/domain/freeze";
 import {
   changesBetween,
@@ -401,6 +407,14 @@ export class Site extends Context.Service<
     ) => Effect.Effect<Option.Option<DraftSummary>, StorageError>;
     /** The site's forms, in the live site and its open drafts, with the pages each is on. */
     readonly forms: Effect.Effect<ReadonlyArray<SiteForm>, StorageError>;
+    /**
+     * The library images the live site and its open drafts show, with the
+     * pages that show each, or "Header and footer".
+     */
+    readonly imagesInUse: Effect.Effect<
+      ReadonlyArray<{ readonly media: MediaId; readonly pages: ReadonlyArray<string> }>,
+      StorageError
+    >;
     /** The block versions the live site pins, and where each block is used. */
     readonly blocksInUse: Effect.Effect<ReadonlyArray<BlockInUse>, StorageError>;
     /**
@@ -517,6 +531,18 @@ export class Site extends Context.Service<
       const notified = Effect.map(settingsStore.current, ({ settings }) =>
         notifiedForms(liveOf(settings)),
       );
+
+      /** What the live release holds, and every open draft. */
+      const liveAndOpen = Effect.gen(function* () {
+        const live = yield* contentOf((yield* liveRelease).snapshot);
+        const open = yield* inStorageTurn(
+          Effect.gen(function* () {
+            const infos = (yield* drafts.list).filter((info) => info.status === "open");
+            return yield* Effect.forEach(infos, (info) => drafts.draft(info.id));
+          }),
+        ).pipe(Effect.catchTag("DraftNotFound", Effect.die));
+        return { live, open };
+      });
 
       /** Loads every version of each block the contents pin, and the ones between. */
       const libraryFor = (sides: ReadonlyArray<SiteContent>) =>
@@ -1496,14 +1522,20 @@ export class Site extends Context.Service<
             Effect.catchTag("DraftNotFound", Effect.die),
           );
         }),
+        imagesInUse: Effect.gen(function* () {
+          const { live, open } = yield* liveAndOpen;
+          const found = new Map<MediaId, Set<string>>();
+          const use = (media: MediaId, place: string) =>
+            found.set(media, (found.get(media) ?? new Set()).add(place));
+          for (const content of [live, ...open]) {
+            for (const media of imagesUsedBy(content.parts.blocks)) use(media, "Header and footer");
+            for (const page of Object.values(content.pages))
+              for (const media of imagesOnPage(page)) use(media, page.meta.title || page.path);
+          }
+          return Array.from(found, ([media, pages]) => ({ media, pages: Array.from(pages) }));
+        }),
         forms: Effect.gen(function* () {
-          const live = yield* contentOf((yield* liveRelease).snapshot);
-          const open = yield* inStorageTurn(
-            Effect.gen(function* () {
-              const infos = (yield* drafts.list).filter((info) => info.status === "open");
-              return yield* Effect.forEach(infos, (info) => drafts.draft(info.id));
-            }),
-          ).pipe(Effect.catchTag("DraftNotFound", Effect.die));
+          const { live, open } = yield* liveAndOpen;
           const found = new Map<FormId, { name: string; pages: Set<string>; live: boolean }>();
           for (const [content, isLive] of [
             [live, true] as const,

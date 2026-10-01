@@ -2,6 +2,7 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 
+import { schedules } from "../../workers/studio-api/src/schedules.ts";
 import { agentGateway } from "./agent.ts";
 import { workerCompatibility, workerObservability } from "./cloudflare-config.ts";
 import { dataPlane } from "./data-plane.ts";
@@ -49,8 +50,7 @@ export const StudioApi = Effect.fn("Pakshi.StudioApi")(function* (sites: SitesWo
     name: workerName("studio-api", config.stage),
     main: "../workers/studio-api/src/index.ts",
     workersDev: false,
-    // The reconcile job, which has each site's SiteDoc rewrite a KV entry that differs from D1.
-    crons: ["*/5 * * * *"],
+    crons: Object.values(schedules),
     env,
   });
 });

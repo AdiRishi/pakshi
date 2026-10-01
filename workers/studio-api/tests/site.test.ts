@@ -9,6 +9,7 @@ import { Batch } from "@repo/contracts/ops";
 import type { PageDocument } from "@repo/contracts/page";
 import { liveReleaseOf } from "@repo/contracts/release";
 import type { LiveRelease } from "@repo/contracts/snapshot";
+import { ReviewPage } from "@repo/contracts/studio";
 import type { Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import type { Approver } from "@repo/domain/approvals";
@@ -682,10 +683,9 @@ it.effect("a preview shows the draft's latest saved page, and a review marks wha
       expect((yield* site.draftView(id, "/missing")).view.page).toBeNull();
       const submission = yield* submitted(site, id);
       const shown = (version: "submitted" | "live") =>
-        Effect.flatMap(
-          site.submissionView(submission.id, submission.snapshot, version, "/"),
-          (page) => (page._tag === "Page" ? Effect.succeed(page) : Effect.die("It changed.")),
-        );
+        site
+          .submissionView(submission.id, submission.snapshot, version, "/")
+          .pipe(Effect.filterOrElse(ReviewPage.guards.Page, () => Effect.die("It changed.")));
       expect((yield* shown("submitted")).changed).toEqual(["b_hero"]);
       expect(headingOn((yield* shown("live")).view.page ?? undefined)).toBe("Learn by building");
       expect((yield* site.review(submission.id)).changes).toMatchObject([

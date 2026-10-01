@@ -1,5 +1,6 @@
 import type { Permission } from "@repo/contracts/access";
 import { BrandId, MediaId, randomId, SiteId } from "@repo/contracts/ids";
+import { Timestamp } from "@repo/contracts/release";
 import { MediaFile } from "@repo/contracts/snapshot";
 import {
   AddressTaken,
@@ -90,6 +91,61 @@ const summaryOf = (row: typeof MediaRow.Type) => ({
   width: row.width,
   height: row.height,
   alt: row.alt,
+});
+
+const LibraryRow = Schema.Struct({
+  ...MediaRow.fields,
+  name: Schema.String,
+  size: Schema.Int,
+  uploaded_by: Schema.NullOr(Schema.String),
+  created_at: Timestamp,
+});
+
+/**
+ * The images in a site's own library or a brand's, newest first, with who
+ * uploaded each. `usedOn` gives the pages that show an image.
+ */
+export const libraryImages = Effect.fn("StudioApi.libraryImages")(function* (
+  owner:
+    | { readonly kind: "site"; readonly id: SiteId }
+    | { readonly kind: "brand"; readonly id: BrandId },
+  usedOn: (media: MediaId) => ReadonlyArray<string>,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const rows = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: LibraryRow,
+    execute: () => sql`
+      select media.id, content_type, width, height, alt, media.name, size,
+        "user".name as uploaded_by, media.created_at
+      from media left join "user" on "user".id = media.uploaded_by
+      where ${owner.kind === "site" ? sql`site_id = ${owner.id}` : sql`brand_id = ${owner.id}`}
+      order by media.created_at desc, media.id`,
+  })(undefined);
+  return rows.map((row) => ({
+    ...summaryOf(row),
+    name: row.name,
+    size: row.size,
+    uploadedBy: row.uploaded_by,
+    uploadedAt: row.created_at,
+    usedOn: usedOn(row.id),
+  }));
+});
+
+/** Which library an image is in, of a site's and its brand's. */
+export const libraryOf = Effect.fn("StudioApi.libraryOf")(function* (
+  site: { readonly id: SiteId; readonly brand: BrandId },
+  media: MediaId,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const [row] = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: Schema.Struct({ site_id: Schema.NullOr(SiteId) }),
+    execute: () => sql`select site_id from media
+      where id = ${media} and (site_id = ${site.id} or brand_id = ${site.brand})`,
+  })(undefined);
+  if (row === undefined) return null;
+  return row.site_id === null ? ("brand" as const) : ("site" as const);
 });
 
 /** The images a site can place: its own library and its brand's, newest first. */

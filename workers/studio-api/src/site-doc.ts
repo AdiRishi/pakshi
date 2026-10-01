@@ -588,6 +588,10 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#run((site) => site.forms);
   }
 
+  imagesInUse() {
+    return this.#run((site) => site.imagesInUse);
+  }
+
   /** Copies the block versions the site pins to D1 again. */
   reportBlocks() {
     return this.#changing(() => this.#run((site) => site.reportBlocks));
