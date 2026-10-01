@@ -34,6 +34,16 @@ const List = Schema.Union([
   Schema.Struct({ block: BlockId, slot: Schema.String }),
 ]).annotate({ description: "\"root\" for the page's sections, or a section's slot of items" });
 
+const afterProblem =
+  "Supply after: null to insert first, including on an empty page, or an existing block ID to insert after it";
+
+const After = Schema.NullOr(BlockId.annotate({ message: afterProblem }))
+  .annotate({
+    description:
+      "The existing block ID to go after, or JSON null to insert first, including on an empty page",
+  })
+  .annotateKey({ messageMissingKey: afterProblem });
+
 /**
  * An object in a tool call, or the same object written as a JSON string,
  * which models often send for nested objects.
@@ -94,16 +104,14 @@ export const AgentOp = Schema.Union([
   Schema.Struct({
     op: Schema.Literal("insertBlock"),
     list: List,
-    after: Schema.NullOr(BlockId).annotate({
-      description: "The block to go after, or null for first",
-    }),
+    after: After,
     block: NewBlock,
   }),
   Schema.Struct({
     op: Schema.Literal("moveBlock"),
     block: BlockId,
     list: List,
-    after: Schema.NullOr(BlockId),
+    after: After,
   }),
   Schema.Struct({ op: Schema.Literal("removeBlock"), block: BlockId }),
   Schema.Struct({ op: Schema.Literal("setMeta"), field: MetaField, value: Json }),
@@ -179,7 +187,7 @@ export const InsertSection = Tool.make("insert_section", {
     "Adds a section to a page after another, or first. Fields left out keep placeholder content for a person to fill in",
   parameters: Schema.Struct({
     page: PageId,
-    after: Schema.NullOr(BlockId),
+    after: After,
     section: NewBlock,
   }),
   success: Schema.Struct({ block: BlockId, items: Schema.Array(BlockId) }),
