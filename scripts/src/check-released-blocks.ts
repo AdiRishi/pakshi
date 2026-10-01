@@ -19,11 +19,11 @@ import { Schema } from "effect";
 
 const blocksSource = "packages/blocks/src/";
 const renderingLog = "packages/blocks/src/rendering-changes.json";
-const baselines = "infra/tests/blocks.browser.test.ts-snapshots/";
+const baselines = "infra/tests/blocks.integration.test.ts-snapshots/";
 
 const versionFolder = /^packages\/blocks\/src\/([a-z][a-z0-9-]*)\/v(\d+)\//;
 const baselineFile =
-  /^infra\/tests\/blocks\.browser\.test\.ts-snapshots\/([a-z][a-z0-9-]*)-v(\d+)-/;
+  /^infra\/tests\/blocks\.integration\.test\.ts-snapshots\/([a-z][a-z0-9-]*)-v(\d+)-/;
 
 const git = (root: string, args: ReadonlyArray<string>) =>
   execFileSync("git", args, { cwd: root, encoding: "utf8" });

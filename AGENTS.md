@@ -45,8 +45,8 @@ The agent calls Workers AI through the stage's AI Gateway even under
 AI Gateway permissions, and its calls cost money. Its evals
 (`pnpm --filter @repo/agent evals`) call the real model too, so run them only
 when a change needs checking against it, never as routine
-(`packages/agent/evals/README.md`). The browser test that has the agent edit a
-draft runs only with `PAKSHI_AGENT_TESTS=1`.
+(`packages/agent/evals/README.md`). The integration journey that has the agent
+edit a draft runs only with `PAKSHI_AGENT_TESTS=1`.
 
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
@@ -56,12 +56,23 @@ folder never changes: change a block by adding its next version folder, with
 `changes` and `migrate`. CI runs `node scripts/src/check-released-blocks.ts
 origin/main` to enforce this. A new version also needs golden files: run
 `pnpm --filter @repo/blocks exec vitest run tests/schemas.test.ts -u`, and
-update only the new version's file. The browser suite keeps a baseline
-screenshot of every block fixture (`infra/tests/blocks.browser.test.ts`).
+update only the new version's file. The integration suite keeps a baseline
+screenshot of every block fixture (`infra/tests/blocks.integration.test.ts`).
 Accepting changed baselines of a released version needs an entry naming it in
 `packages/blocks/src/rendering-changes.json`, which the sites using it see.
 
-Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing.
+Tests come in three kinds, set out in
+`docs/adr/0003-three-kinds-of-tests.mdx`: unit tests for most behaviour, E2E
+tests that run a Worker on the Cloudflare Vitest plugin
+(`tests/e2e/*.e2e.test.ts`), and a few integration journeys in Playwright
+against a local stack (`infra/tests/*.integration.test.ts`, run with
+`pnpm --filter @repo/infra test`). Put a check in the cheapest kind that can
+make it. E2E tests use `it.live`, because Effect's test clock never lets a
+real wait finish. `infra/src/test-bindings.ts` lists the stand-in for every
+Worker binding under E2E tests; give a new binding one there.
+
+Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing. `pnpm
+test` runs unit and E2E tests; the integration journeys need an Alchemy profile.
 
 `.repos/` contains read-only source references. When writing Effect code, read
 `.repos/effect/LLMS.md` and inspect the matching version there before choosing

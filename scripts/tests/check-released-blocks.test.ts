@@ -16,7 +16,7 @@ const write = (root: string, path: string, text: string) => {
 };
 
 const hero = "packages/blocks/src/hero/v1/index.tsx";
-const baseline = "infra/tests/blocks.browser.test.ts-snapshots/hero-v1-centered-light-darwin.png";
+const baseline = "infra/tests/blocks.integration.test.ts-snapshots/hero-v1-centered-light-darwin.png";
 const log = "packages/blocks/src/rendering-changes.json";
 
 /** A repository whose main branch has released hero v1 with a screenshot, on a branch off main. */
@@ -58,11 +58,15 @@ await test("a fixture added to a released version is rejected too", (context) =>
   assert.equal(releasedBlockProblems(root, "main").length, 1);
 });
 
-await test("a new version, and removing a whole released version, are allowed", (context) => {
+await test("a new version of a released block is allowed", (context) => {
   const root = repository(context);
   write(root, "packages/blocks/src/hero/v2/index.tsx", "export default 2;\n");
   commit(root);
   assert.deepEqual(releasedBlockProblems(root, "main"), []);
+});
+
+await test("removing a whole released version is allowed", (context) => {
+  const root = repository(context);
   rmSync(join(root, "packages/blocks/src/hero/v1"), { recursive: true });
   commit(root);
   assert.deepEqual(releasedBlockProblems(root, "main"), []);
