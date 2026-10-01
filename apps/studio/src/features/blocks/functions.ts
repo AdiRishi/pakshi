@@ -2,12 +2,10 @@ import { BlockType, SiteId } from "@repo/contracts/ids";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
-import { type Effect, Schema } from "effect";
+import { Schema } from "effect";
 
-import { callStudio, type StudioClient } from "@/server/studio-rpc";
-
-const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+import { studio } from "@/server/studio";
+import { callStudio } from "@/server/studio-rpc";
 
 /** Every block in the library, with each version and how many sites have it live. */
 export const getBlockCatalog = createServerFn({ method: "GET" }).handler(() =>

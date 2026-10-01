@@ -1,13 +1,8 @@
 import { InvitationToken } from "@repo/contracts/accounts";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
-import { env } from "cloudflare:workers";
 import { Effect, Schema } from "effect";
 
-import { callStudio, type StudioClient } from "@/server/studio-rpc";
-
-const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+import { studio } from "@/server/studio";
 
 /** The signed-in person, or null when nobody is signed in. */
 export const getViewer = createServerFn({ method: "GET" }).handler(() =>

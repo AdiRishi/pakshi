@@ -21,14 +21,11 @@ import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
 import { type Effect, Schema } from "effect";
 
+import { studio } from "@/server/studio";
 import { callStudio, type StudioClient } from "@/server/studio-rpc";
 
 const forSite = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId }));
 const forDraft = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: DraftId }));
-
-/** Calls studio-api for the request this server function serves. */
-const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
 
 /** Calls studio-api for a suggestion, which waits on a model, so it gets longer to answer. */
 const suggestion = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
