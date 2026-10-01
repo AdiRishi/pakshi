@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 070 | Measuring `sites` startup moves to checkpoint 9, with production                   | 2026-10-01 | Accepted            |
 | 069 | A brand color too light to read fails the contrast check rather than being changed | 2026-10-01 | Accepted            |
 | 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Accepted            |
 | 067 | A new draft offers every block in the library                                      | 2026-10-01 | Accepted            |
@@ -78,6 +79,14 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 070 — Measuring `sites` startup moves to checkpoint 9, with production [#decision-070]
+
+**Context.** Checkpoint 8 asks for `sites` startup measured well under 1 second with two versions of one block live. Several versions of the header and hero are live at once in the dev stack, but Cloudflare reports a Worker's startup time only when its code is uploaded, which the local stack never does.
+
+**Decision.** The measurement moves to checkpoint 9, which builds domains and needs production anyway ([decision 052](#decision-052)). Checkpoint 8 is done with versions live at once in the dev stack.
+
+**Consequences.** Until then, nothing checks that dynamic imports keep startup small as the library grows.
 
 ## 069 — A brand color too light to read fails the contrast check rather than being changed [#decision-069]
 

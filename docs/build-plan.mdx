@@ -26,7 +26,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [5. Publishing and merging](#5-publishing-and-merging)
 - [x] [6. Approvals, sharing and previews](#6-approvals-sharing-and-previews)
 - [x] [7. The agent](#7-the-agent)
-- [ ] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
+- [x] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
 - [ ] [9. Site essentials](#9-site-essentials)
 - [ ] [10. Ready for real sites](#10-ready-for-real-sites)
 
@@ -217,11 +217,13 @@ Brands own their look, and blocks improve without surprising live sites.
 
 **Done when:**
 
-- Two versions of one block are live at once, on two sites the `sites` Worker serves, with its startup measured well under 1 second. A lockfile pins one version of each block, so one site can't show two.
+- Two versions of one block are live at once, on two sites the `sites` Worker serves. A lockfile pins one version of each block, so one site can't show two.
 - A theme with a failing contrast pair can't be saved.
 - A brand change reaches a site's live pages only when its Brand update draft publishes.
 - An upgrade from v1 to v3 migrates content through both steps.
 - CI rejects an edit to a released block's folder.
+
+The check that `sites` startup stays well under 1 second with several versions of a block live moved to checkpoint 9, because Cloudflare reports startup time only for uploaded code, and checkpoint 9 needs production anyway ([decision 070](/decision-log#decision-070)).
 
 **Proves:** block versions at runtime.
 
@@ -246,6 +248,7 @@ Everything else a real site needs.
 - Flooding one site's form leaves another site's forms working.
 - A custom hostname serves over HTTPS in production.
 - A publish and a rollback are each live on a production platform subdomain within 60 seconds.
+- With several versions of a block live, the `sites` Worker's startup time Cloudflare reports is well under 1 second.
 - After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
 - An unpublished page returns 410 and leaves the sitemap and menus.
 - A deleted site stops serving at once, and an org admin can restore it within 30 days.
