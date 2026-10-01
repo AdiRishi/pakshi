@@ -30,7 +30,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
 - [x] [9. Real accounts and setup](#9-real-accounts-and-setup)
 - [x] [10. Site essentials](#10-site-essentials)
-- [ ] [11. Ready for real sites](#11-ready-for-real-sites)
+- [x] [11. Ready for real sites](#11-ready-for-real-sites)
 - [ ] [12. Production](#12-production)
 
 ## 1. Skeleton
@@ -284,13 +284,14 @@ Finish access control, safety and operations.
 
 **Build:**
 
-- The [permissions](/product-spec#roles-and-permissions) screens: members, grants, custom roles, overrides and the delegation rule. Each change tells the `SiteDoc`s it affects to reload the permissions their live connections hold ([decision 041](/decision-log#decision-041)).
-- The audit log's viewer, with every audited action recorded.
-- [Accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
-- The content security policy on every site.
-- Alerts for the failures [operations](/technical-design#operations) lists.
-- Block requests filed into the platform team's tracker.
-- Recording for every [success metric](/product-spec#success-metrics).
+- The [permissions](/product-spec#roles-and-permissions) screens: people, members of each brand and site, grants, custom roles, overrides and the delegation rule. Each change tells the `SiteDoc`s it affects what the people it changed may do now, and `SiteDoc` checks live and agent batches against that ([decision 080](/decision-log#decision-080), [decision 081](/decision-log#decision-081)).
+- The audit log's viewer and export, with every audited action recorded ([decision 082](/decision-log#decision-082)).
+- [Checks](/product-spec#accessibility) for link text and form labels, a checks panel in the editor that steps through what the checks find, and Studio at WCAG 2.2 AA ([decision 079](/decision-log#decision-079)).
+- The content security policy on every site ([decision 084](/decision-log#decision-084)).
+- Block requests kept in Pakshi, for the platform team to read and close ([decision 086](/decision-log#decision-086)).
+- Every [success metric](/product-spec#success-metrics) recorded, on an org admin's Metrics page ([decision 083](/decision-log#decision-083)).
+
+Alerts and the security review moved out of this checkpoint: Workers Logs and tracing stay on for every Worker, and security gets scans of its own ([decision 085](/decision-log#decision-085)).
 
 **Demo:** the Pakshi team builds its first real site in the dev stack, using only Studio and the agent.
 
@@ -298,7 +299,7 @@ Finish access control, safety and operations.
 
 - Delegation tests show no one can grant a permission they don't hold or a scope they don't control.
 - Removing a person's permission stops their next batch.
-- A security review has passed.
+- axe finds no WCAG 2.2 AA violations on the screens this checkpoint adds.
 - Every success metric is being recorded.
 
 ## 12. Production
@@ -321,6 +322,7 @@ Deploy Pakshi to Cloudflare and run real sites on it.
 - A publish and a rollback are each live on a platform subdomain within 60 seconds.
 - With several versions of a block live, the `sites` Worker's startup time Cloudflare reports is well under 1 second.
 - After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
+- Every page of a deployed site sends its content security policy, and the browser blocks nothing the page needs.
 - The restore drill has been run, and its steps are written down.
 - The first real site is live, and every change to it went through Pakshi.
 
