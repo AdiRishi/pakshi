@@ -2,7 +2,7 @@ import { describe, expect, it } from "@effect/vitest";
 import { latestLockfile } from "@repo/blocks";
 import type { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, DraftName } from "@repo/contracts/draft";
-import { BlockId, BlockType, type DraftId, PageId, TurnId } from "@repo/contracts/ids";
+import { BlockId, BlockType, type DraftId, MediaId, PageId, TurnId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { ConflictKey, Side } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
@@ -341,6 +341,20 @@ it.effect(
         expect(yield* liveName).toBe("Harbour Summer School");
       }),
     ),
+);
+
+it.effect("a site's sharing image counts as in use, so the library keeps it", () =>
+  withSite((site) =>
+    Effect.gen(function* () {
+      const { revision } = yield* site.settings;
+      const sharingImage = { $ref: "media" as const, id: MediaId.make("med_sharing") };
+      yield* site.saveSettings(meera, { sharingImage }, revision, studio);
+      expect(yield* site.imagesInUse).toContainEqual({
+        media: "med_sharing",
+        pages: ["Site settings"],
+      });
+    }),
+  ),
 );
 
 it.effect("restoring an older release makes a draft of it that starts from what's live", () =>
