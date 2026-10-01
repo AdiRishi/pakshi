@@ -18,15 +18,11 @@ type StorageError = SqlError.SqlError | Schema.SchemaError;
 /** A run of a person's edits ends after this long without one. */
 const sessionGap = 30 * 60 * 1000;
 
-/** A growing session's entry is rewritten at most this often. */
-const reportEvery = 5 * 60 * 1000;
-
 const SessionRow = Schema.Struct({
   id: AuditId,
   started_at: Timestamp,
   last_at: Timestamp,
   batches: Schema.Int,
-  reported_at: Timestamp,
 });
 
 export interface DraftRef {
@@ -62,7 +58,7 @@ export class SiteAudit extends Context.Service<
       const findSession = SqlSchema.findOneOption({
         Request: Schema.Struct({ draft: Schema.String, person: Schema.String }),
         Result: SessionRow,
-        execute: ({ draft, person }) => sql`select id, started_at, last_at, batches, reported_at
+        execute: ({ draft, person }) => sql`select id, started_at, last_at, batches
           from editing_sessions where draft_id = ${draft} and person = ${person}`,
       });
       return SiteAudit.of({
@@ -83,38 +79,29 @@ export class SiteAudit extends Context.Service<
             (session) => Date.parse(at) - Date.parse(session.last_at) < sessionGap,
           );
           const session = Option.match(continues, {
-            onNone: () => ({
-              id: AuditId.make(randomId("aud")),
-              started_at: at,
-              batches: 1,
-              reported_at: null,
-            }),
+            onNone: () => ({ id: AuditId.make(randomId("aud")), started_at: at, batches: 1 }),
             onSome: (session) => ({ ...session, batches: session.batches + 1 }),
           });
-          const report =
-            session.reported_at === null ||
-            Date.parse(at) - Date.parse(session.reported_at) >= reportEvery;
           yield* sql`insert into editing_sessions
-              (draft_id, person, id, started_at, last_at, batches, reported_at)
+              (draft_id, person, id, started_at, last_at, batches)
             values (${draft.id}, ${actor.id}, ${session.id}, ${session.started_at}, ${at},
-              ${session.batches}, ${report ? at : (session.reported_at ?? at)})
+              ${session.batches})
             on conflict (draft_id, person) do update set id = excluded.id,
               started_at = excluded.started_at, last_at = excluded.last_at,
-              batches = excluded.batches, reported_at = excluded.reported_at`;
-          if (report)
-            yield* send({
-              id: session.id,
-              at,
-              actor: { id: actor.id, name: actor.name },
-              site,
-              brand: null,
-              event: {
-                _tag: "EditingSession",
-                draft,
-                batches: session.batches,
-                startedAt: session.started_at,
-              },
-            });
+              batches = excluded.batches`;
+          yield* send({
+            id: session.id,
+            at,
+            actor: { id: actor.id, name: actor.name },
+            site,
+            brand: null,
+            event: {
+              _tag: "EditingSession",
+              draft,
+              batches: session.batches,
+              startedAt: session.started_at,
+            },
+          });
         }),
         agentChanged: Effect.fn("SiteAudit.agentChanged")(function* (actor, draft, turn) {
           const [counted] = yield* sql<{ readonly batches: number }>`select count(*) as batches

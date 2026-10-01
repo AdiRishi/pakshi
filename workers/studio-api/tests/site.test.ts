@@ -177,6 +177,24 @@ it.effect("a new draft starts from the live release, and joins the drafts list",
   ),
 );
 
+it.effect("the audit log counts every batch of a person's editing session", () =>
+  withSite((site, state) =>
+    Effect.gen(function* () {
+      const { id } = yield* site.createDraft(sam, name("Heading"));
+      yield* site.applyBatch(sam, id, setHeading("Build a boat"));
+      yield* site.applyBatch(sam, id, setHeading("Sail a boat"));
+      yield* site.deliverOutbox;
+      const sessions = state.delivered.flatMap((message) =>
+        message._tag === "Audit" && message.entry.event._tag === "EditingSession"
+          ? [message.entry]
+          : [],
+      );
+      expect(new Set(sessions.map((entry) => entry.id)).size).toBe(1);
+      expect(sessions.at(-1)?.event).toMatchObject({ batches: 2 });
+    }),
+  ),
+);
+
 it.effect("publishing writes a snapshot, makes it live, closes the draft and tells everyone", () =>
   withSite((site, state) =>
     Effect.gen(function* () {

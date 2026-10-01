@@ -136,7 +136,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** Every audited action must be recorded, and actions happen in studio-api, in each site's `SiteDoc`, and in scheduled jobs.
 
-**Decision.** One `audit_log` table in D1. studio-api writes the entries for what it changes. `SiteDoc` sends its own through its outbox, written in the same storage turn as the change; the entries for publishes and rollbacks are made from the release records as they reach D1, so no release goes live without one. An editing session is one entry, for a person's run of edits in a draft until half an hour passes without one, rewritten at most every five minutes as it grows. An entry deleting a person's form entries doesn't keep their email address. Entries outlive the sites they name. Reading the log needs `audit.read`, which org admins hold.
+**Decision.** One `audit_log` table in D1. studio-api writes the entries for what it changes. `SiteDoc` sends its own through its outbox, written in the same storage turn as the change; the entries for publishes and rollbacks are made from the release records as they reach D1, so no release goes live without one. An editing session is one entry, for a person's run of edits in a draft until half an hour passes without one, rewritten with each batch as it grows. An entry deleting a person's form entries doesn't keep their email address. Entries outlive the sites they name. Reading the log needs `audit.read`, which org admins hold.
 
 **Consequences.** Every new audited action is one event in `AuditEvent`, with its kind in the log's filters.
 
