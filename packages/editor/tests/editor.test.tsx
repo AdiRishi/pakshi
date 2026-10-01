@@ -87,16 +87,14 @@ describe("the keyboard alone", () => {
   test("reaches every field on the page with Tab", async () => {
     const { canvas } = await open();
     const fields = Array.from(canvas().querySelectorAll<HTMLElement>("[data-pakshi-field]"));
-    const reached = new Set<HTMLElement>();
+    const reached = new Set<EventTarget | null>();
+    canvas().addEventListener("focusin", (event) => reached.add(event.target));
     await userEvent.click(page.getByTitle(/^Canvas:/));
-    for (let step = 0; step < fields.length * 3 && reached.size < fields.length; step += 1) {
-      await userEvent.keyboard("{Tab}");
-      const focused = fields.find((field) => field === canvas().activeElement);
-      if (focused !== undefined) reached.add(focused);
-    }
-    expect(
-      fields.filter((field) => !reached.has(field)).map((field) => field.dataset["pakshiField"]),
-    ).toEqual([]);
+    const missing = () => fields.filter((field) => !reached.has(field));
+    // Presses go in batches, because a keyboard call per press is slower than the test may take.
+    for (let pressed = 0; pressed < fields.length * 3 && missing().length > 0; pressed += 20)
+      await userEvent.keyboard("{Tab}".repeat(20));
+    expect(missing().map((field) => field.dataset["pakshiField"])).toEqual([]);
   });
 
   test("edits a field from a selected block: arrows, Enter, typing and Escape", async () => {
