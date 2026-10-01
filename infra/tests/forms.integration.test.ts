@@ -16,6 +16,7 @@ import {
   submit,
   unique,
   uniqueAddress,
+  visit,
 } from "./support/studio.ts";
 
 test("a visitor sends a form on a site's own domain, and its admin reads, exports and deletes the entry", async ({
@@ -33,8 +34,7 @@ test("a visitor sends a form on a site's own domain, and its admin reads, export
   await addFormSection(priya, canvas, "Ask for a room");
   await describePage(priya, "Book a room at Northbank library.");
   await emailEntriesTo(priya, site, "New form", "rooms@riverton.test");
-  await priya.goto(draft);
-  await priya.getByRole("link", { name: "Edit" }).first().click();
+  await openHome(priya, draft);
   await submit(priya, "Publish");
 
   // Rendered first at the platform address, so the domain must not be handed its cached page.
@@ -55,7 +55,7 @@ test("a visitor sends a form on a site's own domain, and its admin reads, export
   await visitor.getByRole("button", { name: "Send" }).click();
   await expect(visitor.getByText("Thank you. Your answers were sent.")).toBeVisible();
 
-  await priya.goto(`${studioUrl}/sites/${site}/submissions`);
+  await visit(priya, `${studioUrl}/sites/${site}/submissions`);
   await priya.getByRole("link", { name: "ama@example.org" }).click();
   await expect(priya.getByRole("dialog")).toContainText("Ama Mensah");
   const download = priya.waitForEvent("download");
@@ -64,7 +64,7 @@ test("a visitor sends a form on a site's own domain, and its admin reads, export
   expect((await download).suggestedFilename()).toMatch(/\.csv$/);
 
   await priya.getByRole("button", { name: "Delete a person's data" }).click();
-  await priya.getByLabel("Their email address").fill("ama@example.org");
+  await priya.getByLabel("Their email address", { exact: true }).fill("ama@example.org");
   await priya.getByRole("button", { name: "Find entries" }).click();
   await priya.getByRole("button", { name: "Delete 1 entry" }).click();
   await expect(priya.getByText("Nothing has been sent yet.")).toBeVisible();

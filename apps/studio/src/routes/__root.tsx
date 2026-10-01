@@ -11,6 +11,7 @@ import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient } from "@tanstack/react-query";
 import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
+import { useEffect } from "react";
 
 import appCss from "@repo/ui/globals.css?url";
 
@@ -49,6 +50,11 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 });
 
 function RootDocument({ children }: { readonly children: React.ReactNode }) {
+  // Marks the page once React has taken it over, so browser tests act on a
+  // page whose controls respond.
+  useEffect(() => {
+    document.documentElement.dataset["hydrated"] = "";
+  }, []);
   return (
     <html lang="en">
       <head>
