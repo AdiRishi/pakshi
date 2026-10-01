@@ -49,11 +49,13 @@ import { Workflow } from "./workflow.ts";
 export const previewBasePath = "/preview";
 /** Where Studio serves a brand's library images, at `${brandMediaBasePath}/{brand}/{media}`, for its admins. */
 export const brandMediaBasePath = "/brand-media";
+/**
+ * Where Studio serves the images a site can place, from its library and its
+ * brand's, at `${siteMediaBasePath}/{site}/{media}`, for anyone who works on it.
+ */
+export const siteMediaBasePath = "/site-media";
 export const reviewBasePath = "/review";
 export const mediaSegment = "_media";
-
-/** Better Auth's ID for the organization's identity provider, used by sign-in on both sides. */
-export const identityProviderId = "organization";
 
 /** The person a Studio request is made for. */
 export const Person = Schema.Struct({
@@ -186,14 +188,6 @@ export class SettingsChanged extends Schema.TaggedError<SettingsChanged>()("Sett
 /** The image isn't in the site's library or its brand's. */
 export class ImageNotFound extends Schema.TaggedError<ImageNotFound>()("ImageNotFound", {}) {}
 
-/** A site's settings, with whether the person may change them. */
-export const SiteSettingsView = Schema.Struct({
-  site: Schema.Struct({ id: SiteId, name: Schema.String }),
-  ...SettingsView.fields,
-  can: Schema.Struct({ edit: Schema.Boolean }),
-});
-export type SiteSettingsView = typeof SiteSettingsView.Type;
-
 /** The person already holds this role there. */
 export class AlreadyMember extends Schema.TaggedError<AlreadyMember>()("AlreadyMember", {}) {}
 
@@ -218,6 +212,16 @@ export const MediaSummary = Schema.Struct({
   alt: Schema.String,
 });
 export type MediaSummary = typeof MediaSummary.Type;
+
+/** A site's settings, with the images it can choose from and whether the person may change them. */
+export const SiteSettingsView = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  brand: Schema.Struct({ id: BrandId, name: Schema.String }),
+  ...SettingsView.fields,
+  media: Schema.Array(MediaSummary),
+  can: Schema.Struct({ edit: Schema.Boolean }),
+});
+export type SiteSettingsView = typeof SiteSettingsView.Type;
 
 export const PageSummary = Schema.Struct({
   id: PageId,

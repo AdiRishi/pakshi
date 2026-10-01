@@ -25,6 +25,7 @@ import { Route as AuthedOrganizationWorkflowRouteImport } from './routes/_authed
 import { Route as AuthedSitesNewRouteImport } from './routes/_authed/sites/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as BrandMediaBrandIdMediaIdRouteImport } from './routes/brand-media/$brandId/$mediaId'
+import { Route as SiteMediaSiteIdMediaIdRouteImport } from './routes/site-media/$siteId/$mediaId'
 import { Route as AuthedApprovalsSiteIdSubmissionIdRouteImport } from './routes/_authed/approvals/$siteId/$submissionId'
 import { Route as AuthedBrandsBrandIdIndexRouteImport } from './routes/_authed/brands/$brandId/index'
 import { Route as AuthedBrandsBrandIdIdentityRouteImport } from './routes/_authed/brands/$brandId/identity'
@@ -33,9 +34,10 @@ import { Route as AuthedBrandsBrandIdWorkflowRouteImport } from './routes/_authe
 import { Route as AuthedSitesSiteIdIndexRouteImport } from './routes/_authed/sites/$siteId/index'
 import { Route as AuthedSitesSiteIdBlocksRouteImport } from './routes/_authed/sites/$siteId/blocks'
 import { Route as AuthedSitesSiteIdReleasesRouteImport } from './routes/_authed/sites/$siteId/releases'
-import { Route as AuthedSitesSiteIdWorkflowRouteImport } from './routes/_authed/sites/$siteId/workflow'
 import { Route as PreviewSiteIdDraftIdSplatRouteImport } from './routes/preview/$siteId/$draftId/$'
 import { Route as ReviewSiteIdSubmissionIdSplatRouteImport } from './routes/review/$siteId/$submissionId/$'
+import { Route as AuthedSitesSiteIdSettingsIndexRouteImport } from './routes/_authed/sites/$siteId/settings/index'
+import { Route as AuthedSitesSiteIdSettingsWorkflowRouteImport } from './routes/_authed/sites/$siteId/settings/workflow'
 import { Route as AuthedSitesSiteIdDraftsDraftIdIndexRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/index'
 import { Route as AuthedSitesSiteIdDraftsDraftIdUpdateRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/update'
 import { Route as AuthedSitesSiteIdDraftsDraftIdPagesPageIdRouteImport } from './routes/_authed/sites/$siteId/drafts/$draftId/pages/$pageId'
@@ -121,6 +123,11 @@ const BrandMediaBrandIdMediaIdRoute =
     path: '/brand-media/$brandId/$mediaId',
     getParentRoute: () => rootRouteImport,
   } as any)
+const SiteMediaSiteIdMediaIdRoute = SiteMediaSiteIdMediaIdRouteImport.update({
+  id: '/site-media/$siteId/$mediaId',
+  path: '/site-media/$siteId/$mediaId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthedApprovalsSiteIdSubmissionIdRoute =
   AuthedApprovalsSiteIdSubmissionIdRouteImport.update({
     id: '/approvals/$siteId/$submissionId',
@@ -167,12 +174,6 @@ const AuthedSitesSiteIdReleasesRoute =
     path: '/sites/$siteId/releases',
     getParentRoute: () => AuthedRoute,
   } as any)
-const AuthedSitesSiteIdWorkflowRoute =
-  AuthedSitesSiteIdWorkflowRouteImport.update({
-    id: '/sites/$siteId/workflow',
-    path: '/sites/$siteId/workflow',
-    getParentRoute: () => AuthedRoute,
-  } as any)
 const PreviewSiteIdDraftIdSplatRoute =
   PreviewSiteIdDraftIdSplatRouteImport.update({
     id: '/preview/$siteId/$draftId/$',
@@ -184,6 +185,18 @@ const ReviewSiteIdSubmissionIdSplatRoute =
     id: '/review/$siteId/$submissionId/$',
     path: '/review/$siteId/$submissionId/$',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AuthedSitesSiteIdSettingsIndexRoute =
+  AuthedSitesSiteIdSettingsIndexRouteImport.update({
+    id: '/sites/$siteId/settings/',
+    path: '/sites/$siteId/settings/',
+    getParentRoute: () => AuthedRoute,
+  } as any)
+const AuthedSitesSiteIdSettingsWorkflowRoute =
+  AuthedSitesSiteIdSettingsWorkflowRouteImport.update({
+    id: '/sites/$siteId/settings/workflow',
+    path: '/sites/$siteId/settings/workflow',
+    getParentRoute: () => AuthedRoute,
   } as any)
 const AuthedSitesSiteIdDraftsDraftIdIndexRoute =
   AuthedSitesSiteIdDraftsDraftIdIndexRouteImport.update({
@@ -218,6 +231,7 @@ export interface FileRoutesByFullPath {
   '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
+  '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/approvals/': typeof AuthedApprovalsIndexRoute
   '/brands/': typeof AuthedBrandsIndexRoute
   '/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
@@ -226,11 +240,12 @@ export interface FileRoutesByFullPath {
   '/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
   '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
-  '/sites/$siteId/workflow': typeof AuthedSitesSiteIdWorkflowRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/brands/$brandId/': typeof AuthedBrandsBrandIdIndexRoute
   '/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
+  '/sites/$siteId/settings/': typeof AuthedSitesSiteIdSettingsIndexRoute
   '/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
   '/sites/$siteId/drafts/$draftId/': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
   '/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
@@ -249,6 +264,7 @@ export interface FileRoutesByTo {
   '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
+  '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/approvals': typeof AuthedApprovalsIndexRoute
   '/brands': typeof AuthedBrandsIndexRoute
   '/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
@@ -257,11 +273,12 @@ export interface FileRoutesByTo {
   '/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
   '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
-  '/sites/$siteId/workflow': typeof AuthedSitesSiteIdWorkflowRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/brands/$brandId': typeof AuthedBrandsBrandIdIndexRoute
   '/sites/$siteId': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
+  '/sites/$siteId/settings': typeof AuthedSitesSiteIdSettingsIndexRoute
   '/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
   '/sites/$siteId/drafts/$draftId': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
   '/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
@@ -282,6 +299,7 @@ export interface FileRoutesById {
   '/_authed/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
+  '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/_authed/approvals/': typeof AuthedApprovalsIndexRoute
   '/_authed/brands/': typeof AuthedBrandsIndexRoute
   '/_authed/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
@@ -290,11 +308,12 @@ export interface FileRoutesById {
   '/_authed/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/_authed/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
   '/_authed/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
-  '/_authed/sites/$siteId/workflow': typeof AuthedSitesSiteIdWorkflowRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/_authed/brands/$brandId/': typeof AuthedBrandsBrandIdIndexRoute
   '/_authed/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/_authed/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
+  '/_authed/sites/$siteId/settings/': typeof AuthedSitesSiteIdSettingsIndexRoute
   '/_authed/sites/$siteId/drafts/$draftId/update': typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
   '/_authed/sites/$siteId/drafts/$draftId/': typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
   '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
@@ -315,6 +334,7 @@ export interface FileRouteTypes {
     | '/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
+    | '/site-media/$siteId/$mediaId'
     | '/approvals/'
     | '/brands/'
     | '/approvals/$siteId/$submissionId'
@@ -323,11 +343,12 @@ export interface FileRouteTypes {
     | '/brands/$brandId/workflow'
     | '/sites/$siteId/blocks'
     | '/sites/$siteId/releases'
-    | '/sites/$siteId/workflow'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
     | '/brands/$brandId/'
     | '/sites/$siteId/'
+    | '/sites/$siteId/settings/workflow'
+    | '/sites/$siteId/settings/'
     | '/sites/$siteId/drafts/$draftId/update'
     | '/sites/$siteId/drafts/$draftId/'
     | '/sites/$siteId/drafts/$draftId/pages/$pageId'
@@ -346,6 +367,7 @@ export interface FileRouteTypes {
     | '/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
+    | '/site-media/$siteId/$mediaId'
     | '/approvals'
     | '/brands'
     | '/approvals/$siteId/$submissionId'
@@ -354,11 +376,12 @@ export interface FileRouteTypes {
     | '/brands/$brandId/workflow'
     | '/sites/$siteId/blocks'
     | '/sites/$siteId/releases'
-    | '/sites/$siteId/workflow'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
     | '/brands/$brandId'
     | '/sites/$siteId'
+    | '/sites/$siteId/settings/workflow'
+    | '/sites/$siteId/settings'
     | '/sites/$siteId/drafts/$draftId/update'
     | '/sites/$siteId/drafts/$draftId'
     | '/sites/$siteId/drafts/$draftId/pages/$pageId'
@@ -378,6 +401,7 @@ export interface FileRouteTypes {
     | '/_authed/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
+    | '/site-media/$siteId/$mediaId'
     | '/_authed/approvals/'
     | '/_authed/brands/'
     | '/_authed/approvals/$siteId/$submissionId'
@@ -386,11 +410,12 @@ export interface FileRouteTypes {
     | '/_authed/brands/$brandId/workflow'
     | '/_authed/sites/$siteId/blocks'
     | '/_authed/sites/$siteId/releases'
-    | '/_authed/sites/$siteId/workflow'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
     | '/_authed/brands/$brandId/'
     | '/_authed/sites/$siteId/'
+    | '/_authed/sites/$siteId/settings/workflow'
+    | '/_authed/sites/$siteId/settings/'
     | '/_authed/sites/$siteId/drafts/$draftId/update'
     | '/_authed/sites/$siteId/drafts/$draftId/'
     | '/_authed/sites/$siteId/drafts/$draftId/pages/$pageId'
@@ -406,6 +431,7 @@ export interface RootRouteChildren {
   JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   BrandMediaBrandIdMediaIdRoute: typeof BrandMediaBrandIdMediaIdRoute
+  SiteMediaSiteIdMediaIdRoute: typeof SiteMediaSiteIdMediaIdRoute
   PreviewSiteIdDraftIdSplatRoute: typeof PreviewSiteIdDraftIdSplatRoute
   ReviewSiteIdSubmissionIdSplatRoute: typeof ReviewSiteIdSubmissionIdSplatRoute
 }
@@ -524,6 +550,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BrandMediaBrandIdMediaIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/site-media/$siteId/$mediaId': {
+      id: '/site-media/$siteId/$mediaId'
+      path: '/site-media/$siteId/$mediaId'
+      fullPath: '/site-media/$siteId/$mediaId'
+      preLoaderRoute: typeof SiteMediaSiteIdMediaIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_authed/approvals/$siteId/$submissionId': {
       id: '/_authed/approvals/$siteId/$submissionId'
       path: '/approvals/$siteId/$submissionId'
@@ -580,13 +613,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesSiteIdReleasesRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/sites/$siteId/workflow': {
-      id: '/_authed/sites/$siteId/workflow'
-      path: '/sites/$siteId/workflow'
-      fullPath: '/sites/$siteId/workflow'
-      preLoaderRoute: typeof AuthedSitesSiteIdWorkflowRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/preview/$siteId/$draftId/$': {
       id: '/preview/$siteId/$draftId/$'
       path: '/preview/$siteId/$draftId/$'
@@ -600,6 +626,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/review/$siteId/$submissionId/$'
       preLoaderRoute: typeof ReviewSiteIdSubmissionIdSplatRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authed/sites/$siteId/settings/': {
+      id: '/_authed/sites/$siteId/settings/'
+      path: '/sites/$siteId/settings'
+      fullPath: '/sites/$siteId/settings/'
+      preLoaderRoute: typeof AuthedSitesSiteIdSettingsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/$siteId/settings/workflow': {
+      id: '/_authed/sites/$siteId/settings/workflow'
+      path: '/sites/$siteId/settings/workflow'
+      fullPath: '/sites/$siteId/settings/workflow'
+      preLoaderRoute: typeof AuthedSitesSiteIdSettingsWorkflowRouteImport
+      parentRoute: typeof AuthedRoute
     }
     '/_authed/sites/$siteId/drafts/$draftId/': {
       id: '/_authed/sites/$siteId/drafts/$draftId/'
@@ -639,9 +679,10 @@ interface AuthedRouteChildren {
   AuthedBrandsBrandIdWorkflowRoute: typeof AuthedBrandsBrandIdWorkflowRoute
   AuthedSitesSiteIdBlocksRoute: typeof AuthedSitesSiteIdBlocksRoute
   AuthedSitesSiteIdReleasesRoute: typeof AuthedSitesSiteIdReleasesRoute
-  AuthedSitesSiteIdWorkflowRoute: typeof AuthedSitesSiteIdWorkflowRoute
   AuthedBrandsBrandIdIndexRoute: typeof AuthedBrandsBrandIdIndexRoute
   AuthedSitesSiteIdIndexRoute: typeof AuthedSitesSiteIdIndexRoute
+  AuthedSitesSiteIdSettingsWorkflowRoute: typeof AuthedSitesSiteIdSettingsWorkflowRoute
+  AuthedSitesSiteIdSettingsIndexRoute: typeof AuthedSitesSiteIdSettingsIndexRoute
   AuthedSitesSiteIdDraftsDraftIdUpdateRoute: typeof AuthedSitesSiteIdDraftsDraftIdUpdateRoute
   AuthedSitesSiteIdDraftsDraftIdIndexRoute: typeof AuthedSitesSiteIdDraftsDraftIdIndexRoute
   AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute: typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
@@ -662,9 +703,11 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBrandsBrandIdWorkflowRoute: AuthedBrandsBrandIdWorkflowRoute,
   AuthedSitesSiteIdBlocksRoute: AuthedSitesSiteIdBlocksRoute,
   AuthedSitesSiteIdReleasesRoute: AuthedSitesSiteIdReleasesRoute,
-  AuthedSitesSiteIdWorkflowRoute: AuthedSitesSiteIdWorkflowRoute,
   AuthedBrandsBrandIdIndexRoute: AuthedBrandsBrandIdIndexRoute,
   AuthedSitesSiteIdIndexRoute: AuthedSitesSiteIdIndexRoute,
+  AuthedSitesSiteIdSettingsWorkflowRoute:
+    AuthedSitesSiteIdSettingsWorkflowRoute,
+  AuthedSitesSiteIdSettingsIndexRoute: AuthedSitesSiteIdSettingsIndexRoute,
   AuthedSitesSiteIdDraftsDraftIdUpdateRoute:
     AuthedSitesSiteIdDraftsDraftIdUpdateRoute,
   AuthedSitesSiteIdDraftsDraftIdIndexRoute:
@@ -686,6 +729,7 @@ const rootRouteChildren: RootRouteChildren = {
   JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   BrandMediaBrandIdMediaIdRoute: BrandMediaBrandIdMediaIdRoute,
+  SiteMediaSiteIdMediaIdRoute: SiteMediaSiteIdMediaIdRoute,
   PreviewSiteIdDraftIdSplatRoute: PreviewSiteIdDraftIdSplatRoute,
   ReviewSiteIdSubmissionIdSplatRoute: ReviewSiteIdSubmissionIdSplatRoute,
 }

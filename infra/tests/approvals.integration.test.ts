@@ -28,7 +28,7 @@ test("a change goes through the site's approval step to live", async ({ browser 
   const siteId = new URL(draft).pathname.split("/")[2] ?? "";
 
   // The site's own workflow: one step, for anyone with the approver role there.
-  await priya.goto(`${studioUrl}/sites/${siteId}/workflow`);
+  await priya.goto(`${studioUrl}/sites/${siteId}/settings/workflow`);
   const inherit = priya.getByRole("switch", { name: "Use the brand's workflow" });
   await clickWhenReady(inherit, priya.getByRole("button", { name: "Add step" }));
   await priya.getByRole("button", { name: "Add step" }).click();

@@ -15,29 +15,28 @@ import { AppShell } from "@/components/app-shell";
 
 import { BrandHeader } from "../brands/brand-header";
 import { brandQuery } from "../brands/queries";
-import { SiteHeader } from "../sites/site-header";
+import { SettingsShell } from "../settings/settings-shell";
 import { WorkflowEditor, workflowQuery } from "./workflow-editor";
 
 const description =
   "Changes go through these steps in order before going live. A workflow can be set on the organization, a brand or a site, and the nearest one applies.";
 
-/** A site's approval workflow, among the site's sections. */
+/** A site's approval workflow, among the site's settings. */
 export function SiteWorkflowPage(props: {
   readonly viewer: Viewer;
   readonly scope: Extract<Scope, { kind: "site" }>;
 }) {
   const { data } = useSuspenseQuery(workflowQuery(props.scope));
   return (
-    <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={{ id: props.scope.id, name: data.name }}
-        section="workflow"
-        description={description}
-      />
-      <div className="px-10 py-8">
-        <WorkflowEditor key={JSON.stringify(data.own)} view={data} />
-      </div>
-    </AppShell>
+    <SettingsShell
+      viewer={props.viewer}
+      site={{ id: props.scope.id, name: data.name }}
+      page="workflow"
+      title="Approval workflow"
+      description={description}
+    >
+      <WorkflowEditor key={JSON.stringify(data.own)} view={data} />
+    </SettingsShell>
   );
 }
 

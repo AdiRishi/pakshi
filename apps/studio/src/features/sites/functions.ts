@@ -12,7 +12,7 @@ import {
 } from "@repo/contracts/ids";
 import { ConflictKey, Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
-import { SiteName } from "@repo/contracts/settings";
+import { SettingsChanges, SiteName } from "@repo/contracts/settings";
 import { DraftSharing } from "@repo/contracts/sharing";
 import { Decision, SiteAddress } from "@repo/contracts/studio";
 import { Workflow } from "@repo/contracts/workflow";
@@ -33,6 +33,20 @@ const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
 /** Calls studio-api for a suggestion, which waits on a model, so it gets longer to answer. */
 const suggestion = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
   callStudio({ binding: env.STUDIO_RPC, request: getRequest(), timeout: "90 seconds" }, use);
+
+/** A site's settings, with the images it can choose from. */
+export const getSiteSettings = createServerFn({ method: "GET" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.siteSettings(data)));
+
+/** Saves some of a site's settings, as of the settings revision the person started from. */
+export const saveSiteSettings = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: SiteId, changes: SettingsChanges, seen: Schema.Int }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.saveSiteSettings(data)));
 
 /** A site's drafts, with the release that's live. */
 export const getSiteDrafts = createServerFn({ method: "GET" })

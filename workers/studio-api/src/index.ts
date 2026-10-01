@@ -3,7 +3,12 @@ import { accountsBasePath, authBasePath } from "@repo/contracts/accounts";
 import { agentBasePath } from "@repo/contracts/agent";
 import { liveBasePath } from "@repo/contracts/live";
 import { routingKeys } from "@repo/contracts/snapshot";
-import { brandMediaBasePath, previewBasePath, reviewBasePath } from "@repo/contracts/studio";
+import {
+  brandMediaBasePath,
+  previewBasePath,
+  reviewBasePath,
+  siteMediaBasePath,
+} from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { Effect } from "effect";
@@ -15,7 +20,7 @@ import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
 import { serveLive } from "./live.ts";
-import { serveBrandMedia, servePreviewMedia, serveReviewMedia } from "./media.ts";
+import { serveBrandMedia, servePreviewMedia, serveReviewMedia, serveSiteMedia } from "./media.ts";
 import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
 
@@ -32,7 +37,7 @@ export class StudioRpc extends WorkerEntrypoint<StudioApiEnv> {
 /**
  * Sign-in and making accounts, which Studio forwards unchanged for their
  * cookies, the editor's live connections, conversations with
- * the agent, and the images of drafts and submissions. studio-api has no public address;
+ * the agent, and the images of drafts, submissions, sites and brands. studio-api has no public address;
  * only Studio's service bindings reach it.
  */
 export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
@@ -49,6 +54,8 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
       return serveReviewMedia(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${brandMediaBasePath}/`))
       return serveBrandMedia(request, this.env);
+    if (request.method === "GET" && url.pathname.startsWith(`${siteMediaBasePath}/`))
+      return serveSiteMedia(request, this.env);
     return Response.json({ code: "not_found", message: "Route not found." }, { status: 404 });
   }
 

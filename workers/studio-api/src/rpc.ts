@@ -48,7 +48,7 @@ import { Cause, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
-import { loadAccess } from "./access.ts";
+import { describeScope, loadAccess } from "./access.ts";
 import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { authFor } from "./auth.ts";
 import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
@@ -235,6 +235,24 @@ const handlers = (env: StudioApiEnv) =>
         if (!found.permissions.includes(permission)) return yield* new NotPermitted({ action });
         return { found, doc: yield* siteDoc(env, site) };
       });
+      /** A site's settings as its settings screens show them, to someone who works on it. */
+      const settingsView = Effect.fn("StudioRpc.settingsView")(function* (
+        site: Effect.Success<ReturnType<typeof siteOf>>,
+        view: SettingsView,
+      ) {
+        // A site's brand outlives it.
+        const brand = yield* describeScope({ kind: "brand", id: site.brand }).pipe(
+          Effect.catchTag("ScopeNotFound", Effect.die),
+        );
+        const media = yield* siteMedia(site);
+        return {
+          site: { id: site.id, name: site.name },
+          brand: { id: site.brand, name: brand.name },
+          ...view,
+          media,
+          can: { edit: site.permissions.includes("site.settings.edit") },
+        };
+      });
       const liveOf = (doc: Effect.Success<ReturnType<typeof siteDoc>>) =>
         Effect.tryPromise(async (): Promise<Release> => doc.live());
 
@@ -312,11 +330,7 @@ const handlers = (env: StudioApiEnv) =>
                 const view = yield* Effect.tryPromise(async (): Promise<SettingsView> =>
                   doc.settings(),
                 );
-                return {
-                  site: { id: found.id, name: found.name },
-                  ...view,
-                  can: { edit: found.permissions.includes("site.settings.edit") },
-                };
+                return yield* settingsView(found, view);
               }),
             ),
           ),
@@ -342,11 +356,7 @@ const handlers = (env: StudioApiEnv) =>
                   async (): Promise<Outcome<SettingsView>> =>
                     doc.saveSettings(collaborator(person), changes, seen),
                 );
-                return {
-                  site: { id: found.id, name: view.settings.name },
-                  ...view,
-                  can: { edit: true },
-                };
+                return yield* settingsView({ ...found, name: view.settings.name }, view);
               }),
             ),
           ),

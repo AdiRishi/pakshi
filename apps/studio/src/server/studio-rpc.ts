@@ -7,12 +7,14 @@ import {
   BrandChanged,
   CannotDecide,
   DraftNotFound,
+  ImageNotFound,
   InvitationClosed,
   NotInBrandLibrary,
   NothingToRollBack,
   NotPermitted,
   ReleaseNotFound,
   ScopeNotFound,
+  SettingsChanged,
   SiteNotFound,
   SubmissionNotFound,
   StudioRpcs,
@@ -67,6 +69,16 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError(
       "conflict",
       "Someone saved this brand since you opened it. Reload to see their changes, then make yours again.",
+    );
+  if (Schema.is(SettingsChanged)(failure))
+    return new AppRequestError(
+      "conflict",
+      "Someone saved this site's settings since you opened them. Reload to see their changes, then make yours again.",
+    );
+  if (Schema.is(ImageNotFound)(failure))
+    return new AppRequestError(
+      "invalid_request",
+      "Choose an image from the site's library or its brand's.",
     );
   if (Schema.is(NotInBrandLibrary)(failure))
     return new AppRequestError(

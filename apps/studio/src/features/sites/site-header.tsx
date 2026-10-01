@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 /** A site's name, what it's showing, and links to the site's sections. */
 export function SiteHeader(props: {
   readonly site: { readonly id: SiteId; readonly name: string };
-  readonly section: "drafts" | "releases" | "blocks" | "workflow";
+  readonly section: "drafts" | "releases" | "blocks" | "settings";
   readonly description: string;
   readonly actions?: ReactNode;
 }) {
@@ -22,7 +22,7 @@ export function SiteHeader(props: {
     { key: "drafts", label: "Drafts", to: "/sites/$siteId" },
     { key: "releases", label: "Releases", to: "/sites/$siteId/releases" },
     { key: "blocks", label: "Blocks", to: "/sites/$siteId/blocks" },
-    { key: "workflow", label: "Approval workflow", to: "/sites/$siteId/workflow" },
+    { key: "settings", label: "Settings", to: "/sites/$siteId/settings" },
   ] as const;
   return (
     <header className="flex flex-col gap-3 bg-accent px-10 pt-6">
@@ -48,6 +48,8 @@ export function SiteHeader(props: {
             key={section.key}
             to={section.to}
             params={{ siteId: props.site.id }}
+            // Link marks every link to a page above this one current too.
+            activeOptions={{ exact: true }}
             aria-current={section.key === props.section ? "page" : undefined}
             className={buttonVariants({
               variant: "ghost",
