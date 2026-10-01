@@ -180,14 +180,14 @@ export const saveRole = Effect.fn("StudioApi.saveRole")(function* (
     }),
     execute: () => sql`select user_id, scope_kind, scope_id from grants where role = ${role.id}`,
   })(undefined);
+  const added = permissions.filter((permission) => !before.permissions.includes(permission));
+  const removed = before.permissions.filter((permission) => !permissions.includes(permission));
+  yield* audit(person, {}, { _tag: "RoleChanged", role: refOf(role), added, removed });
   yield* refreshAccess(
     yield* Effect.forEach(holders, (holder) =>
       Effect.map(scopeOf(holder), (scope) => ({ person: holder.user_id, scope })),
     ),
   );
-  const added = permissions.filter((permission) => !before.permissions.includes(permission));
-  const removed = before.permissions.filter((permission) => !permissions.includes(permission));
-  yield* audit(person, {}, { _tag: "RoleChanged", role: refOf(role), added, removed });
   return role;
 });
 

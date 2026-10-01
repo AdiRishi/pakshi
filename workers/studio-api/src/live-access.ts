@@ -1,7 +1,7 @@
 import type { Permission, Scope } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { covers, permissionsOn } from "@repo/domain/access";
-import { Context, Effect, Schema } from "effect";
+import { type Cause, Context, Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { loadAccess } from "./access.ts";
@@ -9,7 +9,8 @@ import { loadAccess } from "./access.ts";
 /**
  * The SiteDocs that check people's batches against their permissions. Each
  * keeps what studio-api last told it, so a change of access must reach every
- * site it covers before the person's next batch.
+ * site it covers before the person's next batch. A change that can't reach
+ * one fails, and making the change again tells the sites again.
  */
 export class LiveAccess extends Context.Service<
   LiveAccess,
@@ -20,7 +21,7 @@ export class LiveAccess extends Context.Service<
         readonly id: string;
         readonly permissions: ReadonlyArray<Permission>;
       }>,
-    ) => Effect.Effect<void>;
+    ) => Effect.Effect<void, Cause.UnknownError>;
   }
 >()("Pakshi/StudioApi/LiveAccess") {}
 

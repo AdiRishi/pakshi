@@ -288,13 +288,13 @@ export const grantRoleTo = Effect.fn("StudioApi.grantRoleTo")(function* (
     (access, resource) => mayGrant(access, role.permissions, resource),
     "give this role here",
   );
-  if (!(yield* insertGrant(person.id, role.id, scope))) return;
-  yield* audit(viewer, filedUnder(scope), {
-    _tag: "RoleGranted",
-    person,
-    role: refOf(role),
-    scope: named,
-  });
+  if (yield* insertGrant(person.id, role.id, scope))
+    yield* audit(viewer, filedUnder(scope), {
+      _tag: "RoleGranted",
+      person,
+      role: refOf(role),
+      scope: named,
+    });
   yield* refreshAccess([{ person: person.id, scope }]);
 });
 
@@ -313,13 +313,13 @@ export const revokeRoleFrom = Effect.fn("StudioApi.revokeRoleFrom")(function* (
     "take this role away here",
   );
   if (holdsOrgAdmin(role.id, scope)) yield* keepAnOrgAdmin(person.id);
-  if (!(yield* deleteGrant(person.id, role.id, scope))) return;
-  yield* audit(viewer, filedUnder(scope), {
-    _tag: "RoleRevoked",
-    person,
-    role: refOf(role),
-    scope: named,
-  });
+  if (yield* deleteGrant(person.id, role.id, scope))
+    yield* audit(viewer, filedUnder(scope), {
+      _tag: "RoleRevoked",
+      person,
+      role: refOf(role),
+      scope: named,
+    });
   yield* refreshAccess([{ person: person.id, scope }]);
 });
 
@@ -403,13 +403,13 @@ export const removeOverrideFor = Effect.fn("StudioApi.removeOverrideFor")(functi
   const removed = yield* sql`delete from permission_overrides
     where user_id = ${person.id} and permission = ${permission} and scope_kind = ${scope.kind}
       and coalesce(scope_id, '') = ${scopeIdOf(scope) ?? ""} returning user_id`;
-  if (removed.length === 0) return;
-  yield* audit(viewer, filedUnder(scope), {
-    _tag: "OverrideRemoved",
-    person,
-    permission,
-    scope: named,
-  });
+  if (removed.length > 0)
+    yield* audit(viewer, filedUnder(scope), {
+      _tag: "OverrideRemoved",
+      person,
+      permission,
+      scope: named,
+    });
   yield* refreshAccess([{ person: person.id, scope }]);
 });
 
@@ -478,7 +478,5 @@ export const removeAllAccessOf = Effect.fn("StudioApi.removeAllAccessOf")(functi
         scope: place.scope,
       });
   }
-  yield* refreshAccess(
-    [...grants, ...overrides].map(({ scope }) => ({ person: person.id, scope })),
-  );
+  yield* refreshAccess([{ person: person.id, scope: { kind: "organization" } }]);
 });

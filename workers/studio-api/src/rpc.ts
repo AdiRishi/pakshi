@@ -207,13 +207,7 @@ const liveAccessOf = (env: StudioApiEnv) =>
     refresh: (site, people) =>
       Effect.tryPromise(async () =>
         (await getServerByName(env.SITE_DOC, site)).refreshPermissions(people),
-      ).pipe(
-        Effect.retry({ schedule: Schedule.exponential("100 millis"), times: 3 }),
-        // The change is made; the site's own record catches up when the person next connects.
-        Effect.catch((error) =>
-          Effect.logError("A site couldn't take a change of access", site, error),
-        ),
-      ),
+      ).pipe(Effect.retry({ schedule: Schedule.exponential("100 millis"), times: 3 })),
   });
 
 const handlers = (env: StudioApiEnv) =>
