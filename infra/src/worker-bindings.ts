@@ -89,6 +89,8 @@ export interface StudioEnv extends Cloudflare.InferEnv<ReturnType<typeof studioB
 export const sitesBindings = (data: DataPlane, sitesApi: Effect.Success<typeof SitesApi>) => ({
   ROUTING: data.routing,
   CONTENT: data.content,
+  /** Resizes library images for each screen. Under `alchemy dev` it runs locally. */
+  IMAGES: Cloudflare.Images.Images("IMAGES"),
   SITES_API: sitesApi,
   CF_VERSION_METADATA: Cloudflare.Workers.VersionMetadata(),
 });

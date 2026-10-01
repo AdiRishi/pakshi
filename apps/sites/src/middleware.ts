@@ -17,7 +17,7 @@ const mediaPrefix = "/_media/";
 export const onRequest = defineMiddleware(async (context, next) => {
   // Page paths are lowercase letters, digits and hyphens, so no page can take this prefix.
   if (context.url.pathname.startsWith(mediaPrefix))
-    return serveMedia(context.url.pathname.slice(mediaPrefix.length));
+    return serveMedia(context.request, (promise) => context.locals.cfContext.waitUntil(promise));
   const site = await liveSiteFor(context.url.host);
   if (site === null) return new Response("There is no site at this address.", { status: 404 });
 

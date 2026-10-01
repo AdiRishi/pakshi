@@ -5,6 +5,7 @@ import { FormId } from "@repo/contracts/ids";
 import { themeCss } from "@repo/tokens";
 import { Option, Schema } from "effect";
 
+import { responsiveImage } from "../lib/responsive.ts";
 import { pageMeta, redirectFor } from "../lib/seo.ts";
 import { loadManifest, loadPage } from "../lib/snapshot.ts";
 
@@ -29,7 +30,7 @@ const data = {
   forms: manifest.forms,
   media: (id) => {
     const file = manifest.media[id];
-    return file === undefined ? undefined : { src: `/_media/${id}`, width: file.width, height: file.height };
+    return file === undefined ? undefined : responsiveImage(id, file);
   },
   }),
   sent: Option.getOrNull(sent),
