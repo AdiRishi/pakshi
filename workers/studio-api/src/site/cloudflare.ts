@@ -29,7 +29,7 @@ const MediaRow = Schema.Struct({
 const encodePage = Schema.encodeSync(Schema.fromJsonString(PageDocument));
 const encodeManifest = Schema.encodeSync(Schema.fromJsonString(SnapshotManifest));
 const liveJson = Schema.fromJsonString(LiveRelease);
-const decodeLive = Schema.decodeSync(liveJson);
+const decodeLive = Schema.decodeOption(liveJson);
 const encodeLive = Schema.encodeSync(liveJson);
 const decodeMediaRows = Schema.decodeUnknownSync(Schema.Array(MediaRow));
 
@@ -52,7 +52,7 @@ export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
     Layer.succeed(Routing)({
       read: Effect.promise(async () => {
         const value = await env.ROUTING.get(routingKeys.site(site));
-        return value === null ? Option.none() : Option.some(decodeLive(value));
+        return value === null ? Option.none() : decodeLive(value);
       }),
       write: (live) =>
         Effect.promise(() => env.ROUTING.put(routingKeys.site(site), encodeLive(live))),
