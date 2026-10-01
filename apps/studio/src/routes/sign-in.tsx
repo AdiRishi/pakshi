@@ -100,7 +100,7 @@ export const Route = createFileRoute("/sign-in")({
           <Button type="submit" size="lg" className="h-11 font-bold">
             Sign in
           </Button>
-          <Link to="/forgot-password" className="text-center text-sm text-primary underline">
+          <Link to="/forgot-password" className="text-center text-sm text-link underline">
             Forgot your password?
           </Link>
         </form>

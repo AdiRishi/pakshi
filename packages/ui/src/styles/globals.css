@@ -33,6 +33,8 @@
   --border: #dce6ee;
   --input: #dce6ee;
   --ring: #1c74b8;
+  /* Text links, dark enough to read on every surface, unlike --primary. */
+  --link: #1c74b8;
   --radius: 0.75rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #3e5363;
@@ -55,6 +57,7 @@
 @theme inline {
   --font-sans: "Onest Variable", Onest, sans-serif;
   --color-ring: var(--ring);
+  --color-link: var(--link);
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);

@@ -101,7 +101,7 @@ export const siteDocument = async (
           <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
             <h1 className="text-title">Page not found</h1>
             <p className="text-lead text-muted-foreground">There's no page at this address.</p>
-            <a className="text-primary underline" href="/">
+            <a className="text-link underline" href="/">
               Go to the home page
             </a>
           </main>,
