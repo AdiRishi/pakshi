@@ -13,6 +13,7 @@ import {
   submit,
   unique,
   uniqueAddress,
+  visit,
 } from "./support/studio.ts";
 
 test("an unpublished page leaves the menus and the sitemap, and its address says it has gone", async ({
@@ -29,7 +30,7 @@ test("an unpublished page leaves the menus and the sitemap, and its address says
   await addTextSection(priya, home, "Riverside Library", "Books, events and quiet rooms.");
   await describePage(priya, "Riverside Library's books, events and rooms.");
 
-  await priya.goto(launch);
+  await visit(priya, launch);
   const dialog = priya.getByRole("dialog", { name: "New page" });
   await clickWhenReady(priya.getByRole("button", { name: "New page" }), dialog);
   await dialog.getByLabel("Title", { exact: true }).fill("Opening hours");
@@ -38,9 +39,12 @@ test("an unpublished page leaves the menus and the sitemap, and its address says
   await addTextSection(priya, canvas, "Opening hours", "Open every day from nine.");
   await describePage(priya, "When Riverside Library is open.");
 
-  await priya.goto(launch);
+  await visit(priya, launch);
   const menus = priya.getByRole("region", { name: "Main menu" });
-  await menus.getByRole("button", { name: "Add item" }).click();
+  await clickWhenReady(
+    menus.getByRole("button", { name: "Add item" }),
+    menus.getByLabel("Links to", { exact: true }),
+  );
   await menus.getByLabel("Links to", { exact: true }).selectOption({ label: "Opening hours" });
   await menus.getByLabel("Label", { exact: true }).fill("Hours");
   await menus.getByLabel("Label", { exact: true }).blur();
@@ -55,7 +59,7 @@ test("an unpublished page leaves the menus and the sitemap, and its address says
   );
 
   const draft = await newDraft(priya, site, "Close the hours page");
-  await priya.goto(draft);
+  await visit(priya, draft);
   await priya.getByRole("button", { name: "More for Opening hours" }).click();
   await priya.getByRole("menuitem", { name: "Unpublish" }).click();
   const confirm = priya.getByRole("alertdialog");

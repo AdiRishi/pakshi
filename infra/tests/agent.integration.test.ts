@@ -30,8 +30,10 @@ test("the agent edits a draft for its person, and its turn undoes whole", async 
   const canvas = await openHome(priya, draft);
   await addTextSection(priya, canvas, "Story time", "Every Saturday at ten.");
 
-  await priya.getByLabel("Message Pakshi").fill("Change the heading 'Story time' to 'Story hour'.");
-  await priya.getByLabel("Message Pakshi").press("Enter");
+  await priya
+    .getByLabel("Message Pakshi", { exact: true })
+    .fill("Change the heading 'Story time' to 'Story hour'.");
+  await priya.getByLabel("Message Pakshi", { exact: true }).press("Enter");
   await expect(heading(canvas)).toHaveText("Story hour", { timeout: 120_000 });
   const changes = priya.getByRole("region", { name: "Changes" });
   await expect(changes).toContainText("1 change to the draft", { timeout: 120_000 });

@@ -41,7 +41,7 @@ export const domainAddress = (hostname: string) => {
  * .localhost can be proven in a local stack, and they are at the first check.
  */
 export const connectDomain = async (page: Page, site: string, hostname: string) => {
-  await page.goto(`${studioUrl}/sites/${site}/settings/domains`);
+  await visit(page, `${studioUrl}/sites/${site}/settings/domains`);
   const dialog = page.getByRole("dialog", { name: "Add a domain" });
   await clickWhenReady(page.getByRole("button", { name: "Add domain" }), dialog);
   await dialog.getByLabel("Domain", { exact: true }).fill(hostname);
@@ -61,19 +61,23 @@ export const browserFor = async (browser: Browser, as: "admin" | "visitor") => {
 };
 
 /**
- * Clicks something once the page has hydrated: the page renders on the
- * server first, and its buttons work only after that.
+ * Opens a Studio address and waits until React has hydrated the page: it
+ * renders on the server first, and its controls respond only after that.
  */
+export const visit = async (page: Page, url: string) => {
+  await page.goto(url);
+  await page.locator("html[data-hydrated]").waitFor({ state: "attached" });
+};
+
+/** Clicks something and waits for what it opens. */
 export const clickWhenReady = async (button: Locator, appears: Locator) => {
-  await expect(async () => {
-    await button.click({ timeout: 1000 });
-    await expect(appears).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await button.click();
+  await expect(appears).toBeVisible();
 };
 
 /** Makes a brand from the Brands screen, and returns its name. */
 export const createBrand = async (page: Page, name: string) => {
-  await page.goto(`${studioUrl}/brands`);
+  await visit(page, `${studioUrl}/brands`);
   const dialog = page.getByRole("dialog", { name: "New brand" });
   await clickWhenReady(page.getByRole("button", { name: "New brand" }), dialog);
   await dialog.getByLabel("Name", { exact: true }).fill(name);
@@ -83,30 +87,25 @@ export const createBrand = async (page: Page, name: string) => {
 
 /** Makes a site in a brand, at a platform subdomain, and returns its first draft's address in Studio. */
 export const createSite = async (page: Page, name: string, brand: string, address: string) => {
-  await page.goto(`${studioUrl}/sites/new`);
-  // Hydration resets the form, so each try fills it in again.
-  await expect(async () => {
-    await page.getByLabel("Site name", { exact: true }).fill(name);
-    await page.getByLabel("Brand", { exact: true }).selectOption({ label: brand });
-    await page.getByLabel("Pakshi address", { exact: true }).fill(address);
-    await page.getByRole("button", { name: "Create site" }).click({ timeout: 1000 });
-    await expect(page.getByRole("heading", { name: "Launch", level: 1 })).toBeVisible({
-      timeout: 3000,
-    });
-  }).toPass();
+  await visit(page, `${studioUrl}/sites/new`);
+  await page.getByLabel("Site name", { exact: true }).fill(name);
+  await page.getByLabel("Brand", { exact: true }).selectOption({ label: brand });
+  await page.getByLabel("Pakshi address", { exact: true }).fill(address);
+  await page.getByRole("button", { name: "Create site" }).click();
+  await expect(page.getByRole("heading", { name: "Launch", level: 1 })).toBeVisible();
   return page.url();
 };
 
 /**
- * Invites someone from the People screen with a role on a place, and returns
+ * Invites someone from the People screen with a role on a site, and returns
  * the link the invitation sends them.
  */
-export const invite = async (page: Page, email: string, place: string, role: string) => {
-  await page.goto(`${studioUrl}/people`);
+export const invite = async (page: Page, email: string, site: string, role: string) => {
+  await visit(page, `${studioUrl}/people`);
   const dialog = page.getByRole("dialog", { name: "Invite someone" });
   await clickWhenReady(page.getByRole("button", { name: "Invite someone" }), dialog);
   await dialog.getByLabel("Email", { exact: true }).fill(email);
-  await dialog.getByLabel("Where", { exact: true }).selectOption({ label: place });
+  await dialog.getByLabel("Where", { exact: true }).selectOption({ label: `${site} only` });
   await dialog.getByLabel("Role", { exact: true }).selectOption({ label: role });
   await dialog.getByRole("button", { name: "Send invitation" }).click();
   const link = await page.getByLabel("Invitation link", { exact: true }).inputValue();
@@ -117,7 +116,7 @@ export const invite = async (page: Page, email: string, place: string, role: str
 /** Someone opens their invitation in a browser of their own and makes their account. */
 export const joinFrom = async (browser: Browser, link: string, name: string) => {
   const page = await browserFor(browser, "visitor");
-  await page.goto(link);
+  await visit(page, link);
   await page.getByLabel("Your name", { exact: true }).fill(name);
   await page.getByLabel("Password", { exact: true }).fill(`${name} password`);
   await page.getByRole("button", { name: "Join" }).click();
@@ -127,7 +126,7 @@ export const joinFrom = async (browser: Browser, link: string, name: string) => 
 
 /** Opens a draft's home page in the editor, and waits for the canvas to show it. */
 export const openHome = async (page: Page, draftUrl: string) => {
-  await page.goto(draftUrl);
+  await visit(page, draftUrl);
   await page.getByRole("link", { name: "Edit" }).first().click();
   const canvas = page.frameLocator("iframe[title^='Canvas']");
   await expect(canvas.locator("[data-pakshi-block]").first()).toBeVisible();
@@ -183,12 +182,10 @@ export const addFormSection = async (page: Page, canvas: FrameLocator, heading: 
 
 /** Has a form's new entries emailed to an address, from the site's settings. */
 export const emailEntriesTo = async (page: Page, site: string, form: string, email: string) => {
-  await page.goto(`${studioUrl}/sites/${site}/settings/forms`);
-  await expect(async () => {
-    await page.getByLabel(`Add an email address for ${form}`, { exact: true }).fill(email);
-    await page.getByRole("button", { name: "Add", exact: true }).click({ timeout: 1000 });
-    await expect(page.getByText(email)).toBeVisible({ timeout: 1000 });
-  }).toPass();
+  await visit(page, `${studioUrl}/sites/${site}/settings/forms`);
+  await page.getByLabel(`Add an email address for ${form}`, { exact: true }).fill(email);
+  await page.getByRole("button", { name: "Add", exact: true }).click();
+  await expect(page.getByText(email)).toBeVisible();
   await page.getByRole("button", { name: "Save changes" }).click();
   await expect(page.getByText("Settings saved")).toBeVisible();
 };
@@ -214,7 +211,7 @@ export const submit = async (page: Page, action: "Publish" | "Submit for approva
 
 /** Starts a draft from a site's drafts list, and returns the draft's address in Studio. */
 export const newDraft = async (page: Page, site: string, name: string) => {
-  await page.goto(`${studioUrl}/sites/${site}`);
+  await visit(page, `${studioUrl}/sites/${site}`);
   const dialog = page.getByRole("dialog", { name: "New draft" });
   await clickWhenReady(page.getByRole("button", { name: "New draft" }).first(), dialog);
   await dialog.getByLabel("Name", { exact: true }).fill(name);

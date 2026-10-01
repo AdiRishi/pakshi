@@ -5,7 +5,7 @@ import { type Browser, expect, type FrameLocator, type Page, test } from "@playw
 
 import { fixtureSites, fixturesPath } from "../src/fixture-sites.ts";
 import { differingPixels } from "./support/pixels.ts";
-import { browserFor, newDraft, previewOf, studioUrl } from "./support/studio.ts";
+import { browserFor, newDraft, previewOf, studioUrl, visit } from "./support/studio.ts";
 
 const sitesUrl = new URL(process.env.SITES_URL ?? "http://localhost");
 
@@ -52,7 +52,7 @@ const openCanvas = async (
   site: (typeof sites)[number],
   scheme: "light" | "dark",
 ): Promise<FrameLocator> => {
-  await page.goto(`${await draftOf(page, site.site.id)}/pages/${site.page}`);
+  await visit(page, `${await draftOf(page, site.site.id)}/pages/${site.page}`);
   await page
     .getByRole("button", { name: scheme === "dark" ? "Dark" : "Light", exact: true })
     .click();

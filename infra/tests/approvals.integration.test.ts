@@ -16,6 +16,7 @@ import {
   submit,
   unique,
   uniqueAddress,
+  visit,
 } from "./support/studio.ts";
 
 test("a change goes through the site's approval step to live", async ({ browser }) => {
@@ -28,11 +29,11 @@ test("a change goes through the site's approval step to live", async ({ browser 
   const siteId = new URL(draft).pathname.split("/")[2] ?? "";
 
   // The site's own workflow: one step, for anyone with the approver role there.
-  await priya.goto(`${studioUrl}/sites/${siteId}/settings/workflow`);
+  await visit(priya, `${studioUrl}/sites/${siteId}/settings/workflow`);
   const inherit = priya.getByRole("switch", { name: "Use the brand's workflow" });
   await clickWhenReady(inherit, priya.getByRole("button", { name: "Add step" }));
   await priya.getByRole("button", { name: "Add step" }).click();
-  await priya.getByLabel("Step name").fill("Communications team");
+  await priya.getByLabel("Step name", { exact: true }).fill("Communications team");
   const results = await new AxeBuilder({ page: priya })
     .withTags(["wcag2a", "wcag2aa", "wcag21aa", "wcag22aa"])
     .analyze();
@@ -57,12 +58,10 @@ test("a change goes through the site's approval step to live", async ({ browser 
   await submit(sam, "Submit for approval");
   await expect(sam.getByText("Launch is sent for approval")).toBeVisible();
 
-  await jonah.goto(`${studioUrl}/approvals`);
+  await visit(jonah, `${studioUrl}/approvals`);
   await jonah.getByRole("link", { name: "Review Launch" }).click();
-  await expect(async () => {
-    await jonah.getByRole("button", { name: "Approve and publish" }).click({ timeout: 1000 });
-    await expect(jonah).toHaveURL(`${studioUrl}/approvals`, { timeout: 5000 });
-  }).toPass();
+  await jonah.getByRole("button", { name: "Approve and publish" }).click();
+  await expect(jonah).toHaveURL(`${studioUrl}/approvals`);
   await expect
     .poll(async () => (await jonah.request.get(siteAddress(address))).text())
     .toContain("Volunteer with us");
