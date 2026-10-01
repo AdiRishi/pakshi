@@ -28,7 +28,7 @@ const complete = edit(harbourDraft, [
 
 const nothingLive: Pick<SnapshotManifest, "pages" | "gone"> = { pages: [], gone: [] };
 
-/** What pre-flight found in a draft, or nothing when it freezes. */
+/** What the checks found in a draft, or nothing when it freezes. */
 const issuesIn = (draft: Draft, notified: ReadonlySet<FormId> = new Set()) => {
   const result = freeze(draft, contracts, nothingLive, notified);
   return result.ok ? [] : result.issues;

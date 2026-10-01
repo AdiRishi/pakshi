@@ -26,7 +26,7 @@ import { type CatchUp, type Collaborator, ServerMessage } from "@repo/contracts/
 import type { Conflict, MergedChange, Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
 import { type BlockInstance, PageDocument, type PagePath } from "@repo/contracts/page";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
 import {
   liveOf,
@@ -309,10 +309,10 @@ export class Site extends Context.Service<
       id: DraftId,
       sharing: DraftSharing,
     ) => Effect.Effect<DraftSummary, StorageError | DraftNotFound>;
-    /** What pre-flight finds in a draft now, and whether it's behind. */
+    /** What the checks find in a draft now, and whether it's behind. */
     readonly check: (id: DraftId) => Effect.Effect<
       {
-        readonly issues: ReadonlyArray<PreflightIssue>;
+        readonly issues: ReadonlyArray<CheckIssue>;
         readonly behind: boolean;
       },
       StorageError | DraftNotFound
@@ -530,7 +530,7 @@ export class Site extends Context.Service<
         return content;
       });
 
-      /** The forms the site's settings email new entries from, which pre-flight needs. */
+      /** The forms the site's settings email new entries from, which the checks need. */
       const notified = Effect.map(settingsStore.current, ({ settings }) =>
         notifiedForms(liveOf(settings)),
       );
@@ -800,7 +800,7 @@ export class Site extends Context.Service<
       /**
        * A submission merged with a release that went live during its review,
        * with the merged snapshot written, or null when the merge needs a
-       * person. A merge that leaves anything for pre-flight to find needs one
+       * person. A merge that leaves anything for the checks to find needs one
        * too. Runs in the release turn.
        */
       const mergeSubmission = Effect.fn("Site.mergeSubmission")(function* (

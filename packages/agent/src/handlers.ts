@@ -4,7 +4,7 @@ import type { Draft } from "@repo/contracts/draft";
 import { type BlockId, type BlockType, PageId, randomId } from "@repo/contracts/ids";
 import type { Op, Target } from "@repo/contracts/ops";
 import type { PageDocument } from "@repo/contracts/page";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
 import { Effect, Option, Result } from "effect";
 
@@ -96,7 +96,7 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
   );
 });
 
-const describeIssue = (issue: PreflightIssue) => {
+const describeIssue = (issue: CheckIssue) => {
   switch (issue._tag) {
     case "Incomplete":
       return `${issue.place.title}, ${issue.block.title} (${issue.block.id}) ${issue.field}: ${issue.message}`;

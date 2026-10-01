@@ -1,6 +1,6 @@
 import { roleTitles } from "@repo/contracts/access";
 import type { MergedChange } from "@repo/contracts/merge";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import { currentStep, type Submission } from "@repo/contracts/submission";
 import type { WorkflowStep } from "@repo/contracts/workflow";
 
@@ -72,8 +72,8 @@ export const describeChange = (change: MergedChange) => {
   }
 };
 
-/** What pre-flight found, in a sentence, and the page to fix it on, if it's on one. */
-export const describeIssue = (issue: PreflightIssue) => {
+/** What the checks found, in a sentence, and the page to fix it on, if it's on one. */
+export const describeIssue = (issue: CheckIssue) => {
   switch (issue._tag) {
     case "NoFormEmails":
       return {
@@ -108,8 +108,8 @@ export const describeIssue = (issue: PreflightIssue) => {
   }
 };
 
-/** The checks pre-flight runs, each with the kinds of issue it finds, in the order people fix them. */
-export const preflightChecks = [
+/** The checks a draft must pass, each with the kinds of issue it finds, in the order people fix them. */
+export const checkGroups = [
   { title: "Placeholders", passed: "No placeholder content left", tags: ["Placeholder"] },
   {
     title: "Required fields",
@@ -126,5 +126,5 @@ export const preflightChecks = [
 ] as const satisfies ReadonlyArray<{
   readonly title: string;
   readonly passed: string;
-  readonly tags: ReadonlyArray<PreflightIssue["_tag"]>;
+  readonly tags: ReadonlyArray<CheckIssue["_tag"]>;
 }>;

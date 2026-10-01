@@ -1,5 +1,5 @@
 import type { Activity, Part, SitePlan, Turn } from "@repo/contracts/agent";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import { useBlockTitle } from "@repo/editor";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -161,7 +161,7 @@ function PlanCard(props: {
   );
 }
 
-const issueLine = (issue: PreflightIssue) => {
+const issueLine = (issue: CheckIssue) => {
   switch (issue._tag) {
     case "Incomplete":
       return `${issue.place.title}: ${issue.field} in the ${issue.block.title}. ${issue.message}.`;

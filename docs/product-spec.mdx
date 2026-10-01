@@ -11,22 +11,22 @@ This doc defines what Pakshi does and for whom. It sits between the [vision](/vi
 
 ## Scope at a glance
 
-| In this version                                                         | Not in this version                     |
-| ----------------------------------------------------------------------- | --------------------------------------- |
-| Brands with theme (light and dark), identity and voice guide            | Payments (Stripe Checkout)              |
-| Sites, pages, and blog posts as pages                                   | Scheduled publishing                    |
-| Agent builds and edits sites                                            | Visual, node-based workflow editor      |
-| Visual editing on the page, live with others                            | Comments on previews                    |
-| Named drafts that merge like branches and are shared like documents     | File uploads on forms                   |
-| Approval workflows on the organization, a brand or a site, and rollback | Guideline import into Theme Studio      |
-| Pinned block versions, upgrades through drafts                          | Analytics dashboard                     |
-| Roles, fine-grained permissions and custom roles                        | Localization                            |
-| Forms, submissions, notification email                                  | Redirect bulk import                    |
-| Custom domains (subdomains)                                             | Identity-provider group to role mapping |
-| Media library with alt text, SEO basics, pre-flight checks, audit log   | Spam protection on forms                |
-|                                                                         | Confirmation emails to form submitters  |
-|                                                                         | Two people typing in the same paragraph |
-|                                                                         | Brand locks on site settings            |
+| In this version                                                              | Not in this version                     |
+| ---------------------------------------------------------------------------- | --------------------------------------- |
+| Brands with theme (light and dark), identity and voice guide                 | Payments (Stripe Checkout)              |
+| Sites, pages, and blog posts as pages                                        | Scheduled publishing                    |
+| Agent builds and edits sites                                                 | Visual, node-based workflow editor      |
+| Visual editing on the page, live with others                                 | Comments on previews                    |
+| Named drafts that merge like branches and are shared like documents          | File uploads on forms                   |
+| Approval workflows on the organization, a brand or a site, and rollback      | Guideline import into Theme Studio      |
+| Pinned block versions, upgrades through drafts                               | Analytics dashboard                     |
+| Roles, fine-grained permissions and custom roles                             | Localization                            |
+| Forms, submissions, notification email                                       | Redirect bulk import                    |
+| Custom domains (subdomains)                                                  | Identity-provider group to role mapping |
+| Media library with alt text, SEO basics, checks before submitting, audit log | Spam protection on forms                |
+|                                                                              | Confirmation emails to form submitters  |
+|                                                                              | Two people typing in the same paragraph |
+|                                                                              | Brand locks on site settings            |
 
 The [non-goals](#non-goals) list what Pakshi will not become in any version.
 
@@ -105,7 +105,7 @@ Nine journeys cover the product. Each one reuses the same few building blocks: d
 2. The editor starts a draft and describes the site to the agent: purpose, audience, pages, key dates, whether it needs a form. They attach source documents or images.
 3. The agent proposes a site plan (pages, and the sections on each) based on the brand's recipes. The editor adjusts it in chat.
 4. Once the plan is confirmed, the agent builds the pages section by section. The editor watches them appear on the canvas.
-5. Where content is missing, the agent inserts a clearly marked placeholder rather than inventing facts. Pre-flight blocks submission while any remain.
+5. Where content is missing, the agent inserts a clearly marked placeholder rather than inventing facts. The checks block submission while any remain.
 6. If the agent needs something no block can do, it says so, suggests the nearest block, and offers to file a block request.
 7. The editor shares the draft for feedback and submits it for approval (journey 4). A site admin connects a domain.
 
@@ -196,7 +196,7 @@ gitGraph
 - A site can have any number of named drafts. Each draft starts from a release. Publishing a draft closes it, unless someone edited it after it was submitted. Then it stays open with those edits, based on the release it just published.
 - When a draft publishes, every other draft on the site is behind. People already working in a draft keep going. A draft that's behind must be updated the next time someone opens it, and before it's submitted.
 - Updating merges field by field against the release the draft started from. Identical changes on both sides aren't conflicts, and sections added on both sides are all kept. Only real conflicts need a person: the same field changed differently on both sides, a block edited on one side and removed on the other, or the same existing sections reordered on both sides. The agent may suggest a merge for a text field; a person accepts it or picks a side.
-- If the two sides use different versions of a block, both are brought to the newer version before merging. The merged draft is then checked for structure (block rules and references), and anything that fails is shown as a conflict, so a merge never produces a broken page. Pre-flight checks, such as no placeholders left, run only at submission.
+- If the two sides use different versions of a block, both are brought to the newer version before merging. The merged draft is then checked for structure (block rules and references), and anything that fails is shown as a conflict, so a merge never produces a broken page. The checks before submitting, such as no placeholders left, run only at submission.
 
 ### Pages, menus, header and footer
 
@@ -242,7 +242,7 @@ stateDiagram-v2
 - Submitting freezes the draft exactly as it will be published. Approvals apply to that frozen version only. Submitting the same draft again replaces its pending submission and restarts the workflow.
 - If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals. A merge with conflicts sends the submission back to its draft, and submitting again restarts the workflow.
 - A submission publishes only if it's based on the current live release, so a final approval can never overwrite a release that went live during review.
-- Pre-flight must pass before submitting: no placeholders left, every required field filled and at its minimum length, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
+- A draft must pass its checks before it is submitted: no placeholders left, every required field filled and at its minimum length, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
 - A publish is live worldwide within about a minute. Every release is kept.
 - Rollback without approval undoes only the most recent publish, and takes about a minute. An older release comes back only as a draft, through the site's workflow, and only while its block versions and media are still kept.
 
@@ -292,7 +292,7 @@ Each brand has a library (logos, approved images) that its sites can use; each s
 
 ### Accessibility
 
-Every block version meets WCAG 2.2 AA before release. Pre-flight checks heading order, alt text, link text and form labels. Studio itself targets WCAG 2.2 AA.
+Every block version meets WCAG 2.2 AA before release. The checks cover alt text, link text and form labels. Studio itself targets WCAG 2.2 AA.
 
 ## Non-goals
 

@@ -163,7 +163,7 @@ Changes reach production through the workflows owners set, and drafts are shared
 
 - [Approval workflows](/product-spec#approvals-and-publishing) on the organization, a brand or a site, and the workflow editor as a list of steps.
 - Submissions and approval progress in `SiteDoc`, with the D1 copy, stale-approval rejection, and the release turn that orders them with publishing ([decision 057](/decision-log#decision-057)).
-- [Pre-flight](/product-spec#approvals-and-publishing) at submission. Its check for a form notification address comes with forms in checkpoint 9, which adds the setting.
+- [Checks](/product-spec#approvals-and-publishing) at submission. Its check for a form notification address comes with forms in checkpoint 9, which adds the setting.
 - The Approvals screen with the preview and what changed, and approval notifications through Email Service.
 - [Sharing](/product-spec#sharing-and-previews) with people, the organization or anyone with the link, with view or edit access, stored with the draft in `SiteDoc` ([decision 055](/decision-log#decision-055)).
 - [Previews](/technical-design#publishing-serving-and-previews) served by Studio, which checks the draft's sharing on every request ([decision 054](/decision-log#decision-054)), with screenshot checks against `sites`.
@@ -175,7 +175,7 @@ Changes reach production through the workflows owners set, and drafts are shared
 - When two final approvals race, exactly one release goes live.
 - A decision made on a submission that changed since it was loaded is rejected.
 - A clean merge during review keeps the approvals, and a merge that needed a person restarts the workflow.
-- Pre-flight blocks a submission while a placeholder remains.
+- The checks block a submission while a placeholder remains.
 - A preview opens for someone it's shared with and not for anyone else, and revoking access blocks the next request.
 - Previews send no-index headers, and their forms don't submit.
 
@@ -261,7 +261,7 @@ Everything else a real site needs.
 
 - [Site settings](/technical-design#site-settings) as a registry with one home in `SiteDoc`, delivered to the snapshot or straight to the runtime that reads them ([decision 072](/decision-log#decision-072)), with the General, Domains and Forms and email screens.
 - Forms, menus, redirects and page status edited as whole values in drafts ([decision 073](/decision-log#decision-073)).
-- [Forms and submissions](/product-spec#forms-and-submissions): the form editor in the editor's settings panel, intake into `SiteSubmissions` with the 64 KB cap, notification emails retried from its alarm ([decision 074](/decision-log#decision-074)), pre-flight's checks for a notification address and for consent, the submissions screen, CSV export and deletion by email.
+- [Forms and submissions](/product-spec#forms-and-submissions): the form editor in the editor's settings panel, intake into `SiteSubmissions` with the 64 KB cap, notification emails retried from its alarm ([decision 074](/decision-log#decision-074)), the checks for a notification address and for consent, the submissions screen, CSV export and deletion by email.
 - The [media library](/product-spec#media): brand and site libraries, uploads from the Media screen and from the editor's image popover, resizing with the Images binding ([decision 075](/decision-log#decision-075)), alt text, and retention by a daily job.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): pages and menus in each draft, unpublishing and deleting pages with their menu items and an offer to redirect, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): each page's sharing image, canonical address and no-index option, the sitemap, robots.txt, the blog RSS feed and redirects.
@@ -286,7 +286,7 @@ Finish access control, safety and operations.
 
 - The [permissions](/product-spec#roles-and-permissions) screens: members, grants, custom roles, overrides and the delegation rule. Each change tells the `SiteDoc`s it affects to reload the permissions their live connections hold ([decision 041](/decision-log#decision-041)).
 - The audit log's viewer, with every audited action recorded.
-- Pre-flight's [accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
+- [Accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
 - The content security policy on every site.
 - Alerts for the failures [operations](/technical-design#operations) lists.
 - Block requests filed into the platform team's tracker.

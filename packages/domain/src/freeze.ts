@@ -7,7 +7,7 @@ import { BlockId, type FormId, type MediaId, type PageId } from "@repo/contracts
 import type { Place } from "@repo/contracts/merge";
 import type { Target } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument, PagePath } from "@repo/contracts/page";
-import type { Incomplete, PreflightIssue } from "@repo/contracts/publishing";
+import type { Incomplete, CheckIssue } from "@repo/contracts/publishing";
 import { MediaRef, PageRef } from "@repo/contracts/references";
 import type { MenuItem } from "@repo/contracts/site";
 import type { SnapshotManifest } from "@repo/contracts/snapshot";
@@ -18,8 +18,8 @@ import { type BlockContracts, formsUsedBy } from "./document.ts";
 
 /*
  * Freezing turns a draft into what a snapshot holds. Drafts may be
- * incomplete while people work on them; a frozen draft may not, so pre-flight
- * runs first: every block is checked against its version's complete schema
+ * incomplete while people work on them; a frozen draft may not, so the checks
+ * run first: every block is checked against its version's complete schema
  * and for placeholder content, every page for its title and description,
  * every link to a page for a page that's served, and every form on a served
  * page for somewhere to send its entries and, when it asks for contact
@@ -38,7 +38,7 @@ export interface Frozen {
 
 export type FreezeResult =
   | { readonly ok: true; readonly frozen: Frozen }
-  | { readonly ok: false; readonly issues: ReadonlyArray<PreflightIssue> };
+  | { readonly ok: false; readonly issues: ReadonlyArray<CheckIssue> };
 
 const formatIssues = SchemaIssue.makeFormatterStandardSchemaV1();
 
@@ -119,7 +119,7 @@ const placeholdersIn = (
   place: Place,
   id: BlockId,
   block: BlockInstance,
-): ReadonlyArray<PreflightIssue> => {
+): ReadonlyArray<CheckIssue> => {
   const contract = contractOf(contracts, block);
   return placeholderPaths(contracts, block).map((path) => ({
     _tag: "Placeholder",
@@ -143,7 +143,7 @@ const brokenLinksIn = (
   place: Place,
   id: BlockId,
   block: BlockInstance,
-): ReadonlyArray<PreflightIssue> => {
+): ReadonlyArray<CheckIssue> => {
   const contract = contractOf(contracts, block);
   return Object.entries(block.props).flatMap(([name, value]) =>
     pageLinks(value)
@@ -162,7 +162,7 @@ const brokenMenuLinks = (
   served: ReadonlySet<PageId>,
   title: string,
   items: ReadonlyArray<MenuItem>,
-): ReadonlyArray<PreflightIssue> =>
+): ReadonlyArray<CheckIssue> =>
   items.flatMap((item) => [
     ...(isPageRef(item.target) && !served.has(item.target.id)
       ? [
@@ -181,7 +181,7 @@ const brokenMenuLinks = (
 const brokenRedirects = (
   served: ReadonlySet<PageId>,
   redirects: SiteContent["redirects"],
-): ReadonlyArray<PreflightIssue> =>
+): ReadonlyArray<CheckIssue> =>
   Object.entries(redirects).flatMap(([from, to]) =>
     isPageRef(to) && !served.has(to.id)
       ? [
@@ -206,7 +206,7 @@ const lacksConsent = (form: FormDefinition) =>
 const formIssues = (
   content: SiteContent,
   notified: ReadonlySet<FormId>,
-): ReadonlyArray<PreflightIssue> => {
+): ReadonlyArray<CheckIssue> => {
   const used = new Set(
     placedBlocks(content).flatMap(({ blocks }) => Array.from(formsUsedBy(blocks))),
   );
@@ -279,7 +279,7 @@ export const shownMedia = (
 };
 
 /**
- * Freezes a draft's content, or lists everything pre-flight found to fix.
+ * Freezes a draft's content, or lists everything the checks found to fix.
  * `previous` is the manifest of the release now live, whose addresses stay
  * gone unless a page serves them again. `notified` holds the forms whose
  * entries the site's settings email to someone.
@@ -292,7 +292,7 @@ export const freeze = (
 ): FreezeResult => {
   const pages = servedPages(content);
   const served = new Set(pages.map((page) => page.id));
-  const issues: ReadonlyArray<PreflightIssue> = [
+  const issues: ReadonlyArray<CheckIssue> = [
     ...placedBlocks(content).flatMap(({ target, title, blocks }) =>
       Object.entries(blocks).flatMap(([key, block]) => {
         const place = { target, title };
