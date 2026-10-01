@@ -203,6 +203,40 @@ it.effect("publishing writes a snapshot, makes it live, closes the draft and tel
   ),
 );
 
+it.effect("an unpublished page outlives its draft, so a later draft can publish it again", () =>
+  Effect.gen(function* () {
+    const { state, layer } = yield* platform();
+    const setHome = (id: string, status: "published" | "unpublished") =>
+      decodeBatch({ id, ops: [{ op: "setStatus", page: "pg_home", status }] });
+    /** Runs against a freshly started SiteDoc, as after a restart. */
+    const started = <A, E>(test: (site: Site["Service"]) => Effect.Effect<A, E>) =>
+      Site.use(test).pipe(Effect.provide(siteService(layer)));
+
+    const retired = yield* started((site) =>
+      Effect.gen(function* () {
+        const { id } = yield* site.createDraft(sam, name("Retire the home page"));
+        yield* site.applyBatch(sam, id, setHome("bat_retire", "unpublished"));
+        return yield* published(site, id);
+      }),
+    );
+    expect(state.manifests.get(retired.snapshot)).toMatchObject({ pages: [], gone: ["/"] });
+
+    const restored = yield* started((site) =>
+      Effect.gen(function* () {
+        const { id } = yield* site.createDraft(sam, name("Bring it back"));
+        expect((yield* opened(site, id)).pages[PageId.make("pg_home")]?.status).toBe("unpublished");
+        yield* site.applyBatch(sam, id, setHome("bat_return", "published"));
+        return yield* published(site, id);
+      }),
+    );
+    const [entry] = state.manifests.get(restored.snapshot)?.pages ?? [];
+    expect(entry?.path).toBe("/");
+    expect(headingOn(entry === undefined ? undefined : state.pages.get(entry.object))).toBe(
+      "Learn by building",
+    );
+  }).pipe(Effect.provide(storage)),
+);
+
 it.effect("a draft with an incomplete field isn't published", () =>
   withSite((site, state) =>
     Effect.gen(function* () {

@@ -207,6 +207,7 @@ export const fixtureSites = async () => {
           meta: page.meta,
           object: hash,
         })),
+        unpublished: [],
         gone: [],
       });
       return {

@@ -134,6 +134,7 @@ export const platform = Effect.fn("platform")(function* (
       brand: encodeBrand(harbourBrand),
       media: { med_harbour: { contentType: "image/jpeg", width: 1600, height: 1067 } },
       pages: [{ id: "pg_home", path: "/", type: "page", meta: home.meta, object: homeHash }],
+      unpublished: [],
       gone: [],
     }),
   );
