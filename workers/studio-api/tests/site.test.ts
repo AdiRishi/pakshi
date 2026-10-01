@@ -376,8 +376,6 @@ it.effect("people can't move a draft onto a release", () =>
             base: { release: "rel_other", snapshot: "snap_other" },
             lockfile: draft.lockfile,
             brand: encodeBrand(draft.brand),
-            forms: {},
-            menus: { main: [], footer: [] },
           },
         ],
       });

@@ -129,6 +129,7 @@ export const platform = Effect.fn("platform")(function* (
         menus: { main: [], footer: [] },
       },
       forms: {},
+      redirects: {},
       lockfile: { hero: 1, "rich-text": 1, header: 1, footer: 1 },
       brand: encodeBrand(harbourBrand),
       media: { med_harbour: { contentType: "image/jpeg", width: 1600, height: 1067 } },

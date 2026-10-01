@@ -15,7 +15,14 @@ import {
   type ValueKind,
 } from "@repo/contracts/merge";
 import type { MetaField } from "@repo/contracts/ops";
-import { type BlockInstance, type PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
+import {
+  type BlockInstance,
+  type PageDocument,
+  PageMeta,
+  type PagePath,
+  PostMeta,
+} from "@repo/contracts/page";
+import type { Link } from "@repo/contracts/references";
 import { MenuItem, type SiteParts } from "@repo/contracts/site";
 import type { Lockfile } from "@repo/contracts/snapshot";
 import { Equal, Option, Predicate, Schema } from "effect";
@@ -471,6 +478,9 @@ const metaFields = {
   tags: { title: "Tags", kind: "tags" },
   excerpt: { title: "Excerpt", kind: "text" },
   cover: { title: "Cover image", kind: "media" },
+  image: { title: "Sharing image", kind: "media" },
+  canonical: { title: "Canonical address", kind: "link" },
+  noindex: { title: "Hidden from search engines", kind: "choice" },
 } as const satisfies Record<MetaField, { readonly title: string; readonly kind: ValueKind }>;
 
 const metaOf = (page: PageDocument | undefined): Readonly<Record<string, Json>> => page?.meta ?? {};
@@ -827,9 +837,20 @@ export const mergeSites = (
     });
     if (form !== undefined) forms[id] = form;
   }
+  const redirects: Record<PagePath, Link> = {};
+  const redirectPaths = new Set(sideNames.flatMap((side) => Object.keys(sides[side].redirects)));
+  for (const from of redirectPaths) {
+    const to = merge.value(siteSpot(`redirect/${from}`, "Redirects", from, "link"), {
+      base: base.redirects[from],
+      draft: draft.redirects[from],
+      live: live.redirects[from],
+    });
+    if (to !== undefined) redirects[from] = to;
+  }
   const content: SiteContent = {
     parts: mergeParts(merge, { base: base.parts, draft: draft.parts, live: live.parts }),
     forms,
+    redirects,
     lockfile,
     brand: newerBrand(merge, { base: base.brand, draft: draft.brand, live: live.brand }),
     pages: mergePages(merge, { base: base.pages, draft: draft.pages, live: live.pages }),

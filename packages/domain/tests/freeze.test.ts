@@ -1,5 +1,5 @@
 import type { Draft } from "@repo/contracts/draft";
-import { MenuItemId, PageId } from "@repo/contracts/ids";
+import { FormId, MenuItemId, PageId } from "@repo/contracts/ids";
 import { Op } from "@repo/contracts/ops";
 import { SnapshotManifest } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
@@ -29,8 +29,8 @@ const complete = edit(harbourDraft, [
 const nothingLive: Pick<SnapshotManifest, "pages" | "gone"> = { pages: [], gone: [] };
 
 /** What pre-flight found in a draft, or nothing when it freezes. */
-const issuesIn = (draft: Draft) => {
-  const result = freeze(draft, contracts, nothingLive);
+const issuesIn = (draft: Draft, notified: ReadonlySet<FormId> = new Set()) => {
+  const result = freeze(draft, contracts, nothingLive, notified);
   return result.ok ? [] : result.issues;
 };
 
@@ -42,7 +42,7 @@ describe("freezing", () => {
     const draft = edit(harbourDraft, [
       { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "" },
     ]);
-    const result = freeze(draft, contracts, nothingLive);
+    const result = freeze(draft, contracts, nothingLive, new Set());
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.issues).toEqual([
@@ -84,14 +84,14 @@ describe("freezing", () => {
       ],
       gone: ["/old-programme", "/news/dates"],
     });
-    const result = freeze(unpublished, contracts, previous);
+    const result = freeze(unpublished, contracts, previous, new Set());
     if (!result.ok) throw new Error(JSON.stringify(result.issues));
     expect(result.frozen.pages.map((page) => page.id).toSorted()).toEqual(["pg_dates", "pg_home"]);
     expect(result.frozen.gone.toSorted()).toEqual(["/about", "/old-programme"]);
   });
 
   test("lists the library images the snapshot shows", () => {
-    const result = freeze(complete, contracts, nothingLive);
+    const result = freeze(complete, contracts, nothingLive, new Set());
     if (!result.ok) throw new Error(JSON.stringify(result.issues));
     expect(result.frozen.media).toEqual(["med_harbour"]);
   });
@@ -169,5 +169,59 @@ describe("freezing", () => {
         page: "pg_about",
       },
     ]);
+  });
+
+  test("needs somewhere to send a served form's entries, and consent when it asks for an email", () => {
+    const visit = FormId.make("frm_visit");
+    const withForm = edit(complete, [
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: {
+          id: "b_visit",
+          type: "form-section",
+          variant: "card",
+          surface: "default",
+          props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+        },
+      },
+    ]);
+    expect(issuesIn(withForm)).toEqual([
+      { _tag: "NoFormEmails", form: visit, name: "Plan a visit" },
+      { _tag: "MissingConsent", form: visit, name: "Plan a visit" },
+    ]);
+    const withConsent = edit(withForm, [
+      {
+        op: "setForm",
+        form: {
+          id: "frm_visit",
+          name: "Plan a visit",
+          submitLabel: "Send",
+          fields: [
+            { kind: "email", id: "ff_email", label: "Email", required: true },
+            {
+              kind: "checkbox",
+              id: "ff_consent",
+              label: "I agree to the privacy policy",
+              required: true,
+              link: { $ref: "page", id: "pg_about" },
+            },
+          ],
+        },
+      },
+    ]);
+    expect(issuesIn(withConsent, new Set([visit]))).toEqual([]);
+  });
+
+  test("lists a redirect to a page that isn't served as a broken link", () => {
+    const draft = edit(complete, [
+      { op: "setStatus", page: "pg_about", status: "unpublished" },
+      { op: "setRedirect", from: "/old-about", to: { $ref: "page", id: "pg_about" } },
+    ]);
+    expect(issuesIn(draft)).toContainEqual(
+      expect.objectContaining({ _tag: "BrokenLink", field: "/old-about", page: "pg_about" }),
+    );
   });
 });

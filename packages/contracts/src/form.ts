@@ -42,7 +42,14 @@ export type FormField = typeof FormField.Type;
 export const FormDefinition = Schema.Struct({
   id: FormId,
   name: Label,
-  fields: Schema.Array(FormField).check(Schema.isMinLength(1)),
+  fields: Schema.Array(FormField).check(
+    Schema.isMinLength(1),
+    Schema.makeFilter((fields) =>
+      new Set(fields.map((field) => field.id)).size === fields.length
+        ? undefined
+        : "Each field needs its own ID",
+    ),
+  ),
   submitLabel: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(40)),
 });
 export type FormDefinition = typeof FormDefinition.Type;

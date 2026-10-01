@@ -20,8 +20,9 @@ import { incompleteProps } from "./freeze.ts";
  *
  * A part is named by a key of path segments from its page, or from `site`
  * for the header and footer: a field or a part of one, a block's variant,
- * surface or place, a whole block, a page's meta field or address, a
- * whole page, or the site-wide values a rebase sets. A write to a part
+ * surface or place, a whole block, a page's meta field, address or status,
+ * a whole page, a form, a menu, a redirect, or the site-wide values a
+ * rebase sets. A write to a part
  * replaces every write to the parts below it.
  */
 
@@ -108,6 +109,16 @@ const partsOf = ({ op, before }: Step) => {
       return { own: keyOf([op.page.id]), items: [] };
     case "deletePage":
       return { own: keyOf([op.page]), items: [] };
+    case "setStatus":
+      return { own: keyOf([op.page, "status"]), items: [] };
+    case "setForm":
+      return { own: keyOf(["site", "forms", op.form.id]), items: [] };
+    case "removeForm":
+      return { own: keyOf(["site", "forms", op.form]), items: [] };
+    case "setMenu":
+      return { own: keyOf(["site", "menus", op.menu]), items: [] };
+    case "setRedirect":
+      return { own: keyOf(["site", "redirects", op.from]), items: [] };
     case "rebase":
       return { own: keyOf(["site", "rebase"]), items: [] };
   }
@@ -124,7 +135,11 @@ const setsValue = (op: Op) =>
   op.op === "setVariant" ||
   op.op === "setSurface" ||
   op.op === "setMeta" ||
-  op.op === "setPath";
+  op.op === "setPath" ||
+  op.op === "setStatus" ||
+  op.op === "setForm" ||
+  op.op === "setMenu" ||
+  op.op === "setRedirect";
 
 const writesAt = (writes: Writes, keys: ReadonlyArray<string>) =>
   keys.flatMap((key) => {

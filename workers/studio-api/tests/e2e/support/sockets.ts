@@ -25,8 +25,9 @@ export const openSocket = <Message>(
   path: string,
   session: string | undefined,
   headers: Readonly<Record<string, string>> = {},
-) =>
-  Effect.acquireRelease(
+) => {
+  const decode = Schema.decodeSync(messages);
+  return Effect.acquireRelease(
     Effect.promise(async (): Promise<Socket<Message>> => {
       const request = new Headers({ upgrade: "websocket", origin: studioOrigin, ...headers });
       if (session !== undefined) request.set("cookie", session);
@@ -36,7 +37,6 @@ export const openSocket = <Message>(
       const socket = response.webSocket;
       if (socket === null) return refused(response.status);
       socket.accept();
-      const decode = Schema.decodeSync(messages);
       const received: Array<Message> = [];
       const waiting = new Set<() => void>();
       let closedWith: number | null = null;
@@ -81,6 +81,7 @@ export const openSocket = <Message>(
     }),
     (socket) => Effect.sync(socket.close),
   );
+};
 
 const refused = <Message>(status: number): Socket<Message> => ({
   status,

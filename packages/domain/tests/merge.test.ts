@@ -483,6 +483,48 @@ describe("site-level parts", () => {
   });
 });
 
+describe("forms, redirects and page status", () => {
+  test("merge each form, redirect and page's status on its own", () => {
+    const draft = edit(harbourDraft, [
+      { op: "setRedirect", from: "/old-about", to: { $ref: "page", id: "pg_about" } },
+      { op: "removeForm", form: "frm_visit" },
+    ]);
+    const live = edit(harbourDraft, [
+      { op: "setRedirect", from: "/programme", to: "https://example.org/programme" },
+      { op: "setStatus", page: "pg_dates", status: "unpublished" },
+      {
+        op: "setForm",
+        form: {
+          id: "frm_news",
+          name: "Newsletter",
+          submitLabel: "Sign up",
+          fields: [{ kind: "email", id: "ff_email", label: "Email", required: true }],
+        },
+      },
+    ]);
+    const { content, conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(content.redirects).toEqual({
+      "/old-about": { $ref: "page", id: "pg_about" },
+      "/programme": "https://example.org/programme",
+    });
+    expect(Object.keys(content.forms)).toEqual(["frm_news"]);
+    expect(content.pages[PageId.make("pg_dates")]?.status).toBe("unpublished");
+  });
+
+  test("conflict when both sides send one address to different places", () => {
+    const draft = edit(harbourDraft, [
+      { op: "setRedirect", from: "/old", to: { $ref: "page", id: "pg_about" } },
+    ]);
+    const live = edit(harbourDraft, [
+      { op: "setRedirect", from: "/old", to: { $ref: "page", id: "pg_dates" } },
+    ]);
+    expect(merge({ draft, live }).conflicts).toEqual([
+      expect.objectContaining({ place: { target: "site", title: "Redirects" }, field: "/old" }),
+    ]);
+  });
+});
+
 describe("brand revisions", () => {
   const revision = (number: number, brandColor: `#${string}`): Draft => ({
     ...harbourDraft,

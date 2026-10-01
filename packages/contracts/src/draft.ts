@@ -4,18 +4,19 @@ import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { DraftId, FormId, PageId, SiteId } from "./ids.ts";
 import { PageDocument } from "./page.ts";
-import { SiteParts } from "./site.ts";
+import { Redirects, SiteParts } from "./site.ts";
 import { LiveRelease, Lockfile } from "./snapshot.ts";
 
 /**
- * What a draft or a release holds of a site: every page, and the parts and
- * forms every page shares, with the block versions and brand revision they
- * render with. Settings aren't part of a draft; a snapshot takes them when
+ * What a draft or a release holds of a site: every page, and the parts,
+ * forms and redirects every page shares, with the block versions and brand
+ * revision they render with. Settings aren't part of a draft; a snapshot takes them when
  * it's frozen.
  */
 export const SiteContent = Schema.Struct({
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
+  redirects: Redirects,
   lockfile: Lockfile,
   brand: BrandRevision,
   pages: Schema.Record(PageId, PageDocument),

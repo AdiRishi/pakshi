@@ -2,7 +2,8 @@ import type { BlockContract } from "@repo/blocks/contract";
 import { type Field, type Fields, propsSchema } from "@repo/blocks/fields";
 import { placeholderMedia, placeholderPaths } from "@repo/blocks/placeholders";
 import type { SiteContent } from "@repo/contracts/draft";
-import { BlockId, type MediaId, type PageId } from "@repo/contracts/ids";
+import type { FormDefinition } from "@repo/contracts/form";
+import { BlockId, type FormId, type MediaId, type PageId } from "@repo/contracts/ids";
 import type { Place } from "@repo/contracts/merge";
 import type { Target } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument, PagePath } from "@repo/contracts/page";
@@ -13,14 +14,16 @@ import type { SnapshotManifest } from "@repo/contracts/snapshot";
 import { Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 import type { Json } from "effect/Schema";
 
-import type { BlockContracts } from "./document.ts";
+import { type BlockContracts, formsUsedBy } from "./document.ts";
 
 /*
  * Freezing turns a draft into what a snapshot holds. Drafts may be
  * incomplete while people work on them; a frozen draft may not, so pre-flight
  * runs first: every block is checked against its version's complete schema
- * and for placeholder content, every page for its title and description, and
- * every link to a page for a page that's served.
+ * and for placeholder content, every page for its title and description,
+ * every link to a page for a page that's served, and every form on a served
+ * page for somewhere to send its entries and, when it asks for contact
+ * details, a consent checkbox.
  */
 
 /** A draft ready to be written as a snapshot. */
@@ -175,6 +178,48 @@ const brokenMenuLinks = (
     ...brokenMenuLinks(served, title, item.children ?? []),
   ]);
 
+const brokenRedirects = (
+  served: ReadonlySet<PageId>,
+  redirects: SiteContent["redirects"],
+): ReadonlyArray<PreflightIssue> =>
+  Object.entries(redirects).flatMap(([from, to]) =>
+    isPageRef(to) && !served.has(to.id)
+      ? [
+          {
+            _tag: "BrokenLink" as const,
+            place: { target: "site" as const, title: "Redirects" },
+            block: null,
+            field: from,
+            page: to.id,
+          },
+        ]
+      : [],
+  );
+
+/** Whether a form asks for an email address or phone number without a consent checkbox linking to a privacy policy. */
+const lacksConsent = (form: FormDefinition) =>
+  form.fields.some((field) => field.kind === "email" || field.kind === "phone") &&
+  !form.fields.some((field) => field.kind === "checkbox" && field.link !== undefined);
+
+const formIssues = (
+  content: SiteContent,
+  notified: ReadonlySet<FormId>,
+): ReadonlyArray<PreflightIssue> => {
+  const used = new Set(
+    placedBlocks(content).flatMap(({ blocks }) => Array.from(formsUsedBy(blocks))),
+  );
+  return Array.from(used).flatMap((id) => {
+    const form = content.forms[id];
+    if (form === undefined) return [];
+    return [
+      ...(notified.has(id) ? [] : [{ _tag: "NoFormEmails" as const, form: id, name: form.name }]),
+      ...(lacksConsent(form)
+        ? [{ _tag: "MissingConsent" as const, form: id, name: form.name }]
+        : []),
+    ];
+  });
+};
+
 /** The library images a field's value shows. */
 const mediaIn = (field: Field, value: Json | undefined): ReadonlyArray<MediaId> => {
   if (value === undefined) return [];
@@ -222,8 +267,10 @@ export const shownMedia = (
       for (const [name, field] of Object.entries(fields))
         for (const id of mediaIn(field, block.props[name])) media.add(id);
     }
-  for (const page of servedPages(content))
+  for (const page of servedPages(content)) {
     if (page.type === "post" && page.meta.cover) media.add(page.meta.cover.id);
+    if (page.meta.image) media.add(page.meta.image.id);
+  }
   for (const id of Object.values(content.brand.identity)) if (id !== null) media.add(id);
   for (const id of placeholderMedia.keys()) media.delete(id);
   return Array.from(media);
@@ -232,12 +279,14 @@ export const shownMedia = (
 /**
  * Freezes a draft's content, or lists everything pre-flight found to fix.
  * `previous` is the manifest of the release now live, whose addresses stay
- * gone unless a page serves them again.
+ * gone unless a page serves them again. `notified` holds the forms whose
+ * entries the site's settings email to someone.
  */
 export const freeze = (
   content: SiteContent,
   contracts: BlockContracts,
   previous: Pick<SnapshotManifest, "pages" | "gone">,
+  notified: ReadonlySet<FormId>,
 ): FreezeResult => {
   const pages = servedPages(content);
   const served = new Set(pages.map((page) => page.id));
@@ -267,6 +316,8 @@ export const freeze = (
     ),
     ...brokenMenuLinks(served, "Main menu", content.parts.menus.main),
     ...brokenMenuLinks(served, "Footer menu", content.parts.menus.footer),
+    ...brokenRedirects(served, content.redirects),
+    ...formIssues(content, notified),
   ];
   if (issues.length > 0) return { ok: false, issues };
 

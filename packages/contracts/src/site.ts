@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 import { BlockId, MenuItemId } from "./ids.ts";
-import { BlockInstance } from "./page.ts";
+import { BlockInstance, PagePath } from "./page.ts";
 import { Link } from "./references.ts";
 
 const MenuLabel = Schema.String.check(Schema.isMaxLength(40));
@@ -20,6 +20,13 @@ export const Menus = Schema.Struct({
   footer: Schema.Array(MenuLink),
 });
 export type Menus = typeof Menus.Type;
+
+/**
+ * Addresses that send visitors on to a page or another site, such as a
+ * page's old address after it moved. A page at the same address wins.
+ */
+export const Redirects = Schema.Record(PagePath, Link);
+export type Redirects = typeof Redirects.Type;
 
 /**
  * The parts of a site that every page shares: one header block, one footer

@@ -53,6 +53,7 @@ export const fixtureDraft = Schema.decodeSync(Draft)({
     menus: fixtureSite.menus,
   },
   forms: fixtureSite.forms,
+  redirects: {},
   lockfile,
   brand: {
     brand: "brand_harbour",

@@ -2,7 +2,7 @@ import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 
 import { BlockId, BlockType, PageId } from "./ids.ts";
-import { MediaRef } from "./references.ts";
+import { MediaRef, WebUrl } from "./references.ts";
 
 /** A page's address on its site: `/` or lowercase segments such as `/summer-school/2027`. */
 export const PagePath = Schema.String.check(
@@ -32,7 +32,16 @@ export type BlockInstance = typeof BlockInstance.Type;
 const atMost = (max: number) =>
   Schema.String.check(Schema.isMaxLength(max, { message: `Use at most ${max} characters` }));
 
-export const PageMeta = Schema.Struct({ title: atMost(70), description: atMost(160) });
+export const PageMeta = Schema.Struct({
+  title: atMost(70),
+  description: atMost(160),
+  /** The image shown when the page is shared, instead of its hero image or the site's default. */
+  image: Schema.optionalKey(MediaRef),
+  /** Another address search engines should treat as the page's own, for a page copied from elsewhere. */
+  canonical: Schema.optionalKey(WebUrl),
+  /** Keeps the page out of search engines and the sitemap. */
+  noindex: Schema.optionalKey(Schema.Boolean),
+});
 export type PageMeta = typeof PageMeta.Type;
 
 export const PostMeta = Schema.Struct({

@@ -1,5 +1,5 @@
 import type { Draft, SiteContent } from "@repo/contracts/draft";
-import type { BlockId } from "@repo/contracts/ids";
+import { type BlockId, FormId } from "@repo/contracts/ids";
 import type { BlockList, ItemTree, MetaField, Op, SetProp, Target } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument } from "@repo/contracts/page";
 import type { LiveRelease } from "@repo/contracts/snapshot";
@@ -21,6 +21,9 @@ const metaFields: ReadonlyArray<MetaField> = [
   "tags",
   "excerpt",
   "cover",
+  "image",
+  "canonical",
+  "noindex",
 ];
 
 const same = <T>(a: T, b: T) => Equal.equals(a, b);
@@ -79,8 +82,9 @@ const longestIncreasing = (values: ReadonlyArray<number>): ReadonlySet<number> =
 
 /**
  * The ops that take a draft to `content` on a new base: a rebase first, then
- * the header and footer, pages, blocks, fields and addresses. `contracts`
- * are the block versions `content` pins.
+ * forms, menus, redirects, the header and footer, pages, blocks, fields and
+ * addresses, and last the forms `content` doesn't have, once no block uses
+ * them. `contracts` are the block versions `content` pins.
  */
 export const rebaseOps = (
   draft: Draft,
@@ -103,14 +107,21 @@ export const rebaseOps = (
     ops.push(op);
   };
 
-  emit({
-    op: "rebase",
-    base,
-    lockfile: content.lockfile,
-    brand: content.brand,
-    forms: content.forms,
-    menus: content.parts.menus,
-  });
+  emit({ op: "rebase", base, lockfile: content.lockfile, brand: content.brand });
+  for (const form of Object.values(content.forms))
+    if (!same(working.forms[form.id], form)) emit({ op: "setForm", form });
+  if (!same(working.parts.menus.main, content.parts.menus.main))
+    emit({ op: "setMenu", menu: "main", items: content.parts.menus.main });
+  if (!same(working.parts.menus.footer, content.parts.menus.footer))
+    emit({ op: "setMenu", menu: "footer", items: content.parts.menus.footer });
+  for (const from of new Set([
+    ...Object.keys(working.redirects),
+    ...Object.keys(content.redirects),
+  ])) {
+    const [current, to] = [working.redirects[from], content.redirects[from]];
+    if (!same(current, to))
+      emit(to === undefined ? { op: "setRedirect", from } : { op: "setRedirect", from, to });
+  }
   for (const id of [content.parts.header, content.parts.footer]) {
     const [from, to] = [working.parts.blocks[id], content.parts.blocks[id]];
     if (from === undefined || to === undefined)
@@ -126,12 +137,8 @@ export const rebaseOps = (
       addresses.push({ op: "createPage", page: target });
       continue;
     }
-    // No op publishes or unpublishes a page on its own, so the page is replaced whole.
-    if (current.status !== target.status) {
-      emit({ op: "deletePage", page: target.id });
-      addresses.push({ op: "createPage", page: target });
-      continue;
-    }
+    if (current.status !== target.status)
+      emit({ op: "setStatus", page: target.id, status: target.status ?? "published" });
     pageOps(target, () => working.pages[target.id] ?? current, emit);
     for (const field of metaFields) {
       const [from, to] = [metaOf(current)[field], metaOf(target)[field]];
@@ -145,7 +152,10 @@ export const rebaseOps = (
     if (current.path !== target.path)
       addresses.push({ op: "setPath", page: target.id, path: target.path });
   }
-  return [...ops, ...addresses];
+  const removedForms: ReadonlyArray<Op> = Object.keys(working.forms)
+    .filter((id) => !(id in content.forms))
+    .map((id) => ({ op: "removeForm", form: FormId.make(id) }));
+  return [...ops, ...addresses, ...removedForms];
 };
 
 const metaOf = (page: PageDocument): Readonly<Record<string, SetProp["value"]>> => page.meta;

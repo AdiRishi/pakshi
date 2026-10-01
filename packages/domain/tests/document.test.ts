@@ -1,6 +1,7 @@
 import { placeholderTree } from "@repo/blocks";
 import { propsSchema } from "@repo/blocks/fields";
-import { BlockId, PageId } from "@repo/contracts/ids";
+import { FormDefinition } from "@repo/contracts/form";
+import { BlockId, FormId, PageId } from "@repo/contracts/ids";
 import { BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { Schema } from "effect";
@@ -42,6 +43,12 @@ const item = (id: string, title: string) => ({
   variant: "default",
   props: { title, body: "Every day." },
 });
+
+const visitForm = () => {
+  const form = harbourDraft.forms[FormId.make("frm_visit")];
+  if (form === undefined) throw new Error("The draft has a visit form.");
+  return Schema.encodeSync(FormDefinition)(form);
+};
 
 const insertMore: WireOp = {
   op: "insertBlock",
@@ -180,6 +187,48 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
     ],
   ],
   ["delete a page", [{ op: "deletePage", page: "pg_about" }]],
+  ["unpublish a page", [{ op: "setStatus", page: "pg_about", status: "unpublished" }]],
+  [
+    "set a page's sharing image",
+    [
+      {
+        op: "setMeta",
+        page: "pg_home",
+        field: "image",
+        value: { $ref: "media", id: "med_harbour", alt: "Boats" },
+      },
+    ],
+  ],
+  [
+    "add a form",
+    [
+      {
+        op: "setForm",
+        form: {
+          id: "frm_news",
+          name: "Newsletter",
+          submitLabel: "Sign up",
+          fields: [{ kind: "email", id: "ff_email", label: "Email", required: true }],
+        },
+      },
+    ],
+  ],
+  ["change a form", [{ op: "setForm", form: { ...visitForm(), name: "Book a visit" } }]],
+  ["remove a form no block uses", [{ op: "removeForm", form: "frm_visit" }]],
+  [
+    "replace the main menu",
+    [
+      {
+        op: "setMenu",
+        menu: "main",
+        items: [{ id: "mi_about", label: "About", target: { $ref: "page", id: "pg_about" } }],
+      },
+    ],
+  ],
+  [
+    "add a redirect",
+    [{ op: "setRedirect", from: "/old-about", to: { $ref: "page", id: "pg_about" } }],
+  ],
 ];
 
 describe("every op's inverse restores the draft exactly", () => {
@@ -338,6 +387,7 @@ describe("each rule rejects the ops that break it", () => {
       { op: "removeBlock", page: "pg_home", block: "b_nope" },
       "unknown-block",
     ],
+    ["a form that doesn't exist", { op: "removeForm", form: "frm_nope" }, "unknown-form"],
     [
       "a block ID that's taken",
       {
@@ -519,6 +569,26 @@ describe("each rule rejects the ops that break it", () => {
   test.each(cases)("%s", (_name, op, rule) => {
     expect(rejection(op)).toEqual(expect.arrayContaining([expect.objectContaining({ rule })]));
   });
+});
+
+test("a form can't be removed while a block uses it", () => {
+  const errors = rejection(
+    {
+      op: "insertBlock",
+      page: "pg_home",
+      list: "root",
+      after: null,
+      block: {
+        id: "b_visit",
+        type: "form-section",
+        variant: "card",
+        surface: "default",
+        props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+      },
+    },
+    { op: "removeForm", form: "frm_visit" },
+  );
+  expect(errors).toEqual([expect.objectContaining({ op: 1, rule: "in-use" })]);
 });
 
 test("a new page with blocks in no list is refused, even when it was never decoded", () => {

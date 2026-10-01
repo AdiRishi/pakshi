@@ -11,7 +11,7 @@ const paragraph = (text: string) => ({
 
 /**
  * A draft of the Harbour site: a home page with a hero, a feature grid with
- * two items and a gallery, an about page, and a post.
+ * two items and a gallery, an about page, a post, and a form no page uses yet.
  */
 export const harbourDraft: Draft = Schema.decodeSync(Draft)({
   id: "dr_harbour",
@@ -27,7 +27,18 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     },
     menus: { main: [], footer: [] },
   },
-  forms: {},
+  forms: {
+    frm_visit: {
+      id: "frm_visit",
+      name: "Plan a visit",
+      submitLabel: "Send",
+      fields: [
+        { kind: "shortText", id: "ff_name", label: "Your name", required: true },
+        { kind: "email", id: "ff_email", label: "Email", required: true },
+      ],
+    },
+  },
+  redirects: {},
   lockfile: Object.fromEntries(
     [
       "call-to-action",

@@ -196,6 +196,7 @@ export const fixtureSites = async () => {
         settings: { name: site.name, sharingImage: null },
         parts,
         forms: fixtureSite.forms,
+        redirects: {},
         lockfile,
         brand: revision,
         media,
