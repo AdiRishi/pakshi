@@ -45,10 +45,12 @@ import * as Migrator from "effect/unstable/sql/Migrator";
 import { type Connection, type ConnectionContext, Server, type WSMessage } from "partyserver";
 
 import { SiteApprovals } from "./site/approvals.ts";
+import { SiteAudit } from "./site/audit.ts";
 import { cloudflarePlatform } from "./site/cloudflare.ts";
 import { SiteDrafts, SiteIdentity } from "./site/drafts.ts";
 import { migrations } from "./site/migrations.ts";
 import { Outbox } from "./site/outbox.ts";
+import { SitePermissions } from "./site/permissions.ts";
 import { LiveUpdates } from "./site/platform.ts";
 import { SiteReleases } from "./site/releases.ts";
 import { SiteSettingsStore } from "./site/settings.ts";
@@ -58,7 +60,7 @@ import { Site } from "./site/site.ts";
 export const LiveAuthorization = Schema.Struct({
   person: Collaborator,
   draft: DraftId,
-  /** What the person may do on this site, which every batch they send is checked against. */
+  /** What the person may do on this site now, which SiteDoc records for checking their batches. */
   permissions: Schema.Array(Permission),
 });
 export type LiveAuthorization = typeof LiveAuthorization.Type;
@@ -95,7 +97,9 @@ const encodeError = Schema.encodeSync(SiteDocError);
 type SiteFailure = SqlError.SqlError | Schema.SchemaError | SiteDocError;
 
 /** What SiteDoc keeps on each connection. It lives in the socket's attachment, so it survives hibernation. */
-interface LiveState extends LiveAuthorization {
+interface LiveState {
+  readonly person: Collaborator;
+  readonly draft: DraftId;
   readonly presence: Presence | null;
 }
 
@@ -109,12 +113,6 @@ export interface TypingIn extends Focus {
 /** The agent working in a draft for a person, as others see it. */
 interface AgentPeer extends Peer {
   readonly draft: DraftId;
-}
-
-/** The person an agent works for, and whether they edit the site's pages rather than a shared draft. */
-interface AgentPrincipal {
-  readonly person: Collaborator;
-  readonly editsSite: boolean;
 }
 
 /** The connection ID the agent working for a person has in presence. It holds no socket. */
@@ -132,7 +130,7 @@ const agentConnection = (person: Collaborator) => `agent:${person.id}`;
 export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   static override options = { hibernate: true };
 
-  #runtime: ManagedRuntime.ManagedRuntime<Site, never> | undefined;
+  #runtime: ManagedRuntime.ManagedRuntime<Site | SitePermissions, never> | undefined;
   #messages: Promise<unknown> = Promise.resolve();
   /**
    * The agents working in drafts, by connection ID. They're kept in memory
@@ -151,9 +149,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
             SiteReleases.layer,
             SiteApprovals.layer,
             SiteSettingsStore.layer,
+            SiteAudit.layer,
           ),
         ),
         Layer.provideMerge(Outbox.layer),
+        Layer.merge(SitePermissions.layer),
         Layer.provide(Layer.effectDiscard(Migrator.make({})({ loader: migrations }))),
         Layer.provideMerge(SqliteClient.layer({ storage: this.ctx.storage })),
         Layer.provide(cloudflarePlatform(this.env, site)),
@@ -196,6 +196,21 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     if (await this.#run((site) => site.undelivered)) await this.ctx.storage.setAlarm(Date.now());
   }
 
+  /** What a person may do on the site, as studio-api last said. */
+  #permissionsOf(person: string) {
+    return this.#site().runPromise(
+      Effect.orDie(SitePermissions.use((permissions) => permissions.of(person))),
+    );
+  }
+
+  /** What a person may do with a draft now: their permissions on the site, or the draft's sharing. */
+  async #accessOf(person: Collaborator, draft: DraftId) {
+    const editsSite = (await this.#permissionsOf(person.id)).includes("page.edit");
+    return editsSite
+      ? ("edit" as const)
+      : await this.#run((site) => site.access(draft, { id: person.id, editsSite }));
+  }
+
   /** Runs each live message after the ones before it, in the order they arrive. */
   #inOrder<A>(task: () => Promise<A>): Promise<A> {
     const next = this.#messages.then(task);
@@ -234,13 +249,14 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return Option.isSome(authorization) ? [authorization.value.draft] : [];
   }
 
-  override onConnect(connection: LiveConnection, { request }: ConnectionContext) {
+  override async onConnect(connection: LiveConnection, { request }: ConnectionContext) {
     const authorization = decodeAuthorization(request.headers.get(liveAuthorizationHeader));
     if (Option.isNone(authorization)) {
       connection.close(1008, "Not authorized");
       return;
     }
-    connection.setState({ ...authorization.value, presence: null });
+    const { person, draft, permissions } = authorization.value;
+    connection.setState({ person, draft, presence: null });
     const peer = this.#peerOf(connection);
     if (peer !== null)
       this.#toDraft(
@@ -248,6 +264,8 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
         authorization.value.draft,
         ServerMessage.cases.PeerChanged.make({ peer }),
       );
+    // The connection's messages run after this, in the order they arrive.
+    await this.#inOrder(() => this.holdPermissions(person.id, permissions));
   }
 
   override onMessage(connection: LiveConnection, raw: WSMessage) {
@@ -279,14 +297,8 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
               ),
             ),
           Batch: async ({ batch }) => {
-            // A share can allow editing, and can be taken back while the connection is open.
-            const editsSite = state.permissions.includes("page.edit");
-            const access = editsSite
-              ? "edit"
-              : await this.#run((site) =>
-                  site.access(state.draft, { id: state.person.id, editsSite }),
-                );
-            if (access !== "edit") {
+            // Permissions and shares can both change while the connection is open.
+            if ((await this.#accessOf(state.person, state.draft)) !== "edit") {
               const errors = [
                 {
                   op: 0,
@@ -418,22 +430,49 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   /** Replaces a draft's sharing, and disconnects anyone it no longer lets edit the draft. */
-  shareDraft(id: DraftId, sharing: DraftSharing) {
+  shareDraft(by: Collaborator, id: DraftId, sharing: DraftSharing) {
     return this.#changing(async () => {
-      const outcome = await this.#call((site) => site.share(id, sharing));
-      if (outcome.ok)
-        for (const connection of this.getConnections<LiveState>(id)) {
-          const state = connection.state;
-          if (state === null || state.permissions.includes("page.edit")) continue;
-          const access = await this.#run((site) =>
-            site.access(id, { id: state.person.id, editsSite: false }),
-          );
-          if (access === "edit") continue;
-          this.#send(connection, ServerMessage.cases.AccessEnded.make({}));
-          connection.close(1008, "No longer shared for editing");
-        }
+      const outcome = await this.#call((site) => site.share(by, id, sharing));
+      if (outcome.ok) await this.#endLostAccess(this.getConnections<LiveState>(id));
       return outcome;
     });
+  }
+
+  /** Closes the connections whose person may no longer edit their draft, saying why. */
+  async #endLostAccess(connections: Iterable<LiveConnection>) {
+    for (const connection of connections) {
+      const state = connection.state;
+      if (state === null || (await this.#accessOf(state.person, state.draft)) === "edit") continue;
+      this.#send(connection, ServerMessage.cases.AccessEnded.make({}));
+      connection.close(1008, "Can no longer edit this draft");
+    }
+  }
+
+  /** Records what a person may do on the site, before their live connection or agent works here. */
+  holdPermissions(person: string, permissions: ReadonlyArray<Permission>) {
+    return this.#site().runPromise(
+      Effect.orDie(SitePermissions.use((held) => held.hold(person, permissions))),
+    );
+  }
+
+  /**
+   * Records what people may do on the site after their access changed, so
+   * their next batch, or their agent's, is checked against it, and closes the
+   * live connections of anyone who can no longer edit their draft.
+   */
+  async refreshPermissions(
+    people: ReadonlyArray<{ readonly id: string; readonly permissions: ReadonlyArray<Permission> }>,
+  ) {
+    const refreshed = new Set(
+      await this.#inOrder(() =>
+        this.#site().runPromise(Effect.orDie(SitePermissions.use((held) => held.refresh(people)))),
+      ),
+    );
+    await this.#endLostAccess(
+      Array.from(this.getConnections<LiveState>()).filter(
+        (connection) => connection.state !== null && refreshed.has(connection.state.person.id),
+      ),
+    );
   }
 
   // Calls from a person's agent, which studio-api let them talk to.
@@ -443,7 +482,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
    * may still edit the draft, and shows the agent where it made the change.
    */
   async applyAgentBatch(
-    by: AgentPrincipal,
+    by: Collaborator,
     id: DraftId,
     batch: Batch,
     turn: TurnId,
@@ -464,25 +503,21 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
           ],
         },
       };
-    const outcome = await this.#call((site) => site.applyAgentBatch(by.person, id, batch, turn));
-    if (outcome.ok && outcome.value.status === "committed")
-      this.agentPresence(by.person, id, presence);
+    const outcome = await this.#call((site) => site.applyAgentBatch(by, id, batch, turn));
+    if (outcome.ok && outcome.value.status === "committed") this.agentPresence(by, id, presence);
     return outcome;
   }
 
   /** Undoes a turn the agent made for a person, if the person may still edit the draft. */
-  async undoTurn(by: AgentPrincipal, id: DraftId, turn: TurnId) {
+  async undoTurn(by: Collaborator, id: DraftId, turn: TurnId) {
     if (!(await this.#agentMayEdit(by, id)))
       return { ok: true as const, value: { status: "refused" as const } };
-    return this.#call((site) => site.undoTurn(by.person, id, turn));
+    return this.#call((site) => site.undoTurn(by, id, turn));
   }
 
-  /** Whether the person an agent works for may edit a draft now, since a share can end mid-conversation. */
-  async #agentMayEdit(by: AgentPrincipal, id: DraftId) {
-    const access = await this.#run((site) =>
-      site.access(id, { id: by.person.id, editsSite: by.editsSite }),
-    );
-    return access === "edit";
+  /** Whether the person an agent works for may edit a draft now, since access can end mid-conversation. */
+  async #agentMayEdit(by: Collaborator, id: DraftId) {
+    return (await this.#accessOf(by, id)) === "edit";
   }
 
   /** Shows the agent working for a person at a place in a draft, or with null, gone from it. */

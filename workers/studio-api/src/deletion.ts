@@ -14,6 +14,7 @@ import { Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { loadAccess } from "./access.ts";
+import { audit } from "./audit.ts";
 import { siteFor } from "./sites.ts";
 
 /*
@@ -53,6 +54,7 @@ export const deleteSite = Effect.fn("StudioApi.deleteSite")(function* (
   yield* unroute({ address: found.address, domains: domains.map((domain) => domain.hostname) });
   yield* sql`delete from domains where site_id = ${site}`;
   yield* sql`update sites set deleted_at = ${now()}, deleted_by = ${person.id} where id = ${site}`;
+  yield* audit(person, { site }, { _tag: "SiteDeleted", name: found.name });
 });
 
 const DeletedRow = Schema.Struct({
@@ -115,6 +117,7 @@ export const restoreSite = Effect.fn("StudioApi.restoreSite")(function* (
   // KV first, so a restore that stops partway leaves a site that can be restored again.
   if (found.address !== null) yield* route(found.address);
   yield* sql`update sites set deleted_at = null, deleted_by = null where id = ${site}`;
+  yield* audit(person, { site }, { _tag: "SiteRestored", name: found.name });
 });
 
 /** Tables whose rows belong to a site by their `site_id`. */
@@ -125,6 +128,7 @@ const siteTables = [
   "block_usage",
   "block_requests",
   "domains",
+  "conversations",
 ] as const;
 
 /** Tables of grants and settings that apply to a scope. */
@@ -143,11 +147,11 @@ export const purgeDeletedSites = Effect.fn("StudioApi.purgeDeletedSites")(functi
   const cutoff = new Date(Date.now() - restoreWindow).toISOString();
   const expired = yield* SqlSchema.findAll({
     Request: Schema.Void,
-    Result: Schema.Struct({ id: SiteId }),
+    Result: Schema.Struct({ id: SiteId, name: Schema.String }),
     execute: () =>
-      sql`select id from sites where deleted_at is not null and deleted_at < ${cutoff}`,
+      sql`select id, name from sites where deleted_at is not null and deleted_at < ${cutoff}`,
   })(undefined);
-  for (const { id } of expired) {
+  for (const { id, name } of expired) {
     yield* erase(id);
     const media = yield* sql<{ readonly id: MediaId }>`delete from media
       where site_id = ${id} returning id`;
@@ -155,6 +159,8 @@ export const purgeDeletedSites = Effect.fn("StudioApi.purgeDeletedSites")(functi
     for (const table of siteTables) yield* sql`delete from ${sql(table)} where site_id = ${id}`;
     for (const table of scopedTables)
       yield* sql`delete from ${sql(table)} where scope_kind = 'site' and scope_id = ${id}`;
+    // Filed before the site's row goes, so the entry keeps the site's brand.
+    yield* audit(null, { site: id }, { _tag: "SitePurged", name });
     yield* sql`delete from sites where id = ${id}`;
   }
   return expired.map(({ id }) => id);
@@ -183,5 +189,9 @@ export const deleteBrand = Effect.fn("StudioApi.deleteBrand")(function* (
   yield* sql`delete from brand_revisions where brand_id = ${brand}`;
   for (const table of scopedTables)
     yield* sql`delete from ${sql(table)} where scope_kind = 'brand' and scope_id = ${brand}`;
+  const [named] = yield* sql<{
+    readonly name: string;
+  }>`select name from brands where id = ${brand}`;
   yield* sql`delete from brands where id = ${brand}`;
+  yield* audit(person, { brand }, { _tag: "BrandDeleted", name: named?.name ?? "" });
 });

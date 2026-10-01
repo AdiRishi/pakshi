@@ -18,7 +18,7 @@ const encodeAuthorization = Schema.encodeSync(Schema.fromJsonString(AgentAuthori
 export const serveAgent = async (request: Request, env: StudioApiEnv) => {
   const editor = await editorOf(request, env, agentBasePath);
   if (Result.isFailure(editor)) return editor.failure;
-  const { person, site, draft, permissions, editsSite } = editor.success;
+  const { person, site, draft, permissions } = editor.success;
   const headers = new Headers(request.headers);
   headers.set(
     agentAuthorizationHeader,
@@ -28,10 +28,16 @@ export const serveAgent = async (request: Request, env: StudioApiEnv) => {
       brand: site.brand,
       draft,
       permissions,
-      editsSite,
       studio: new URL(request.url).origin,
     }),
   );
+  // The agent's batches go to SiteDoc, which checks them against what the person may do.
+  await (await getServerByName(env.SITE_DOC, site.id)).holdPermissions(person.id, permissions);
+  await env.CORE.prepare(
+    "insert or ignore into conversations (site_id, draft_id, user_id) values (?, ?, ?)",
+  )
+    .bind(site.id, draft, person.id)
+    .run();
   const agent = await getServerByName(env.SITE_AGENT, conversationName(site.id, draft, person.id));
   return agent.fetch(new Request(request, { headers }));
 };

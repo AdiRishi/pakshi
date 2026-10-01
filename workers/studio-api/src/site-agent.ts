@@ -267,6 +267,14 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     });
   }
 
+  /** Deletes the conversation for good, for a site deleted for good. Its documents go with the site's. */
+  async erase() {
+    for (const connection of this.getConnections()) connection.close(1000, "Site deleted");
+    await this.#runtime?.dispose();
+    this.#runtime = undefined;
+    await this.ctx.storage.deleteAll();
+  }
+
   /** Whether a turn is under way, which the person is told, since the conversation takes one at a time. */
   #busy(connection: AgentConnection) {
     if (this.#working === null) return false;
@@ -401,11 +409,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       return;
     }
     const doc = await getServerByName(this.env.SITE_DOC, who.site);
-    const outcome = await doc.undoTurn(
-      { person: { id: who.person.id, name: who.person.name }, editsSite: who.editsSite },
-      who.draft,
-      id,
-    );
+    const outcome = await doc.undoTurn({ id: who.person.id, name: who.person.name }, who.draft, id);
     if (!outcome.ok || outcome.value.status === "refused") {
       this.#send(connection, { _tag: "Notice", message: "You can no longer edit this draft." });
       return;

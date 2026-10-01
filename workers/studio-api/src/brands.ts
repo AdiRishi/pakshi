@@ -29,6 +29,7 @@ import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { loadAccess } from "./access.ts";
+import { audit } from "./audit.ts";
 import { brandMedia } from "./sites.ts";
 
 /*
@@ -253,6 +254,7 @@ export const createBrand = Effect.fn("StudioApi.createBrand")(function* (
     created_by: { id: person.id, name: person.name },
     created_at: now(),
   });
+  yield* audit(person, { brand: id }, { _tag: "BrandCreated", name });
   return { id };
 });
 
@@ -266,6 +268,7 @@ export const saveVoice = Effect.fn("StudioApi.saveVoice")(function* (
   const found = yield* brandFor(person, brand);
   if (!found.edit) return yield* new NotPermitted({ action: "change this brand's voice guide" });
   yield* sql`update brands set voice = ${encode(VoiceGuide, voice)} where id = ${brand}`;
+  yield* audit(person, { brand }, { _tag: "VoiceGuideSaved" });
   return voice;
 });
 

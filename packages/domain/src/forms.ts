@@ -4,6 +4,8 @@ import type { FormDefinition, FormField } from "@repo/contracts/form";
 import type { FormFieldId } from "@repo/contracts/ids";
 import { Option, Schema } from "effect";
 
+import { csv } from "./csv.ts";
+
 /*
  * How a form post becomes an entry. Browsers check most of this before
  * sending, but a post can come from anywhere, so the answers are checked
@@ -83,15 +85,6 @@ export const readEntry = (
 };
 
 /**
- * One CSV cell. A value a spreadsheet would read as a formula starts with an
- * apostrophe, so opening an export can't run anything a visitor typed.
- */
-const cell = (value: string) => {
-  const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
-  return /[",\r\n]/.test(safe) ? `"${safe.replaceAll('"', '""')}"` : safe;
-};
-
-/**
  * A form's entries as CSV, oldest first: when each came, the page it came
  * from, and a column per field any entry answered. A field's column is headed
  * with the label it had in the newest entry that answered it.
@@ -108,5 +101,5 @@ export const entriesCsv = (entries: ReadonlyArray<FormEntry>) => {
       ...columns.map((id) => entry.fields.find((field) => field.id === id)?.value ?? ""),
     ]),
   ];
-  return rows.map((row) => row.map(cell).join(",")).join("\r\n");
+  return csv(rows);
 };

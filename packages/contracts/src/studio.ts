@@ -2,7 +2,16 @@ import { ContrastIssue, HexColor, PresetId } from "@repo/tokens";
 import { Context, Schema, SchemaGetter } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
-import { DefaultRole, Scope } from "./access.ts";
+import {
+  CustomRole,
+  Permission,
+  Role,
+  RoleDescription,
+  RoleId,
+  RoleName,
+  RoleRef,
+  Scope,
+} from "./access.ts";
 import {
   InvitationToken,
   InvitationView,
@@ -10,6 +19,7 @@ import {
   OrganizationName,
   PendingInvitation,
 } from "./accounts.ts";
+import { AuditCursor, AuditFilters, AuditPage, AuditQuery } from "./audit.ts";
 import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
 import { EmailAddress } from "./email.ts";
@@ -26,6 +36,7 @@ import {
   MediaId,
   PageId,
   ReleaseId,
+  CustomRoleId,
   SiteId,
   SnapshotId,
   SubmissionId,
@@ -121,6 +132,10 @@ export const Viewer = Schema.Struct({
     createSite: Schema.Boolean,
     /** Invite people somewhere, so Studio shows them the people screen. */
     invite: Schema.Boolean,
+    /** Make and change custom roles. */
+    manageRoles: Schema.Boolean,
+    /** Read the audit log of anything. */
+    readAudit: Schema.Boolean,
   }),
 });
 export type Viewer = typeof Viewer.Type;
@@ -159,24 +174,96 @@ export const CreatedSite = Schema.Struct({
 });
 export type CreatedSite = typeof CreatedSite.Type;
 
-/** One person in the organization and the grants they hold. */
+/** A role someone holds on a scope, and whether the viewer may take it away. */
+export const MemberGrant = Schema.Struct({
+  role: RoleRef,
+  scope: NamedScope,
+  removable: Schema.Boolean,
+});
+export type MemberGrant = typeof MemberGrant.Type;
+
+/** A permission switched on or off for someone on a scope, and whether the viewer may remove it. */
+export const MemberOverride = Schema.Struct({
+  permission: Permission,
+  scope: NamedScope,
+  allowed: Schema.Boolean,
+  setBy: Schema.NullOr(Collaborator),
+  setAt: Schema.NullOr(Timestamp),
+  removable: Schema.Boolean,
+});
+export type MemberOverride = typeof MemberOverride.Type;
+
+/** One person in the organization, the access they hold, and when they last used Studio. */
 export const Member = Schema.Struct({
   person: Person,
-  grants: Schema.Array(Schema.Struct({ role: DefaultRole, scope: NamedScope })),
+  grants: Schema.Array(MemberGrant),
+  overrides: Schema.Array(MemberOverride),
+  lastActive: Schema.NullOr(Timestamp),
 });
 export type Member = typeof Member.Type;
 
-/** Where a person may invite people, and which roles they may give there. */
-export const InvitePlace = Schema.Struct({ scope: NamedScope, roles: Schema.Array(DefaultRole) });
-export type InvitePlace = typeof InvitePlace.Type;
+/**
+ * Somewhere the viewer controls: the roles they may give there, and the
+ * permissions they may switch on or off for someone. Each holds only what
+ * the viewer holds there.
+ */
+export const AccessPlace = Schema.Struct({
+  scope: NamedScope,
+  roles: Schema.Array(RoleRef),
+  permissions: Schema.Array(Permission),
+});
+export type AccessPlace = typeof AccessPlace.Type;
 
-/** The organization's people, the invitations waiting, and where the viewer may invite. */
+/** The organization's people, the invitations waiting, and where the viewer may give access. */
 export const People = Schema.Struct({
   members: Schema.Array(Member),
   invitations: Schema.Array(PendingInvitation),
-  places: Schema.Array(InvitePlace),
+  places: Schema.Array(AccessPlace),
 });
 export type People = typeof People.Type;
+
+/** Who can work on a brand or a site, as its members screen shows them. */
+export const ScopeMembers = Schema.Struct({
+  scope: NamedScope,
+  /** Roles given on this scope itself, which can be changed here. */
+  direct: Schema.Array(Schema.Struct({ person: Person, role: RoleRef, removable: Schema.Boolean })),
+  /** Roles that reach this scope from a grant above it, changed where they were given. */
+  inherited: Schema.Array(Schema.Struct({ person: Person, role: RoleRef, from: NamedScope })),
+  /** The roles the viewer may give here, none when they can't manage its members. */
+  roles: Schema.Array(RoleRef),
+});
+export type ScopeMembers = typeof ScopeMembers.Type;
+
+/** Every role, with who holds it where, and what the viewer may do with roles. */
+export const RolesView = Schema.Struct({
+  roles: Schema.Array(
+    Schema.Struct({
+      role: Role,
+      holders: Schema.Array(Schema.Struct({ person: Collaborator, scope: NamedScope })),
+    }),
+  ),
+  can: Schema.Struct({ manage: Schema.Boolean }),
+  /** The permissions the viewer may put in a role: those they hold across the organization. */
+  permissions: Schema.Array(Permission),
+});
+export type RolesView = typeof RolesView.Type;
+
+/** There's no role with that ID. */
+export class RoleNotFound extends Schema.TaggedError<RoleNotFound>()("RoleNotFound", {}) {}
+
+/** Another role, default or custom, has this name. */
+export class RoleNameTaken extends Schema.TaggedError<RoleNameTaken>()("RoleNameTaken", {
+  name: Schema.String,
+}) {}
+
+/** Someone holds the role, or a workflow step names it, so it can't be deleted. */
+export class RoleInUse extends Schema.TaggedError<RoleInUse>()("RoleInUse", {}) {}
+
+/** The organization would be left without an org admin to manage it. */
+export class LastOrgAdmin extends Schema.TaggedError<LastOrgAdmin>()("LastOrgAdmin", {}) {}
+
+/** There's no one in the organization with that ID. */
+export class PersonNotFound extends Schema.TaggedError<PersonNotFound>()("PersonNotFound", {}) {}
 
 /** An invitation just made, with the link it sends, for the inviter to copy. */
 export const SentInvitation = Schema.Struct({ invitation: PendingInvitation, link: Schema.String });
@@ -563,6 +650,8 @@ export const WorkflowView = Schema.Struct({
   /** The scope above this one, whose workflow applies when this one has none: a site's brand, a brand's organization. */
   parent: Schema.NullOr(Scope),
   inherited: ResolvedWorkflow,
+  /** Every role a step can name. */
+  roles: Schema.Array(RoleRef),
   can: Schema.Struct({ edit: Schema.Boolean }),
 });
 export type WorkflowView = typeof WorkflowView.Type;
@@ -879,9 +968,107 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("organizationPeople", { success: People, error: StudioUnavailable }),
   /** Invites someone by email with a role on a scope, which they get when they accept. */
   Rpc.make("invite", {
-    payload: { email: EmailAddress, role: DefaultRole, scope: Scope },
+    payload: { email: EmailAddress, role: RoleId, scope: Scope },
     success: SentInvitation,
-    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, AlreadyMember]),
+    error: Schema.Union([
+      StudioUnavailable,
+      ScopeNotFound,
+      RoleNotFound,
+      NotPermitted,
+      AlreadyMember,
+    ]),
+  }),
+  /** A page of the audit log entries the person may read, newest first. */
+  Rpc.make("auditLog", {
+    payload: { query: AuditQuery, before: Schema.NullOr(AuditCursor) },
+    success: AuditPage,
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  Rpc.make("auditFilters", {
+    success: AuditFilters,
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  /** Every entry a query matches as CSV, newest first. */
+  Rpc.make("exportAudit", {
+    payload: { query: AuditQuery },
+    success: Schema.Struct({ filename: Schema.String, csv: Schema.String }),
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  /** Every role, with who holds it where. */
+  Rpc.make("roles", { success: RolesView, error: StudioUnavailable }),
+  /** Makes a custom role, or with an ID, changes one. */
+  Rpc.make("saveRole", {
+    payload: {
+      role: Schema.NullOr(CustomRoleId),
+      name: RoleName,
+      description: RoleDescription,
+      permissions: Schema.Array(Permission),
+    },
+    success: CustomRole,
+    error: Schema.Union([StudioUnavailable, NotPermitted, RoleNotFound, RoleNameTaken]),
+  }),
+  Rpc.make("deleteRole", {
+    payload: { role: CustomRoleId },
+    error: Schema.Union([StudioUnavailable, NotPermitted, RoleNotFound, RoleInUse]),
+  }),
+  /** Who can work on a brand or a site, and the roles the viewer may give there. */
+  Rpc.make("scopeMembers", {
+    payload: { scope: Scope },
+    success: ScopeMembers,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound]),
+  }),
+  /** Gives someone in the organization a role on a scope. */
+  Rpc.make("grantRole", {
+    payload: { person: Schema.String, role: RoleId, scope: Scope },
+    error: Schema.Union([
+      StudioUnavailable,
+      ScopeNotFound,
+      PersonNotFound,
+      RoleNotFound,
+      NotPermitted,
+    ]),
+  }),
+  /** Gives someone a role on a scope in place of one they hold there. */
+  Rpc.make("changeRole", {
+    payload: { person: Schema.String, from: RoleId, to: RoleId, scope: Scope },
+    error: Schema.Union([
+      StudioUnavailable,
+      ScopeNotFound,
+      PersonNotFound,
+      RoleNotFound,
+      NotPermitted,
+      LastOrgAdmin,
+    ]),
+  }),
+  Rpc.make("revokeRole", {
+    payload: { person: Schema.String, role: RoleId, scope: Scope },
+    error: Schema.Union([
+      StudioUnavailable,
+      ScopeNotFound,
+      PersonNotFound,
+      RoleNotFound,
+      NotPermitted,
+      LastOrgAdmin,
+    ]),
+  }),
+  /** Switches one permission on or off for someone on a scope, whatever their roles say. */
+  Rpc.make("setOverride", {
+    payload: {
+      person: Schema.String,
+      permission: Permission,
+      scope: Scope,
+      allowed: Schema.Boolean,
+    },
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, PersonNotFound, NotPermitted]),
+  }),
+  Rpc.make("removeOverride", {
+    payload: { person: Schema.String, permission: Permission, scope: Scope },
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, PersonNotFound, NotPermitted]),
+  }),
+  /** Takes away every role and override someone holds, so they can no longer open Studio's work. */
+  Rpc.make("removeAllAccess", {
+    payload: { person: Schema.String },
+    error: Schema.Union([StudioUnavailable, PersonNotFound, NotPermitted, LastOrgAdmin]),
   }),
   Rpc.make("revokeInvitation", {
     payload: { invitation: InvitationId },
@@ -1138,7 +1325,7 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("saveWorkflow", {
     payload: { scope: Scope, steps: Schema.NullOr(Workflow) },
     success: WorkflowView,
-    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, RoleNotFound]),
   }),
   Rpc.make("approvals", { success: Approvals, error: StudioUnavailable }),
   Rpc.make("review", {

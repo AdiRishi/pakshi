@@ -1,14 +1,30 @@
 import type { DefaultRole, Permission, Scope } from "@repo/contracts/access";
-import { BrandId, SiteId } from "@repo/contracts/ids";
+import { BrandId, CustomRoleId, SiteId } from "@repo/contracts/ids";
 import { describe, expect, test } from "vitest";
 
-import { type Access, authorize, type Resource, rolesOn } from "../src/access.ts";
+import {
+  type Access,
+  authorize,
+  defaultRoles,
+  type Grant,
+  mayDefineRole,
+  mayGrant,
+  mayOverride,
+  type Resource,
+  rolesOn,
+} from "../src/access.ts";
 
 const brandA = BrandId.make("brand_a");
 const brandB = BrandId.make("brand_b");
 const siteA1 = SiteId.make("site_a1");
 const siteA2 = SiteId.make("site_a2");
 const siteB1 = SiteId.make("site_b1");
+
+const grant = (role: DefaultRole, scope: Scope): Grant => ({
+  role,
+  permissions: defaultRoles[role],
+  scope,
+});
 
 // The default roles table from the product spec, one row per line.
 const table: ReadonlyArray<readonly [ReadonlyArray<Permission>, ReadonlyArray<DefaultRole>]> = [
@@ -67,7 +83,7 @@ const roles = [
 
 describe.each(roles)("%s", (role) => {
   test.each(grantScopes)("granted on %s", (_, scope, covered) => {
-    const access: Access = { grants: [{ role, scope }], overrides: [] };
+    const access: Access = { grants: [grant(role, scope)], overrides: [] };
     for (const [permissions, holders] of table) {
       for (const permission of permissions) {
         for (const [name, resource] of resources) {
@@ -87,7 +103,7 @@ const siteA2Resource: Resource = { kind: "site", id: siteA2, brand: brandA };
 describe("overrides", () => {
   test("a denial on one site beats a role granted on its brand", () => {
     const access: Access = {
-      grants: [{ role: "brand-admin", scope: { kind: "brand", id: brandA } }],
+      grants: [grant("brand-admin", { kind: "brand", id: brandA })],
       overrides: [{ permission: "page.edit", scope: { kind: "site", id: siteA1 }, allowed: false }],
     };
     expect(authorize(access, "page.edit", siteA1Resource)).toBe(false);
@@ -97,7 +113,7 @@ describe("overrides", () => {
 
   test("an allowance gives a permission no role holds", () => {
     const access: Access = {
-      grants: [{ role: "approver", scope: { kind: "site", id: siteA1 } }],
+      grants: [grant("approver", { kind: "site", id: siteA1 })],
       overrides: [
         { permission: "site.approve_own", scope: { kind: "site", id: siteA1 }, allowed: true },
       ],
@@ -124,12 +140,91 @@ describe("overrides", () => {
 test("a person holds on a site the roles granted on it, its brand or the organization", () => {
   const access: Access = {
     grants: [
-      { role: "approver", scope: { kind: "brand", id: brandA } },
-      { role: "editor", scope: { kind: "site", id: siteB1 } },
-      { role: "submissions-viewer", scope: { kind: "organization" } },
-      { role: "site-admin", scope: { kind: "site", id: siteA2 } },
+      grant("approver", { kind: "brand", id: brandA }),
+      grant("editor", { kind: "site", id: siteB1 }),
+      grant("submissions-viewer", { kind: "organization" }),
+      grant("site-admin", { kind: "site", id: siteA2 }),
     ],
     overrides: [],
   };
   expect(rolesOn(access, siteA1Resource)).toEqual(["approver", "submissions-viewer"]);
+});
+
+test("a custom role gives exactly the permissions it holds now", () => {
+  const reviewer = CustomRoleId.make("role_reviewer");
+  const access: Access = {
+    grants: [
+      {
+        role: reviewer,
+        permissions: ["page.edit", "site.approve"],
+        scope: { kind: "brand", id: brandA },
+      },
+    ],
+    overrides: [],
+  };
+  expect(authorize(access, "site.approve", siteA1Resource)).toBe(true);
+  expect(authorize(access, "site.publish", siteA1Resource)).toBe(false);
+  expect(authorize(access, "site.approve", { kind: "site", id: siteB1, brand: brandB })).toBe(
+    false,
+  );
+  expect(rolesOn(access, siteA1Resource)).toEqual([reviewer]);
+});
+
+describe("delegation", () => {
+  const brandAdmin: Access = {
+    grants: [grant("brand-admin", { kind: "brand", id: brandA })],
+    overrides: [],
+  };
+  const siteB1Resource: Resource = { kind: "site", id: siteB1, brand: brandB };
+
+  test("no one can give a role holding a permission they don't hold", () => {
+    expect(mayGrant(brandAdmin, defaultRoles.editor, siteA1Resource)).toBe(true);
+    expect(mayGrant(brandAdmin, defaultRoles.approver, siteA1Resource)).toBe(false);
+    expect(mayGrant(brandAdmin, defaultRoles["org-admin"], { kind: "brand", id: brandA })).toBe(
+      false,
+    );
+  });
+
+  test("no one can give access on a scope they don't control", () => {
+    expect(mayGrant(brandAdmin, defaultRoles.editor, siteB1Resource)).toBe(false);
+    expect(mayGrant(brandAdmin, defaultRoles.editor, { kind: "organization" })).toBe(false);
+    const editor: Access = {
+      grants: [grant("editor", { kind: "site", id: siteA1 })],
+      overrides: [],
+    };
+    expect(mayGrant(editor, ["page.edit"], siteA1Resource)).toBe(false);
+  });
+
+  test("an override needs the permission it switches and control of its scope", () => {
+    expect(mayOverride(brandAdmin, "submissions.read", siteA1Resource)).toBe(true);
+    expect(mayOverride(brandAdmin, "site.approve_own", siteA1Resource)).toBe(false);
+    expect(mayOverride(brandAdmin, "submissions.read", siteB1Resource)).toBe(false);
+  });
+
+  test("a permission switched off for someone is one they can no longer give", () => {
+    const limited: Access = {
+      grants: brandAdmin.grants,
+      overrides: [
+        { permission: "submissions.export", scope: { kind: "site", id: siteA1 }, allowed: false },
+      ],
+    };
+    expect(mayGrant(limited, defaultRoles["submissions-viewer"], siteA1Resource)).toBe(false);
+    expect(mayGrant(limited, defaultRoles["submissions-viewer"], siteA2Resource)).toBe(true);
+  });
+
+  test("defining a role needs roles.manage and every permission it holds across the organization", () => {
+    const orgAdmin: Access = {
+      grants: [grant("org-admin", { kind: "organization" })],
+      overrides: [],
+    };
+    expect(mayDefineRole(orgAdmin, ["page.edit", "site.approve_own"])).toBe(true);
+    expect(mayDefineRole(brandAdmin, ["page.edit"])).toBe(false);
+    const withoutOwnApproval: Access = {
+      grants: orgAdmin.grants,
+      overrides: [
+        { permission: "site.approve_own", scope: { kind: "organization" }, allowed: false },
+      ],
+    };
+    expect(mayDefineRole(withoutOwnApproval, ["site.approve_own"])).toBe(false);
+  });
 });

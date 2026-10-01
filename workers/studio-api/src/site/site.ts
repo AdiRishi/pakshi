@@ -85,6 +85,7 @@ import { Context, Effect, Equal, Layer, Option, Schema, Semaphore } from "effect
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 
 import { SiteApprovals, type Stored } from "./approvals.ts";
+import { SiteAudit } from "./audit.ts";
 import {
   type BatchResult,
   byBrand,
@@ -174,6 +175,9 @@ export interface SubmissionReview {
 }
 
 const encodePage = Schema.encodeSync(PageDocument);
+
+/** How long a change to KV can take to reach every location, with room to spare. */
+const kvSettles = 2 * 60 * 1000;
 
 /** How many snapshots' content a SiteDoc keeps in memory. */
 const keptSnapshots = 4;
@@ -306,6 +310,7 @@ export class Site extends Context.Service<
     ) => Effect.Effect<ShareAccess | null, StorageError>;
     /** Replaces how an open draft is shared. */
     readonly share: (
+      by: Collaborator,
       id: DraftId,
       sharing: DraftSharing,
     ) => Effect.Effect<DraftSummary, StorageError | DraftNotFound>;
@@ -446,6 +451,7 @@ export class Site extends Context.Service<
       const media = yield* MediaLibrary;
       const delivery = yield* OutboxDelivery;
       const live = yield* LiveUpdates;
+      const audit = yield* SiteAudit;
       const storageTurn = yield* Semaphore.make(1);
       const releaseTurn = yield* Semaphore.make(1);
       const inStorageTurn = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
@@ -575,8 +581,14 @@ export class Site extends Context.Service<
         origin: Origin,
       ) {
         const result = yield* drafts.commit(actor, id, batch, origin);
-        if (result.status === "committed")
-          yield* live.send(id, ServerMessage.cases.Committed.make(result.commit));
+        if (result.status !== "committed") return result;
+        yield* live.send(id, ServerMessage.cases.Committed.make(result.commit));
+        const draft = { id, name: (yield* drafts.summary(id)).name };
+        if (origin._tag === "Person") yield* audit.edited(actor, draft);
+        if (origin._tag === "Agent")
+          yield* batch.undo === true
+            ? audit.record(actor, { _tag: "AgentTurnUndone", draft, turn: origin.turn })
+            : audit.agentChanged(actor, draft, origin.turn);
         return result;
       });
 
@@ -622,7 +634,7 @@ export class Site extends Context.Service<
             const library = yield* libraryFor([from, draft, to]);
             const result = mergeSites({ base: from, draft, live: to }, library, resolutions);
             const resolved = isResolved(result, resolutions);
-            if (committer !== null && resolved)
+            if (committer !== null && resolved) {
               yield* moveOnto(
                 committer,
                 id,
@@ -630,6 +642,12 @@ export class Site extends Context.Service<
                 liveReleaseOf(target),
                 contractsAt(library, result.content.lockfile),
               );
+              yield* audit.record(committer, {
+                _tag: "DraftUpdated",
+                draft: { id, name: (yield* drafts.summary(id)).name },
+                conflicts: result.conflicts.length,
+              });
+            }
             return { target, result, resolved };
           }),
         );
@@ -1010,16 +1028,26 @@ export class Site extends Context.Service<
         const allowed = eligibility(submission, approver);
         if (!allowed.ok) return yield* new CannotDecide({ reason: allowed.reason });
         const at = now();
+        const decided = audit.record(approver.person, {
+          _tag: "ApprovalDecision",
+          draft: submission.draft,
+          submission: submission.id,
+          step: allowed.step,
+          decision: decision === "request-changes" ? "changes-requested" : "approved",
+        });
         if (decision === "request-changes") {
           const returned: Submission = {
             ...submission,
             status: { _tag: "ChangesRequested", by: approver.person, at, note },
           };
           yield* inStorageTurn(
-            recordSubmission(
-              { ...stored, submission: returned },
-              { _tag: "ChangesRequested" },
-              studio,
+            Effect.andThen(
+              recordSubmission(
+                { ...stored, submission: returned },
+                { _tag: "ChangesRequested" },
+                studio,
+              ),
+              decided,
             ),
           );
           return DecisionOutcome.cases.Recorded.make({ submission: returned });
@@ -1034,6 +1062,7 @@ export class Site extends Context.Service<
             ],
           },
         };
+        yield* inStorageTurn(decided);
         const next = currentStep(approved.submission);
         if (next !== null) {
           yield* inStorageTurn(
@@ -1145,7 +1174,11 @@ export class Site extends Context.Service<
           ),
         settings: settingsStore.current,
         saveSettings: (by, changes, seen, studio) =>
-          inStorageTurn(settingsStore.save(by, changes, seen, studio)),
+          inStorageTurn(
+            Effect.tap(settingsStore.save(by, changes, seen, studio), () =>
+              audit.record(by, { _tag: "SettingsSaved", settings: Object.keys(changes) }),
+            ),
+          ),
         live: liveRelease,
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
         drafts: Effect.gen(function* () {
@@ -1157,7 +1190,20 @@ export class Site extends Context.Service<
           const base = yield* liveRelease;
           const content = startingContent(yield* contentOf(base.snapshot));
           const info = yield* inStorageTurn(
-            drafts.create({ name, kind: { _tag: "Edit" }, by, base: liveReleaseOf(base), content }),
+            Effect.tap(
+              drafts.create({
+                name,
+                kind: { _tag: "Edit" },
+                by,
+                base: liveReleaseOf(base),
+                content,
+              }),
+              (created) =>
+                audit.record(by, {
+                  _tag: "DraftCreated",
+                  draft: { id: created.id, name: created.name },
+                }),
+            ),
           );
           return { ...info, review: null };
         }),
@@ -1169,9 +1215,11 @@ export class Site extends Context.Service<
               Effect.gen(function* () {
                 yield* openDraft(id);
                 const at = now();
+                const { name } = yield* drafts.summary(id);
                 yield* sql.withTransaction(
                   Effect.gen(function* () {
                     yield* drafts.close(id, "closed");
+                    yield* audit.record(by, { _tag: "DraftClosed", draft: { id, name } });
                     for (const stored of yield* approvals.inReview)
                       if (stored.submission.draft.id === id)
                         yield* approvals.record({
@@ -1277,12 +1325,20 @@ export class Site extends Context.Service<
           if (Option.isNone(info) || info.value.status !== "open") return null;
           return draftAccess(info.value.sharing, visitor);
         }),
-        share: (id, sharing) =>
+        share: (by, id, sharing) =>
           inStorageTurn(
             Effect.gen(function* () {
               yield* openDraft(id);
               yield* drafts.share(id, sharing);
-              return yield* summary(id);
+              const shared = yield* summary(id);
+              yield* audit.record(by, {
+                _tag: "DraftShared",
+                draft: { id, name: shared.name },
+                people: sharing.people.length,
+                audience: sharing.general.audience,
+                access: sharing.general.access,
+              });
+              return shared;
             }),
           ),
         check: Effect.fn("Site.check")(function* (id) {
@@ -1355,6 +1411,12 @@ export class Site extends Context.Service<
                       steps.length > 0 ? { _tag: "StepStarted" } : null,
                       studio,
                     );
+                    yield* audit.record(actor, {
+                      _tag: "SubmittedForApproval",
+                      draft: { id, name },
+                      submission: stored.submission.id,
+                      draftStartedAt: (yield* drafts.summary(id)).createdAt,
+                    });
                   }),
                 ),
               );
@@ -1458,7 +1520,21 @@ export class Site extends Context.Service<
           const current = yield* contentOf(base.snapshot);
           const content = startingContent({ ...restoredContent, brand: current.brand });
           const info = yield* inStorageTurn(
-            drafts.create({ name, kind: { _tag: "Edit" }, by, base: liveReleaseOf(base), content }),
+            Effect.tap(
+              drafts.create({
+                name,
+                kind: { _tag: "Edit" },
+                by,
+                base: liveReleaseOf(base),
+                content,
+              }),
+              (created) =>
+                audit.record(by, {
+                  _tag: "DraftRestored",
+                  draft: { id: created.id, name: created.name },
+                  release: id,
+                }),
+            ),
           );
           return Option.some({ ...info, review: null });
         }),
@@ -1498,13 +1574,22 @@ export class Site extends Context.Service<
               const open = yield* drafts.openOfKind(kind);
               const info = Option.isSome(open)
                 ? open.value
-                : yield* drafts.create({
-                    name: `${definition.title} v${version} upgrade`,
-                    kind,
-                    by,
-                    base: liveReleaseOf(base),
-                    content: startingContent(migrateContent(library, content, target)),
-                  });
+                : yield* Effect.tap(
+                    drafts.create({
+                      name: `${definition.title} v${version} upgrade`,
+                      kind,
+                      by,
+                      base: liveReleaseOf(base),
+                      content: startingContent(migrateContent(library, content, target)),
+                    }),
+                    (created) =>
+                      audit.record(by, {
+                        _tag: "BlockUpgradeDraft",
+                        draft: { id: created.id, name: created.name },
+                        block: type,
+                        version,
+                      }),
+                  );
               return Option.some(yield* summary(info.id));
             }),
           ).pipe(
@@ -1597,7 +1682,21 @@ export class Site extends Context.Service<
           Effect.gen(function* () {
             const latest = yield* releases.live;
             if (Option.isNone(latest)) return;
-            yield* routing.write(liveReleaseOf(latest.value.release));
+            const live = liveReleaseOf(latest.value.release);
+            const served = yield* routing.read;
+            // KV takes up to a minute to show a new release everywhere, so only an
+            // older release that KV doesn't serve is a change nothing in Pakshi made.
+            const settled = Date.now() - Date.parse(latest.value.release.at) > kvSettles;
+            if (settled && !Option.exists(served, (value) => Equal.equals(value, live)))
+              yield* audit.record(null, {
+                _tag: "LiveReleaseRestored",
+                release: live.release,
+                served: Option.match(served, {
+                  onNone: () => null,
+                  onSome: (value) => value.release,
+                }),
+              });
+            yield* routing.write(live);
             yield* releases.resend(latest.value);
           }),
         ),

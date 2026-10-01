@@ -1,3 +1,4 @@
+import { AuditEntry } from "@repo/contracts/audit";
 import { DraftName } from "@repo/contracts/draft";
 import { DraftId } from "@repo/contracts/ids";
 import { Release } from "@repo/contracts/release";
@@ -51,6 +52,8 @@ export const OutboxMessage = Schema.TaggedUnion({
   Settings: { settings: SiteSettings, studio: Schema.NullOr(Schema.String) },
   /** The newest brand revision the site has taken in. */
   BrandTaken: { number: Schema.Int },
+  /** Something that happened in the site, for the audit log. */
+  Audit: { entry: AuditEntry },
   Notify: {
     notification: Notification,
     submission: Submission,

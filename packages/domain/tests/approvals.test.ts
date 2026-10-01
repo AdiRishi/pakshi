@@ -1,4 +1,4 @@
-import type { DefaultRole, Permission } from "@repo/contracts/access";
+import type { Permission, RoleId } from "@repo/contracts/access";
 import type { Collaborator } from "@repo/contracts/live";
 import { Timestamp } from "@repo/contracts/release";
 import type { Submission } from "@repo/contracts/submission";
@@ -14,7 +14,7 @@ const priya = { id: "user_priya", name: "Priya Shah" };
 
 const approvers: WorkflowStep = {
   name: "Communications team",
-  roles: ["approver"],
+  roles: [{ id: "approver", name: "Approver" }],
   people: [],
   required: 1,
 };
@@ -40,7 +40,7 @@ const inReview = (
 
 const approver = (
   person: Collaborator,
-  roles: ReadonlyArray<DefaultRole>,
+  roles: ReadonlyArray<RoleId>,
   permissions: ReadonlyArray<Permission> = ["site.approve"],
 ) => ({ person, roles, permissions });
 

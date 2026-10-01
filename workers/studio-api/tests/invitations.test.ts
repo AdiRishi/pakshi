@@ -5,9 +5,10 @@ import { Effect, Option } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 import { loadAccess } from "../src/access.ts";
-import { acceptInvitation, invitationView, invite, invitePlaces } from "../src/invitations.ts";
+import { acceptInvitation, invitationView, invite } from "../src/invitations.ts";
 import type { Mailer } from "../src/notifications.ts";
 import { organizationName, startOrganization } from "../src/organization.ts";
+import { accessPlaces } from "../src/places.ts";
 import { core } from "./support/core.ts";
 
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
@@ -41,7 +42,7 @@ it.effect(
   () =>
     Effect.gen(function* () {
       const places = (id: string) =>
-        Effect.flatMap(loadAccess(id), ({ access }) => invitePlaces(access));
+        Effect.flatMap(loadAccess(id), ({ access }) => accessPlaces(access));
       const brandAdmin = yield* places("user_brand");
       expect(brandAdmin.map((place) => place.scope.name)).toEqual([
         "City Libraries",
@@ -49,7 +50,7 @@ it.effect(
         "Northbank Libraries",
       ]);
       // A brand admin doesn't hold approving, so can't make anyone an approver.
-      expect(brandAdmin[0]?.roles).toEqual([
+      expect(brandAdmin[0]?.roles.map((role) => role.id)).toEqual([
         "brand-admin",
         "site-admin",
         "editor",
@@ -88,7 +89,7 @@ it.effect("an invitation emails a link that gives its grant once, to its own add
     expect(yield* invitationView(token)).toMatchObject({
       _tag: "Open",
       organization: "Riverton Council",
-      role: "editor",
+      role: { id: "editor", name: "Editor" },
       accountExists: false,
     });
 
@@ -97,7 +98,7 @@ it.effect("an invitation emails a link that gives its grant once, to its own add
     expect(stranger._tag).toBe("InvitationClosed");
     yield* acceptInvitation(ana, token);
     const { access } = yield* loadAccess(ana.id);
-    expect(access.grants).toEqual([{ role: "editor", scope: northbank }]);
+    expect(access.grants).toMatchObject([{ role: "editor", scope: northbank }]);
 
     const again = yield* Effect.flip(acceptInvitation(ana, token));
     expect(again._tag).toBe("InvitationClosed");
@@ -142,7 +143,9 @@ it.effect("someone who already holds the role there isn't invited again", () =>
 it.effect("a second organization setup is refused, and changes nothing", () =>
   Effect.gen(function* () {
     // The fixture has set the organization up already.
-    expect(yield* startOrganization("Another council", "user_editor")).toBe(false);
+    expect(
+      yield* startOrganization("Another council", { id: "user_editor", name: "Sam Okafor" }),
+    ).toBe(false);
     expect(yield* organizationName).toEqual(Option.some("Riverton Council"));
     const { access } = yield* loadAccess("user_editor");
     expect(access.grants.map((grant) => grant.role)).toEqual(["editor"]);

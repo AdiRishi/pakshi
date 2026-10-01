@@ -12,10 +12,15 @@ import {
   EntryNotFound,
   ImageNotFound,
   InvitationClosed,
+  LastOrgAdmin,
   NotInBrandLibrary,
   NothingToRollBack,
   NotPermitted,
+  PersonNotFound,
   ReleaseNotFound,
+  RoleInUse,
+  RoleNameTaken,
+  RoleNotFound,
   ScopeNotFound,
   SettingsChanged,
   SiteNotFound,
@@ -52,6 +57,28 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError("not_found", "This site has no such submission.");
   if (Schema.is(ScopeNotFound)(failure))
     return new AppRequestError("not_found", "There's nothing here that you can work on.");
+  if (Schema.is(PersonNotFound)(failure))
+    return new AppRequestError(
+      "not_found",
+      "There's no one in the organization with that account.",
+    );
+  if (Schema.is(RoleNotFound)(failure))
+    return new AppRequestError("not_found", "That role was deleted, or doesn't exist.");
+  if (Schema.is(RoleNameTaken)(failure))
+    return new AppRequestError(
+      "conflict",
+      `There's already a role called ${failure.name}. Give this one another name.`,
+    );
+  if (Schema.is(RoleInUse)(failure))
+    return new AppRequestError(
+      "conflict",
+      "Someone holds this role, or an approval workflow names it. Take it away from them and out of workflows first.",
+    );
+  if (Schema.is(LastOrgAdmin)(failure))
+    return new AppRequestError(
+      "conflict",
+      "Someone else must be an org admin first, or no one could manage the organization.",
+    );
   if (Schema.is(NotPermitted)(failure))
     return new AppRequestError("forbidden", `You don't have permission to ${failure.action}.`);
   if (Schema.is(CannotDecide)(failure)) return new AppRequestError("forbidden", failure.reason);

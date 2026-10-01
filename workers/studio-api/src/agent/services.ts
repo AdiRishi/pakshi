@@ -40,8 +40,6 @@ export const AgentAuthorization = Schema.Struct({
   brand: BrandId,
   draft: DraftId,
   permissions: Schema.Array(Permission),
-  /** Whether they edit the site's pages, rather than the draft through a share. */
-  editsSite: Schema.Boolean,
   /** Studio's address, for preview links. */
   studio: Schema.String,
 });
@@ -98,7 +96,7 @@ export const turnServices = (
         commit: (ops, at) =>
           Effect.promise(async (): Promise<Outcome<BatchResult>> =>
             site.applyAgentBatch(
-              { person, editsSite: who.editsSite },
+              person,
               who.draft,
               { id: BatchId.make(randomId("bat")), ops },
               turn.id,

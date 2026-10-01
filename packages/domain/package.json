@@ -8,6 +8,10 @@
       "types": "./src/access.ts",
       "default": "./src/access.ts"
     },
+    "./audit": {
+      "types": "./src/audit.ts",
+      "default": "./src/audit.ts"
+    },
     "./approvals": {
       "types": "./src/approvals.ts",
       "default": "./src/approvals.ts"
@@ -15,6 +19,10 @@
     "./commit": {
       "types": "./src/commit.ts",
       "default": "./src/commit.ts"
+    },
+    "./csv": {
+      "types": "./src/csv.ts",
+      "default": "./src/csv.ts"
     },
     "./document": {
       "types": "./src/document.ts",

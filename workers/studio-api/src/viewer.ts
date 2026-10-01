@@ -1,14 +1,13 @@
-import { roleTitles } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { Person, Viewer } from "@repo/contracts/studio";
-import { type Access, authorize } from "@repo/domain/access";
+import { type Access, authorize, mayDefineRole } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { loadAccess } from "./access.ts";
-import { invitePlaces } from "./invitations.ts";
 import { waitingFor } from "./lists.ts";
 import { organizationName } from "./organization.ts";
+import { accessPlaces } from "./places.ts";
 import { brandsForNewSites } from "./sites.ts";
 
 const SiteRow = Schema.Struct({
@@ -58,15 +57,15 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
 ): Effect.fn.Return<Viewer, Schema.SchemaError | SqlError.SqlError, SqlClient.SqlClient> {
   const { access, grants } = yield* loadAccess(user.id);
   const [sites, organization, newSiteBrands, places] = yield* Effect.all(
-    [reachableSites(access), organizationName, brandsForNewSites(user), invitePlaces(access)],
+    [reachableSites(access), organizationName, brandsForNewSites(user), accessPlaces(access)],
     { concurrency: "unbounded" },
   );
   return {
     user: { id: user.id, name: user.name, email: user.email },
     organization: Option.getOrElse(organization, () => ""),
     roles: grants.map((grant) => ({
-      role: roleTitles[grant.role],
-      scope: grant.scope_name ?? Option.getOrElse(organization, () => "Organization"),
+      role: grant.role.name,
+      scope: grant.scopeName ?? Option.getOrElse(organization, () => "Organization"),
     })),
     sites: sites
       .filter((site) =>
@@ -81,6 +80,8 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
       createBrand: authorize(access, "brand.create", { kind: "organization" }),
       createSite: newSiteBrands.length > 0,
       invite: places.length > 0,
+      manageRoles: mayDefineRole(access, []),
+      readAudit: authorize(access, "audit.read", { kind: "organization" }),
     },
   };
 });

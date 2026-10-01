@@ -74,10 +74,10 @@ it.effect("a domain removal KV refuses keeps the domain, so removing it again fi
     const sql = yield* SqlClient.SqlClient;
     yield* routedSite;
     const kv = flakyKv();
-    yield* Effect.exit(removeDomain(library, "www.library.org", kv.change));
+    yield* Effect.exit(removeDomain(library, "www.library.org", orgAdmin, kv.change));
     expect(yield* sql`select hostname from domains`).toEqual([{ hostname: "www.library.org" }]);
 
-    yield* removeDomain(library, "www.library.org", kv.change);
+    yield* removeDomain(library, "www.library.org", orgAdmin, kv.change);
     expect(kv.taken).toEqual(["www.library.org"]);
     expect(yield* sql`select hostname from domains`).toEqual([]);
   }).pipe(Effect.provide(core)),

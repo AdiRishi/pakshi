@@ -30,7 +30,7 @@ const currentApprovers = Effect.fn("StudioApi.currentApprovers")(function* (
       where id in (select value from json_each(${JSON.stringify(step.people.map((person) => person.id))}))
         or id in (
           select user_id from grants
-          where role in (select value from json_each(${JSON.stringify(step.roles)}))
+          where role in (select value from json_each(${JSON.stringify(step.roles.map((role) => role.id))}))
             and (scope_kind = 'organization'
               or (scope_kind = 'brand' and scope_id = ${site.brand})
               or (scope_kind = 'site' and scope_id = ${site.id})))`,

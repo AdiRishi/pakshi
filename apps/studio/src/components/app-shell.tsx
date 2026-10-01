@@ -6,6 +6,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarGroup,
+  SidebarGroupLabel,
   SidebarHeader,
   SidebarInset,
   SidebarMenu,
@@ -18,12 +19,14 @@ import { Link, useMatchRoute } from "@tanstack/react-router";
 import {
   BlocksIcon,
   CircleCheckIcon,
+  HistoryIcon,
   HouseIcon,
   LogOutIcon,
   PaletteIcon,
+  ShieldCheckIcon,
   UsersIcon,
 } from "lucide-react";
-import type { ReactNode } from "react";
+import { type ReactNode, useId } from "react";
 
 import { Logo } from "@/components/logo";
 import { initials } from "@/lib/initials";
@@ -31,7 +34,9 @@ import { initials } from "@/lib/initials";
 /** Studio's frame for a signed-in person: the navigation sidebar and the page beside it. */
 export function AppShell(props: { readonly viewer: Viewer; readonly children: ReactNode }) {
   const [primaryRole] = props.viewer.roles;
+  const { can } = props.viewer;
   const matchRoute = useMatchRoute();
+  const organizationLabel = useId();
   return (
     <SidebarProvider>
       <Sidebar collapsible="none" className="h-auto min-h-screen border-r">
@@ -78,18 +83,6 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                     Blocks
                   </SidebarMenuButton>
                 </SidebarMenuItem>
-                {props.viewer.can.invite && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton
-                      size="lg"
-                      isActive={matchRoute({ to: "/people", fuzzy: true }) !== false}
-                      render={<Link to="/people" />}
-                    >
-                      <UsersIcon />
-                      People
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
                 {props.viewer.brands && (
                   <SidebarMenuItem>
                     <SidebarMenuButton
@@ -105,6 +98,49 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
               </SidebarMenu>
             </nav>
           </SidebarGroup>
+          {(can.invite || can.manageRoles || can.readAudit) && (
+            <SidebarGroup>
+              <SidebarGroupLabel id={organizationLabel}>Organization</SidebarGroupLabel>
+              <nav aria-labelledby={organizationLabel}>
+                <SidebarMenu>
+                  {can.invite && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        size="lg"
+                        isActive={matchRoute({ to: "/people", fuzzy: true }) !== false}
+                        render={<Link to="/people" />}
+                      >
+                        <UsersIcon />
+                        People
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      size="lg"
+                      isActive={matchRoute({ to: "/roles", fuzzy: true }) !== false}
+                      render={<Link to="/roles" />}
+                    >
+                      <ShieldCheckIcon />
+                      Roles
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  {can.readAudit && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        size="lg"
+                        isActive={matchRoute({ to: "/audit", fuzzy: true }) !== false}
+                        render={<Link to="/audit" />}
+                      >
+                        <HistoryIcon />
+                        Audit log
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
+                </SidebarMenu>
+              </nav>
+            </SidebarGroup>
+          )}
         </SidebarContent>
         <SidebarFooter className="gap-3 p-4">
           <div className="flex items-center gap-3">

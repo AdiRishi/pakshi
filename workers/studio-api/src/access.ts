@@ -1,7 +1,8 @@
-import { Scope } from "@repo/contracts/access";
+import { defaultRoleDetails, Permission, RoleId, Scope } from "@repo/contracts/access";
+import { NamedScope } from "@repo/contracts/accounts";
 import { BrandId } from "@repo/contracts/ids";
 import { ScopeNotFound } from "@repo/contracts/studio";
-import { type Access, Grant, Override, type Resource } from "@repo/domain/access";
+import { type Access, defaultRoles, isDefaultRole, type Resource } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -10,22 +11,64 @@ const ScopeRow = Schema.Struct({
   scope_id: Schema.NullOr(Schema.String),
 });
 
-const scopeOf = (row: typeof ScopeRow.Type) =>
+export const scopeOf = (row: typeof ScopeRow.Type) =>
   Schema.decodeUnknownEffect(Scope)(
     row.scope_kind === "organization"
       ? { kind: "organization" }
       : { kind: row.scope_kind, id: row.scope_id },
   );
 
+/** Where an audit entry about a scope is filed. */
+export const filedUnder = (scope: Scope) => {
+  switch (scope.kind) {
+    case "organization":
+      return {};
+    case "brand":
+      return { brand: scope.id };
+    case "site":
+      return { site: scope.id };
+  }
+};
+
+/** A scope with its name, as people see it. */
+export const nameScope = (scope: Scope, name: string): NamedScope => {
+  switch (scope.kind) {
+    case "organization":
+      return { kind: "organization", name };
+    case "brand":
+      return { kind: "brand", id: scope.id, name };
+    case "site":
+      return { kind: "site", id: scope.id, name };
+  }
+};
+
+/** A scope with the name a query joined for it, as people see it. */
+export const namedScopeOf = (row: typeof ScopeRow.Type & { readonly scope_name: string }) =>
+  Schema.decodeUnknownEffect(NamedScope)(
+    row.scope_kind === "organization"
+      ? { kind: "organization", name: row.scope_name }
+      : { kind: row.scope_kind, id: row.scope_id, name: row.scope_name },
+  );
+
 const GrantRow = Schema.Struct({
   ...ScopeRow.fields,
-  role: Grant.fields.role,
+  role: RoleId,
   scope_name: Schema.NullOr(Schema.String),
+  /** A custom role's name and permissions; null for a default role. */
+  custom_name: Schema.NullOr(Schema.String),
+  custom_permissions: Schema.NullOr(Schema.fromJsonString(Schema.Array(Permission))),
 });
+type GrantRow = typeof GrantRow.Type;
+
+/** A grant's role as people see it named, and the permissions it holds now. */
+const roleOf = (row: GrantRow) =>
+  isDefaultRole(row.role)
+    ? { name: defaultRoleDetails[row.role].name, permissions: defaultRoles[row.role] }
+    : { name: row.custom_name ?? "", permissions: row.custom_permissions ?? [] };
 
 const OverrideRow = Schema.Struct({
   ...ScopeRow.fields,
-  permission: Override.fields.permission,
+  permission: Permission,
   allowed: Schema.Literals([0, 1]),
 });
 
@@ -36,8 +79,10 @@ export const loadAccess = Effect.fn("StudioApi.loadAccess")(function* (userId: s
     Request: Schema.String,
     Result: GrantRow,
     execute: (user) => sql`
-      select g.role, g.scope_kind, g.scope_id, coalesce(b.name, s.name) as scope_name
+      select g.role, g.scope_kind, g.scope_id, coalesce(b.name, s.name) as scope_name,
+        r.name as custom_name, r.permissions as custom_permissions
       from grants g
+      left join roles r on r.id = g.role
       left join brands b on g.scope_kind = 'brand' and b.id = g.scope_id
       left join sites s on g.scope_kind = 'site' and s.id = g.scope_id
       where g.user_id = ${user}`,
@@ -55,7 +100,11 @@ export const loadAccess = Effect.fn("StudioApi.loadAccess")(function* (userId: s
   });
   const access: Access = {
     grants: yield* Effect.forEach(grants, (grant) =>
-      Effect.map(scopeOf(grant), (scope) => ({ role: grant.role, scope })),
+      Effect.map(scopeOf(grant), (scope) => ({
+        role: grant.role,
+        permissions: roleOf(grant).permissions,
+        scope,
+      })),
     ),
     overrides: yield* Effect.forEach(overrides, (override) =>
       Effect.map(scopeOf(override), (scope) => ({
@@ -65,7 +114,13 @@ export const loadAccess = Effect.fn("StudioApi.loadAccess")(function* (userId: s
       })),
     ),
   };
-  return { access, grants };
+  return {
+    access,
+    grants: grants.map((grant) => ({
+      role: { id: grant.role, name: roleOf(grant).name },
+      scopeName: grant.scope_name,
+    })),
+  };
 });
 
 const ScopeNameRow = Schema.Struct({ name: Schema.String, brand_id: Schema.NullOr(BrandId) });

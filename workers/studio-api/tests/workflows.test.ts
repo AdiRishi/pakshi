@@ -9,7 +9,7 @@ import { core } from "./support/core.ts";
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
 
 const oneStep = (name: string): Workflow => [
-  { name, roles: ["approver"], people: [], required: 1 },
+  { name, roles: [{ id: "approver", name: "Approver" }], people: [], required: 1 },
 ];
 
 const northbank = { id: SiteId.make("site_a1"), brand: BrandId.make("brand_a") };

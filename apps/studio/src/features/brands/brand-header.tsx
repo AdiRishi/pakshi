@@ -17,6 +17,7 @@ const sections = [
   { key: "identity", label: "Identity and voice", to: "/brands/$brandId/identity" },
   { key: "workflow", label: "Approval workflow", to: "/brands/$brandId/workflow" },
   { key: "sites", label: "Sites", to: "/brands/$brandId/sites" },
+  { key: "members", label: "Members", to: "/brands/$brandId/members" },
 ] as const;
 
 /** A brand's name, how many sites use it, and links to the brand's sections. */

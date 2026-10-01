@@ -13,6 +13,7 @@ const pages = [
   { key: "domains", label: "Domains", to: "/sites/$siteId/settings/domains" },
   { key: "forms", label: "Forms and email", to: "/sites/$siteId/settings/forms" },
   { key: "workflow", label: "Approval workflow", to: "/sites/$siteId/settings/workflow" },
+  { key: "members", label: "Members", to: "/sites/$siteId/settings/members" },
 ] as const;
 
 /** One of a site's settings pages, with links to the others. */
