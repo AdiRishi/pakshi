@@ -8,11 +8,16 @@ import { Option, Schema } from "effect";
  * studio-api set, so the forms work before Studio's JavaScript loads.
  */
 
-/** A posted form's fields, or none when the form isn't the one expected. */
+/**
+ * A posted form's fields, or none when the form isn't the one expected or
+ * another site posted it. Studio's CSRF middleware covers only server
+ * functions, so these forms check the browser's origin themselves.
+ */
 export const readForm = async <S extends Schema.Top & { readonly DecodingServices: never }>(
   request: Request,
   schema: S,
 ): Promise<Option.Option<S["Type"]>> => {
+  if (request.headers.get("origin") !== new URL(request.url).origin) return Option.none();
   const form = await request.formData().then(Option.some, () => Option.none<FormData>());
   return Option.flatMap(form, (fields) => Schema.decodeOption(schema)(Object.fromEntries(fields)));
 };

@@ -18,6 +18,13 @@ test("the first person to open Pakshi sets it up and becomes its admin", async (
   // Signing out and back in works with the password chosen.
   await page.getByRole("button", { name: "Sign out" }).click();
   await expect(page).toHaveURL(/\/sign-in$/);
+  // A sign-in form another site posts signs no one in.
+  const forged = await page.request.post(`${studioUrl}/sign-in`, {
+    form: { email: admin.email, password: admin.password, redirect: "/" },
+    headers: { origin: "https://elsewhere.example" },
+    maxRedirects: 0,
+  });
+  expect(forged.headers()["set-cookie"]).toBeUndefined();
   await page.getByLabel("Email").fill(admin.email);
   await page.getByLabel("Password").fill(admin.password);
   await page.getByRole("button", { name: "Sign in" }).click();
