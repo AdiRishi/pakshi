@@ -147,7 +147,6 @@ export const migrations = Migrator.fromRecord({
       started_at text not null,
       last_at text not null,
       batches integer not null,
-      reported_at text not null,
       primary key (draft_id, person)
     )`;
   }),
