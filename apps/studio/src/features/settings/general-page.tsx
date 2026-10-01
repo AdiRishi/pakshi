@@ -1,7 +1,7 @@
 import type { SiteId } from "@repo/contracts/ids";
 import type { MediaRef } from "@repo/contracts/references";
 import { SiteName } from "@repo/contracts/settings";
-import { siteMediaBasePath, type SiteSettingsView, type Viewer } from "@repo/contracts/studio";
+import type { SiteSettingsView, Viewer } from "@repo/contracts/studio";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -24,15 +24,13 @@ import { Equal, Option, Schema } from "effect";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
+import { siteMediaSrc } from "../media/addresses";
 import { LibraryPicker } from "../media/library-picker";
 import { saveSiteSettings } from "../sites/functions";
 import { siteSettingsQuery } from "../sites/queries";
 import { SettingsShell } from "./settings-shell";
 
 const decodeName = Schema.decodeOption(SiteName);
-
-export const siteMediaSrc = (site: SiteId, media: MediaRef["id"]) =>
-  `${siteMediaBasePath}/${site}/${media}`;
 
 /** A site's name and default sharing image, which go live with its next publish. */
 export function GeneralSettingsPage(props: { readonly viewer: Viewer; readonly site: SiteId }) {

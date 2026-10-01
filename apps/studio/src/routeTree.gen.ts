@@ -18,6 +18,7 @@ import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedBlocksRouteImport } from './routes/_authed/blocks'
 import { Route as AuthedPeopleRouteImport } from './routes/_authed/people'
+import { Route as ApiMediaRouteImport } from './routes/api/media'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as AuthedApprovalsIndexRouteImport } from './routes/_authed/approvals/index'
 import { Route as AuthedBrandsIndexRouteImport } from './routes/_authed/brands/index'
@@ -34,6 +35,7 @@ import { Route as AuthedBrandsBrandIdSitesRouteImport } from './routes/_authed/b
 import { Route as AuthedBrandsBrandIdWorkflowRouteImport } from './routes/_authed/brands/$brandId/workflow'
 import { Route as AuthedSitesSiteIdIndexRouteImport } from './routes/_authed/sites/$siteId/index'
 import { Route as AuthedSitesSiteIdBlocksRouteImport } from './routes/_authed/sites/$siteId/blocks'
+import { Route as AuthedSitesSiteIdMediaRouteImport } from './routes/_authed/sites/$siteId/media'
 import { Route as AuthedSitesSiteIdReleasesRouteImport } from './routes/_authed/sites/$siteId/releases'
 import { Route as PreviewSiteIdDraftIdSplatRouteImport } from './routes/preview/$siteId/$draftId/$'
 import { Route as ReviewSiteIdSubmissionIdSplatRouteImport } from './routes/review/$siteId/$submissionId/$'
@@ -89,6 +91,11 @@ const AuthedPeopleRoute = AuthedPeopleRouteImport.update({
   id: '/people',
   path: '/people',
   getParentRoute: () => AuthedRoute,
+} as any)
+const ApiMediaRoute = ApiMediaRouteImport.update({
+  id: '/api/media',
+  path: '/api/media',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const JoinTokenRoute = JoinTokenRouteImport.update({
   id: '/join/$token',
@@ -177,6 +184,11 @@ const AuthedSitesSiteIdBlocksRoute = AuthedSitesSiteIdBlocksRouteImport.update({
   path: '/sites/$siteId/blocks',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedSitesSiteIdMediaRoute = AuthedSitesSiteIdMediaRouteImport.update({
+  id: '/sites/$siteId/media',
+  path: '/sites/$siteId/media',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const AuthedSitesSiteIdReleasesRoute =
   AuthedSitesSiteIdReleasesRouteImport.update({
     id: '/sites/$siteId/releases',
@@ -253,6 +265,7 @@ export interface FileRoutesByFullPath {
   '/sign-out': typeof SignOutRoute
   '/blocks': typeof AuthedBlocksRoute
   '/people': typeof AuthedPeopleRoute
+  '/api/media': typeof ApiMediaRoute
   '/join/$token': typeof JoinTokenRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
   '/sites/new': typeof AuthedSitesNewRoute
@@ -267,6 +280,7 @@ export interface FileRoutesByFullPath {
   '/brands/$brandId/sites': typeof AuthedBrandsBrandIdSitesRoute
   '/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
+  '/sites/$siteId/media': typeof AuthedSitesSiteIdMediaRoute
   '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
@@ -289,6 +303,7 @@ export interface FileRoutesByTo {
   '/sign-out': typeof SignOutRoute
   '/blocks': typeof AuthedBlocksRoute
   '/people': typeof AuthedPeopleRoute
+  '/api/media': typeof ApiMediaRoute
   '/join/$token': typeof JoinTokenRoute
   '/': typeof AuthedIndexRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
@@ -304,6 +319,7 @@ export interface FileRoutesByTo {
   '/brands/$brandId/sites': typeof AuthedBrandsBrandIdSitesRoute
   '/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
+  '/sites/$siteId/media': typeof AuthedSitesSiteIdMediaRoute
   '/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
@@ -328,6 +344,7 @@ export interface FileRoutesById {
   '/sign-out': typeof SignOutRoute
   '/_authed/blocks': typeof AuthedBlocksRoute
   '/_authed/people': typeof AuthedPeopleRoute
+  '/api/media': typeof ApiMediaRoute
   '/join/$token': typeof JoinTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/organization/workflow': typeof AuthedOrganizationWorkflowRoute
@@ -343,6 +360,7 @@ export interface FileRoutesById {
   '/_authed/brands/$brandId/sites': typeof AuthedBrandsBrandIdSitesRoute
   '/_authed/brands/$brandId/workflow': typeof AuthedBrandsBrandIdWorkflowRoute
   '/_authed/sites/$siteId/blocks': typeof AuthedSitesSiteIdBlocksRoute
+  '/_authed/sites/$siteId/media': typeof AuthedSitesSiteIdMediaRoute
   '/_authed/sites/$siteId/releases': typeof AuthedSitesSiteIdReleasesRoute
   '/preview/$siteId/$draftId/$': typeof PreviewSiteIdDraftIdSplatRoute
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
@@ -368,6 +386,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/blocks'
     | '/people'
+    | '/api/media'
     | '/join/$token'
     | '/organization/workflow'
     | '/sites/new'
@@ -382,6 +401,7 @@ export interface FileRouteTypes {
     | '/brands/$brandId/sites'
     | '/brands/$brandId/workflow'
     | '/sites/$siteId/blocks'
+    | '/sites/$siteId/media'
     | '/sites/$siteId/releases'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
@@ -404,6 +424,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/blocks'
     | '/people'
+    | '/api/media'
     | '/join/$token'
     | '/'
     | '/organization/workflow'
@@ -419,6 +440,7 @@ export interface FileRouteTypes {
     | '/brands/$brandId/sites'
     | '/brands/$brandId/workflow'
     | '/sites/$siteId/blocks'
+    | '/sites/$siteId/media'
     | '/sites/$siteId/releases'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
@@ -442,6 +464,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/_authed/blocks'
     | '/_authed/people'
+    | '/api/media'
     | '/join/$token'
     | '/_authed/'
     | '/_authed/organization/workflow'
@@ -457,6 +480,7 @@ export interface FileRouteTypes {
     | '/_authed/brands/$brandId/sites'
     | '/_authed/brands/$brandId/workflow'
     | '/_authed/sites/$siteId/blocks'
+    | '/_authed/sites/$siteId/media'
     | '/_authed/sites/$siteId/releases'
     | '/preview/$siteId/$draftId/$'
     | '/review/$siteId/$submissionId/$'
@@ -479,6 +503,7 @@ export interface RootRouteChildren {
   SetUpRoute: typeof SetUpRoute
   SignInRoute: typeof SignInRoute
   SignOutRoute: typeof SignOutRoute
+  ApiMediaRoute: typeof ApiMediaRoute
   JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   BrandMediaBrandIdMediaIdRoute: typeof BrandMediaBrandIdMediaIdRoute
@@ -552,6 +577,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/people'
       preLoaderRoute: typeof AuthedPeopleRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/api/media': {
+      id: '/api/media'
+      path: '/api/media'
+      fullPath: '/api/media'
+      preLoaderRoute: typeof ApiMediaRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/join/$token': {
       id: '/join/$token'
@@ -665,6 +697,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesSiteIdBlocksRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/$siteId/media': {
+      id: '/_authed/sites/$siteId/media'
+      path: '/sites/$siteId/media'
+      fullPath: '/sites/$siteId/media'
+      preLoaderRoute: typeof AuthedSitesSiteIdMediaRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/sites/$siteId/releases': {
       id: '/_authed/sites/$siteId/releases'
       path: '/sites/$siteId/releases'
@@ -758,6 +797,7 @@ interface AuthedRouteChildren {
   AuthedBrandsBrandIdSitesRoute: typeof AuthedBrandsBrandIdSitesRoute
   AuthedBrandsBrandIdWorkflowRoute: typeof AuthedBrandsBrandIdWorkflowRoute
   AuthedSitesSiteIdBlocksRoute: typeof AuthedSitesSiteIdBlocksRoute
+  AuthedSitesSiteIdMediaRoute: typeof AuthedSitesSiteIdMediaRoute
   AuthedSitesSiteIdReleasesRoute: typeof AuthedSitesSiteIdReleasesRoute
   AuthedBrandsBrandIdIndexRoute: typeof AuthedBrandsBrandIdIndexRoute
   AuthedSitesSiteIdIndexRoute: typeof AuthedSitesSiteIdIndexRoute
@@ -785,6 +825,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBrandsBrandIdSitesRoute: AuthedBrandsBrandIdSitesRoute,
   AuthedBrandsBrandIdWorkflowRoute: AuthedBrandsBrandIdWorkflowRoute,
   AuthedSitesSiteIdBlocksRoute: AuthedSitesSiteIdBlocksRoute,
+  AuthedSitesSiteIdMediaRoute: AuthedSitesSiteIdMediaRoute,
   AuthedSitesSiteIdReleasesRoute: AuthedSitesSiteIdReleasesRoute,
   AuthedBrandsBrandIdIndexRoute: AuthedBrandsBrandIdIndexRoute,
   AuthedSitesSiteIdIndexRoute: AuthedSitesSiteIdIndexRoute,
@@ -814,6 +855,7 @@ const rootRouteChildren: RootRouteChildren = {
   SetUpRoute: SetUpRoute,
   SignInRoute: SignInRoute,
   SignOutRoute: SignOutRoute,
+  ApiMediaRoute: ApiMediaRoute,
   JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   BrandMediaBrandIdMediaIdRoute: BrandMediaBrandIdMediaIdRoute,

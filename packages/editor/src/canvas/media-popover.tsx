@@ -1,6 +1,7 @@
 import { fieldAt } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { Target } from "@repo/contracts/ops";
+import { Button } from "@repo/ui/components/button";
 import {
   Popover,
   PopoverContent,
@@ -10,6 +11,8 @@ import {
   PopoverTrigger,
 } from "@repo/ui/components/popover";
 import { Schema } from "effect";
+import { UploadIcon } from "lucide-react";
+import { useRef, useState } from "react";
 
 import { type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
 import { LibraryPicker } from "../library-picker.tsx";
@@ -31,7 +34,27 @@ export function MediaPopover(props: {
   readonly onClose: () => void;
 }) {
   const store = useStore();
-  const { definitions } = useServices();
+  const { definitions, uploadImage } = useServices();
+  const fileInput = useRef<HTMLInputElement>(null);
+  const [uploading, setUploading] = useState(false);
+  const [problem, setProblem] = useState<string | null>(null);
+  /** Adds the chosen file to the library and places it here. */
+  const upload = async (input: HTMLInputElement) => {
+    const file = input.files?.[0];
+    input.value = "";
+    if (file === undefined || uploadImage === null) return;
+    setUploading(true);
+    setProblem(null);
+    try {
+      const image = await uploadImage(file);
+      // A new image has no alt text yet, so it's left for someone to write before submitting.
+      store.run([{ op: "setProp", ...props.field, value: { $ref: "media", id: image.id } }]);
+    } catch (error) {
+      setProblem(error instanceof Error ? error.message : String(error));
+    } finally {
+      setUploading(false);
+    }
+  };
   const rect = useCanvasRect(props.anchor, props.container);
   const block = useEditorState(
     (state) => holderOf(state.view, props.field.target)?.blocks[props.field.block],
@@ -73,6 +96,30 @@ export function MediaPopover(props: {
           chosen={chosen?.id}
           onChoose={(image) => store.run([{ op: "setProp", ...props.field, value: image }])}
         />
+        {uploadImage !== null && (
+          <>
+            <input
+              ref={fileInput}
+              type="file"
+              accept="image/jpeg,image/png,image/webp,image/avif"
+              className="sr-only"
+              tabIndex={-1}
+              aria-hidden
+              onChange={(event) => void upload(event.target)}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              className="self-start"
+              disabled={uploading}
+              onClick={() => fileInput.current?.click()}
+            >
+              <UploadIcon />
+              {uploading ? "Uploading" : "Upload an image"}
+            </Button>
+            {problem !== null && <p className="text-sm text-destructive">{problem}</p>}
+          </>
+        )}
         <FieldControl
           field={{ ...props.field, path: [...props.field.path, "alt"] }}
           definition={field.parts.alt}

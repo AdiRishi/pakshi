@@ -105,6 +105,8 @@ export function EditorProvider(props: {
   readonly media: ReadonlyArray<MediaSummary>;
   readonly mediaSrc: (id: MediaId) => string;
   readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
+  /** Adds an image to the site's library, or null for someone who can't. */
+  readonly uploadImage: ((file: File) => Promise<MediaSummary>) | null;
   readonly siteCss: string;
   /** The site's published settings, which pages show with, such as its name. */
   readonly settings: PublishedSettings;
@@ -137,14 +139,25 @@ export function EditorProvider(props: {
     readonly origin: Origin;
   } | null>(null);
   const [announcement, setAnnouncement] = useState("");
+  // Images uploaded while the editor is open, which the library shows first.
+  const [uploaded, setUploaded] = useState<ReadonlyArray<MediaSummary>>([]);
+  const upload = props.uploadImage;
 
   const services = useMemo(
     () => ({
       store,
       definitions: props.definitions,
-      media: props.media,
+      media: [...uploaded, ...props.media],
       mediaSrc: props.mediaSrc,
       suggestAltText: props.suggestAltText,
+      uploadImage:
+        upload === null
+          ? null
+          : async (file: File) => {
+              const image = await upload(file);
+              setUploaded((current) => [image, ...current]);
+              return image;
+            },
       siteCss: props.siteCss,
       settings: props.settings,
       scheme: props.scheme,
@@ -152,7 +165,9 @@ export function EditorProvider(props: {
     [
       store,
       props.definitions,
+      uploaded,
       props.media,
+      upload,
       props.mediaSrc,
       props.suggestAltText,
       props.siteCss,

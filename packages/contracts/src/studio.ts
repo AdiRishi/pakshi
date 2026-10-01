@@ -357,6 +357,8 @@ export const SiteAbilities = Schema.Struct({
   publish: Schema.Boolean,
   rollBack: Schema.Boolean,
   share: Schema.Boolean,
+  /** Add images to the site's library, which editing its pages allows. */
+  upload: Schema.Boolean,
 });
 export type SiteAbilities = typeof SiteAbilities.Type;
 
