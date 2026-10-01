@@ -75,11 +75,12 @@ export class Web extends Context.Service<
 export class BlockRequests extends Context.Service<
   BlockRequests,
   {
+    /** Files a request for the person, or answers false when they may not ask for blocks here. */
     readonly file: (request: {
       readonly need: string;
       readonly example: string;
       readonly nearest: string | null;
-    }) => Effect.Effect<void>;
+    }) => Effect.Effect<boolean>;
   }
 >()("Pakshi/Agent/BlockRequests") {}
 

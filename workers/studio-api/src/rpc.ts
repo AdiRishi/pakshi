@@ -55,6 +55,7 @@ import { describeScope, loadAccess } from "./access.ts";
 import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { audit, auditFilters, auditLog, exportAudit } from "./audit.ts";
 import { authFor } from "./auth.ts";
+import { blockRequests, closeBlockRequest, requestBlock } from "./block-requests.ts";
 import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
 import { offerRevision } from "./brand-updates.ts";
 import {
@@ -1129,6 +1130,16 @@ const handlers = (env: StudioApiEnv) =>
                 };
               }),
             ),
+          ),
+        blockRequests: () =>
+          SignedIn.use((person) => withCore("block requests")(blockRequests(person))),
+        requestBlock: ({ site, need, example }) =>
+          SignedIn.use((person) =>
+            withCore("request block")(requestBlock(person, { site, need, example, nearest: null })),
+          ),
+        closeBlockRequest: ({ request }) =>
+          SignedIn.use((person) =>
+            withCore("close block request")(closeBlockRequest(person, request)),
           ),
         saveVoiceGuide: ({ brand, voice }) =>
           SignedIn.use((person) => withCore("save voice guide")(saveVoice(person, brand, voice))),

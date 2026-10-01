@@ -27,6 +27,7 @@ import { FormEntry, FormSummary } from "./entries.ts";
 import { FormDefinition } from "./form.ts";
 import {
   BlockId,
+  BlockRequestId,
   BlockType,
   BrandId,
   DraftId,
@@ -835,6 +836,42 @@ export const RemovableVersion = Schema.Struct({
 });
 export type RemovableVersion = typeof RemovableVersion.Type;
 
+/** A request for a block the library doesn't have. */
+export const BlockRequest = Schema.Struct({
+  id: BlockRequestId,
+  /** The site it's for, or null for any site. */
+  site: Schema.NullOr(Schema.Struct({ id: SiteId, name: Schema.String })),
+  requestedBy: Collaborator,
+  need: Schema.String,
+  example: Schema.String,
+  /** The block the agent found closest, when it filed the request. */
+  nearest: Schema.NullOr(BlockType),
+  requestedAt: Timestamp,
+  closedAt: Schema.NullOr(Timestamp),
+});
+export type BlockRequest = typeof BlockRequest.Type;
+
+/**
+ * The block requests a person may see: every one for the platform team, who
+ * close them, and their own for everyone else, with the sites they may ask
+ * for blocks on.
+ */
+export const BlockRequests = Schema.Struct({
+  requests: Schema.Array(BlockRequest),
+  sites: Schema.Array(Schema.Struct({ id: SiteId, name: Schema.String })),
+  can: Schema.Struct({ close: Schema.Boolean }),
+});
+export type BlockRequests = typeof BlockRequests.Type;
+
+export const BlockNeed = Schema.Trim.check(
+  Schema.isMinLength(1, { message: "Say what visitors should see and do" }),
+  Schema.isMaxLength(2000, { message: "Use at most 2,000 characters" }),
+);
+
+export const BlockExample = Schema.Trim.check(
+  Schema.isMaxLength(500, { message: "Use at most 500 characters" }),
+);
+
 export const BlockCatalog = Schema.Struct({
   blocks: Schema.Array(CatalogBlock),
   /** For the platform team: versions past the 3 months they're kept unused. */
@@ -1303,6 +1340,17 @@ class SignedInRpcs extends RpcGroup.make(
     error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
   }),
   Rpc.make("blockCatalog", { success: BlockCatalog, error: StudioUnavailable }),
+  Rpc.make("blockRequests", { success: BlockRequests, error: StudioUnavailable }),
+  /** Asks the platform team for a block, for one site or, with null, for any. */
+  Rpc.make("requestBlock", {
+    payload: { site: Schema.NullOr(SiteId), need: BlockNeed, example: BlockExample },
+    success: BlockRequest,
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  Rpc.make("closeBlockRequest", {
+    payload: { request: BlockRequestId },
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
   Rpc.make("siteBlocks", { payload: { site: SiteId }, success: SiteBlocks, error: siteError }),
   /** A draft that moves the site to the newest version of a block. */
   Rpc.make("adoptUpgrade", {

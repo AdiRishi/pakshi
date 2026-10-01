@@ -155,6 +155,9 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     setOverride: unused,
     removeOverride: unused,
     removeAllAccess: unused,
+    blockRequests: unused,
+    requestBlock: unused,
+    closeBlockRequest: unused,
   });
   const server = rpcWebHandler(
     StudioRpcs,
