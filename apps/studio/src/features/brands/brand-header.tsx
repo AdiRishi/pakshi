@@ -1,4 +1,5 @@
-import type { SiteId } from "@repo/contracts/ids";
+import type { BrandId } from "@repo/contracts/ids";
+import { Badge } from "@repo/ui/components/badge";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -11,43 +12,44 @@ import { buttonVariants } from "@repo/ui/components/button";
 import { Link } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
-/** A site's name, what it's showing, and links to the site's sections. */
-export function SiteHeader(props: {
-  readonly site: { readonly id: SiteId; readonly name: string };
-  readonly section: "drafts" | "releases" | "blocks" | "workflow";
-  readonly description: string;
+const sections = [
+  { key: "theme", label: "Theme", to: "/brands/$brandId" },
+  { key: "identity", label: "Identity and voice", to: "/brands/$brandId/identity" },
+  { key: "workflow", label: "Approval workflow", to: "/brands/$brandId/workflow" },
+  { key: "sites", label: "Sites", to: "/brands/$brandId/sites" },
+] as const;
+
+/** A brand's name, how many sites use it, and links to the brand's sections. */
+export function BrandHeader(props: {
+  readonly brand: { readonly id: BrandId; readonly name: string };
+  readonly sites: number;
+  readonly section: (typeof sections)[number]["key"];
   readonly actions?: ReactNode;
 }) {
-  const sections = [
-    { key: "drafts", label: "Drafts", to: "/sites/$siteId" },
-    { key: "releases", label: "Releases", to: "/sites/$siteId/releases" },
-    { key: "blocks", label: "Blocks", to: "/sites/$siteId/blocks" },
-    { key: "workflow", label: "Approval workflow", to: "/sites/$siteId/workflow" },
-  ] as const;
   return (
     <header className="flex flex-col gap-3 bg-accent px-10 pt-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
-            <BreadcrumbLink render={<Link to="/" />}>Home</BreadcrumbLink>
+            <BreadcrumbLink render={<Link to="/brands" />}>Brands</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{props.site.name}</BreadcrumbPage>
+            <BreadcrumbPage>{props.brand.name}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
       <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{props.site.name}</h1>
+        <h1 className="text-3xl font-semibold tracking-tight">{props.brand.name}</h1>
+        <Badge variant="secondary">{props.sites === 1 ? "1 site" : `${props.sites} sites`}</Badge>
         <div className="ml-auto flex items-center gap-2">{props.actions}</div>
       </div>
-      <p className="text-secondary-foreground">{props.description}</p>
-      <nav aria-label="Site sections" className="flex gap-1">
+      <nav aria-label="Brand sections" className="flex gap-1">
         {sections.map((section) => (
           <Link
             key={section.key}
             to={section.to}
-            params={{ siteId: props.site.id }}
+            params={{ brandId: props.brand.id }}
             aria-current={section.key === props.section ? "page" : undefined}
             className={buttonVariants({
               variant: "ghost",
