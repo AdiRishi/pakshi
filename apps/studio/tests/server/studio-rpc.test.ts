@@ -86,6 +86,8 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     people: unused,
     siteSettings: unused,
     saveSiteSettings: unused,
+    mediaLibrary: unused,
+    saveAltText: unused,
     siteEntries: unused,
     formEntries: unused,
     formEntry: unused,

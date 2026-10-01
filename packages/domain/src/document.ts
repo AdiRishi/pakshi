@@ -2,7 +2,7 @@ import type { BlockContract } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import { fieldParts, propsSchema } from "@repo/blocks/fields";
 import type { Draft } from "@repo/contracts/draft";
-import type { BlockId, BlockType, FormId, PageId } from "@repo/contracts/ids";
+import type { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type {
   BatchError,
   BatchRule,
@@ -20,7 +20,7 @@ import type {
   Target,
 } from "@repo/contracts/ops";
 import { type BlockInstance, PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
-import { FormRef } from "@repo/contracts/references";
+import { FormRef, MediaRef } from "@repo/contracts/references";
 import type { MenuItem, Menus, SiteParts } from "@repo/contracts/site";
 import { Equal, Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 
@@ -567,6 +567,26 @@ const setStatus = (draft: Draft, op: SetStatus) => {
 // Forms, menus and redirects ---------------------------------------------------
 
 const isFormRef = Schema.is(FormRef);
+const isMediaRef = Schema.is(MediaRef);
+
+/** The library images a value holds, wherever they sit in it. */
+const imagesIn = (value: Json): ReadonlyArray<MediaId> => {
+  if (isMediaRef(value)) return [value.id];
+  if (isItemList(value)) return value.flatMap(imagesIn);
+  return isRecord(value) ? Object.values(value).flatMap(imagesIn) : [];
+};
+
+/** The library images some blocks show. */
+export const imagesUsedBy = (blocks: BlockHolder["blocks"]): ReadonlySet<MediaId> =>
+  new Set(Object.values(blocks).flatMap((block) => Object.values(block.props).flatMap(imagesIn)));
+
+/** The library images a page shows: in its blocks, and as its sharing image or a post's cover. */
+export const imagesOnPage = (page: Draft["pages"][PageId]): ReadonlySet<MediaId> =>
+  new Set([
+    ...imagesUsedBy(page.blocks),
+    ...(page.meta.image === undefined ? [] : [page.meta.image.id]),
+    ...(page.type === "post" && page.meta.cover !== undefined ? [page.meta.cover.id] : []),
+  ]);
 
 /** The forms a value uses, wherever they sit in it. */
 const formsIn = (value: Json): ReadonlyArray<FormId> => {

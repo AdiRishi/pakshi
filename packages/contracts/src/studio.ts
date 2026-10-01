@@ -256,6 +256,42 @@ export const SiteForm = Schema.Struct({
 });
 export type SiteForm = typeof SiteForm.Type;
 
+/** Where Studio sends an image to add to a library: `${mediaUploadPath}?site=` or `?brand=`, with `&name=`. */
+export const mediaUploadPath = "/api/media";
+
+/** The largest image a library takes, in bytes. */
+export const imageLimit = 20 * 1024 * 1024;
+
+/** An image in a library, as the media screens show it. */
+export const LibraryImage = Schema.Struct({
+  ...MediaSummary.fields,
+  /** The file's name when it was uploaded. */
+  name: Schema.String,
+  /** Its size in bytes. */
+  size: Schema.Int,
+  uploadedBy: Schema.NullOr(Schema.String),
+  uploadedAt: Timestamp,
+  /** The pages that show it, in the live site or an open draft. */
+  usedOn: Schema.Array(Schema.String),
+});
+export type LibraryImage = typeof LibraryImage.Type;
+
+/** A site's library and its brand's, with what the person may do with each. */
+export const MediaLibraryView = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  brand: Schema.Struct({ id: BrandId, name: Schema.String }),
+  siteImages: Schema.Array(LibraryImage),
+  brandImages: Schema.Array(LibraryImage),
+  can: Schema.Struct({ editSite: Schema.Boolean, editBrand: Schema.Boolean }),
+});
+export type MediaLibraryView = typeof MediaLibraryView.Type;
+
+/** Why an upload was refused. */
+export const UploadRefusal = Schema.Struct({
+  reason: Schema.Literals(["not-image", "too-large", "not-permitted"]),
+});
+export type UploadRefusal = typeof UploadRefusal.Type;
+
 /** A site's settings, with the images and forms they refer to and whether the person may change them. */
 export const SiteSettingsView = Schema.Struct({
   site: Schema.Struct({ id: SiteId, name: Schema.String }),
@@ -814,6 +850,16 @@ class SignedInRpcs extends RpcGroup.make(
       SettingsChanged,
       ImageNotFound,
     ]),
+  }),
+  Rpc.make("mediaLibrary", {
+    payload: { site: SiteId },
+    success: MediaLibraryView,
+    error: siteError,
+  }),
+  /** Sets the alt text a library image suggests wherever it's placed next. */
+  Rpc.make("saveAltText", {
+    payload: { site: SiteId, media: MediaId, alt: Schema.String.check(Schema.isMaxLength(250)) },
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, ImageNotFound]),
   }),
   Rpc.make("siteEntries", {
     payload: { site: SiteId },

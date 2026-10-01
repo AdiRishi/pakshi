@@ -4,6 +4,7 @@ import { runDurableObjectAlarm } from "cloudflare:test";
 import { env, exports } from "cloudflare:workers";
 import { Effect } from "effect";
 
+import { schedules } from "../../src/schedules.ts";
 import { edit, newSite, publish, readyPage, served, textSection } from "./support/sites.ts";
 import { setUp, studio } from "./support/studio.ts";
 
@@ -88,7 +89,13 @@ it.live("the reconcile job puts back a live release KV lost", () =>
     );
     yield* Effect.promise(() => env.ROUTING.delete(routingKeys.site(site)));
 
-    yield* Effect.promise(() => exports.default.scheduled());
+    yield* Effect.promise(() =>
+      exports.default.scheduled({
+        cron: schedules.frequent,
+        scheduledTime: Date.now(),
+        noRetry: () => undefined,
+      }),
+    );
     expect((yield* served("riverside"))?.live?.release).toBe(release.id);
   }).pipe(Effect.scoped),
 );

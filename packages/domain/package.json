@@ -28,6 +28,10 @@
       "types": "./src/freeze.ts",
       "default": "./src/freeze.ts"
     },
+    "./images": {
+      "types": "./src/images.ts",
+      "default": "./src/images.ts"
+    },
     "./merge": {
       "types": "./src/merge.ts",
       "default": "./src/merge.ts"
@@ -53,6 +57,7 @@
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

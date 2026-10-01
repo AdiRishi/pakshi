@@ -1,18 +1,22 @@
 import { D1Client } from "@effect/sql-d1";
-import { BrandId, DraftId, MediaId, SiteId, SubmissionId } from "@repo/contracts/ids";
+import { BrandId, DraftId, MediaId, randomId, SiteId, SubmissionId } from "@repo/contracts/ids";
 import { objectKeys } from "@repo/contracts/snapshot";
 import {
   brandMediaBasePath,
+  imageLimit,
+  MediaSummary,
   mediaSegment,
   type Person,
   previewBasePath,
   reviewBasePath,
   siteMediaBasePath,
+  type UploadRefusal,
 } from "@repo/contracts/studio";
-import { permissionsOn } from "@repo/domain/access";
+import { authorize, permissionsOn } from "@repo/domain/access";
+import { imageInfo } from "@repo/domain/images";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Option, Schema } from "effect";
-import type { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
 import { loadAccess } from "./access.ts";
@@ -148,5 +152,73 @@ export const serveSiteMedia = (request: Request, env: StudioApiEnv) =>
       if (Option.isNone(found) || !(yield* inSiteLibrary(found.value, ids.value.media)))
         return notFound();
       return yield* image(env, ids.value.media);
+    }),
+  );
+
+const refuseUpload = (reason: UploadRefusal["reason"], status: number) =>
+  Response.json({ reason } satisfies UploadRefusal, { status });
+
+type Library =
+  | { readonly kind: "site"; readonly id: SiteId }
+  | { readonly kind: "brand"; readonly id: BrandId };
+
+/** The library an upload goes to, from its address: a site's or a brand's. */
+const uploadOwner = (url: URL): Option.Option<Library> => {
+  const site = Schema.decodeUnknownOption(SiteId)(url.searchParams.get("site"));
+  if (Option.isSome(site)) return Option.some({ kind: "site", id: site.value });
+  return Option.map(
+    Schema.decodeUnknownOption(BrandId)(url.searchParams.get("brand")),
+    (id): Library => ({ kind: "brand", id }),
+  );
+};
+
+/**
+ * Adds an image to a site's library, for someone who may edit its pages, or
+ * to a brand's, for someone who may edit its theme. The file's own bytes say
+ * what it is; anything that isn't a JPEG, PNG, WebP or AVIF image is refused.
+ */
+export const serveUpload = (request: Request, env: StudioApiEnv) =>
+  answer(
+    env,
+    Effect.gen(function* () {
+      const url = new URL(request.url);
+      if (request.method !== "POST") return new Response("Method not allowed", { status: 405 });
+      // Studio forwards the browser's own Origin, so a form on another site can't upload here.
+      if (request.headers.get("origin") !== url.origin)
+        return new Response("Forbidden", { status: 403 });
+      const owner = uploadOwner(url);
+      if (Option.isNone(owner)) return notFound();
+      const person = yield* signedIn(request, env);
+      if (person === null) return signInFirst();
+      const { access } = yield* loadAccess(person.id);
+      if (owner.value.kind === "site") {
+        const site = yield* Effect.option(findSite(owner.value.id));
+        if (
+          Option.isNone(site) ||
+          !(yield* standingOn(person, site.value)).permissions.includes("page.edit")
+        )
+          return refuseUpload("not-permitted", 403);
+      } else if (!authorize(access, "brand.theme.edit", owner.value))
+        return refuseUpload("not-permitted", 403);
+      if (Number(request.headers.get("content-length") ?? "0") > imageLimit)
+        return refuseUpload("too-large", 413);
+      const bytes = new Uint8Array(yield* Effect.promise(() => request.arrayBuffer()));
+      if (bytes.byteLength > imageLimit) return refuseUpload("too-large", 413);
+      const info = imageInfo(bytes);
+      if (info === null) return refuseUpload("not-image", 415);
+      const id = MediaId.make(randomId("med"));
+      const name = (url.searchParams.get("name") ?? "").slice(0, 200);
+      yield* Effect.promise(() =>
+        env.CONTENT.put(objectKeys.media(id), bytes, {
+          httpMetadata: { contentType: info.contentType },
+        }),
+      );
+      const sql = yield* SqlClient.SqlClient;
+      yield* sql`insert into media (id, site_id, brand_id, content_type, width, height, name, size, uploaded_by)
+        values (${id}, ${owner.value.kind === "site" ? owner.value.id : null},
+          ${owner.value.kind === "brand" ? owner.value.id : null}, ${info.contentType},
+          ${info.width}, ${info.height}, ${name}, ${bytes.byteLength}, ${person.id})`;
+      const uploaded = yield* Schema.encodeEffect(MediaSummary)({ id, ...info, alt: "" });
+      return Response.json(uploaded, { status: 201 });
     }),
   );

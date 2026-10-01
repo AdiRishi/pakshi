@@ -843,6 +843,9 @@ importers:
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.3
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
