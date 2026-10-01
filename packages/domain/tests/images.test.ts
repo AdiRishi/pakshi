@@ -69,4 +69,9 @@ describe("reading an image's format and size from its bytes", () => {
     );
     expect(imageInfo(new Uint8Array([0x89, 0x50, 0x4e, 0x47]))).toBe(null);
   });
+
+  test("refuses an image cut off before its size", async () => {
+    expect(imageInfo((await fixture("med_harbourlogo.png")).subarray(0, 20))).toBe(null);
+    expect(imageInfo(webpHeader(2400, 1600).subarray(0, 20))).toBe(null);
+  });
 });
