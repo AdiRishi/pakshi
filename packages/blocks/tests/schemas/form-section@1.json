@@ -1,0 +1,100 @@
+{
+  "title": "Form",
+  "placement": "section",
+  "variants": [
+    "card",
+    "plain"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "form": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "form"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9]{1,64}$"
+            }
+          },
+          "required": [
+            "$ref",
+            "id"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "heading",
+        "form"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "form": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "form"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^frm_[A-Za-z0-9]{1,64}$"
+            }
+          },
+          "required": [
+            "$ref",
+            "id"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "heading",
+        "form"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

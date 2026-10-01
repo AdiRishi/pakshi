@@ -1,0 +1,58 @@
+{
+  "title": "Blog list",
+  "placement": "section",
+  "variants": [
+    "list",
+    "cards"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

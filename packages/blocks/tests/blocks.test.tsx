@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 
+import { noIdentity } from "@repo/contracts/brand";
 import { BlockId, BlockType, ItemId, MediaId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
@@ -16,7 +17,7 @@ import { propsSchema } from "../src/fields.ts";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
-import { loadBlocks, renderBlock } from "../src/render.tsx";
+import { latestLockfile, loadBlocks, renderBlock } from "../src/render.tsx";
 import { siteData } from "../src/site-data.ts";
 
 const load = async (type: string, version: number) => {
@@ -27,6 +28,7 @@ const load = async (type: string, version: number) => {
 
 const site = siteData({
   ...fixtureSite,
+  identity: noIdentity,
   media: (id) => {
     const file = fixtureSite.media[id];
     return file === undefined ? undefined : { src: `/_media/${id}`, ...file };
@@ -53,16 +55,9 @@ const flatten = (tree: BlockTree): Record<BlockId, BlockInstance> => {
   };
 };
 
-const renderTree = async (tree: BlockTree) => {
-  const types = new Set([
-    tree.type,
-    ...Object.values(tree.slots ?? {})
-      .flat()
-      .map((item) => item.type),
-  ]);
-  const definitions = new Map<string, BlockDefinition>(
-    await Promise.all(Array.from(types, async (type) => [type, await load(type, 1)] as const)),
-  );
+/** Renders a block at a version, with the items in its slots at their newest. */
+const renderTree = async (tree: BlockTree, version: number) => {
+  const definitions = await loadBlocks({ ...latestLockfile, [tree.type]: version });
   return markup(renderBlock(definitions, flatten(tree), tree.id));
 };
 
@@ -91,7 +86,7 @@ describe.each(
 )("%s v%i fixture %s", (type, version, _name, entry) => {
   test("renders, with a section's surface on its root", async () => {
     const block = await load(type, version);
-    const html = await renderTree(fixtureTree(entry));
+    const html = await renderTree(fixtureTree(entry), version);
     expect(html).toMatch(
       block.placement === "item" ? /^<li / : `data-surface="${entry.fixture.surface}"`,
     );
@@ -284,9 +279,8 @@ describe("completeness is checked apart from drafts", () => {
   });
 });
 
-const contracts = await loadBlocks(
-  Object.fromEntries(blockFixtures.map((entry) => [entry.type, entry.version])),
-);
+// Placeholders work the same at any version; hero's first holds its button in a plain field.
+const contracts = await loadBlocks({ ...latestLockfile, hero: 1 });
 
 /** The IDs of a list field's items. */
 const itemIds = (list: Json | undefined) =>
@@ -361,16 +355,22 @@ describe("placeholders", () => {
     expect(placeholderPaths(contracts, gallery)).toContainEqual(["images", first, "caption"]);
   });
 
-  test("real content holds no placeholders", () => {
+  test("real content holds no placeholders", async () => {
     for (const entry of blockFixtures.filter((fixture) => fixture.name !== "placeholder")) {
       const tree = fixtureTree(entry);
+      const pinned = await loadBlocks({ ...latestLockfile, [entry.type]: entry.version });
       for (const block of [tree, ...Object.values(tree.slots ?? {}).flat()])
-        expect(placeholderPaths(contracts, block)).toEqual([]);
+        expect(placeholderPaths(pinned, block)).toEqual([]);
     }
   });
 
   test("placeholder images and the placeholder form resolve on every site", () => {
-    const bare = siteData({ ...fixtureSite, forms: {}, media: () => undefined });
+    const bare = siteData({
+      ...fixtureSite,
+      identity: noIdentity,
+      forms: {},
+      media: () => undefined,
+    });
     expect(bare.media(MediaId.make("med_pakshiHills"))?.src).toMatch(/^data:image\/svg\+xml,/);
     expect(bare.form(placeholderForm.id)?.submitLabel).toBe("Send message");
   });

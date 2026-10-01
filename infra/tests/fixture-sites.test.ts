@@ -4,22 +4,23 @@ import { expect, test } from "vitest";
 
 import { fixtureSites, fixturesPath } from "../src/fixture-sites.ts";
 
-test("every block fixture is shown on a fixture site", async () => {
+test("every fixture of every block version is shown on a fixture site", async () => {
   const sites = await fixtureSites();
-  const key = (block: {
-    readonly type: string;
-    readonly variant: string;
-    readonly props: object;
-  }) => JSON.stringify([block.type, block.variant, block.props]);
+  const key = (
+    block: { readonly type: string; readonly variant: string; readonly props: object },
+    version: number | undefined,
+  ) => JSON.stringify([block.type, version, block.variant, block.props]);
   const shown = new Set(
-    sites.flatMap(({ manifest, pages }) => [
-      ...Object.values(manifest.parts.blocks).map(key),
-      ...pages.flatMap(({ page }) => Object.values(page.blocks).map(key)),
-    ]),
+    sites.flatMap(({ manifest, pages }) =>
+      [
+        ...Object.values(manifest.parts.blocks),
+        ...pages.flatMap(({ page }) => Object.values(page.blocks)),
+      ].map((block) => key(block, manifest.lockfile[block.type])),
+    ),
   );
   for (const entry of blockFixtures)
     expect(shown, `${entry.type} v${entry.version} ${entry.name}`).toContain(
-      key(fixtureTree(entry)),
+      key(fixtureTree(entry), entry.version),
     );
 });
 

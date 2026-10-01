@@ -1,0 +1,27 @@
+{
+  "variant": "centered",
+  "surface": "brand",
+  "props": {
+    "heading": "Summer school at the harbour",
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "id": "it_secondary",
+        "button": {
+          "label": "Ask a question",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    ],
+    "summary": "Five days of hands-on workshops for anyone who wants to learn by building."
+  }
+}

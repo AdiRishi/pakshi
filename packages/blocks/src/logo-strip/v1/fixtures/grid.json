@@ -1,0 +1,34 @@
+{
+  "variant": "grid",
+  "surface": "muted",
+  "props": {
+    "logos": [
+      {
+        "id": "it_trust",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "Westbay Harbour Trust" },
+        "link": "https://example.org/harbour-trust"
+      },
+      {
+        "id": "it_rowing",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "Westbay Rowing Club" }
+      },
+      {
+        "id": "it_boatyard",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "North Quay Boatyard" }
+      },
+      {
+        "id": "it_arts",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "County Arts Council" }
+      },
+      {
+        "id": "it_timber",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "Coastline Timber" },
+        "link": "https://example.org/coastline-timber"
+      },
+      {
+        "id": "it_sailing",
+        "logo": { "$ref": "media", "id": "med_harbour", "alt": "Westbay Sailing School" }
+      }
+    ]
+  }
+}

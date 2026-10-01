@@ -1,0 +1,237 @@
+{
+  "title": "Hero",
+  "placement": "section",
+  "variants": [
+    "centered",
+    "split-image",
+    "full-bleed"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "kicker": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id"
+          ],
+          "additionalProperties": true
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "button": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "link": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "$ref": {
+                            "type": "string",
+                            "enum": [
+                              "page"
+                            ]
+                          },
+                          "id": {
+                            "type": "string",
+                            "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                          }
+                        },
+                        "required": [
+                          "$ref",
+                          "id"
+                        ],
+                        "additionalProperties": true
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "label",
+                  "link"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "id",
+              "button"
+            ],
+            "additionalProperties": true
+          },
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "heading",
+        "actions"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "kicker": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 280
+        },
+        "image": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id",
+            "alt"
+          ],
+          "additionalProperties": true
+        },
+        "actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "button": {
+                "type": "object",
+                "properties": {
+                  "label": {
+                    "type": "string",
+                    "maxLength": 40
+                  },
+                  "link": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "properties": {
+                          "$ref": {
+                            "type": "string",
+                            "enum": [
+                              "page"
+                            ]
+                          },
+                          "id": {
+                            "type": "string",
+                            "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                          }
+                        },
+                        "required": [
+                          "$ref",
+                          "id"
+                        ],
+                        "additionalProperties": true
+                      },
+                      {
+                        "type": "string"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "label",
+                  "link"
+                ],
+                "additionalProperties": true
+              }
+            },
+            "required": [
+              "id",
+              "button"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 0,
+          "maxItems": 2
+        }
+      },
+      "required": [
+        "heading",
+        "actions"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

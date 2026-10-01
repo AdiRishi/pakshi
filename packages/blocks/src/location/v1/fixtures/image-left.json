@@ -1,0 +1,18 @@
+{
+  "variant": "image-left",
+  "surface": "muted",
+  "props": {
+    "heading": "Getting to the harbour",
+    "address": "Harbour Summer School\nThe Boatshed, North Quay\nPortlow PL12 3AB",
+    "map": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Boats moored along North Quay, beside the boatshed"
+    },
+    "directions": "The boatshed is a ten-minute walk from Portlow station. Follow the signs to the quay.\nThere's no parking on the quay, so please use the town car park on Station Road.",
+    "link": {
+      "label": "Get directions",
+      "link": "https://www.openstreetmap.org/search?query=North%20Quay%20Portlow"
+    }
+  }
+}

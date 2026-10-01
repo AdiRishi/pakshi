@@ -72,7 +72,9 @@ describe("moving a block by one", () => {
     expect(run(moveUp, undefined)).toBe(true);
     expect(home().root.slice(0, 2)).toEqual(["b_calltoactioncentered", "b_calltoactionbanner"]);
     expect(run(moveUp, undefined)).toBe(false);
-    choose("b_splitplaceholder");
+    const last = home().root.at(-1);
+    if (last === undefined) throw new Error("The page has sections.");
+    choose(last);
     expect(run(moveDown, undefined)).toBe(false);
   });
 

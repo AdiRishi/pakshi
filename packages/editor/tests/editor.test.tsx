@@ -89,7 +89,7 @@ describe("the keyboard alone", () => {
     const fields = Array.from(canvas().querySelectorAll<HTMLElement>("[data-pakshi-field]"));
     const reached = new Set<HTMLElement>();
     await userEvent.click(page.getByTitle(/^Canvas:/));
-    for (let step = 0; step < 150 && reached.size < fields.length; step += 1) {
+    for (let step = 0; step < fields.length * 3 && reached.size < fields.length; step += 1) {
       await userEvent.keyboard("{Tab}");
       const focused = fields.find((field) => field === canvas().activeElement);
       if (focused !== undefined) reached.add(focused);

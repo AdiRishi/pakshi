@@ -2,6 +2,17 @@
 import callToAction1banner from "./call-to-action/v1/fixtures/banner.json" with { type: "json" };
 import callToAction1centered from "./call-to-action/v1/fixtures/centered.json" with { type: "json" };
 import callToAction1placeholder from "./call-to-action/v1/fixtures/placeholder.json" with { type: "json" };
+import contactDetails1columns from "./contact-details/v1/fixtures/columns.json" with { type: "json" };
+import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholder.json" with { type: "json" };
+import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
+import eventCard1default from "./event-card/v1/fixtures/default.json" with { type: "json" };
+import eventCard1placeholder from "./event-card/v1/fixtures/placeholder.json" with { type: "json" };
+import eventCards1grid from "./event-cards/v1/fixtures/grid.json" with { type: "json" };
+import eventCards1list from "./event-cards/v1/fixtures/list.json" with { type: "json" };
+import eventCards1placeholder from "./event-cards/v1/fixtures/placeholder.json" with { type: "json" };
+import faq1list from "./faq/v1/fixtures/list.json" with { type: "json" };
+import faq1placeholder from "./faq/v1/fixtures/placeholder.json" with { type: "json" };
+import faq1twoColumns from "./faq/v1/fixtures/two-columns.json" with { type: "json" };
 import featureGrid1placeholder from "./feature-grid/v1/fixtures/placeholder.json" with { type: "json" };
 import featureGrid1threeColumns from "./feature-grid/v1/fixtures/three-columns.json" with { type: "json" };
 import featureGrid1twoColumns from "./feature-grid/v1/fixtures/two-columns.json" with { type: "json" };
@@ -17,22 +28,65 @@ import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { 
 import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
 import header1centered from "./header/v1/fixtures/centered.json" with { type: "json" };
 import header1simple from "./header/v1/fixtures/simple.json" with { type: "json" };
+import header2centered from "./header/v2/fixtures/centered.json" with { type: "json" };
+import header2simple from "./header/v2/fixtures/simple.json" with { type: "json" };
 import hero1centered from "./hero/v1/fixtures/centered.json" with { type: "json" };
 import hero1placeholder from "./hero/v1/fixtures/placeholder.json" with { type: "json" };
 import hero1splitImage from "./hero/v1/fixtures/split-image.json" with { type: "json" };
+import hero2centered from "./hero/v2/fixtures/centered.json" with { type: "json" };
+import hero2placeholder from "./hero/v2/fixtures/placeholder.json" with { type: "json" };
+import hero2splitImage from "./hero/v2/fixtures/split-image.json" with { type: "json" };
+import hero3centered from "./hero/v3/fixtures/centered.json" with { type: "json" };
+import hero3fullBleed from "./hero/v3/fixtures/full-bleed.json" with { type: "json" };
+import hero3placeholder from "./hero/v3/fixtures/placeholder.json" with { type: "json" };
+import hero3splitImage from "./hero/v3/fixtures/split-image.json" with { type: "json" };
+import imageCaption1narrow from "./image-caption/v1/fixtures/narrow.json" with { type: "json" };
+import imageCaption1placeholder from "./image-caption/v1/fixtures/placeholder.json" with { type: "json" };
+import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { type: "json" };
+import location1imageLeft from "./location/v1/fixtures/image-left.json" with { type: "json" };
+import location1imageRight from "./location/v1/fixtures/image-right.json" with { type: "json" };
+import location1placeholder from "./location/v1/fixtures/placeholder.json" with { type: "json" };
+import logoStrip1grid from "./logo-strip/v1/fixtures/grid.json" with { type: "json" };
+import logoStrip1placeholder from "./logo-strip/v1/fixtures/placeholder.json" with { type: "json" };
+import logoStrip1row from "./logo-strip/v1/fixtures/row.json" with { type: "json" };
 import postList1cards from "./post-list/v1/fixtures/cards.json" with { type: "json" };
 import postList1list from "./post-list/v1/fixtures/list.json" with { type: "json" };
 import postList1placeholder from "./post-list/v1/fixtures/placeholder.json" with { type: "json" };
+import quote1centered from "./quote/v1/fixtures/centered.json" with { type: "json" };
+import quote1placeholder from "./quote/v1/fixtures/placeholder.json" with { type: "json" };
+import quote1withPhoto from "./quote/v1/fixtures/with-photo.json" with { type: "json" };
 import richText1narrow from "./rich-text/v1/fixtures/narrow.json" with { type: "json" };
 import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with { type: "json" };
 import split1imageLeft from "./split/v1/fixtures/image-left.json" with { type: "json" };
 import split1imageRight from "./split/v1/fixtures/image-right.json" with { type: "json" };
 import split1placeholder from "./split/v1/fixtures/placeholder.json" with { type: "json" };
+import stats1cards from "./stats/v1/fixtures/cards.json" with { type: "json" };
+import stats1placeholder from "./stats/v1/fixtures/placeholder.json" with { type: "json" };
+import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
+import teamGrid1fourColumns from "./team-grid/v1/fixtures/four-columns.json" with { type: "json" };
+import teamGrid1placeholder from "./team-grid/v1/fixtures/placeholder.json" with { type: "json" };
+import teamGrid1threeColumns from "./team-grid/v1/fixtures/three-columns.json" with { type: "json" };
+import teamMember1default from "./team-member/v1/fixtures/default.json" with { type: "json" };
+import teamMember1placeholder from "./team-member/v1/fixtures/placeholder.json" with { type: "json" };
+import timeline1agenda from "./timeline/v1/fixtures/agenda.json" with { type: "json" };
+import timeline1placeholder from "./timeline/v1/fixtures/placeholder.json" with { type: "json" };
+import timeline1vertical from "./timeline/v1/fixtures/vertical.json" with { type: "json" };
 
 export const fixtureFiles = [
   { type: "call-to-action", version: 1, name: "banner", fixture: callToAction1banner },
   { type: "call-to-action", version: 1, name: "centered", fixture: callToAction1centered },
   { type: "call-to-action", version: 1, name: "placeholder", fixture: callToAction1placeholder },
+  { type: "contact-details", version: 1, name: "columns", fixture: contactDetails1columns },
+  { type: "contact-details", version: 1, name: "placeholder", fixture: contactDetails1placeholder },
+  { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },
+  { type: "event-card", version: 1, name: "default", fixture: eventCard1default },
+  { type: "event-card", version: 1, name: "placeholder", fixture: eventCard1placeholder },
+  { type: "event-cards", version: 1, name: "grid", fixture: eventCards1grid },
+  { type: "event-cards", version: 1, name: "list", fixture: eventCards1list },
+  { type: "event-cards", version: 1, name: "placeholder", fixture: eventCards1placeholder },
+  { type: "faq", version: 1, name: "list", fixture: faq1list },
+  { type: "faq", version: 1, name: "placeholder", fixture: faq1placeholder },
+  { type: "faq", version: 1, name: "two-columns", fixture: faq1twoColumns },
   { type: "feature-grid", version: 1, name: "placeholder", fixture: featureGrid1placeholder },
   { type: "feature-grid", version: 1, name: "three-columns", fixture: featureGrid1threeColumns },
   { type: "feature-grid", version: 1, name: "two-columns", fixture: featureGrid1twoColumns },
@@ -48,15 +102,47 @@ export const fixtureFiles = [
   { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
   { type: "header", version: 1, name: "centered", fixture: header1centered },
   { type: "header", version: 1, name: "simple", fixture: header1simple },
+  { type: "header", version: 2, name: "centered", fixture: header2centered },
+  { type: "header", version: 2, name: "simple", fixture: header2simple },
   { type: "hero", version: 1, name: "centered", fixture: hero1centered },
   { type: "hero", version: 1, name: "placeholder", fixture: hero1placeholder },
   { type: "hero", version: 1, name: "split-image", fixture: hero1splitImage },
+  { type: "hero", version: 2, name: "centered", fixture: hero2centered },
+  { type: "hero", version: 2, name: "placeholder", fixture: hero2placeholder },
+  { type: "hero", version: 2, name: "split-image", fixture: hero2splitImage },
+  { type: "hero", version: 3, name: "centered", fixture: hero3centered },
+  { type: "hero", version: 3, name: "full-bleed", fixture: hero3fullBleed },
+  { type: "hero", version: 3, name: "placeholder", fixture: hero3placeholder },
+  { type: "hero", version: 3, name: "split-image", fixture: hero3splitImage },
+  { type: "image-caption", version: 1, name: "narrow", fixture: imageCaption1narrow },
+  { type: "image-caption", version: 1, name: "placeholder", fixture: imageCaption1placeholder },
+  { type: "image-caption", version: 1, name: "wide", fixture: imageCaption1wide },
+  { type: "location", version: 1, name: "image-left", fixture: location1imageLeft },
+  { type: "location", version: 1, name: "image-right", fixture: location1imageRight },
+  { type: "location", version: 1, name: "placeholder", fixture: location1placeholder },
+  { type: "logo-strip", version: 1, name: "grid", fixture: logoStrip1grid },
+  { type: "logo-strip", version: 1, name: "placeholder", fixture: logoStrip1placeholder },
+  { type: "logo-strip", version: 1, name: "row", fixture: logoStrip1row },
   { type: "post-list", version: 1, name: "cards", fixture: postList1cards },
   { type: "post-list", version: 1, name: "list", fixture: postList1list },
   { type: "post-list", version: 1, name: "placeholder", fixture: postList1placeholder },
+  { type: "quote", version: 1, name: "centered", fixture: quote1centered },
+  { type: "quote", version: 1, name: "placeholder", fixture: quote1placeholder },
+  { type: "quote", version: 1, name: "with-photo", fixture: quote1withPhoto },
   { type: "rich-text", version: 1, name: "narrow", fixture: richText1narrow },
   { type: "rich-text", version: 1, name: "placeholder", fixture: richText1placeholder },
   { type: "split", version: 1, name: "image-left", fixture: split1imageLeft },
   { type: "split", version: 1, name: "image-right", fixture: split1imageRight },
   { type: "split", version: 1, name: "placeholder", fixture: split1placeholder },
+  { type: "stats", version: 1, name: "cards", fixture: stats1cards },
+  { type: "stats", version: 1, name: "placeholder", fixture: stats1placeholder },
+  { type: "stats", version: 1, name: "row", fixture: stats1row },
+  { type: "team-grid", version: 1, name: "four-columns", fixture: teamGrid1fourColumns },
+  { type: "team-grid", version: 1, name: "placeholder", fixture: teamGrid1placeholder },
+  { type: "team-grid", version: 1, name: "three-columns", fixture: teamGrid1threeColumns },
+  { type: "team-member", version: 1, name: "default", fixture: teamMember1default },
+  { type: "team-member", version: 1, name: "placeholder", fixture: teamMember1placeholder },
+  { type: "timeline", version: 1, name: "agenda", fixture: timeline1agenda },
+  { type: "timeline", version: 1, name: "placeholder", fixture: timeline1placeholder },
+  { type: "timeline", version: 1, name: "vertical", fixture: timeline1vertical },
 ] as const;
