@@ -8,7 +8,7 @@ import {
 import { BlockType, SiteId } from "@repo/contracts/ids";
 import { Timestamp } from "@repo/contracts/release";
 import type { BlockVersionInfo, CatalogBlock, RemovableVersion } from "@repo/contracts/studio";
-import { Effect, Schema } from "effect";
+import { type Cause, Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 /*
@@ -102,13 +102,30 @@ export const blockTitle = (type: BlockType) =>
   Effect.promise(async () => (await loadBlock(type, latestLockfile)).title);
 
 /**
+ * The sites whose SiteDoc hasn't copied the block versions it serves to D1,
+ * such as one no one has opened since it was seeded. The scheduled job asks
+ * each for them.
+ */
+export const sitesWithoutBlockUsage = Effect.fn("StudioApi.sitesWithoutBlockUsage")(function* () {
+  const sql = yield* SqlClient.SqlClient;
+  return yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: Schema.Struct({ id: SiteId }),
+    execute: () => sql`select id from sites
+      where id not in (select site_id from block_usage where holder = 'live')`,
+  })(undefined);
+});
+
+/**
  * The versions the platform team may remove from the registry: not the
- * newest of their block, pinned by no live release or open draft, and unused
- * for 3 months.
+ * newest of their block, pinned by no live release or open draft, unused for
+ * 3 months, and with no older version of their block in use, since an upgrade
+ * from that version migrates through them. None are listed while any site
+ * hasn't reported the versions it serves.
  */
 export const removableVersions = Effect.fn("StudioApi.removableVersions")(function* () {
   const sql = yield* SqlClient.SqlClient;
-  const [rows, lastUsed] = yield* Effect.all(
+  const [rows, lastUsed, unreported] = yield* Effect.all(
     [
       usage(),
       SqlSchema.findAll({
@@ -116,21 +133,47 @@ export const removableVersions = Effect.fn("StudioApi.removableVersions")(functi
         Result: Schema.Struct({ type: BlockType, version: Schema.Int, last_used_at: Timestamp }),
         execute: () => sql`select type, version, last_used_at from block_versions`,
       })(undefined),
+      sitesWithoutBlockUsage(),
     ],
     { concurrency: "unbounded" },
   );
-  const inUse = new Set(rows.map((row) => blockKey(row.type, row.version)));
+  if (unreported.length > 0) return [];
+  const oldestInUse = new Map<BlockType, number>();
+  for (const row of rows)
+    oldestInUse.set(row.type, Math.min(oldestInUse.get(row.type) ?? row.version, row.version));
   const used = new Map(lastUsed.map((row) => [blockKey(row.type, row.version), row.last_used_at]));
   const cutoff = Date.now() - keptUnused;
   return registeredVersions.flatMap(({ type, version }): ReadonlyArray<RemovableVersion> => {
-    const key = blockKey(type, version);
-    const lastUsedAt = used.get(key) ?? null;
+    const lastUsedAt = used.get(blockKey(type, version)) ?? null;
     const removable =
       version !== latestLockfile[type] &&
-      !inUse.has(key) &&
+      version < (oldestInUse.get(type) ?? Number.POSITIVE_INFINITY) &&
       (lastUsedAt === null || Date.parse(lastUsedAt) < cutoff);
     return removable ? [{ type, version, lastUsedAt }] : [];
   });
+});
+
+/**
+ * Asks each site that hasn't reported the block versions it serves to
+ * report them, through `report`. Returns the sites asked; one whose request
+ * fails is logged, and the next run asks again.
+ */
+export const collectBlockUsage = Effect.fn("StudioApi.collectBlockUsage")(function* (
+  report: (site: SiteId) => Effect.Effect<void, Cause.UnknownError>,
+) {
+  const sites = yield* sitesWithoutBlockUsage();
+  const asked = yield* Effect.forEach(
+    sites,
+    ({ id }) =>
+      report(id).pipe(
+        Effect.as([id]),
+        Effect.catch((cause) =>
+          Effect.as(Effect.logError(`Asking ${id} for its block versions failed`, cause), []),
+        ),
+      ),
+    { concurrency: 10 },
+  );
+  return asked.flat();
 });
 
 /** The sites with a version of a block older than `latest` live. */

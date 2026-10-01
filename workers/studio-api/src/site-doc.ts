@@ -560,6 +560,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#run((site) => site.blocksInUse);
   }
 
+  /** Copies the block versions the site pins to D1 again. */
+  reportBlocks() {
+    return this.#changing(() => this.#run((site) => site.reportBlocks));
+  }
+
   /** Writes the live release to KV and D1 again, for the reconcile job. */
   reconcile() {
     return this.#changing(() => this.#run((site) => site.reconcile));

@@ -356,6 +356,11 @@ export class Site extends Context.Service<
     ) => Effect.Effect<Option.Option<DraftSummary>, StorageError>;
     /** The block versions the live site pins, and where each block is used. */
     readonly blocksInUse: Effect.Effect<ReadonlyArray<BlockInUse>, StorageError>;
+    /**
+     * Queues D1's copy of the block versions the live release and each open
+     * draft pin again, for a site whose copy is missing.
+     */
+    readonly reportBlocks: Effect.Effect<void, StorageError>;
     /** Writes the live release to KV, and its copy to D1, again. */
     readonly reconcile: Effect.Effect<void, StorageError>;
     /** Whether the outbox holds anything still to deliver. */
@@ -573,6 +578,52 @@ export class Site extends Context.Service<
         const removed = removedBlockVersions(content.lockfile);
         return removed.length === 0 ? Effect.void : Effect.fail(new BlocksRemoved({ removed }));
       };
+
+      /**
+       * The site's open Brand update draft, moved to a brand revision, or a new
+       * one made from what's live. The revision arrives as the brand's own
+       * batch, so whoever saved it counts as having edited the draft. Runs in
+       * the storage turn.
+       */
+      const brandUpdateDraft = Effect.fn("Site.brandUpdateDraft")(
+        function* (by: Collaborator, revision: BrandRevision, live: Release, content: SiteContent) {
+          const open = yield* drafts.openOfKind({ _tag: "BrandUpdate" });
+          const info = Option.isSome(open)
+            ? open.value
+            : yield* drafts.create({
+                name: "Brand update",
+                kind: { _tag: "BrandUpdate" },
+                by,
+                base: liveReleaseOf(live),
+                content: startingContent(content),
+              });
+          const draft = yield* drafts.draft(info.id);
+          const result = yield* commit(
+            by,
+            draft.id,
+            {
+              id: BatchId.make(randomId("bat")),
+              ops: [
+                {
+                  op: "rebase",
+                  base: draft.base,
+                  lockfile: draft.lockfile,
+                  brand: revision,
+                  settings: draft.settings,
+                  forms: draft.forms,
+                  menus: draft.parts.menus,
+                },
+              ],
+            },
+            byBrand,
+          );
+          if (result.status !== "committed")
+            return yield* Effect.die(`SiteDoc couldn't move ${draft.id} to a new brand.`);
+          return yield* summary(info.id);
+          // A draft found open or made in this storage turn is still there.
+        },
+        Effect.catchTag("DraftNotFound", Effect.die),
+      );
 
       const findRelease = Effect.fn("Site.findRelease")(function* (id: ReleaseId) {
         const history = yield* releases.history;
@@ -1172,7 +1223,10 @@ export class Site extends Context.Service<
               const [before, latest] = history.slice(-2).map(releaseOf);
               if (latest?._tag !== "Published" || before === undefined)
                 return yield* new NothingToRollBack({});
-              const content = yield* contentOf(before.snapshot);
+              const [content, undone] = yield* Effect.all(
+                [contentOf(before.snapshot), contentOf(latest.snapshot)],
+                { concurrency: "unbounded" },
+              );
               yield* keptBlocks(content);
               const release = Release.cases.RolledBack.make({
                 id: ReleaseId.make(randomId("rel")),
@@ -1185,6 +1239,13 @@ export class Site extends Context.Service<
                 Effect.gen(function* () {
                   yield* releases.append(release, content.lockfile);
                   yield* goLive(release);
+                  // Undoing a Brand update takes the site back to an older revision, which a
+                  // site only leaves forward, so the newer one comes back as a draft.
+                  if (
+                    content.brand.number < undone.brand.number &&
+                    Option.isNone(yield* drafts.openOfKind({ _tag: "BrandUpdate" }))
+                  )
+                    yield* brandUpdateDraft(actor, undone.brand, release, content);
                 }),
               );
               yield* mergeUnderReview(studio);
@@ -1217,59 +1278,15 @@ export class Site extends Context.Service<
                     yield* brandTaken(revision.number);
                     return { _tag: "Taken" } as const;
                   }
-                  const open = yield* drafts.openOfKind({ _tag: "BrandUpdate" });
-                  if (Option.isSome(open)) {
-                    const draft = yield* drafts.draft(open.value.id);
-                    const result = yield* commit(
-                      by,
-                      draft.id,
-                      {
-                        id: BatchId.make(randomId("bat")),
-                        ops: [
-                          {
-                            op: "rebase",
-                            base: draft.base,
-                            lockfile: draft.lockfile,
-                            brand: revision,
-                            settings: draft.settings,
-                            forms: draft.forms,
-                            menus: draft.parts.menus,
-                          },
-                        ],
-                      },
-                      byBrand,
-                    );
-                    if (result.status !== "committed")
-                      return yield* Effect.die(`SiteDoc couldn't move ${draft.id} to a new brand.`);
-                  }
-                  const info = Option.isSome(open)
-                    ? open.value
-                    : yield* drafts.create({
-                        name: "Brand update",
-                        kind: { _tag: "BrandUpdate" },
-                        by,
-                        base: liveReleaseOf(base),
-                        content: startingContent({ ...content, brand: revision }),
-                      });
+                  const draft = yield* brandUpdateDraft(by, revision, base, content);
                   yield* brandTaken(revision.number);
-                  return { _tag: "Draft", draft: yield* summary(info.id) } as const;
+                  return { _tag: "Draft", draft } as const;
                 }),
-              ).pipe(
-                // The draft was found open in this storage turn, so it's still there.
-                Effect.catchTag("DraftNotFound", Effect.die),
               );
             }),
           ),
         adoptUpgrade: Effect.fn("Site.adoptUpgrade")(function* (by, type, version) {
           const kind = { _tag: "BlockUpgrade", type, version } as const;
-          const open = yield* drafts.openOfKind(kind);
-          if (Option.isSome(open))
-            return Option.some(
-              yield* summary(open.value.id).pipe(
-                // The draft was just found open, and a draft is never removed.
-                Effect.catchTag("DraftNotFound", Effect.die),
-              ),
-            );
           const base = yield* liveRelease;
           const content = yield* contentOf(base.snapshot);
           const current = content.lockfile[type];
@@ -1279,16 +1296,47 @@ export class Site extends Context.Service<
             loadBlockVersions([content.lockfile, target]),
           );
           const definition = yield* Effect.promise(() => loadBlock(type, target));
-          const info = yield* inStorageTurn(
-            drafts.create({
-              name: `${definition.title} v${version} upgrade`,
-              kind,
-              by,
-              base: liveReleaseOf(base),
-              content: startingContent(migrateContent(library, content, target)),
+          // Checked and made in one storage turn, so adopting twice at once makes one draft.
+          return yield* inStorageTurn(
+            Effect.gen(function* () {
+              const open = yield* drafts.openOfKind(kind);
+              const info = Option.isSome(open)
+                ? open.value
+                : yield* drafts.create({
+                    name: `${definition.title} v${version} upgrade`,
+                    kind,
+                    by,
+                    base: liveReleaseOf(base),
+                    content: startingContent(migrateContent(library, content, target)),
+                  });
+              return Option.some(yield* summary(info.id));
             }),
+          ).pipe(
+            // The draft was found open or made in this storage turn, so it's still there.
+            Effect.catchTag("DraftNotFound", Effect.die),
           );
-          return Option.some({ ...info, review: null });
+        }),
+        reportBlocks: Effect.gen(function* () {
+          const latest = yield* releases.live;
+          if (Option.isNone(latest)) return;
+          const content = yield* contentOf(latest.value.release.snapshot);
+          yield* inStorageTurn(
+            sql.withTransaction(
+              Effect.gen(function* () {
+                yield* outbox.send({ _tag: "Blocks", holder: "live", lockfile: content.lockfile });
+                for (const info of yield* drafts.list)
+                  if (info.status === "open")
+                    yield* outbox.send({
+                      _tag: "Blocks",
+                      holder: info.id,
+                      lockfile: (yield* drafts.draft(info.id)).lockfile,
+                    });
+              }),
+            ),
+          ).pipe(
+            // The draft was just listed open, and a draft is never removed.
+            Effect.catchTag("DraftNotFound", Effect.die),
+          );
         }),
         blocksInUse: Effect.gen(function* () {
           const content = yield* contentOf((yield* liveRelease).snapshot);

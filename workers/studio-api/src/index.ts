@@ -10,6 +10,7 @@ import { getServerByName } from "partyserver";
 
 import { serveAgent } from "./agent/route.ts";
 import { authBasePath, authFor } from "./auth.ts";
+import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
 import { serveLive } from "./live.ts";
 import { serveBrandMedia, servePreviewMedia, serveReviewMedia } from "./media.ts";
@@ -50,7 +51,8 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
 
   /**
    * The scheduled jobs, on the cron schedule infra sets: the reconcile job,
-   * and offering brand revisions again to sites that missed them.
+   * offering brand revisions again to sites that missed them, and asking
+   * sites that haven't reported their block versions for them.
    */
   override async scheduled() {
     const [reconciled, offered] = await Effect.runPromise(
@@ -63,6 +65,11 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
             ),
         ),
         offerMissedRevisions(this.env),
+        collectBlockUsage((site) =>
+          Effect.tryPromise(async () =>
+            (await getServerByName(this.env.SITE_DOC, site)).reportBlocks(),
+          ),
+        ),
       ]).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
     );
     if (reconciled.length > 0)
