@@ -8,6 +8,21 @@ import { defineConfig } from "astro/config";
 export default defineConfig({
   output: "server",
   devToolbar: { enabled: false },
+  // Each page's policy lets it load only the site's own styles, fonts and
+  // images, plus what it inlines, by hash. Pages run no scripts. Astro's dev
+  // server injects its own, so the policy is sent only by built sites.
+  security: {
+    csp: {
+      directives: [
+        "default-src 'none'",
+        "img-src 'self'",
+        "font-src 'self'",
+        "form-action 'self'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+      ],
+    },
+  },
   integrations: [react()],
   vite: { plugins: [tailwindcss(), themeFonts()] },
 });

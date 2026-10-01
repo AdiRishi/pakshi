@@ -73,7 +73,9 @@ export const fixPlaceOf = (issue: CheckIssue, draft: Draft): FixPlace | null => 
       };
     }
     case "MissingMeta":
-      return issue.place.target === "site" ? { kind: "pages" } : { kind: "page", page: issue.place.target };
+      return issue.place.target === "site"
+        ? { kind: "pages" }
+        : { kind: "page", page: issue.place.target };
     case "BrokenLink":
     case "LinkWithoutText":
     case "Incomplete":

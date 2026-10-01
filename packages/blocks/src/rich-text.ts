@@ -98,7 +98,9 @@ export const linkTexts = (document: RichTextDocument) => {
   return document.content.flatMap((node) =>
     node.type === "paragraph" || node.type === "heading"
       ? links(node.content)
-      : node.content.flatMap((item) => item.content.flatMap((paragraph) => links(paragraph.content))),
+      : node.content.flatMap((item) =>
+          item.content.flatMap((paragraph) => links(paragraph.content)),
+        ),
   );
 };
 

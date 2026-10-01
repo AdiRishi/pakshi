@@ -3,7 +3,7 @@ import type { Selected } from "@repo/contracts/agent";
 import { type Draft, isBehind } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
-import type { Target , PropPath } from "@repo/contracts/ops";
+import type { Target, PropPath } from "@repo/contracts/ops";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
@@ -475,7 +475,9 @@ export const useShowBlock = () => {
   const ui = useEditorUi();
   return (target: Target, block: BlockId, path?: PropPath) => {
     store.select(
-      path === undefined ? { kind: "block", target, block } : { kind: "field", target, block, path },
+      path === undefined
+        ? { kind: "block", target, block }
+        : { kind: "field", target, block, path },
     );
     ui.focusSelection("canvas");
   };

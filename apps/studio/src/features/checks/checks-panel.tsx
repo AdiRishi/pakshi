@@ -146,7 +146,8 @@ export function ChecksPanel(props: {
     } as const;
   };
   // Before one is chosen, stepping starts at either end.
-  const previous = index < 0 ? ordered.at(-1) : ordered[(index - 1 + ordered.length) % ordered.length];
+  const previous =
+    index < 0 ? ordered.at(-1) : ordered[(index - 1 + ordered.length) % ordered.length];
   const next = index < 0 ? ordered[0] : ordered[(index + 1) % ordered.length];
 
   return (
@@ -177,7 +178,10 @@ export function ChecksPanel(props: {
         </div>
         {previous !== undefined && next !== undefined && (
           <nav aria-label="Step through the issues" className="flex items-center gap-2">
-            <Link {...linkTo(previous)} className={buttonVariants({ variant: "outline", size: "sm" })}>
+            <Link
+              {...linkTo(previous)}
+              className={buttonVariants({ variant: "outline", size: "sm" })}
+            >
               <ChevronLeftIcon />
               Previous
             </Link>

@@ -331,7 +331,8 @@ export function MembersPanel(props: { readonly scope: Scope; readonly viewer: Pe
         </section>
       )}
       <p className="text-sm text-muted-foreground">
-        You can give only permissions you hold. <Link to="/roles" className="text-foreground underline underline-offset-4">
+        You can give only permissions you hold.{" "}
+        <Link to="/roles" className="text-foreground underline underline-offset-4">
           What each role can do
         </Link>
       </p>
