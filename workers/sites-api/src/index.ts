@@ -64,6 +64,10 @@ export class SiteSubmissions extends DurableObject<SitesApiEnv> {
     return this.#run((entries) => entries.remove(id));
   }
 
+  countFor(email: string) {
+    return this.#run((entries) => entries.countFor(email));
+  }
+
   removeFor(email: string) {
     return this.#run((entries) => entries.removeFor(email));
   }

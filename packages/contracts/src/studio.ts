@@ -200,12 +200,23 @@ export type SiteEntriesView = typeof SiteEntriesView.Type;
 
 /** Where a page of entries ends, for asking for the next. */
 export const EntryCursor = Schema.Struct({ receivedAt: Timestamp, id: EntryId });
+export type EntryCursor = typeof EntryCursor.Type;
 
 export const EntriesPage = Schema.Struct({
   entries: Schema.Array(FormEntry),
   more: Schema.Boolean,
 });
 export type EntriesPage = typeof EntriesPage.Type;
+
+/** The entries one email address sent with one form. */
+export const EntriesFrom = Schema.Struct({
+  form: FormId,
+  name: Schema.String,
+  entries: Schema.Int,
+  first: Timestamp,
+  latest: Timestamp,
+});
+export type EntriesFrom = typeof EntriesFrom.Type;
 
 /** The site has no entry with this ID, or it was deleted. */
 export class EntryNotFound extends Schema.TaggedError<EntryNotFound>()("EntryNotFound", {}) {}
@@ -796,9 +807,14 @@ class SignedInRpcs extends RpcGroup.make(
     success: SiteEntriesView,
     error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
   }),
-  /** A form's entries, newest first, after `before` when given. */
+  /** A form's entries, newest first, after `before` and with an answer containing `search` when given. */
   Rpc.make("formEntries", {
-    payload: { site: SiteId, form: FormId, before: Schema.NullOr(EntryCursor) },
+    payload: {
+      site: SiteId,
+      form: FormId,
+      search: Schema.NullOr(Schema.String),
+      before: Schema.NullOr(EntryCursor),
+    },
     success: EntriesPage,
     error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
   }),
@@ -816,6 +832,12 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("deleteEntry", {
     payload: { site: SiteId, entry: EntryId },
     error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, EntryNotFound]),
+  }),
+  /** How many entries gave an email address on each form, to show before deleting them. */
+  Rpc.make("entriesFrom", {
+    payload: { site: SiteId, email: EmailAddress },
+    success: Schema.Array(EntriesFrom),
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
   }),
   /** Deletes every entry that gave an email address, for someone who asks for their data to go. */
   Rpc.make("deleteEntriesFor", {

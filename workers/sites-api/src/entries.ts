@@ -97,9 +97,10 @@ export interface EntryEmail {
 /** How long a failed email waits before it's tried again: doubling from a minute, up to six hours. */
 const retryDelay = (attempts: number) => Math.min(2 ** attempts, 360) * 60_000;
 
-/** The page of a form's entries before an entry, newest first. */
+/** The page of a form's entries before an entry, newest first, with `search` in an answer when given. */
 export interface EntriesBefore {
   readonly form: FormId;
+  readonly search: string | null;
   readonly before: { readonly receivedAt: Timestamp; readonly id: EntryId } | null;
   readonly limit: number;
 }
@@ -135,6 +136,17 @@ export class SiteEntries extends Context.Service<
     readonly entry: (id: EntryId) => Effect.Effect<Option.Option<FormEntry>, StorageError>;
     /** Deletes one entry, and whether there was one. */
     readonly remove: (id: EntryId) => Effect.Effect<boolean, StorageError>;
+    /** How many entries gave this address, on each form. */
+    readonly countFor: (email: string) => Effect.Effect<
+      ReadonlyArray<{
+        readonly form: FormId;
+        readonly name: string;
+        readonly entries: number;
+        readonly first: Timestamp;
+        readonly latest: Timestamp;
+      }>,
+      StorageError
+    >;
     /** Deletes every entry that gave this address, and how many there were. */
     readonly removeFor: (email: string) => Effect.Effect<number, StorageError>;
     /**
@@ -211,15 +223,35 @@ export class SiteEntries extends Context.Service<
                 max(received_at) as latest
               from entries group by form_id order by latest desc`,
         })(undefined),
-        entries: ({ form, before, limit }) =>
-          rows(
-            before === null
-              ? sql`select * from entries where form_id = ${form}
-                  order by received_at desc, id desc limit ${limit}`
-              : sql`select * from entries where form_id = ${form}
-                  and (received_at, id) < (${before.receivedAt}, ${before.id})
-                  order by received_at desc, id desc limit ${limit}`,
-          ),
+        entries: ({ form, search, before, limit }) =>
+          rows(sql`select * from entries where form_id = ${form}
+            and ${
+              before === null
+                ? sql`1 = 1`
+                : sql`(received_at, id) < (${before.receivedAt}, ${before.id})`
+            }
+            and ${
+              search === null
+                ? sql`1 = 1`
+                : sql`exists (select 1 from json_each(entries.fields)
+                    where json_each.value ->> 'value' like ${`%${search}%`})`
+            }
+            order by received_at desc, id desc limit ${limit}`),
+        countFor: (email) =>
+          SqlSchema.findAll({
+            Request: Schema.Void,
+            Result: Schema.Struct({
+              form: FormId,
+              name: Schema.String,
+              entries: Schema.Int,
+              first: Timestamp,
+              latest: Timestamp,
+            }),
+            execute: () => sql`select form_id as form, form_name as name, count(*) as entries,
+                min(received_at) as first, max(received_at) as latest
+              from entries where email = ${email.toLowerCase()}
+              group by form_id order by latest desc`,
+          })(undefined),
         everyEntry: (form) =>
           rows(sql`select * from entries where form_id = ${form} order by received_at, id`),
         entry: (id) =>

@@ -198,6 +198,43 @@ describe("a link's settings", () => {
   });
 });
 
+describe("a form's settings", () => {
+  test("start a new form for a block, then rename it and change its questions", async () => {
+    const { siteDoc, canvas } = await open();
+    canvas()
+      .querySelector<HTMLElement>(
+        "[data-pakshi-block='b_formsectioncard'] [data-pakshi-field='heading']",
+      )
+      ?.focus();
+    await userEvent.selectOptions(page.getByLabelText("Form", { exact: true }), "Start a new form");
+    const shownForm = () => {
+      const chosen =
+        siteDoc.draft().pages[home]?.blocks[BlockId.make("b_formsectioncard")]?.props["form"];
+      return Object.values(siteDoc.draft().forms).find(
+        (form) => JSON.stringify({ $ref: "form", id: form.id }) === JSON.stringify(chosen),
+      );
+    };
+    await expect.poll(() => shownForm()?.name).toBe("New form");
+
+    await userEvent.fill(page.getByRole("textbox", { name: "Form name" }), "Room booking");
+    await userEvent.keyboard("{Tab}");
+    await userEvent.fill(page.getByRole("textbox", { name: "Question" }).first(), "Full name");
+    await userEvent.keyboard("{Tab}");
+    await userEvent.click(page.getByRole("button", { name: "Add a field" }));
+    await expect
+      .poll(() => shownForm())
+      .toMatchObject({
+        name: "Room booking",
+        fields: [
+          { kind: "shortText", label: "Full name" },
+          { kind: "email", label: "Email" },
+          { kind: "checkbox", label: "I agree to the privacy policy" },
+          { kind: "shortText", label: "New question" },
+        ],
+      });
+  });
+});
+
 describe("a post's settings", () => {
   test("edit its date, tags and cover image", async () => {
     const post = PageId.make("pg_launch");

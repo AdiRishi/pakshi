@@ -409,13 +409,13 @@ const handlers = (env: StudioApiEnv) =>
               }),
             ),
           ),
-        formEntries: ({ site, form, before }) =>
+        formEntries: ({ site, form, search, before }) =>
           SignedIn.use((person) =>
             withCore("form entries")(
               Effect.gen(function* () {
                 yield* permitted(person, site, "submissions.read", "read this site's form entries");
                 const entries = yield* Effect.tryPromise(() =>
-                  entriesOf(site).entries({ form, before, limit: entriesPage + 1 }),
+                  entriesOf(site).entries({ form, search, before, limit: entriesPage + 1 }),
                 );
                 return {
                   entries: entries.slice(0, entriesPage),
@@ -460,6 +460,15 @@ const handlers = (env: StudioApiEnv) =>
                 yield* permitted(person, site, "submissions.delete", "delete form entries");
                 const removed = yield* Effect.tryPromise(() => entriesOf(site).remove(entry));
                 if (!removed) return yield* new EntryNotFound({});
+              }),
+            ),
+          ),
+        entriesFrom: ({ site, email }) =>
+          SignedIn.use((person) =>
+            withCore("entries from")(
+              Effect.gen(function* () {
+                yield* permitted(person, site, "submissions.delete", "delete form entries");
+                return yield* Effect.tryPromise(() => entriesOf(site).countFor(email));
               }),
             ),
           ),
