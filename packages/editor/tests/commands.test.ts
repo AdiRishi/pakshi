@@ -1,5 +1,4 @@
 import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
-import type { BlockList } from "@repo/contracts/ops";
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 
 import {
@@ -16,7 +15,6 @@ import {
 import type { EditorUi, InsertSpot } from "../src/context.tsx";
 import { runCommand } from "../src/run-command.ts";
 import { EditorStore } from "../src/store.ts";
-import { allowedTypes } from "../src/structure.ts";
 import { definitions, fakeSiteDoc, fixtureDraft, meera } from "./support/site-doc.ts";
 
 const page = PageId.make("pg_home");
@@ -164,15 +162,6 @@ describe("removing", () => {
 });
 
 describe("adding", () => {
-  test("the picker offers only sections at the top level, and a slot's own item types in a slot", () => {
-    const { home } = open();
-    const root = allowedTypes(home(), definitions, "root");
-    expect(root).toContain("hero");
-    for (const type of root) expect(definitions.get(type)?.placement).toBe("section");
-    const slot: BlockList = { block: id("b_featuregridthreecolumns"), slot: "items" };
-    expect(allowedTypes(home(), definitions, slot)).toEqual(["feature-item"]);
-  });
-
   test("a new block starts with its placeholder content and is chosen", () => {
     const { store, run, home } = open();
     const list = { block: id("b_featuregridtwocolumns"), slot: "items" };

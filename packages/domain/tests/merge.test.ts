@@ -1,6 +1,6 @@
 import { loadBlockVersions } from "@repo/blocks";
 import { type BlockContract, blockKey } from "@repo/blocks/contract";
-import { optional, text } from "@repo/blocks/fields";
+import { optional, propsSchema, text } from "@repo/blocks/fields";
 import { Draft, type SiteContent } from "@repo/contracts/draft";
 import { BlockId, PageId } from "@repo/contracts/ids";
 import type { Conflict, ConflictKey, Resolutions, Side } from "@repo/contracts/merge";
@@ -11,7 +11,7 @@ import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
 import { applyOps, type BlockContracts } from "../src/document.ts";
-import { type BlockLibrary, contractsAt, mergeSites } from "../src/merge.ts";
+import { type BlockLibrary, contractsAt, mergeSites, migrateContent } from "../src/merge.ts";
 import { rebaseOps } from "../src/rebase.ts";
 import { contracts, harbourDraft } from "./support/draft.ts";
 
@@ -278,11 +278,10 @@ describe("a conflict", () => {
     expect(Array.isArray(images) && images.length).toBe(24);
   });
 
-  test("in a text field can be settled with a merged value, and says what both sides started from", () => {
+  test("in a text field can be settled with a merged value", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
     const live = edit(harbourDraft, [heading("Sail a boat")]);
     const [conflict] = merge({ draft, live }).conflicts;
-    expect(conflict).toMatchObject({ _tag: "Changed", base: "Learn by building" });
     if (conflict === undefined) throw new Error("There's a conflict.");
     const merged = merge({ draft, live }, { [conflict.key]: { merged: "Build and sail a boat" } });
     expect(block(merged.content, "b_hero")?.props["heading"]).toBe("Build and sail a boat");
@@ -297,6 +296,7 @@ describe("a conflict", () => {
       block: { id: "b_hero", title: "Hero" },
       field: "Heading",
       kind: "text",
+      base: "Learn by building",
       draft: "Build a boat",
       live: "Sail a boat",
     });
@@ -558,5 +558,62 @@ describe("sides on different block versions", () => {
         live: "Sail a boat",
       }),
     ]);
+  });
+});
+
+/** The released block versions, up to hero v3. */
+const released = await loadBlockVersions([harbourDraft.lockfile, { hero: 3 }]);
+
+describe("upgrading blocks", () => {
+  const heroOf = (content: SiteContent) => block(content, "b_hero");
+  const heroV3 = (content: SiteContent) => {
+    const contract = contractsAt(released, content.lockfile).get("hero");
+    if (contract === undefined) throw new Error("The upgrade pins hero v3.");
+    return contract;
+  };
+
+  test("from hero v1 to v3 migrates its content through v2 and v3", () => {
+    const upgraded = migrateContent(released, harbourDraft, { hero: 3 });
+    expect(upgraded.lockfile["hero"]).toBe(3);
+    // v2 made the button the first of the buttons, which v3 keeps.
+    expect(heroOf(upgraded)?.props).toEqual({
+      heading: "Learn by building",
+      body: {
+        type: "doc",
+        content: [
+          { type: "paragraph", content: [{ type: "text", text: "Five days of workshops." }] },
+        ],
+      },
+      actions: [
+        { id: "it_primary", button: { label: "Register", link: "https://example.org/register" } },
+      ],
+    });
+    expect(
+      Schema.is(propsSchema(heroV3(upgraded).fields, "complete"))(heroOf(upgraded)?.props),
+    ).toBe(true);
+  });
+
+  test("leaves the other blocks at their versions", () => {
+    const upgraded = migrateContent(released, harbourDraft, { hero: 3 });
+    expect({ ...upgraded.lockfile, hero: 1 }).toEqual(harbourDraft.lockfile);
+    expect(block(upgraded, "b_features")).toEqual(block(harbourDraft, "b_features"));
+  });
+
+  test("keeps all of a hero's text, however long, valid at the new version", () => {
+    const paragraph = (text: string) => ({
+      type: "paragraph",
+      content: [{ type: "text", text, marks: [{ type: "bold" }] }],
+    });
+    const body = {
+      type: "doc",
+      content: Array.from({ length: 12 }, (_, index) =>
+        paragraph(`Day ${index + 1}. ${"Build. ".repeat(20)}`),
+      ),
+    };
+    const long = edit(harbourDraft, [setProp("b_hero", ["body"], body)]);
+    const upgraded = migrateContent(released, long, { hero: 3 });
+    const props = heroOf(upgraded)?.props;
+    expect(props?.["body"]).toEqual(body);
+    expect(Schema.is(propsSchema(heroV3(upgraded).fields, "draft"))(props)).toBe(true);
   });
 });

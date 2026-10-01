@@ -174,13 +174,11 @@ describe("other people's changes", () => {
       throw new Error("The fixture page needs two sections.");
     const move = moveOp(page, definitions, second, "root", null);
     if (move === undefined) throw new Error("The second section can't move to the top.");
-    siteDoc.commit(sam, [
-      insertOp(definitions, home, "root", null, BlockType.make("rich-text")),
-      move,
-    ]);
+    const insert = insertOp(definitions, home, "root", null, BlockType.make("rich-text"));
+    siteDoc.commit(sam, [insert, move]);
     await expect
-      .poll(() => canvas.querySelectorAll("[data-pakshi-block]").length)
-      .toBeGreaterThan(Object.keys(fixtureDraft.parts.blocks).length + (page.root.length ?? 0));
+      .poll(() => canvas.querySelector(`[data-pakshi-block='${insert.block.id}']`))
+      .not.toBeNull();
     expect(canvas.activeElement).toBe(heading);
     expect(heading.hasAttribute("data-pakshi-selected")).toBe(true);
     expect(selectionIn(heading)).toEqual({ start: 3, end: 3 });

@@ -52,6 +52,31 @@ const firstParagraph = (document: RichTextDocument) => {
 };
 
 describe("undo", () => {
+  test("reverses one action at a time: typing on the page, then typing in the settings panel", async () => {
+    const { siteDoc, canvas } = await open();
+    const heading = heroField(canvas(), "heading");
+    if (heading === null) throw new Error("The hero has no heading.");
+    const label = page.getByRole("textbox", { name: "Label", exact: true });
+    const savedLabel = () =>
+      siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"];
+    heading.focus();
+    canvas().getSelection()?.selectAllChildren(heading);
+    canvas().getSelection()?.collapseToEnd();
+    await userEvent.keyboard(" this July");
+    await userEvent.click(label);
+    await userEvent.keyboard("{End} now");
+    await expect.poll(() => heroHeading(siteDoc)).toBe("Summer school at the harbour this July");
+    await expect.poll(savedLabel).toMatchObject({ label: "See the programme now" });
+
+    await userEvent.click(page.getByRole("button", { name: "Undo" }));
+    await expect.element(label).toHaveValue("See the programme");
+    expect(heading.textContent).toBe("Summer school at the harbour this July");
+    await userEvent.click(page.getByRole("button", { name: "Undo" }));
+    await expect.poll(() => heading.textContent).toBe("Summer school at the harbour");
+    await expect.poll(() => heroHeading(siteDoc)).toBe("Summer school at the harbour");
+    await expect.poll(savedLabel).toMatchObject({ label: "See the programme" });
+  });
+
   test("in formatted text on the page leaves the text showing what the draft holds", async () => {
     const { siteDoc, canvas } = await open();
     const block = BlockId.make("b_richtextnarrow");
@@ -116,8 +141,11 @@ describe("the keyboard alone", () => {
     await userEvent.keyboard("{Enter}");
     expect(canvas().activeElement?.getAttribute("data-pakshi-field")).toBe("heading");
     await userEvent.keyboard("{End} today{Escape}");
-    await expect.poll(() => heroHeading(siteDoc)).toBe("Summer school at the harbour");
     expect(canvas().activeElement?.getAttribute("data-pakshi-block")).toBe("b_herocentered");
+    expect(heroField(canvas(), "heading")?.textContent).toBe("Summer school at the harbour");
+    // Typing reaches SiteDoc within half a second, so by then any that Escape left would be saved.
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(heroHeading(siteDoc)).toBe("Summer school at the harbour");
   });
 
   test("opens an image's popover with Enter", async () => {
@@ -245,6 +273,24 @@ const largeDraft = (): Draft => {
   return { ...fixtureDraft, pages: { [home]: { ...base, root, blocks } } };
 };
 
+/** The block definitions, each recording the IDs of the blocks it renders. */
+const countingRenders = () => {
+  const rendered: Array<BlockId> = [];
+  const counting = new Map(
+    Array.from(definitions, ([type, definition]) => [
+      type,
+      {
+        ...definition,
+        render: (input: Parameters<BlockDefinition["render"]>[0]) => {
+          rendered.push(input.id);
+          return definition.render(input);
+        },
+      },
+    ]),
+  );
+  return { rendered, counting };
+};
+
 describe("performance budgets, on a page with 150 blocks", () => {
   test("the canvas shows the page within a second of the draft arriving", async () => {
     const started = performance.now();
@@ -254,19 +300,7 @@ describe("performance budgets, on a page with 150 blocks", () => {
   });
 
   test("a keystroke renders only its own block and paints in the next frame", async () => {
-    const rendered: Array<BlockId> = [];
-    const counting = new Map(
-      Array.from(definitions, ([type, definition]) => [
-        type,
-        {
-          ...definition,
-          render: (input: Parameters<BlockDefinition["render"]>[0]) => {
-            rendered.push(input.id);
-            return definition.render(input);
-          },
-        },
-      ]),
-    );
+    const { rendered, counting } = countingRenders();
     const { canvas } = await open({ draft: largeDraft(), definitions: counting });
     const heading = canvas().querySelector<HTMLElement>(
       "[data-pakshi-block='b_grid10'] [data-pakshi-field='heading']",
@@ -285,19 +319,7 @@ describe("performance budgets, on a page with 150 blocks", () => {
   });
 
   test("someone else's batch renders only the blocks it touches", async () => {
-    const rendered: Array<BlockId> = [];
-    const counting = new Map(
-      Array.from(definitions, ([type, definition]) => [
-        type,
-        {
-          ...definition,
-          render: (input: Parameters<BlockDefinition["render"]>[0]) => {
-            rendered.push(input.id);
-            return definition.render(input);
-          },
-        },
-      ]),
-    );
+    const { rendered, counting } = countingRenders();
     const { siteDoc, canvas } = await open({ draft: largeDraft(), definitions: counting });
     await new Promise((resolve) => setTimeout(resolve, 500));
     rendered.length = 0;
@@ -433,26 +455,8 @@ describe("editing structure", () => {
     await expect.poll(announced).toBe("Removed Made for beginners.");
   });
 
-  test("a drag and the matching move command produce the same ops", async () => {
-    const dragged = await open();
-    const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
-    const target = outlineRow("b_calltoactioncentered")?.firstElementChild;
-    if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement))
-      throw new Error("The outline has no rows for the calls to action.");
-    await userEvent.dragAndDrop(page.elementLocator(source), page.elementLocator(target), {
-      targetPosition: { x: 40, y: target.offsetHeight - 6 },
-      steps: 12,
-    });
-    await expect.poll(() => dragged.siteDoc.log().length).toBe(1);
-    const dragOps = dragged.siteDoc.log()[0]?.ops;
-    await cleanup();
-
-    const moved = await open();
-    outlineRow("b_calltoactionbanner")?.focus();
-    await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
-    await expect.poll(() => moved.siteDoc.log().length).toBe(1);
-    expect(moved.siteDoc.log()[0]?.ops).toEqual(dragOps);
-    expect(dragOps).toEqual([
+  test("a drag in the outline or the canvas and the matching move command produce the same ops", async () => {
+    const movedDown = [
       {
         op: "moveBlock",
         page: home,
@@ -460,7 +464,50 @@ describe("editing structure", () => {
         list: "root",
         after: "b_calltoactioncentered",
       },
-    ]);
+    ];
+    /** The ops of the one batch an action in a freshly opened editor sends. */
+    const opsOf = async (act: (canvas: Document) => Promise<void>) => {
+      const { siteDoc, canvas } = await open();
+      await act(canvas());
+      await expect.poll(() => siteDoc.log().length).toBe(1);
+      const ops = siteDoc.log()[0]?.ops;
+      await cleanup();
+      return ops;
+    };
+
+    const moveCommand = await opsOf(async () => {
+      outlineRow("b_calltoactionbanner")?.focus();
+      await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
+    });
+    expect(moveCommand).toEqual(movedDown);
+
+    const outlineDrag = await opsOf(async () => {
+      const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
+      const target = outlineRow("b_calltoactioncentered")?.firstElementChild;
+      if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement))
+        throw new Error("The outline has no rows for the calls to action.");
+      await userEvent.dragAndDrop(page.elementLocator(source), page.elementLocator(target), {
+        targetPosition: { x: 40, y: target.offsetHeight - 6 },
+        steps: 12,
+      });
+    });
+    expect(outlineDrag).toEqual(movedDown);
+
+    const canvasDrag = await opsOf(async (canvas) => {
+      const block = (id: string) =>
+        canvas.querySelector<HTMLElement>(`[data-pakshi-block="${id}"]`);
+      const source = block("b_calltoactionbanner");
+      const target = block("b_calltoactioncentered");
+      if (source === null || target === null) throw new Error("The canvas has no calls to action.");
+      const FramePointer = source.ownerDocument.defaultView?.PointerEvent ?? PointerEvent;
+      source.dispatchEvent(new FramePointer("pointermove", { bubbles: true }));
+      await expect.poll(() => canvas.querySelector(".pakshi-handle")).not.toBeNull();
+      const handle = canvas.querySelector(".pakshi-handle");
+      if (handle === null) throw new Error("The section shows no handle.");
+      const below = target.getBoundingClientRect();
+      await pointerPath(handle, [{ x: below.left + below.width / 2, y: below.bottom - 12 }]);
+    });
+    expect(canvasDrag).toEqual(movedDown);
   });
 
   test("releasing a drag outside the canvas and the outline moves nothing", async () => {

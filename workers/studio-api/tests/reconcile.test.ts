@@ -57,3 +57,16 @@ it.effect("recording a release again puts right a copy in D1 that drifted", () =
     expect(asked).toEqual([]);
   }).pipe(Effect.provide(core)),
 );
+
+it.effect("a site whose repair fails is left for the next run, and the others are repaired", () =>
+  Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`insert into releases (id, site_id, seq, snapshot, release, published_at) values
+      ('rel_a1first', 'site_a1', 1, 'snap_a1first', '{}', '2026-09-01T00:00:00.000Z'),
+      ('rel_b1first', 'site_b1', 1, 'snap_b1first', '{}', '2026-09-01T00:00:00.000Z')`;
+    const repaired = yield* reconcileSites(served({}), (site) =>
+      site === "site_a1" ? Effect.die(new Error("SiteDoc is unavailable")) : Effect.void,
+    );
+    expect(repaired).toEqual(["site_b1"]);
+  }).pipe(Effect.provide(core)),
+);

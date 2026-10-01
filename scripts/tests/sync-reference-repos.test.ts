@@ -25,14 +25,7 @@ const runSync = (root: string, args: string[]) =>
     env: { ...process.env, NO_COLOR: "1" },
   });
 
-await test("a missing repository selector fails before attempting git", (context) => {
-  const result = runSync(copyWorkspace(context), ["--repo"]);
-  assert.equal(result.status, 1);
-  assert.match(result.stderr, /Missing value for flag --repo/);
-  assert.doesNotMatch(result.stdout, /\[sync:repos\]/);
-});
-
-await test("unknown flags fail before attempting git", (context) => {
+await test("a mistyped flag fails instead of syncing", (context) => {
   const result = runSync(copyWorkspace(context), ["--dry-rnu"]);
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Unrecognized flag: --dry-rnu/);

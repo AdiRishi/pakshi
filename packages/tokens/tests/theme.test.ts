@@ -7,7 +7,6 @@ import {
   hexToOklch,
   oklchToHex,
   PresetId,
-  presets,
   ResolvedTheme,
   resolveTheme,
   themeCss,
@@ -15,6 +14,12 @@ import {
 } from "../src/index.ts";
 
 const editorial = resolveTheme({ preset: "editorial", changes: {} }).theme;
+
+/** The declarations of the first CSS rule for `selector`. */
+const rule = (css: string, selector: string) => {
+  const start = css.indexOf(`${selector} {`);
+  return css.slice(start, css.indexOf("}", start));
+};
 
 test("contrast follows WCAG 2's formula", () => {
   expect(contrast(hexToOklch("#000000"), hexToOklch("#ffffff"))).toBeCloseTo(21, 1);
@@ -72,7 +77,7 @@ test("a brand's changes stay when it picks another preset", () => {
   const moved = themeValues({ ...theme, preset: "bold" });
   expect(moved.brandColor).toBe("#7a1f5c");
   expect(moved.fonts).toEqual({ heading: "fraunces", body: "onest" });
-  expect(moved.density).toBe(presets.bold.density);
+  expect(moved.density).toBe("spacious");
 });
 
 test("theme values that could escape their CSS declaration are rejected", () => {
@@ -113,10 +118,18 @@ test("a fixed scheme applies its colors whatever the visitor prefers", () => {
 });
 
 test("each surface re-scopes the semantic colors for its section", () => {
-  const css = themeCss(editorial, "light");
-  const brand = css.slice(css.indexOf('[data-surface="brand"]'));
-  expect(brand.slice(0, brand.indexOf("}"))).toContain(
+  expect(rule(themeCss(editorial, "light"), '[data-surface="brand"]')).toContain(
     `--background: ${editorial.colors.light.brand.background};`,
+  );
+});
+
+test("a brand's logo for dark backgrounds shows only on dark surfaces", () => {
+  const light = themeCss(editorial, "light");
+  expect(rule(light, '[data-surface="default"]')).toContain("--theme-on-dark: none;");
+  expect(rule(light, '[data-surface="inverse"]')).toContain("--theme-on-dark: inline-block;");
+  expect(rule(light, '[data-surface="inverse"]')).toContain("--theme-on-light: none;");
+  expect(rule(themeCss(editorial, "dark"), '[data-surface="default"]')).toContain(
+    "--theme-on-dark: inline-block;",
   );
 });
 
