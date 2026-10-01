@@ -21,7 +21,7 @@ import type { Field, Fields } from "./fields.ts";
  * Images and a form that every site can show, so a new block looks finished
  * before anyone has chosen its content. Block placeholders point at them by
  * these IDs. They're drafts' content only: a field still holding one is a
- * placeholder, which pre-flight blocks from publishing.
+ * placeholder, which the checks block from publishing.
  *
  * The images are inline SVG, so they resolve the same way in Studio, `sites`
  * and tests without an asset pipeline.

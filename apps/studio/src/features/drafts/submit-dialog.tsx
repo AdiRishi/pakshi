@@ -1,5 +1,5 @@
 import type { DraftId, SiteId } from "@repo/contracts/ids";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import type { Release } from "@repo/contracts/release";
 import type { SubmissionCheck } from "@repo/contracts/studio";
 import type { Submission } from "@repo/contracts/submission";
@@ -20,12 +20,7 @@ import { Link } from "@tanstack/react-router";
 import { CircleAlertIcon, CircleCheckIcon, LoaderIcon } from "lucide-react";
 import { useId, useState } from "react";
 
-import {
-  approversOf,
-  describeIssue,
-  neededOf,
-  preflightChecks,
-} from "@/features/approvals/describe";
+import { approversOf, describeIssue, neededOf, checkGroups } from "@/features/approvals/describe";
 
 import { getSubmissionCheck, submitDraft } from "../sites/functions";
 
@@ -42,11 +37,11 @@ const workflowSource = {
   organization: "the organization's",
 };
 
-/** Pre-flight's checks, each passed or with what's left to fix and a link to its page. */
+/** The checks, each passed or with what's left to fix and a link to its page. */
 function Checks(props: {
   readonly site: SiteId;
   readonly draft: DraftId;
-  readonly issues: ReadonlyArray<PreflightIssue>;
+  readonly issues: ReadonlyArray<CheckIssue>;
 }) {
   return (
     <section aria-labelledby="checks-title" className="flex flex-col gap-3">
@@ -54,7 +49,7 @@ function Checks(props: {
         Checks before submitting
       </h3>
       <ul className="flex flex-col gap-3">
-        {preflightChecks.map((check) => {
+        {checkGroups.map((check) => {
           const found = props.issues.filter((issue) =>
             check.tags.some((tag) => tag === issue._tag),
           );
@@ -149,7 +144,7 @@ function Reviewers(props: { readonly workflow: SubmissionCheck["workflow"] }) {
 
 /**
  * Submits a draft through its site's approval workflow, after showing what
- * pre-flight finds and who reviews it. With no steps, submitting publishes.
+ * the checks find and who reviews it. With no steps, submitting publishes.
  * A draft that's behind merges first, and one whose merge needs a person
  * goes to its update instead.
  */

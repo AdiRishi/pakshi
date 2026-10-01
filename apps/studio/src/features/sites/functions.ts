@@ -151,7 +151,7 @@ export const updateDraft = createServerFn({ method: "POST" })
   )
   .handler(({ data }) => studio((client) => client.updateDraft(data)));
 
-/** What submitting a draft now would meet: pre-flight's findings, and who reviews it. */
+/** What submitting a draft now would meet: what the checks found, and who reviews it. */
 export const getSubmissionCheck = createServerFn({ method: "GET" })
   .validator(forDraft)
   .handler(({ data }) => studio((client) => client.submissionCheck(data)));

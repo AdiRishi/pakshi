@@ -456,7 +456,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 ## 037 — A placeholder is a block's own starting content, found by its value [#decision-037]
 
-**Context.** The editor spec gives every block placeholder content for a new instance, and pre-flight blocks a submission while any placeholder remains, but nothing defined what a placeholder is. An empty required field can't be one: a draft always holds required fields, and an image, a form or a link has no empty value. A new block should also look finished, not like a form waiting to be filled in.
+**Context.** The editor spec gives every block placeholder content for a new instance, and the checks block a submission while any placeholder remains, but nothing defined what a placeholder is. An empty required field can't be one: a draft always holds required fields, and an image, a form or a link has no empty value. A new block should also look finished, not like a form waiting to be filled in.
 
 **Decision.** Every section and item version ships a `fixtures/placeholder.json`, which `defineBlock` decodes into its contract. It uses built-in images and a contact form that every site resolves through `siteData`. `placeholderPaths` finds the fields still holding placeholder content: a built-in image or form, a button whose link is unchanged, or text, rich text or a link equal to a placeholder of that block type, including the items in a section's placeholder. A button's label alone doesn't count, because short labels such as "Get started" are often real.
 
@@ -514,7 +514,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 ## 030 — Alt text belongs to where an image is placed [#decision-030]
 
-**Context.** The snapshot manifest stored alt text on the media file, and the media popover edits it. Editing a shared library record would change every draft at once, outside any draft or approval. Alt text also depends on context: the same photo can say something in one place and be decoration in another, which pre-flight's check for alt text on every meaningful image needs to know.
+**Context.** The snapshot manifest stored alt text on the media file, and the media popover edits it. Editing a shared library record would change every draft at once, outside any draft or approval. Alt text also depends on context: the same photo can say something in one place and be decoration in another, which the check for alt text on every meaningful image needs to know.
 
 **Decision.** A media reference in props carries its own `alt`. An empty alt marks an image as decorative; a missing one is incomplete, which freezing checks. The library keeps an alt text per image only as the suggestion for new placements.
 
@@ -554,7 +554,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** `SiteDoc` validated every batch against the full block schema. A heading with a 3-character minimum could then never be cleared to retype it, and a person couldn't leave a required field empty while working on the rest of a page.
 
-**Decision.** People's batches are checked for types, integrity, link rules and the limits the editor enforces while typing: maximum lengths, allowed marks and nodes, variants and surfaces. Completeness (required fields and minimum lengths) is checked when a draft is frozen, and pre-flight lists what's missing. The agent's batches are also checked for completeness, so it gets a structured error instead of leaving a field empty; where it lacks content it writes a placeholder, which pre-flight also blocks.
+**Decision.** People's batches are checked for types, integrity, link rules and the limits the editor enforces while typing: maximum lengths, allowed marks and nodes, variants and surfaces. Completeness (required fields and minimum lengths) is checked when a draft is frozen, and the checks list what's missing. The agent's batches are also checked for completeness, so it gets a structured error instead of leaving a field empty; where it lacks content it writes a placeholder, which pre-flight also blocks.
 
 **Rejected.** Full validation on every batch, which blocks ordinary editing; keeping a separate unsaved value in the editor until a field is valid, which is a second copy of the page that other people and the agent can't see.
 
@@ -647,7 +647,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Decision.** A site has one live release and any number of named drafts, each starting from a release. Publishing a draft makes it live, and every other draft is then behind. A draft that's behind must be updated the next time it's opened and before it's submitted. Updating is a three-way merge by block ID and field. Different fields, blocks or pages merge automatically; conflicts (same field on both sides, edit against removal, the same list reordered on both sides) need a person, and a model may suggest a merge for text. A submission under review that merges cleanly keeps its approvals; one that needed a person restarts its workflow.
 
-Five rules keep merges safe. All sides are migrated to the newest block version any of them uses before diffing. The merged draft is checked for structure, and a failure is a conflict; pre-flight runs only at submission. A submission publishes only if it's based on the current live release. Publishing closes a draft only if nobody edited it after it was submitted. And people already in a draft that falls behind keep working; the update is required the next time it's opened and before it's submitted.
+Five rules keep merges safe. All sides are migrated to the newest block version any of them uses before diffing. The merged draft is checked for structure, and a failure is a conflict; the checks run only at submission. A submission publishes only if it's based on the current live release. Publishing closes a draft only if nobody edited it after it was submitted. And people already in a draft that falls behind keep working; the update is required the next time it's opened and before it's submitted.
 
 **Rejected.** One draft per site; publishing chosen pages from a shared draft; a draft per page.
 

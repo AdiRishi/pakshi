@@ -4,7 +4,7 @@ import type { PageId, SourceId, TurnId } from "@repo/contracts/ids";
 import type { Collaborator, Focus, Presence } from "@repo/contracts/live";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import type { PagePath } from "@repo/contracts/page";
-import type { PreflightIssue } from "@repo/contracts/publishing";
+import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
 import { Context, type Effect, type Option } from "effect";
 
@@ -38,9 +38,9 @@ export class Workspace extends Context.Service<
      */
     readonly commit: (ops: ReadonlyArray<Op>, at: Presence) => Effect.Effect<Committed>;
     readonly typing: Effect.Effect<ReadonlyArray<TypingIn>>;
-    /** What pre-flight finds in the draft, and whether it's behind the live site. */
+    /** What the checks find in the draft, and whether it's behind the live site. */
     readonly check: Effect.Effect<{
-      readonly issues: ReadonlyArray<PreflightIssue>;
+      readonly issues: ReadonlyArray<CheckIssue>;
       readonly behind: boolean;
     }>;
     /** Where anyone the draft is shared with sees a page of it. */

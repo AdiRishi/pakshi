@@ -632,7 +632,7 @@ it.effect(
     ),
 );
 
-it.effect("pre-flight blocks a submission while a placeholder remains", () =>
+it.effect("the checks block a submission while a placeholder remains", () =>
   withSite((site) =>
     Effect.gen(function* () {
       const { id } = yield* site.createDraft(sam, name("Placeholder"));

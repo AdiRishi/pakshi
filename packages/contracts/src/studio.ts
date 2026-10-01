@@ -34,7 +34,7 @@ import { Collaborator } from "./live.ts";
 import { Conflict, ConflictKey, MergedChange, Resolutions } from "./merge.ts";
 import { Batch, BatchError } from "./ops.ts";
 import { PageDocument, PagePath } from "./page.ts";
-import { PreflightIssue } from "./publishing.ts";
+import { CheckIssue } from "./publishing.ts";
 import { Release, Timestamp } from "./release.ts";
 import { PublishedSettings, SettingsChanges, SettingsView, SiteName } from "./settings.ts";
 import { DraftSharing, ShareAccess } from "./sharing.ts";
@@ -524,9 +524,9 @@ export const ResolvedWorkflow = Schema.Struct({
 });
 export type ResolvedWorkflow = typeof ResolvedWorkflow.Type;
 
-/** What submitting a draft now would meet: pre-flight's findings, whether it's behind, and who reviews it. */
+/** What submitting a draft now would meet: what the checks found, whether it's behind, and who reviews it. */
 export const SubmissionCheck = Schema.Struct({
-  issues: Schema.Array(PreflightIssue),
+  issues: Schema.Array(CheckIssue),
   behind: Schema.Boolean,
   workflow: ResolvedWorkflow,
 });
@@ -536,8 +536,8 @@ export const SubmitOutcome = Schema.TaggedUnion({
   Submitted: { submission: Submission },
   /** The workflow has no steps, so submitting published the draft. */
   Published: { release: Release },
-  /** Pre-flight found things to fix. Nothing was submitted. */
-  Blocked: { issues: Schema.Array(PreflightIssue) },
+  /** The checks found things to fix. Nothing was submitted. */
+  Blocked: { issues: Schema.Array(CheckIssue) },
   /** The draft is behind, and merging the live release needs a person. */
   NeedsUpdate: {},
 });

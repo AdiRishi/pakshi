@@ -3,7 +3,7 @@ import { Schema } from "effect";
 import { BlockId, BlockType, PageId, SourceId, TurnId } from "./ids.ts";
 import { Focus } from "./live.ts";
 import { PagePath } from "./page.ts";
-import { PreflightIssue } from "./publishing.ts";
+import { CheckIssue } from "./publishing.ts";
 import { Timestamp } from "./release.ts";
 
 /*
@@ -103,8 +103,8 @@ export const Part = Schema.TaggedUnion({
     plan: SitePlan,
     status: Schema.Literals(["proposed", "building", "replaced"]),
   },
-  /** Pre-flight's findings, and whether the draft can be submitted. A person submits it. */
-  Submission: { id: Schema.String, issues: Schema.Array(PreflightIssue), behind: Schema.Boolean },
+  /** What the checks found, and whether the draft can be submitted. A person submits it. */
+  Submission: { id: Schema.String, issues: Schema.Array(CheckIssue), behind: Schema.Boolean },
   /** A block the agent asked the platform team for. */
   BlockRequest: { id: Schema.String, need: Schema.String },
 });

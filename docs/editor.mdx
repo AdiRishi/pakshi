@@ -72,7 +72,7 @@ It does not own:
 - **One reducer.** The editor imports `applyOps`, validation and inverse ops from `packages/domain`'s document module, the same code `SiteDoc` runs. Applying a batch locally gives the same result the server will, except where the server knows more: another client's batch arrived first, or a permission changed.
 - **Client-created IDs.** Every batch carries an ID the editor creates, and so does every new block and list item. `SiteDoc` confirms a batch by broadcasting it with that ID. Sending a batch twice, for example after a reconnect, has no extra effect.
 - **Everything by ID.** Blocks, list items inside props, selection and presence are all addressed by ID, never by position. Positions change under concurrent edits; IDs don't.
-- **Incomplete drafts are valid.** A field can be empty or shorter than its minimum while someone works on it. Limits the editor can enforce while typing (maximum length, allowed marks and nodes, link protocols) are hard. Completeness is checked at freezing and reported by pre-flight ([decision 026](/decision-log#decision-026)).
+- **Incomplete drafts are valid.** A field can be empty or shorter than its minimum while someone works on it. Limits the editor can enforce while typing (maximum length, allowed marks and nodes, link protocols) are hard. Completeness is checked at freezing and reported by the checks ([decision 026](/decision-log#decision-026)).
 
 ### With blocks
 
@@ -82,7 +82,7 @@ Blocks are frozen code: a released version never changes ([decision 006](/decisi
 - **Two implementations, one output.** Outside the editor, field components render exactly the markup a block would write by hand, with no attributes or wrappers added. Inside the editor, the editor supplies editing versions through React context. They keep the same element, classes and content, and may add attributes, event handlers and `contenteditable`. They never add wrappers that change layout. The screenshot parity gate enforces this.
 - **Why components.** A `contenteditable` element only works if the editor owns its children. If a block renders a value as React children, each re-render fights the caret. Owning the field components also lets the editor improve without a new block version.
 - **No globals.** Blocks never read `window`, `document` or other browser globals while rendering. In the canvas, React renders into the iframe from Studio's window, so those globals would point at Studio.
-- **Picker metadata.** Each block definition gives the picker what it needs: title, where the block is allowed, and the placeholder content a new instance starts with, which is also its preview. Sections and items keep that content in `fixtures/placeholder.json`, and it should look finished ([decision 037](/decision-log#decision-037)). Pre-flight blocks a submission while placeholders remain.
+- **Picker metadata.** Each block definition gives the picker what it needs: title, where the block is allowed, and the placeholder content a new instance starts with, which is also its preview. Sections and items keep that content in `fixtures/placeholder.json`, and it should look finished ([decision 037](/decision-log#decision-037)). The checks block a submission while placeholders remain.
 - **Every field kind has an editor.** Each field builder in `packages/blocks` (`text`, `richText`, `media`, `cta` and the rest) has a matching field kind in the editor. Adding a field builder without one must fail typecheck.
 
 ### With Studio

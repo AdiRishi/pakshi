@@ -19,7 +19,7 @@ const admin = Effect.cached(
 
 const booking = FormId.make("frm_booking");
 
-/** A form asking for a name and email, with the consent checkbox pre-flight wants. */
+/** A form asking for a name and email, with the consent checkbox the checks want. */
 const bookingForm = Schema.decodeSync(FormDefinition)({
   id: booking,
   name: "Room booking",

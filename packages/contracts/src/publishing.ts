@@ -19,8 +19,8 @@ export const Incomplete = Schema.Struct({
 });
 export type Incomplete = typeof Incomplete.Type;
 
-/** Something pre-flight found that must be fixed before a draft is submitted. */
-export const PreflightIssue = Schema.TaggedUnion({
+/** Something the checks found that must be fixed before a draft is submitted. */
+export const CheckIssue = Schema.TaggedUnion({
   Incomplete: Incomplete.fields,
   /** A field still holding its block's placeholder content. */
   Placeholder: { place: Place, block: NamedBlock, path: PropPath, field: Schema.String },
@@ -38,4 +38,4 @@ export const PreflightIssue = Schema.TaggedUnion({
   /** A form that asks for an email address or phone number without a required consent checkbox linking to a privacy policy. */
   MissingConsent: { form: FormId, name: Schema.String },
 });
-export type PreflightIssue = typeof PreflightIssue.Type;
+export type CheckIssue = typeof CheckIssue.Type;
