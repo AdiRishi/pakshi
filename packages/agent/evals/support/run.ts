@@ -1,5 +1,6 @@
 import { loadBlocks } from "@repo/blocks";
 import type { Part, Selected, SitePlan } from "@repo/contracts/agent";
+import { emptyVoiceGuide, type VoiceGuide } from "@repo/contracts/brand";
 import type { Draft } from "@repo/contracts/draft";
 import { PageId, SourceId } from "@repo/contracts/ids";
 import { Effect, Layer } from "effect";
@@ -39,6 +40,8 @@ export const converse = (options: {
   readonly draft: Draft;
   readonly messages: ReadonlyArray<string>;
   readonly brief?: SitePlan;
+  /** The brand's voice guide, or none. */
+  readonly voice?: VoiceGuide;
   readonly selected?: Selected;
   readonly links?: ReadonlyArray<string>;
   readonly sources?: ReadonlyArray<{ readonly name: string; readonly markdown: string }>;
@@ -72,7 +75,7 @@ export const converse = (options: {
       statuses.push(
         yield* runTurn({
           chat,
-          system: systemPrompt(contracts, options.brief ?? null),
+          system: systemPrompt(contracts, options.voice ?? emptyVoiceGuide, options.brief ?? null),
           message: `${context}\n\n${message}`,
           afterStep: Effect.void,
         }).pipe(Effect.provide(Layer.merge(layer, model))),

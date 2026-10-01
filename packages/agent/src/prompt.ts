@@ -1,5 +1,6 @@
 import { recipes } from "@repo/blocks/recipes";
 import type { Selected, SitePlan, Source } from "@repo/contracts/agent";
+import type { VoiceGuide } from "@repo/contracts/brand";
 import type { Draft } from "@repo/contracts/draft";
 import type { Collaborator } from "@repo/contracts/live";
 import type { BlockContracts } from "@repo/domain/document";
@@ -9,7 +10,7 @@ import type { TypingIn } from "./workspace.ts";
 
 /*
  * What the model reads. The system prompt changes only when the draft's
- * block versions or the brief do, so providers cache it together with the
+ * block versions, the brand's voice guide or the brief do, so providers cache it together with the
  * conversation after it. What changes every turn, such as the site's
  * outline, travels with the person's message instead.
  */
@@ -47,12 +48,36 @@ const recipeIndex = () =>
     .map((recipe) => `- ${recipe.id} (${recipe.pageType}): ${recipe.title}. ${recipe.purpose}.`)
     .join("\n");
 
-/** The system prompt for a conversation in a draft, with the plan the person built, if any. */
-export const systemPrompt = (contracts: BlockContracts, brief: SitePlan | null) =>
+/** The brand's voice guide, as the agent follows it in the copy it writes. */
+const voiceGuide = (voice: VoiceGuide) => {
+  const parts = [
+    voice.tone.trim() === "" ? "" : `Tone: ${voice.tone.trim()}`,
+    ...voice.examples.map(
+      (example) => `Write like this: "${example.write}" Not like this: "${example.avoid}"`,
+    ),
+    voice.wordsToAvoid.length === 0
+      ? ""
+      : `Never use these words: ${voice.wordsToAvoid.join(", ")}.`,
+  ].filter((part) => part !== "");
+  return parts.length === 0
+    ? "The brand has no voice guide yet."
+    : `The brand's voice guide, for every word you write:\n${parts.join("\n")}`;
+};
+
+/**
+ * The system prompt for a conversation in a draft: the brand's voice guide,
+ * and the plan the person built, if any.
+ */
+export const systemPrompt = (
+  contracts: BlockContracts,
+  voice: VoiceGuide,
+  brief: SitePlan | null,
+) =>
   [
     instructions,
     `The blocks this site can use:\n${blockIndex(contracts)}`,
     `Recipes for kinds of pages:\n${recipeIndex()}`,
+    voiceGuide(voice),
     brief === null
       ? "There's no agreed plan yet."
       : `The person chose to build this plan, which is your brief. When they ask you to build it, build it now without proposing it again:\n${JSON.stringify(brief)}`,
