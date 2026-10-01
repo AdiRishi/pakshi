@@ -3,14 +3,9 @@ import { BrandId } from "@repo/contracts/ids";
 import { BrandName } from "@repo/contracts/studio";
 import { HexColor, PresetId } from "@repo/tokens";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
-import { env } from "cloudflare:workers";
-import { type Effect, Schema } from "effect";
+import { Schema } from "effect";
 
-import { callStudio, type StudioClient } from "@/server/studio-rpc";
-
-const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+import { studio } from "@/server/studio";
 
 /** The brands the person holds a permission on. */
 export const getBrands = createServerFn({ method: "GET" }).handler(() =>

@@ -2,14 +2,9 @@ import { DefaultRole, Scope } from "@repo/contracts/access";
 import { EmailAddress } from "@repo/contracts/email";
 import { InvitationId } from "@repo/contracts/ids";
 import { createServerFn } from "@tanstack/react-start";
-import { getRequest } from "@tanstack/react-start/server";
-import { env } from "cloudflare:workers";
-import { type Effect, Schema } from "effect";
+import { Schema } from "effect";
 
-import { callStudio, type StudioClient } from "@/server/studio-rpc";
-
-const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+import { studio } from "@/server/studio";
 
 /** The organization's people, the invitations waiting, and where the person may invite. */
 export const getPeople = createServerFn({ method: "GET" }).handler(() =>
