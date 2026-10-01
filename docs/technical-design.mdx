@@ -391,6 +391,15 @@ There are no tools for submitting, publishing, approving, site settings, domains
 
 **Evals:** about 25 scripted tasks with exact expected outcomes, run on demand when prompts, models or block contracts change, never as routine, because every run calls the model and costs money ([decision 062](/decision-log#decision-062)). They cover a new site from a brief, routine edits, asking when a request is ambiguous, filing a block request for a catalog gap, ignoring instructions inside uploaded documents and web pages, leaving placeholders for missing facts, suggesting merges for text conflicts and alt text, and, once a block has a second version, writing content valid for a pinned older one. They run the agent's real turns in Node, against the document module and an in-memory `SiteDoc`, and reach the model through AI Gateway's REST endpoint with a Cloudflare API token that may use Workers AI. Real conversations become new tasks.
 
+## Site settings
+
+A site's settings are one registry in `@repo/contracts/settings`. Each setting is a field with its schema and default, in one of two groups that says how a saved value reaches the site ([decision 072](/decision-log#decision-072)):
+
+- **Published** settings change what visitors see: the site's name and its default sharing image. Freezing copies them into the snapshot, so they go live with the next publish, and a rollback brings back the values its release had.
+- **Live** settings change how the site runs, such as where each form's entries are emailed. They take effect when they're saved.
+
+`SiteDoc` keeps the values outside any draft, one row per setting someone has saved, and anything unset reads as its default. A save names the settings revision the screen started from, and `SiteDoc` refuses it if someone saved since. Every save goes through the outbox to D1's copy of the site's name and to the site's `SiteSubmissions`, which keeps the live settings. A site `SiteDoc` imports from KV takes the published settings of the release it imports.
+
 ## Forms, submissions and email
 
 Form definitions live in the draft and ship in the snapshot. Submissions go straight from the public Worker to the site's own `SiteSubmissions` Durable Object, which is that site's submissions database. The first form post for a site creates it, so there's nothing to provision and no redeploy, and one binding covers every site. Nothing queries submissions across sites.

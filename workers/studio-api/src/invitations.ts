@@ -1,11 +1,11 @@
 import { DefaultRole, Scope } from "@repo/contracts/access";
 import {
-  type EmailAddress,
   InvitationToken,
   type InvitationView,
   NamedScope,
   PendingInvitation,
 } from "@repo/contracts/accounts";
+import type { EmailAddress } from "@repo/contracts/email";
 import { BrandId, InvitationId, randomId, SiteId } from "@repo/contracts/ids";
 import { Collaborator } from "@repo/contracts/live";
 import { now, Timestamp } from "@repo/contracts/release";

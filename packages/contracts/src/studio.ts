@@ -4,7 +4,6 @@ import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
 import { DefaultRole, Scope } from "./access.ts";
 import {
-  EmailAddress,
   InvitationToken,
   InvitationView,
   NamedScope,
@@ -13,6 +12,7 @@ import {
 } from "./accounts.ts";
 import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
+import { EmailAddress } from "./email.ts";
 import { FormDefinition } from "./form.ts";
 import {
   BlockId,
@@ -34,8 +34,9 @@ import { Batch, BatchError } from "./ops.ts";
 import { PageDocument, PagePath } from "./page.ts";
 import { PreflightIssue } from "./publishing.ts";
 import { Release, Timestamp } from "./release.ts";
+import { PublishedSettings, SettingsChanges, SettingsView, SiteName } from "./settings.ts";
 import { DraftSharing, ShareAccess } from "./sharing.ts";
-import { SiteParts, SiteSettings } from "./site.ts";
+import { SiteParts } from "./site.ts";
 import { LiveRelease, Lockfile, MediaFile, PageListing } from "./snapshot.ts";
 import { Submission } from "./submission.ts";
 import { Workflow } from "./workflow.ts";
@@ -129,11 +130,6 @@ export const SiteAddress = Schema.String.check(
 );
 export type SiteAddress = typeof SiteAddress.Type;
 
-export const SiteName = Schema.Trim.check(
-  Schema.isMinLength(1, { message: "Name the site" }),
-  Schema.isMaxLength(80, { message: "Use at most 80 characters" }),
-);
-
 export const BrandName = Schema.Trim.check(
   Schema.isMinLength(1, { message: "Name the brand" }),
   Schema.isMaxLength(80, { message: "Use at most 80 characters" }),
@@ -181,6 +177,22 @@ export type People = typeof People.Type;
 /** An invitation just made, with the link it sends, for the inviter to copy. */
 export const SentInvitation = Schema.Struct({ invitation: PendingInvitation, link: Schema.String });
 export type SentInvitation = typeof SentInvitation.Type;
+
+/** Someone saved the site's settings since they were loaded, so saving would undo their change. */
+export class SettingsChanged extends Schema.TaggedError<SettingsChanged>()("SettingsChanged", {
+  revision: Schema.Int,
+}) {}
+
+/** The image isn't in the site's library or its brand's. */
+export class ImageNotFound extends Schema.TaggedError<ImageNotFound>()("ImageNotFound", {}) {}
+
+/** A site's settings, with whether the person may change them. */
+export const SiteSettingsView = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  ...SettingsView.fields,
+  can: Schema.Struct({ edit: Schema.Boolean }),
+});
+export type SiteSettingsView = typeof SiteSettingsView.Type;
 
 /** The person already holds this role there. */
 export class AlreadyMember extends Schema.TaggedError<AlreadyMember>()("AlreadyMember", {}) {}
@@ -295,6 +307,8 @@ export const OpenedDraft = Schema.TaggedUnion({
   Ready: {
     draft: Draft,
     summary: DraftSummary,
+    /** The site's published settings now, which the draft's pages show with. */
+    settings: PublishedSettings,
     live: LiveRelease,
     media: Schema.Array(MediaSummary),
     can: SiteAbilities,
@@ -449,7 +463,7 @@ export type Home = typeof Home.Type;
 
 /** Everything a page of a site renders from: the page, and what it reads from the rest of the site. */
 export const SiteView = Schema.Struct({
-  settings: SiteSettings,
+  settings: PublishedSettings,
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
   lockfile: Lockfile,
@@ -722,6 +736,23 @@ class SignedInRpcs extends RpcGroup.make(
     payload: { brand: BrandId, name: SiteName, address: SiteAddress },
     success: CreatedSite,
     error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, AddressTaken]),
+  }),
+  Rpc.make("siteSettings", {
+    payload: { site: SiteId },
+    success: SiteSettingsView,
+    error: siteError,
+  }),
+  /** Saves some of a site's settings. `seen` is the settings revision the person started from. */
+  Rpc.make("saveSiteSettings", {
+    payload: { site: SiteId, changes: SettingsChanges, seen: Schema.Int },
+    success: SiteSettingsView,
+    error: Schema.Union([
+      StudioUnavailable,
+      SiteNotFound,
+      NotPermitted,
+      SettingsChanged,
+      ImageNotFound,
+    ]),
   }),
   Rpc.make("siteDrafts", { payload: { site: SiteId }, success: SiteDrafts, error: siteError }),
   Rpc.make("createDraft", {

@@ -68,6 +68,10 @@ export const recordCopy = Effect.fn("StudioApi.recordCopy")(function* (
           on conflict (site_id, holder) do update set lockfile = excluded.lockfile`;
       return;
     }
+    case "Settings": {
+      yield* sql`update sites set name = ${message.settings.name} where id = ${site}`;
+      return;
+    }
     case "BrandTaken": {
       yield* sql`update sites set brand_revision = max(coalesce(brand_revision, 0), ${message.number})
         where id = ${site}`;

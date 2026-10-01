@@ -1,6 +1,7 @@
 import { DraftName } from "@repo/contracts/draft";
 import { DraftId } from "@repo/contracts/ids";
 import { Release } from "@repo/contracts/release";
+import { SiteSettings } from "@repo/contracts/settings";
 import { ShareAccess } from "@repo/contracts/sharing";
 import { Lockfile } from "@repo/contracts/snapshot";
 import { Submission } from "@repo/contracts/submission";
@@ -42,6 +43,11 @@ export const OutboxMessage = Schema.TaggedUnion({
     holder: Schema.Union([Schema.Literal("live"), DraftId]),
     lockfile: Schema.NullOr(Lockfile),
   },
+  /**
+   * The site's settings after a save, for D1's copy of its name and for the
+   * site's SiteSubmissions, which reads the settings that take effect at once.
+   */
+  Settings: { settings: SiteSettings },
   /** The newest brand revision the site has taken in. */
   BrandTaken: { number: Schema.Int },
   Notify: {

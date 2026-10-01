@@ -1,5 +1,5 @@
 {
-  "settings": { "name": "Harbour Summer School" },
+  "settings": { "name": "Harbour Summer School", "sharingImage": null },
   "menus": {
     "main": [
       { "id": "mi_home", "label": "Home", "target": { "$ref": "page", "id": "pg_home" } },

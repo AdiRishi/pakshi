@@ -62,9 +62,8 @@ const usePageEntries = () =>
 
 /** What blocks read beyond their props, from the draft as the person sees it. */
 export const useDraftSiteData = () => {
-  const { media, mediaSrc } = useServices();
+  const { media, mediaSrc, settings } = useServices();
   const menus = useEditorState((state) => state.view.parts.menus);
-  const settings = useEditorState((state) => state.view.settings);
   const forms = useEditorState((state) => state.view.forms);
   const identity = useEditorState((state) => state.view.brand.identity);
   const pages = usePageEntries();

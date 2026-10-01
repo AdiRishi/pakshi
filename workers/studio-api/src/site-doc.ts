@@ -24,14 +24,15 @@ import {
 import type { Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
 import type { PagePath } from "@repo/contracts/page";
+import type { SettingsChanges, SiteName } from "@repo/contracts/settings";
 import type { DraftSharing } from "@repo/contracts/sharing";
-import type { SiteSettings } from "@repo/contracts/site";
 import {
   BlocksRemoved,
   CannotDecide,
   type Decision,
   DraftNotFound,
   NothingToRollBack,
+  SettingsChanged,
   SubmissionNotFound,
 } from "@repo/contracts/studio";
 import type { Workflow } from "@repo/contracts/workflow";
@@ -50,6 +51,7 @@ import { migrations } from "./site/migrations.ts";
 import { Outbox } from "./site/outbox.ts";
 import { LiveUpdates } from "./site/platform.ts";
 import { SiteReleases } from "./site/releases.ts";
+import { SiteSettingsStore } from "./site/settings.ts";
 import { Site } from "./site/site.ts";
 
 /** Who a live connection is for, and the draft it edits, as studio-api found them. */
@@ -75,6 +77,7 @@ export const SiteDocError = Schema.Union([
   NothingToRollBack,
   SubmissionNotFound,
   CannotDecide,
+  SettingsChanged,
 ]);
 export type SiteDocError = typeof SiteDocError.Type;
 
@@ -142,7 +145,14 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     const site = Schema.decodeSync(SiteId)(this.name);
     this.#runtime ??= ManagedRuntime.make(
       Site.layer.pipe(
-        Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer, SiteApprovals.layer)),
+        Layer.provide(
+          Layer.mergeAll(
+            SiteDrafts.layer,
+            SiteReleases.layer,
+            SiteApprovals.layer,
+            SiteSettingsStore.layer,
+          ),
+        ),
         Layer.provideMerge(Outbox.layer),
         Layer.provide(Layer.effectDiscard(Migrator.make({})({ loader: migrations }))),
         Layer.provideMerge(SqliteClient.layer({ storage: this.ctx.storage })),
@@ -345,9 +355,17 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     }
   }
 
-  /** Starts a new site with its first release, and returns the draft it's built in. */
-  start(by: Collaborator, settings: SiteSettings, brand: BrandRevision) {
-    return this.#changing(() => this.#run((site) => site.start(by, settings, brand)));
+  /** Starts a new site with its name and first release, and returns the draft it's built in. */
+  start(by: Collaborator, name: typeof SiteName.Type, brand: BrandRevision) {
+    return this.#changing(() => this.#run((site) => site.start(by, name, brand)));
+  }
+
+  settings() {
+    return this.#run((site) => site.settings);
+  }
+
+  saveSettings(by: Collaborator, changes: SettingsChanges, seen: number) {
+    return this.#changing(() => this.#call((site) => site.saveSettings(by, changes, seen)));
   }
 
   live() {

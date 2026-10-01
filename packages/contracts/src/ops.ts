@@ -5,7 +5,7 @@ import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BatchId, BlockId, BlockType, FormId, PageId } from "./ids.ts";
 import { PageDocument, PagePath } from "./page.ts";
-import { Menus, SiteSettings } from "./site.ts";
+import { Menus } from "./site.ts";
 import { LiveRelease, Lockfile } from "./snapshot.ts";
 
 /** Where a block lives: a page, or the site-level parts that hold the header and footer. */
@@ -140,7 +140,7 @@ export type DeletePage = typeof DeletePage.Type;
 
 /**
  * Moves a draft onto a release, with the site-wide values only a merge
- * changes: the block lockfile, the brand revision, settings, forms and menus.
+ * changes: the block lockfile, the brand revision, forms and menus.
  * SiteDoc makes it when it merges a release into a draft, publishes the
  * draft, or moves a Brand update draft to a newer revision; people's batches
  * can't carry it.
@@ -150,7 +150,6 @@ export const Rebase = Schema.Struct({
   base: LiveRelease,
   lockfile: Lockfile,
   brand: BrandRevision,
-  settings: SiteSettings,
   forms: Schema.Record(FormId, FormDefinition),
   menus: Menus,
 });

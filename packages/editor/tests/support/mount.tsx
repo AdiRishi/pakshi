@@ -85,6 +85,7 @@ export const openEditor = async (
       mediaSrc={() => pixel}
       suggestAltText={async () => "Boats moored in the harbour at sunset"}
       siteCss={siteCss}
+      settings={fixtureSite.settings}
       scheme="light"
       person={meera}
       connection={siteDoc.connection(meera)}

@@ -16,7 +16,8 @@ const write = (root: string, path: string, text: string) => {
 };
 
 const hero = "packages/blocks/src/hero/v1/index.tsx";
-const baseline = "infra/tests/blocks.integration.test.ts-snapshots/hero-v1-centered-light-darwin.png";
+const baseline =
+  "infra/tests/blocks.integration.test.ts-snapshots/hero-v1-centered-light-darwin.png";
 const log = "packages/blocks/src/rendering-changes.json";
 
 /** A repository whose main branch has released hero v1 with a screenshot, on a branch off main. */

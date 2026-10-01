@@ -1,6 +1,7 @@
 import { D1Client } from "@effect/sql-d1";
 import { MediaId, type SiteId } from "@repo/contracts/ids";
 import { PageDocument } from "@repo/contracts/page";
+import { liveOf } from "@repo/contracts/settings";
 import {
   LiveRelease,
   MediaFile,
@@ -75,11 +76,27 @@ export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
         }),
     }),
     Layer.succeed(OutboxDelivery)({
-      deliver: (message) =>
-        (message._tag === "Notify"
-          ? notify(mailer, site, message.notification, message.submission, message.studio)
-          : recordCopy(site, message)
-        ).pipe(Effect.provide(core), Effect.orDie),
+      deliver: (message) => {
+        switch (message._tag) {
+          case "Notify":
+            return notify(
+              mailer,
+              site,
+              message.notification,
+              message.submission,
+              message.studio,
+            ).pipe(Effect.provide(core), Effect.orDie);
+          case "Settings":
+            return Effect.andThen(
+              Effect.promise(() =>
+                env.SITE_SUBMISSIONS.getByName(site).configure(liveOf(message.settings)),
+              ),
+              recordCopy(site, message).pipe(Effect.provide(core), Effect.orDie),
+            );
+          default:
+            return recordCopy(site, message).pipe(Effect.provide(core), Effect.orDie);
+        }
+      },
     }),
   );
 };

@@ -1,6 +1,7 @@
 import { Schema } from "effect";
 
 import { DefaultRole } from "./access.ts";
+import { EmailAddress } from "./email.ts";
 import { BrandId, InvitationId, SiteId } from "./ids.ts";
 import { Collaborator } from "./live.ts";
 import { Timestamp } from "./release.ts";
@@ -27,13 +28,6 @@ const trimmed = (min: number, max: number, message: string) =>
 
 export const OrganizationName = trimmed(1, 80, "Name the organization");
 export const PersonName = trimmed(1, 80, "Enter your name");
-
-/** An email address as people type it. Pakshi compares addresses without case. */
-export const EmailAddress = Schema.Trim.check(
-  Schema.isMaxLength(254),
-  Schema.isPattern(/^[^\s@]+@[^\s@]+\.[^\s@]+$/, { message: "Enter an email address" }),
-);
-export type EmailAddress = typeof EmailAddress.Type;
 
 export const passwordLength = { min: 10, max: 128 } as const;
 

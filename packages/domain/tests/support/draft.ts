@@ -18,7 +18,6 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
   site: "site_harbour",
   base: { release: "rel_sample1", snapshot: "snap_sample1" },
   revision: 0,
-  settings: { name: "Harbour Summer School" },
   parts: {
     header: "b_header",
     footer: "b_footer",

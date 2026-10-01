@@ -1049,6 +1049,10 @@ importers:
   tooling/tsconfig: {}
 
   workers/sites-api:
+    dependencies:
+      '@repo/contracts':
+        specifier: workspace:*
+        version: link:../../packages/contracts
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'

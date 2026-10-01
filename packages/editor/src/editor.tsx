@@ -4,6 +4,7 @@ import { type Draft, isBehind } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { Target } from "@repo/contracts/ops";
+import type { PublishedSettings } from "@repo/contracts/settings";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { Equal } from "effect";
@@ -105,6 +106,8 @@ export function EditorProvider(props: {
   readonly mediaSrc: (id: MediaId) => string;
   readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
   readonly siteCss: string;
+  /** The site's published settings, which pages show with, such as its name. */
+  readonly settings: PublishedSettings;
   readonly scheme: "light" | "dark";
   /** The person editing, as the others see them. */
   readonly person: Collaborator;
@@ -143,6 +146,7 @@ export function EditorProvider(props: {
       mediaSrc: props.mediaSrc,
       suggestAltText: props.suggestAltText,
       siteCss: props.siteCss,
+      settings: props.settings,
       scheme: props.scheme,
     }),
     [
@@ -152,6 +156,7 @@ export function EditorProvider(props: {
       props.mediaSrc,
       props.suggestAltText,
       props.siteCss,
+      props.settings,
       props.scheme,
     ],
   );

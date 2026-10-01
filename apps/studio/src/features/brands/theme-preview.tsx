@@ -88,7 +88,7 @@ export function ThemePreview(props: {
   const data = useMemo(() => {
     const files = new Map(props.media.map((file) => [file.id, file]));
     return siteData({
-      settings: { name: props.brand.name },
+      settings: { name: props.brand.name, sharingImage: null },
       identity: props.identity,
       menus: fixtureSite.menus,
       pages: fixtureSite.pages,

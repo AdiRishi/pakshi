@@ -44,9 +44,3 @@ export const SiteParts = Schema.Struct({
   }),
 );
 export type SiteParts = typeof SiteParts.Type;
-
-/** The site-wide values every snapshot and draft carries. */
-export const SiteSettings = Schema.Struct({
-  name: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(80)),
-});
-export type SiteSettings = typeof SiteSettings.Type;

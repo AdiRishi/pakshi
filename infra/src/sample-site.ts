@@ -68,7 +68,7 @@ export const sampleSite = async () => {
     schema: "pakshi.snapshot/1",
     id: site.snapshot,
     site: site.site.id,
-    settings: { name: site.site.name },
+    settings: { name: site.site.name, sharingImage: null },
     parts: site.parts,
     forms: site.forms,
     lockfile: site.lockfile,
