@@ -62,6 +62,7 @@ import { Logo } from "@/components/logo";
 import { ChatPanel } from "@/features/agent/chat-panel";
 import { standing } from "@/features/approvals/describe";
 import { DraftActions } from "@/features/drafts/draft-actions";
+import { uploadImage } from "@/features/media/upload";
 import { draftImage } from "@/features/preview/address";
 import { suggestAltText } from "@/features/sites/functions";
 
@@ -381,6 +382,9 @@ export function EditorPage(props: {
       mediaSrc={mediaSrc}
       suggestAltText={(media, block) =>
         suggestAltText({ data: { site: props.site, draft: props.draft, media, block } })
+      }
+      uploadImage={
+        data.can.upload ? (file) => uploadImage(file, { kind: "site", id: props.site }) : null
       }
       siteCss={siteCss}
       settings={data.settings}

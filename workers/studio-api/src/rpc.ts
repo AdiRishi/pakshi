@@ -172,6 +172,7 @@ const abilities = (permissions: ReadonlyArray<Permission>): SiteAbilities => ({
   publish: permissions.includes("site.publish"),
   rollBack: permissions.includes("site.rollback"),
   share: permissions.includes("draft.share"),
+  upload: permissions.includes("page.edit"),
 });
 
 /** How many entries Studio lists at a time. */

@@ -68,6 +68,7 @@ export const openEditor = async (
     readonly page?: PageId;
     readonly definitions?: ReadonlyMap<BlockType, BlockDefinition>;
     readonly siteDoc?: FakeSiteDoc;
+    readonly uploadImage?: (file: File) => Promise<MediaSummary>;
   } = {},
 ) => {
   const siteDoc =
@@ -77,6 +78,7 @@ export const openEditor = async (
   await page.viewport(1440, 900);
   await render(
     <EditorProvider
+      uploadImage={options.uploadImage ?? null}
       draft={options.draft ?? fixtureDraft}
       live={(options.draft ?? fixtureDraft).base}
       page={options.page ?? home}

@@ -14,7 +14,7 @@ import type { ReactNode } from "react";
 /** A site's name, what it's showing, and links to the site's sections. */
 export function SiteHeader(props: {
   readonly site: { readonly id: SiteId; readonly name: string };
-  readonly section: "drafts" | "releases" | "submissions" | "blocks" | "settings";
+  readonly section: "drafts" | "releases" | "submissions" | "media" | "blocks" | "settings";
   readonly description: string;
   readonly actions?: ReactNode;
 }) {
@@ -22,6 +22,7 @@ export function SiteHeader(props: {
     { key: "drafts", label: "Drafts", to: "/sites/$siteId" },
     { key: "releases", label: "Releases", to: "/sites/$siteId/releases" },
     { key: "submissions", label: "Submissions", to: "/sites/$siteId/submissions" },
+    { key: "media", label: "Media", to: "/sites/$siteId/media" },
     { key: "blocks", label: "Blocks", to: "/sites/$siteId/blocks" },
     { key: "settings", label: "Settings", to: "/sites/$siteId/settings" },
   ] as const;

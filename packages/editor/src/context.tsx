@@ -27,6 +27,8 @@ export interface EditorServices {
   readonly scheme: "light" | "dark";
   /** Alt text Pakshi suggests for an image where a block places it, or null. */
   readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
+  /** Adds an image to the site's library, or null for someone who can't. */
+  readonly uploadImage: ((file: File) => Promise<MediaSummary>) | null;
 }
 
 const ServicesContext = createContext<EditorServices | null>(null);

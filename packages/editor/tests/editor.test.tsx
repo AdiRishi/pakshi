@@ -1,6 +1,6 @@
 import type { BlockDefinition, RichTextDocument } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
-import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
+import { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import { Schema } from "effect";
 import { afterEach, describe, expect, test } from "vitest";
 import { cleanup } from "vitest-browser-react";
@@ -175,6 +175,39 @@ describe("choosing an image", () => {
     await expect
       .poll(() => siteDoc.draft().pages[home]?.blocks[split]?.props["image"])
       .toEqual({ $ref: "media", id: pattern.id, alt: "" });
+  });
+});
+
+describe("uploading an image", () => {
+  test("adds it to the library and puts it in the block, waiting for alt text", async () => {
+    const uploaded: Array<string> = [];
+    const { siteDoc, canvas } = await open({
+      uploadImage: async (file) => {
+        uploaded.push(file.name);
+        return {
+          id: MediaId.make("med_upload"),
+          contentType: "image/png",
+          width: 1200,
+          height: 800,
+          alt: "",
+        };
+      },
+    });
+    const split = BlockId.make("b_splitimageleft");
+    canvas()
+      .querySelector<HTMLElement>(`[data-pakshi-block='${split}'] [data-pakshi-field='image']`)
+      ?.focus();
+    await userEvent.keyboard("{Enter}");
+    const chooser = document.querySelector<HTMLInputElement>("input[type='file']");
+    if (chooser === null) throw new Error("The popover has no file chooser.");
+    await userEvent.upload(chooser, new File(["png"], "reading-room.png", { type: "image/png" }));
+    await expect
+      .poll(() => siteDoc.draft().pages[home]?.blocks[split]?.props["image"])
+      .toEqual({ $ref: "media", id: "med_upload" });
+    expect(uploaded).toEqual(["reading-room.png"]);
+    await expect
+      .element(page.getByRole("button", { name: "med_upload", exact: true }))
+      .toHaveAttribute("aria-pressed", "true");
   });
 });
 
