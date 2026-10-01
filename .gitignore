@@ -12,6 +12,7 @@ coverage/
 .vitest/
 test-results/
 playwright-report/
+.playwright/
 *.tsbuildinfo
 *.log
 .env*

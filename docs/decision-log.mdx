@@ -96,11 +96,11 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** Several checkpoints moved their checks to whichever checkpoint first needed production, which pulled production setup into the middle of the plan. Meanwhile every stage but production seeded test users, a sample site and the block fixture sites, and signed people in through a test identity provider, so tests and demos never went through setting Pakshi up.
 
-**Decision.** Every checkpoint is built and checked in the dev stack, and a final checkpoint deploys production and runs the checks that need Cloudflare's network. Pakshi gains email and password sign-in through Better Auth. An empty stack is set up by its first visitor, who names the organization and becomes its org admin; everyone after joins by invitation with a default role. Org admins create brands, and org and brand admins create sites. The test identity provider, the seeded users and the sample site go, and tests set up what they need through Studio or the endpoints it calls. Sign-in through the organization's identity provider returns with production.
+**Decision.** Every checkpoint is built and checked in the dev stack, and a final checkpoint deploys production and runs the checks that need Cloudflare's network. Pakshi gains email and password sign-in through Better Auth. An empty stack is set up by its first visitor, who names the organization and becomes its org admin; everyone after joins by invitation with a default role. Org admins create brands, and org and brand admins create sites. The test identity provider, the seeded users and the sample site go. Integration journeys set Pakshi up through Studio, while unit and E2E tests set up whatever data they need ([kinds of tests](/adr/three-kinds-of-tests)). Sign-in through the organization's identity provider returns with production.
 
 **Rejected.** Keeping seeded test users and sites in dev, which tests a Pakshi no one will run; open sign-up, which lets anyone who reaches Studio in.
 
-**Consequences.** `pnpm dev` starts empty. Each browser suite pays for its own setup. Decisions 052 and 070 point at the production checkpoint, and a stage holds one organization, as each deployment of Pakshi does.
+**Consequences.** `pnpm dev` starts empty. The integration journeys share one setup, made through Studio. Decisions 052 and 070 point at the production checkpoint, and a stage holds one organization, as each deployment of Pakshi does.
 
 ## 070 — Measuring `sites` startup moves to checkpoint 9, with production [#decision-070]
 

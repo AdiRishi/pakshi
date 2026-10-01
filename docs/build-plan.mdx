@@ -13,7 +13,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
 - **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
 - **Every checkpoint is built and checked in the dev stack.** Each ends in a demo someone can run locally with `pnpm dev`. Nothing before the [last checkpoint](#12-production) deploys to production; checks that need Cloudflare's network, such as custom hostnames or KV propagation, wait for it.
-- **Tests and demos act as real people.** They start from an empty stack, set up the organization, create brands and sites, and invite the people they need, through Studio or the endpoints Studio calls. Nothing writes to D1, KV or R2 behind the product's back.
+- **Demos and integration journeys act as real people.** They start from an empty stack, set up the organization, create brands and sites, and invite the people they need, through Studio. Unit and E2E tests set up whatever data they need ([kinds of tests](/adr/three-kinds-of-tests)).
 - **The riskiest work comes first.** Checkpoints 1 to 5 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
 - **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
 - **This doc changes as we learn.** Tick checkpoints off, and split or reorder them when that makes the work clearer.
@@ -241,7 +241,7 @@ Pakshi starts empty, and people set it up the way a real organization would: no 
 - Invitations: someone who may manage members invites a person by email with a default role on the organization, a brand or a site. The invitation is emailed, its link can be copied, and opening it creates the person's account with that grant, or adds the grant to their account. A person can't invite with a role holding permissions they don't hold there.
 - [Creating brands and sites](/product-spec#sites-and-brands): org admins create brands, from a name, a preset and a brand color, and org and brand admins create sites in them. A new site gets its platform subdomain at once, starts from a release with its brand's newest revision, a header, a footer and no pages, and opens in its first draft.
 - Platform subdomains in the dev stack, at `{site}.localhost` on the Sites Worker's port.
-- The seeded sample site and the seeded test users go. Every browser test sets up its own organization, brands, sites and people through Studio or its endpoints.
+- The seeded sample site and the seeded test users go. Tests follow the [three kinds](/adr/three-kinds-of-tests): unit tests for most behaviour, E2E tests that run each Worker on the Cloudflare Vitest plugin, and a few integration journeys in Playwright that set up their own organization, brands, sites and people through Studio.
 
 **Demo:** on an empty `pnpm dev` stack, set up the organization, create a brand and a site, invite an editor, sign in as them in another browser, build a page and publish it at the site's subdomain.
 
@@ -251,7 +251,7 @@ Pakshi starts empty, and people set it up the way a real organization would: no 
 - Nobody can create an account without an invitation once the organization exists, and an invitation's link works once, for its own email address, before it expires.
 - A person can't invite someone with a role that holds a permission they don't hold on that scope.
 - A new site answers at its platform subdomain as soon as it's created, and serves its first published page there.
-- Every browser test starts from its own setup, and nothing writes to D1, KV or R2 behind the product's back.
+- The integration journeys start from an empty stack and set it up through Studio. Only the block fixture sites are seeded, because no site can move back to an older block version.
 
 ## 10. Site essentials
 
