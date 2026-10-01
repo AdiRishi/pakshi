@@ -11,6 +11,7 @@ import {
   domainAddress,
   emailEntriesTo,
   openHome,
+  siteAddress,
   studioUrl,
   submit,
   unique,
@@ -36,6 +37,8 @@ test("a visitor sends a form on a site's own domain, and its admin reads, export
   await priya.getByRole("link", { name: "Edit" }).first().click();
   await submit(priya, "Publish");
 
+  // Rendered first at the platform address, so the domain must not be handed its cached page.
+  await expect(await priya.request.get(siteAddress(address))).toBeOK();
   const hostname = `${address}.riverton.localhost`;
   await connectDomain(priya, site, hostname);
 
@@ -45,6 +48,7 @@ test("a visitor sends a form on a site's own domain, and its admin reads, export
     .poll(async () => (await visitor.request.get(home)).text())
     .toContain("Ask for a room");
   await visitor.goto(home);
+  await expect(visitor.locator("link[rel=canonical]")).toHaveAttribute("href", `${home}/`);
   await visitor.getByLabel("Your name").fill("Ama Mensah");
   await visitor.getByLabel("Email").fill("ama@example.org");
   await visitor.getByLabel("I agree to the privacy policy").check();
