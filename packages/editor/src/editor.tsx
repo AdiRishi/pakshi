@@ -6,7 +6,6 @@ import type { Collaborator } from "@repo/contracts/live";
 import type { Target } from "@repo/contracts/ops";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
-import { themeCss } from "@repo/tokens";
 import { Equal } from "effect";
 import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
 
@@ -315,7 +314,6 @@ export function EditorCanvas(props: {
   const title = useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
   const selection = useEditorState((state) => state.selection);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);
-  const css = useMemo(() => themeCss(theme, scheme), [theme, scheme]);
 
   // The canvas shows the page as sites renders it, but its links don't navigate and its forms don't submit.
   const canvasDocument = controls.document;
@@ -339,7 +337,8 @@ export function EditorCanvas(props: {
       <CanvasFrame
         title={`Canvas: ${title || "Untitled page"}`}
         siteCss={siteCss}
-        themeCss={css}
+        theme={theme}
+        scheme={scheme}
         accent={props.accent}
         presence={props.presence}
         width={props.width}
