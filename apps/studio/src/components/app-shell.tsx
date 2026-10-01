@@ -26,6 +26,7 @@ import {
   PaletteIcon,
   ShieldCheckIcon,
   UsersIcon,
+  WorkflowIcon,
 } from "lucide-react";
 import { type ReactNode, useId } from "react";
 
@@ -99,7 +100,7 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
               </SidebarMenu>
             </nav>
           </SidebarGroup>
-          {(can.invite || can.manageRoles || can.readAudit) && (
+          {(can.invite || can.manageRoles || can.editWorkflow || can.readAudit) && (
             <SidebarGroup>
               <SidebarGroupLabel id={organizationLabel} className="text-muted-foreground">
                 Organization
@@ -128,6 +129,20 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                       Roles
                     </SidebarMenuButton>
                   </SidebarMenuItem>
+                  {can.editWorkflow && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        size="lg"
+                        isActive={
+                          matchRoute({ to: "/organization/workflow", fuzzy: true }) !== false
+                        }
+                        render={<Link to="/organization/workflow" />}
+                      >
+                        <WorkflowIcon />
+                        Approval workflow
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                   {can.readAudit && (
                     <SidebarMenuItem>
                       <SidebarMenuButton

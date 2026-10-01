@@ -135,6 +135,8 @@ export const Viewer = Schema.Struct({
     invite: Schema.Boolean,
     /** Make and change custom roles. */
     manageRoles: Schema.Boolean,
+    /** Edit the organization's approval workflow. */
+    editWorkflow: Schema.Boolean,
     /** Read the audit log of anything. */
     readAudit: Schema.Boolean,
   }),

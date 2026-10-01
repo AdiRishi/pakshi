@@ -81,6 +81,7 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
       createSite: newSiteBrands.length > 0,
       invite: places.length > 0,
       manageRoles: mayDefineRole(access, []),
+      editWorkflow: authorize(access, "workflow.edit", { kind: "organization" }),
       readAudit: authorize(access, "audit.read", { kind: "organization" }),
     },
   };

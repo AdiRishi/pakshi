@@ -61,6 +61,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
         createSite: false,
         invite: false,
         manageRoles: false,
+        editWorkflow: false,
         readAudit: false,
       },
     }),

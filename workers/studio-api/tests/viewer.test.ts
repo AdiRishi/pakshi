@@ -10,6 +10,20 @@ const viewerOf = (id: string) =>
 const siteNames = (id: string) =>
   Effect.map(viewerOf(id), (viewer) => viewer.sites.map((site) => site.name));
 
+it.effect("an org admin can edit the organization's approval workflow", () =>
+  Effect.gen(function* () {
+    const viewer = yield* viewerOf("user_org");
+    expect(viewer.can.editWorkflow).toBe(true);
+  }),
+);
+
+it.effect("a brand admin cannot edit the organization's approval workflow", () =>
+  Effect.gen(function* () {
+    const viewer = yield* viewerOf("user_brand");
+    expect(viewer.can.editWorkflow).toBe(false);
+  }),
+);
+
 it.effect("an org admin can edit every site, and holds the role on the organization", () =>
   Effect.gen(function* () {
     const viewer = yield* viewerOf("user_org");
