@@ -152,7 +152,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** [Decision 041](#decision-041) kept a person's permissions on each live connection's socket. The agent's batches carried a flag captured when its conversation opened, so it would keep editing after its person lost `page.edit`.
 
-**Decision.** `SiteDoc` keeps what each person may do on the site in its own storage. studio-api records it when someone opens a live connection or a conversation with the agent, and a grant, override or role change sends every site it covers what the people it changed may do now, before the change returns. Live and agent batches are both checked against it, and `SiteDoc` closes the connections of anyone who can no longer edit their draft.
+**Decision.** `SiteDoc` keeps what each person may do on the site in its own storage. studio-api records it when someone opens a live connection or a conversation with the agent, and a grant, override or role change sends every site it covers what the people it changed may do now, before the change returns. If a site can't be told, the change fails as one to try again, and trying again tells every site again even though D1 already holds it. Live and agent batches are both checked against it, and `SiteDoc` closes the connections of anyone who can no longer edit their draft.
 
 **Consequences.** A removed permission stops the next batch from a person and their agent alike.
 
