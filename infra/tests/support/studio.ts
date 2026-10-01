@@ -140,6 +140,38 @@ export const addTextSection = async (
   await expect(page.getByText("Saved to the draft")).toBeVisible();
 };
 
+/**
+ * Adds a form section to the end of the page, with a new form whose consent
+ * checkbox links to the page it's on.
+ */
+export const addFormSection = async (page: Page, canvas: FrameLocator, heading: string) => {
+  await page.getByRole("tab", { name: "Outline" }).click();
+  await page
+    .getByRole("tabpanel", { name: "Outline" })
+    .getByRole("button", { name: "Add a section" })
+    .click();
+  await page.getByPlaceholder("Search blocks").fill("Form");
+  await page.keyboard.press("Enter");
+  const section = canvas.locator("[data-pakshi-block]:has(form)").last();
+  await typeInto(page, section.locator('[data-pakshi-field="heading"]'), heading);
+  await typeInto(page, section.locator('[data-pakshi-field="intro"]'), "We reply within a day.");
+  await page.getByLabel("Form", { exact: true }).selectOption({ label: "Start a new form" });
+  await page.getByLabel("Links to", { exact: true }).selectOption({ index: 1 });
+  await expect(page.getByText("Saved to the draft")).toBeVisible();
+};
+
+/** Has a form's new entries emailed to an address, from the site's settings. */
+export const emailEntriesTo = async (page: Page, site: string, form: string, email: string) => {
+  await page.goto(`${studioUrl}/sites/${site}/settings/forms`);
+  await expect(async () => {
+    await page.getByLabel(`Add an email address for ${form}`, { exact: true }).fill(email);
+    await page.getByRole("button", { name: "Add", exact: true }).click({ timeout: 1000 });
+    await expect(page.getByText(email)).toBeVisible({ timeout: 1000 });
+  }).toPass();
+  await page.getByRole("button", { name: "Save changes" }).click();
+  await expect(page.getByText("Settings saved")).toBeVisible();
+};
+
 /** Gives the page open in the editor its description, which publishing needs. */
 export const describePage = async (page: Page, description: string) => {
   // With a block selected, the settings panel shows it; Page settings goes back to the page's.

@@ -27,6 +27,7 @@ import {
 import { FieldPresence } from "../participants.tsx";
 import { AltTextSuggestion } from "./alt-text-suggestion.tsx";
 import { FieldInput, FieldTextarea } from "./field-text.tsx";
+import { FormEditor, newForm } from "./form-editor.tsx";
 
 type Json = Schema.Json;
 
@@ -285,21 +286,35 @@ function LinkChooser(props: ControlProps<KindOf<"link">>) {
   );
 }
 
+/** The value the form picker gives the choice of starting a new form. */
+const startNewForm = "new";
+
 function FormControl(props: ControlProps<KindOf<"form">>) {
   const forms = useEditorState((state) => state.view.forms);
   const { run, errors } = useRun();
   const current = props.value?.id ?? "";
+  const chosen = Object.values(forms).find((form) => form.id === current);
   return (
     <ControlRow
       field={props.field}
       definition={props.definition}
       value={props.value}
       errors={errors}
+      description={
+        chosen === undefined ? "Start a new form, or choose one the site already has." : undefined
+      }
     >
       <NativeSelect
         id={controlId(props.field)}
         value={current}
-        onChange={(event) => run([setProp(props.field, { $ref: "form", id: event.target.value })])}
+        onChange={(event) => {
+          if (event.target.value !== startNewForm) {
+            run([setProp(props.field, { $ref: "form", id: event.target.value })]);
+            return;
+          }
+          const form = newForm();
+          run([{ op: "setForm", form }, setProp(props.field, { $ref: "form", id: form.id })]);
+        }}
         className="w-full"
       >
         {current === placeholderForm.id && (
@@ -312,7 +327,9 @@ function FormControl(props: ControlProps<KindOf<"form">>) {
             {form.name}
           </NativeSelectOption>
         ))}
+        <NativeSelectOption value={startNewForm}>Start a new form</NativeSelectOption>
       </NativeSelect>
+      {chosen !== undefined && <FormEditor form={chosen} />}
     </ControlRow>
   );
 }

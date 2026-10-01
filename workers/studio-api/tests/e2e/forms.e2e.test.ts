@@ -118,7 +118,12 @@ it.live(
       expect(yield* priya.deleteEntriesFor({ site: site.site, email: "ama@example.org" })).toEqual({
         deleted: 1,
       });
-      const left = yield* priya.formEntries({ site: site.site, form: booking, before: null });
+      const left = yield* priya.formEntries({
+        site: site.site,
+        form: booking,
+        search: null,
+        before: null,
+      });
       expect(left.entries).toEqual([]);
     }),
 );

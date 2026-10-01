@@ -1,7 +1,7 @@
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { describe, expect, it } from "@effect/vitest";
 import { NewEntry } from "@repo/contracts/entries";
-import { SiteId } from "@repo/contracts/ids";
+import { FormFieldId, SiteId } from "@repo/contracts/ids";
 import { LiveSettings } from "@repo/contracts/settings";
 import { Effect, Layer, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
@@ -85,9 +85,38 @@ describe("deleting everything for one person", () => {
       Effect.gen(function* () {
         yield* entries.receive(site, booking);
         yield* entries.receive(site, { ...booking, email: null });
+        expect(yield* entries.countFor("Ama@Example.org")).toMatchObject([
+          { form: booking.form, entries: 1 },
+        ]);
         expect(yield* entries.removeFor("AMA@example.org")).toBe(1);
-        const left = yield* entries.entries({ form: booking.form, before: null, limit: 10 });
+        const left = yield* entries.entries({
+          form: booking.form,
+          search: null,
+          before: null,
+          limit: 10,
+        });
         expect(left.map((entry) => entry.email)).toEqual([null]);
+      }),
+    ),
+  );
+});
+
+describe("listing a form's entries", () => {
+  it.effect("finds the ones with an answer that contains the search, newest first", () =>
+    withEntries((entries) =>
+      Effect.gen(function* () {
+        yield* entries.receive(site, booking);
+        yield* entries.receive(site, {
+          ...booking,
+          fields: [{ id: FormFieldId.make("ff_name"), label: "Your name", value: "Kofi Boateng" }],
+        });
+        const found = yield* entries.entries({
+          form: booking.form,
+          search: "kofi",
+          before: null,
+          limit: 10,
+        });
+        expect(found.map((entry) => entry.fields[0]?.value)).toEqual(["Kofi Boateng"]);
       }),
     ),
   );

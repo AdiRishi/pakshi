@@ -91,6 +91,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     formEntry: unused,
     exportEntries: unused,
     deleteEntry: unused,
+    entriesFrom: unused,
     deleteEntriesFor: unused,
     siteDrafts: unused,
     createDraft: unused,

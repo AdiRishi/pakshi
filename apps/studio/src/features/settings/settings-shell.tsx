@@ -10,6 +10,7 @@ import { SiteHeader } from "../sites/site-header";
 
 const pages = [
   { key: "general", label: "General", to: "/sites/$siteId/settings" },
+  { key: "forms", label: "Forms and email", to: "/sites/$siteId/settings/forms" },
   { key: "workflow", label: "Approval workflow", to: "/sites/$siteId/settings/workflow" },
 ] as const;
 
