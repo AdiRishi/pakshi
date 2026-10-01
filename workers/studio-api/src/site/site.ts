@@ -50,6 +50,7 @@ import {
   DraftNotFound,
   type DraftSummary,
   NothingToRollBack,
+  type PageStanding,
   type PageSummary,
   ReviewPage,
   type SettingsChanged,
@@ -74,7 +75,7 @@ import {
 import { rebaseOps } from "@repo/domain/rebase";
 import { draftAccess, type Visitor } from "@repo/domain/sharing";
 import type { Surface } from "@repo/tokens";
-import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
+import { Context, Effect, Equal, Layer, Option, Schema, Semaphore } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 
 import { SiteApprovals, type Stored } from "./approvals.ts";
@@ -144,7 +145,16 @@ export interface BlockInUse {
 export interface DraftView {
   readonly draft: Draft;
   readonly summary: DraftSummary;
+  /** How each of the draft's pages stands against the live site. */
+  readonly standings: Readonly<Record<PageId, PageStanding>>;
 }
+
+/** How a draft's page stands against the live site's page with its ID. */
+const standingOf = (page: PageDocument, live: PageDocument | undefined): PageStanding => {
+  if (page.status === "unpublished") return "unpublished";
+  if (live === undefined || live.status === "unpublished") return "new";
+  return Equal.equals(page, live) ? "live" : "changed";
+};
 
 export type Opened =
   | { readonly _tag: "Ready"; readonly draft: Draft; readonly summary: DraftSummary }
@@ -1139,13 +1149,21 @@ export class Site extends Context.Service<
               }),
             ),
           ),
-        view: (id) =>
-          inStorageTurn(
+        view: Effect.fn("Site.view")(function* (id) {
+          const live = yield* contentOf((yield* liveRelease).snapshot);
+          return yield* inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              return { draft, summary: yield* summary(id) };
+              const standings = Object.fromEntries(
+                Object.values(draft.pages).map((page) => [
+                  page.id,
+                  standingOf(page, live.pages[page.id]),
+                ]),
+              );
+              return { draft, summary: yield* summary(id), standings };
             }),
-          ),
+          );
+        }),
         open: Effect.fn("Site.open")(function* (by, id) {
           const clean = yield* inReleaseTurn(updateIfClean(by, id));
           if (!clean) return { _tag: "NeedsUpdate" } as const;

@@ -1,10 +1,12 @@
 import { fieldAt, placeholderPaths } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId } from "@repo/contracts/ids";
-import type { BatchError, MetaField, Target } from "@repo/contracts/ops";
+import type { BatchError, MetaField, Op, Target } from "@repo/contracts/ops";
 import { PagePath, type PostMeta } from "@repo/contracts/page";
+import { WebUrl } from "@repo/contracts/references";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
+import { Checkbox } from "@repo/ui/components/checkbox";
 import {
   Field,
   FieldDescription,
@@ -15,7 +17,9 @@ import {
   FieldLegend,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
-import { Schema } from "effect";
+import { Label } from "@repo/ui/components/label";
+import { Switch } from "@repo/ui/components/switch";
+import { Option, Schema } from "effect";
 import { CircleAlertIcon, EllipsisIcon } from "lucide-react";
 import { useId, useState } from "react";
 
@@ -239,16 +243,21 @@ function PostTags(props: { readonly value: ReadonlyArray<string> }) {
   );
 }
 
-/** A post's cover image, chosen from the library, with alt text for where it's shown. */
-function PostCover(props: { readonly value: PostMeta["cover"] }) {
-  const { set, errors, burst, endBurst } = useSetMeta("cover");
+/** An image meta field, chosen from the library, with alt text for where it's shown. */
+function MetaImage(props: {
+  readonly field: "cover" | "image";
+  readonly title: string;
+  readonly description: string;
+  readonly value: PostMeta["cover"];
+}) {
+  const { set, errors, burst, endBurst } = useSetMeta(props.field);
   const altId = useId();
   const cover = props.value;
   return (
     <FieldSet>
       <div className="flex items-center justify-between gap-2">
         <FieldLegend variant="label">
-          Cover image <span className="font-normal text-muted-foreground">Optional</span>
+          {props.title} <span className="font-normal text-muted-foreground">Optional</span>
         </FieldLegend>
         {cover !== undefined && (
           <Button variant="ghost" size="xs" onClick={() => set(undefined)}>
@@ -256,8 +265,12 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
           </Button>
         )}
       </div>
-      <FieldDescription>Shown with the post in blog lists and when it's shared.</FieldDescription>
-      <LibraryPicker chosen={cover?.id} onChoose={(image) => set(image)} />
+      <FieldDescription>{props.description}</FieldDescription>
+      <LibraryPicker
+        label={`Library for the ${props.title.toLowerCase()}`}
+        chosen={cover?.id}
+        onChoose={(image) => set(image)}
+      />
       {cover !== undefined && (
         <Field>
           <FieldLabel htmlFor={altId}>Alt text</FieldLabel>
@@ -281,12 +294,16 @@ function PostCover(props: { readonly value: PostMeta["cover"] }) {
 
 const isPagePath = Schema.is(PagePath);
 
-/** The page's address, saved once it's a valid address that no other page has. */
-function PageAddress(props: { readonly value: string }) {
+/**
+ * The page's address, saved once it's a valid address that no other page
+ * has. Its old address can send visitors on to it.
+ */
+function PageAddress(props: { readonly value: PagePath }) {
   const store = useStore();
   const page = useEditorState((state) => state.page);
   const id = useId();
-  const [typed, setTyped] = useState(props.value);
+  const [typed, setTyped] = useState<string>(props.value);
+  const [redirect, setRedirect] = useState(true);
   const [errors, setErrors] = useState<ReadonlyArray<{ readonly message: string }>>([]);
   const save = () => {
     if (typed === props.value) return;
@@ -299,11 +316,10 @@ function PageAddress(props: { readonly value: string }) {
       ]);
       return;
     }
-    setErrors(
-      store
-        .run([{ op: "setPath", page, path: typed }])
-        .map((error) => ({ message: error.message })),
-    );
+    const ops: Array<Op> = [{ op: "setPath", page, path: typed }];
+    if (redirect)
+      ops.push({ op: "setRedirect", from: props.value, to: { $ref: "page", id: page } });
+    setErrors(store.run(ops).map((error) => ({ message: error.message })));
   };
   return (
     <Field data-invalid={errors.length > 0 || undefined}>
@@ -320,8 +336,70 @@ function PageAddress(props: { readonly value: string }) {
         }}
       />
       <FieldDescription>Menu links follow the page when its address changes.</FieldDescription>
+      {typed !== props.value && (
+        <Label className="font-normal">
+          <Checkbox checked={redirect} onCheckedChange={setRedirect} />
+          Send visitors from {props.value} here
+        </Label>
+      )}
       <FieldError errors={[...errors]} />
     </Field>
+  );
+}
+
+const decodeWebUrl = Schema.decodeOption(WebUrl);
+
+/** Whether search engines list the page, and the address they should treat as its own. */
+function SearchEngines(props: { readonly noindex: boolean; readonly canonical: string }) {
+  const id = useId();
+  const hide = useSetMeta("noindex");
+  const canonical = useSetMeta("canonical");
+  const [typed, setTyped] = useState(props.canonical);
+  const [invalid, setInvalid] = useState(false);
+  const saveCanonical = () => {
+    if (typed === props.canonical) return;
+    if (typed === "") return canonical.set(undefined);
+    const decoded = decodeWebUrl(typed);
+    setInvalid(Option.isNone(decoded));
+    if (Option.isSome(decoded)) canonical.set(decoded.value);
+  };
+  return (
+    <>
+      <Field orientation="horizontal">
+        <Switch
+          id={`${id}-hide`}
+          checked={props.noindex}
+          onCheckedChange={(checked) => hide.set(checked ? true : undefined)}
+        />
+        <FieldLabel htmlFor={`${id}-hide`} className="flex-col items-start gap-0.5">
+          Hide from search engines
+          <span className="font-normal text-muted-foreground">
+            It leaves the sitemap. Anyone with the link can still open it.
+          </span>
+        </FieldLabel>
+      </Field>
+      <Field data-invalid={invalid || undefined}>
+        <FieldLabel htmlFor={`${id}-canonical`}>
+          Canonical address <span className="font-normal text-muted-foreground">Optional</span>
+        </FieldLabel>
+        <Input
+          id={`${id}-canonical`}
+          type="url"
+          value={typed}
+          placeholder="https://"
+          aria-invalid={invalid || undefined}
+          onChange={(event) => setTyped(event.target.value)}
+          onBlur={saveCanonical}
+        />
+        <FieldDescription>
+          For a page copied from another site: the address search engines should list instead.
+        </FieldDescription>
+        {invalid && (
+          <FieldError>Enter a full web address, such as https://example.org/page.</FieldError>
+        )}
+        <FieldError errors={[...canonical.errors]} />
+      </Field>
+    </>
   );
 }
 
@@ -352,7 +430,18 @@ function PageSettings() {
           multiline
           description="Shown under the title in search results."
         />
+        <MetaImage
+          field="image"
+          title="Sharing image"
+          description="Shown when the page is shared. Without one, its hero image or the site's default is used."
+          value={page.meta.image}
+        />
         <PageAddress key={page.path} value={page.path} />
+        <SearchEngines
+          key={page.meta.canonical ?? ""}
+          noindex={page.meta.noindex === true}
+          canonical={page.meta.canonical ?? ""}
+        />
       </Section>
       {page.type === "post" && (
         <Section title="Post">
@@ -373,7 +462,12 @@ function PageSettings() {
             description="Shown in blog lists."
           />
           <PostTags key={page.meta.tags.join(",")} value={page.meta.tags} />
-          <PostCover value={page.meta.cover} />
+          <MetaImage
+            field="cover"
+            title="Cover image"
+            description="Shown with the post in blog lists and when it's shared."
+            value={page.meta.cover}
+          />
         </Section>
       )}
       <p className="border-t px-5 py-4 text-sm text-muted-foreground">

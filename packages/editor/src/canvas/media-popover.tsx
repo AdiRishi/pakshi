@@ -69,6 +69,7 @@ export function MediaPopover(props: {
           <PopoverDescription>Choose an image from the site's library.</PopoverDescription>
         </PopoverHeader>
         <LibraryPicker
+          label="Library"
           chosen={chosen?.id}
           onChoose={(image) => store.run([{ op: "setProp", ...props.field, value: image }])}
         />

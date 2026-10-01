@@ -8,12 +8,14 @@ import { useServices } from "./context.tsx";
  * current one places it with the alt text the library suggests.
  */
 export function LibraryPicker(props: {
+  /** What the thumbnails are for, which screen readers announce. */
+  readonly label: string;
   readonly chosen: MediaId | undefined;
   readonly onChoose: (image: MediaRef) => void;
 }) {
   const { media, mediaSrc } = useServices();
   return (
-    <ul className="grid grid-cols-3 gap-2" aria-label="Library">
+    <ul className="grid grid-cols-3 gap-2" aria-label={props.label}>
       {media.map((file) => (
         <li key={file.id}>
           <button

@@ -5,7 +5,8 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --dir ../.. dev",
-    "typecheck": "astro sync && tsc --noEmit"
+    "typecheck": "astro sync && tsc --noEmit && tsc --noEmit -p tests",
+    "test": "vitest run"
   },
   "dependencies": {
     "@astrojs/react": "catalog:",
@@ -24,8 +25,10 @@
     "@cloudflare/workers-types": "catalog:",
     "@repo/infra": "workspace:*",
     "@repo/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
-    "typescript": "catalog:"
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

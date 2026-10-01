@@ -493,6 +493,9 @@ importers:
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.3
       '@types/react':
         specifier: 'catalog:'
         version: 19.3.0
@@ -502,6 +505,9 @@ importers:
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   apps/studio:
     dependencies:
@@ -514,6 +520,9 @@ importers:
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@repo/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
       '@repo/editor':
         specifier: workspace:*
         version: link:../../packages/editor

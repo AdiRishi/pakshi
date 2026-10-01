@@ -13,6 +13,7 @@
     "@repo/blocks": "workspace:*",
     "@repo/brand": "workspace:*",
     "@repo/contracts": "workspace:*",
+    "@repo/domain": "workspace:*",
     "@repo/editor": "workspace:*",
     "@repo/tokens": "workspace:*",
     "@repo/ui": "workspace:*",

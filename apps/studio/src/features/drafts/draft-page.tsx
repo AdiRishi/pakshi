@@ -1,7 +1,7 @@
 import { isBehind } from "@repo/contracts/draft";
 import { type DraftId, PageId, randomId, type SiteId } from "@repo/contracts/ids";
 import type { PageDocument } from "@repo/contracts/page";
-import type { PageSummary, Viewer } from "@repo/contracts/studio";
+import type { DraftPageSummary, PageSummary, Viewer } from "@repo/contracts/studio";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -54,6 +54,7 @@ import { draftPagesQuery } from "../sites/queries";
 import { sendBatch } from "../sites/send-batch";
 import { DraftActions } from "./draft-actions";
 import { PageDialog, type SubmittedPage } from "./page-dialog";
+import { MenusCard, RemovePageDialog, StandingBadge } from "./pages-and-menus";
 
 type PageType = PageSummary["type"];
 
@@ -99,8 +100,10 @@ const newPage = (type: PageType, values: SubmittedPage, author: string): PageDoc
 function PagesTable(props: {
   readonly site: SiteId;
   readonly draft: DraftId;
-  readonly pages: ReadonlyArray<PageSummary>;
+  readonly pages: ReadonlyArray<DraftPageSummary>;
   readonly onRename: (page: PageSummary) => void;
+  readonly onRemove: (page: DraftPageSummary, action: "unpublish" | "delete") => void;
+  readonly onRepublish: (page: DraftPageSummary) => void;
 }) {
   return (
     <Table>
@@ -108,6 +111,7 @@ function PagesTable(props: {
         <TableRow>
           <TableHead className="px-6">Title</TableHead>
           <TableHead>Address</TableHead>
+          <TableHead>In this draft</TableHead>
           <TableHead className="w-0 px-6">
             <span className="sr-only">Actions</span>
           </TableHead>
@@ -124,6 +128,9 @@ function PagesTable(props: {
               )}
             </TableCell>
             <TableCell className="font-mono text-muted-foreground">{page.path}</TableCell>
+            <TableCell>
+              <StandingBadge standing={page.standing} />
+            </TableCell>
             <TableCell className="px-6">
               <div className="flex items-center justify-end gap-2">
                 <Link
@@ -148,6 +155,21 @@ function PagesTable(props: {
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem onClick={() => props.onRename(page)}>Rename</DropdownMenuItem>
+                    {page.standing === "unpublished" ? (
+                      <DropdownMenuItem onClick={() => props.onRepublish(page)}>
+                        Publish again
+                      </DropdownMenuItem>
+                    ) : (
+                      <DropdownMenuItem onClick={() => props.onRemove(page, "unpublish")}>
+                        Unpublish
+                      </DropdownMenuItem>
+                    )}
+                    <DropdownMenuItem
+                      variant="destructive"
+                      onClick={() => props.onRemove(page, "delete")}
+                    >
+                      Delete
+                    </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
@@ -171,6 +193,10 @@ export function DraftPage(props: {
   const [tab, setTab] = useState<PageType>("page");
   const [creating, setCreating] = useState<PageType | null>(null);
   const [renaming, setRenaming] = useState<PageSummary | null>(null);
+  const [removing, setRemoving] = useState<{
+    readonly page: DraftPageSummary;
+    readonly action: "unpublish" | "delete";
+  } | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const behind = isBehind(data.draft.base, data.live);
   const review = data.draft.review;
@@ -189,6 +215,13 @@ export function DraftPage(props: {
       params: { siteId: props.site, draftId: props.draft, pageId: page.id },
     });
     return [];
+  };
+
+  const republish = async (page: DraftPageSummary) => {
+    await sendBatch(props.site, props.draft, [
+      { op: "setStatus", page: page.id, status: "published" },
+    ]);
+    await refresh();
   };
 
   const rename = async (page: PageSummary, values: SubmittedPage) => {
@@ -308,6 +341,8 @@ export function DraftPage(props: {
                       draft={props.draft}
                       pages={byType(type)}
                       onRename={setRenaming}
+                      onRemove={(page, action) => setRemoving({ page, action })}
+                      onRepublish={(page) => void republish(page)}
                     />
                   )}
                 </CardContent>
@@ -315,7 +350,31 @@ export function DraftPage(props: {
             </TabsContent>
           ))}
         </Tabs>
+        <div className="mt-8">
+          <MenusCard
+            site={props.site}
+            draft={props.draft}
+            menus={data.menus}
+            pages={data.pages.filter((page) => page.type === "page")}
+            onSaved={refresh}
+          />
+        </div>
       </div>
+      {removing !== null && (
+        <RemovePageDialog
+          site={props.site}
+          draft={{ id: props.draft, name: data.draft.name }}
+          page={removing.page}
+          pages={data.pages}
+          menus={data.menus}
+          action={removing.action}
+          onClose={() => setRemoving(null)}
+          onDone={async () => {
+            setRemoving(null);
+            await refresh();
+          }}
+        />
+      )}
       {creating !== null && (
         <PageDialog
           open

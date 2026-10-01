@@ -38,7 +38,7 @@ import { PreflightIssue } from "./publishing.ts";
 import { Release, Timestamp } from "./release.ts";
 import { PublishedSettings, SettingsChanges, SettingsView, SiteName } from "./settings.ts";
 import { DraftSharing, ShareAccess } from "./sharing.ts";
-import { SiteParts } from "./site.ts";
+import { Menus, Redirects, SiteParts } from "./site.ts";
 import { LiveRelease, Lockfile, MediaFile, PageListing } from "./snapshot.ts";
 import { Submission } from "./submission.ts";
 import { Workflow } from "./workflow.ts";
@@ -337,11 +337,24 @@ export const SiteDrafts = Schema.Struct({
 export type SiteDrafts = typeof SiteDrafts.Type;
 
 /** A draft's pages and posts. */
+/**
+ * How a page in a draft stands against the live site: not there yet, changed,
+ * the same as live, or unpublished in the draft.
+ */
+export const PageStanding = Schema.Literals(["new", "changed", "live", "unpublished"]);
+export type PageStanding = typeof PageStanding.Type;
+
+export const DraftPageSummary = Schema.Struct({ ...PageSummary.fields, standing: PageStanding });
+export type DraftPageSummary = typeof DraftPageSummary.Type;
+
+/** A draft's pages, menus and redirects, as its Pages and menus screen shows them. */
 export const DraftPages = Schema.Struct({
   site: SiteLabel,
   live: LiveRelease,
   draft: DraftSummary,
-  pages: Schema.Array(PageSummary),
+  pages: Schema.Array(DraftPageSummary),
+  menus: Menus,
+  redirects: Redirects,
   can: SiteAbilities,
 });
 export type DraftPages = typeof DraftPages.Type;
