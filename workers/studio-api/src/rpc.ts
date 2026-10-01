@@ -8,7 +8,7 @@ import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import { publishedOf, type SettingsView } from "@repo/contracts/settings";
-import { routingKeys } from "@repo/contracts/snapshot";
+import { objectKeys, routingKeys } from "@repo/contracts/snapshot";
 import {
   BlocksRemoved,
   CannotDecide,
@@ -65,6 +65,7 @@ import {
   saveLook,
   saveVoice,
 } from "./brands.ts";
+import { deleteBrand, deletedSites, deleteSite, restoreSite } from "./deletion.ts";
 import { addDomain, checkDomains, removeDomain, routedHost, siteDomains } from "./domains.ts";
 import { acceptInvitation, invitationView, invite, revokeInvitation } from "./invitations.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
@@ -265,7 +266,10 @@ const handlers = (env: StudioApiEnv) =>
           ...view,
           media,
           forms,
-          can: { edit: site.permissions.includes("site.settings.edit") },
+          can: {
+            edit: site.permissions.includes("site.settings.edit"),
+            delete: site.permissions.includes("site.delete"),
+          },
         };
       });
       /** Writes a proven domain's host to KV, so `sites` serves the site there. */
@@ -393,6 +397,44 @@ const handlers = (env: StudioApiEnv) =>
                 );
                 return yield* settingsView({ ...found, name: view.settings.name }, view);
               }),
+            ),
+          ),
+        deleteSite: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("delete site")(
+              Effect.gen(function* () {
+                const hosts = yield* deleteSite(person, site);
+                // The site stops serving at once: no host leads to it.
+                const routed = [
+                  ...(hosts.address === null ? [] : [`${hosts.address}.${env.SITES_HOST}`]),
+                  ...hosts.domains.map((hostname) => routedHost(hostname, env.SITES_HOST)),
+                ];
+                yield* Effect.forEach(routed, (host) =>
+                  Effect.promise(() => env.ROUTING.delete(routingKeys.host(host))),
+                );
+              }),
+            ),
+          ),
+        deletedSites: () =>
+          SignedIn.use((person) => withCore("deleted sites")(deletedSites(person))),
+        restoreSite: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("restore site")(
+              Effect.gen(function* () {
+                const address = yield* restoreSite(person, site);
+                if (address !== null)
+                  yield* Effect.promise(() =>
+                    env.ROUTING.put(routingKeys.host(`${address}.${env.SITES_HOST}`), site),
+                  );
+              }),
+            ),
+          ),
+        deleteBrand: ({ brand }) =>
+          SignedIn.use((person) =>
+            withCore("delete brand")(
+              deleteBrand(person, brand, (media) =>
+                Effect.promise(() => env.CONTENT.delete(objectKeys.media(media))),
+              ),
             ),
           ),
         siteDomains: ({ site }) =>

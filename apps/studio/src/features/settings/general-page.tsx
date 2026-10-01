@@ -28,6 +28,7 @@ import { siteMediaSrc } from "../media/addresses";
 import { LibraryPicker } from "../media/library-picker";
 import { saveSiteSettings } from "../sites/functions";
 import { siteSettingsQuery } from "../sites/queries";
+import { DeleteSiteCard } from "./delete-site";
 import { SettingsShell } from "./settings-shell";
 
 const decodeName = Schema.decodeOption(SiteName);
@@ -168,6 +169,7 @@ function GeneralSettings(props: { readonly viewer: Viewer; readonly view: SiteSe
           </CardContent>
         )}
       </Card>
+      {view.can.delete && <DeleteSiteCard site={view.site} />}
       <LibraryPicker
         title="Choose the default sharing image"
         description="From the site's library and its brand's."

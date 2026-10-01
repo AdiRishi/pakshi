@@ -124,7 +124,8 @@ export const invitePlaces = Effect.fn("StudioApi.invitePlaces")(function* (acces
       SqlSchema.findAll({
         Request: Schema.Void,
         Result: Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId }),
-        execute: () => sql`select id, name, brand_id from sites order by name`,
+        execute: () =>
+          sql`select id, name, brand_id from sites where deleted_at is null order by name`,
       })(undefined),
     ],
     { concurrency: "unbounded" },

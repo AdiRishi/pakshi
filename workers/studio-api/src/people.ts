@@ -41,6 +41,7 @@ export const organizationPeople = Effect.fn("StudioApi.organizationPeople")(func
       left join brands b on g.scope_kind = 'brand' and b.id = g.scope_id
       left join sites s on g.scope_kind = 'site' and s.id = g.scope_id
       cross join organization o
+      where g.scope_kind <> 'site' or s.deleted_at is null
       order by u.name, u.id`,
   })(undefined);
   const members = new Map<string, Member>();

@@ -36,3 +36,8 @@ export const createBrand = createServerFn({ method: "POST" })
     ),
   )
   .handler(({ data }) => studio((client) => client.createBrand(data)));
+
+/** Deletes a brand that has no sites. */
+export const deleteBrand = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ brand: BrandId })))
+  .handler(({ data }) => studio((client) => client.deleteBrand(data)));

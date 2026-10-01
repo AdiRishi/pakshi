@@ -301,6 +301,24 @@ export const SiteDomainsView = Schema.Struct({
 });
 export type SiteDomainsView = typeof SiteDomainsView.Type;
 
+/** How long a deleted site can be restored, in days. */
+export const restoreDays = 30;
+
+/** A site deleted within the last 30 days, which an org admin can restore. */
+export const DeletedSite = Schema.Struct({
+  id: SiteId,
+  name: Schema.String,
+  brand: Schema.String,
+  deletedAt: Timestamp,
+  deletedBy: Schema.NullOr(Schema.String),
+});
+export type DeletedSite = typeof DeletedSite.Type;
+
+/** A brand with sites, deleted ones it can still restore included, can't be deleted. */
+export class BrandHasSites extends Schema.TaggedError<BrandHasSites>()("BrandHasSites", {
+  sites: Schema.Int,
+}) {}
+
 /** Another site already has this domain, or it's under Pakshi's own host. */
 export class DomainTaken extends Schema.TaggedError<DomainTaken>()("DomainTaken", {
   hostname: Schema.String,
@@ -349,7 +367,7 @@ export const SiteSettingsView = Schema.Struct({
   ...SettingsView.fields,
   media: Schema.Array(MediaSummary),
   forms: Schema.Array(SiteForm),
-  can: Schema.Struct({ edit: Schema.Boolean }),
+  can: Schema.Struct({ edit: Schema.Boolean, delete: Schema.Boolean }),
 });
 export type SiteSettingsView = typeof SiteSettingsView.Type;
 
@@ -678,7 +696,7 @@ export const BrandView = Schema.Struct({
   sites: Schema.Array(SiteLabel),
   /** The brand's library, where its logos and icon come from. */
   media: Schema.Array(MediaSummary),
-  can: Schema.Struct({ edit: Schema.Boolean }),
+  can: Schema.Struct({ edit: Schema.Boolean, delete: Schema.Boolean }),
 });
 export type BrandView = typeof BrandView.Type;
 
@@ -925,6 +943,26 @@ class SignedInRpcs extends RpcGroup.make(
     payload: { site: SiteId, hostname: Schema.String },
     success: SiteDomainsView,
     error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  /** Deletes a site. It stops serving at once, and its domains are released. */
+  Rpc.make("deleteSite", {
+    payload: { site: SiteId },
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  /** The sites deleted in the last 30 days, for an org admin, or none for anyone else. */
+  Rpc.make("deletedSites", {
+    success: Schema.Array(DeletedSite),
+    error: StudioUnavailable,
+  }),
+  /** Brings back a site deleted in the last 30 days, at its Pakshi address. */
+  Rpc.make("restoreSite", {
+    payload: { site: SiteId },
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  /** Deletes a brand that has no sites. */
+  Rpc.make("deleteBrand", {
+    payload: { brand: BrandId },
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, BrandHasSites]),
   }),
   Rpc.make("mediaLibrary", {
     payload: { site: SiteId },

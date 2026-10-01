@@ -39,7 +39,7 @@ export const waitingFor = Effect.fn("StudioApi.waitingFor")(function* (person: P
     Result: SubmissionRow,
     execute: () => sql`
       select s.site_id, t.name as site_name, t.brand_id, s.submission from submissions s
-      join sites t on t.id = s.site_id
+      join sites t on t.id = s.site_id and t.deleted_at is null
       where s.status = 'InReview' order by s.submitted_at`,
   })(undefined);
   const { access } = yield* loadAccess(person.id);
@@ -63,7 +63,7 @@ export const sentBy = Effect.fn("StudioApi.sentBy")(function* (person: Person) {
     Result: SubmissionRow,
     execute: () => sql`
       select s.site_id, t.name as site_name, t.brand_id, s.submission from submissions s
-      join sites t on t.id = s.site_id
+      join sites t on t.id = s.site_id and t.deleted_at is null
       where s.status = 'InReview' and s.submitted_by = ${person.id}
       order by s.submitted_at desc`,
   })(undefined);
@@ -78,7 +78,7 @@ export const finishedFor = Effect.fn("StudioApi.finishedFor")(function* (person:
     Result: SubmissionRow,
     execute: () => sql`
       select s.site_id, t.name as site_name, t.brand_id, s.submission from submissions s
-      join sites t on t.id = s.site_id
+      join sites t on t.id = s.site_id and t.deleted_at is null
       where s.status <> 'InReview' and (
         s.submitted_by = ${person.id}
         or json_extract(s.submission, '$.status.by.id') = ${person.id}
@@ -105,7 +105,7 @@ export const sharedWith = Effect.fn("StudioApi.sharedWith")(function* (person: P
     Result: SharedRow,
     execute: () => sql`
       select d.site_id, s.name as site_name, d.draft_id, d.draft_name, d.access
-      from draft_shares d join sites s on s.id = d.site_id
+      from draft_shares d join sites s on s.id = d.site_id and s.deleted_at is null
       where d.user_id = ${person.id} order by s.name, d.draft_name`,
   })(undefined);
   return rows.map((row): SharedDraft => ({

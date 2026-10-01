@@ -592,6 +592,15 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#run((site) => site.imagesInUse);
   }
 
+  /** Deletes everything this site keeps here, for a site deleted for good. */
+  async erase() {
+    for (const connection of this.getConnections()) connection.close(1000, "Site deleted");
+    await this.#runtime?.dispose();
+    this.#runtime = undefined;
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+  }
+
   /** Copies the block versions the site pins to D1 again. */
   reportBlocks() {
     return this.#changing(() => this.#run((site) => site.reportBlocks));

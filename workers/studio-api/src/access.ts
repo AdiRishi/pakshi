@@ -86,7 +86,7 @@ export const describeScope = Effect.fn("StudioApi.describeScope")(function* (sco
         case "brand":
           return sql`select name, null as brand_id from brands where id = ${scope.id}`;
         case "site":
-          return sql`select name, brand_id from sites where id = ${scope.id}`;
+          return sql`select name, brand_id from sites where id = ${scope.id} and deleted_at is null`;
       }
     },
   })(undefined);

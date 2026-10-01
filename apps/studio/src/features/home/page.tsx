@@ -27,6 +27,8 @@ import { homeQuery } from "@/features/approvals/queries";
 import { previewPath } from "@/features/preview/address";
 import { formatMoment } from "@/lib/dates";
 
+import { RecentlyDeleted } from "./recently-deleted";
+
 /** A card of items under a heading, shown only when it has some. */
 function Listing(props: {
   readonly id: string;
@@ -185,6 +187,7 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
         <div className="flex flex-col gap-8">
           {home.waiting.length > 0 && <Waiting items={home.waiting} />}
           {home.shared.length > 0 && <Shared drafts={home.shared} />}
+          <RecentlyDeleted />
           <section aria-labelledby="your-access">
             <Card className="gap-0 py-0">
               <CardHeader className="border-b py-4">

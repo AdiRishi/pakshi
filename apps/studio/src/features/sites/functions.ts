@@ -31,6 +31,20 @@ const forDraft = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: 
 const suggestion = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
   callStudio({ binding: env.STUDIO_RPC, request: getRequest(), timeout: "90 seconds" }, use);
 
+/** Deletes a site. It stops serving at once. */
+export const deleteSite = createServerFn({ method: "POST" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.deleteSite(data)));
+
+/** The sites deleted in the last 30 days, for an org admin. */
+export const getDeletedSites = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.deletedSites()),
+);
+
+export const restoreSite = createServerFn({ method: "POST" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.restoreSite(data)));
+
 /** A site's Pakshi address and its own domains. */
 export const getSiteDomains = createServerFn({ method: "GET" })
   .validator(forSite)
