@@ -259,13 +259,14 @@ Everything else a real site needs.
 
 **Build:**
 
-- [Site settings](/technical-design#site-settings) as a registry of definitions in one home in `SiteDoc`, saved together and delivered to the snapshot or straight to the runtime that reads them ([decision 072](/decision-log#decision-072)), with the general and forms and email settings screens.
-- [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap, notification emails with retry, pre-flight's check for a notification address, the submissions screen, CSV export and deletion by email.
-- The [media library](/product-spec#media): brand and site libraries, uploads from the library and from the editor's media popover, Cloudflare Images, alt text, and retention.
-- [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
-- [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
-- [Custom domains](/technical-design#domains): the domains screen and the TXT ownership check, with Cloudflare for SaaS emulated in the dev stack.
-- [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window.
+- [Site settings](/technical-design#site-settings) as a registry with one home in `SiteDoc`, delivered to the snapshot or straight to the runtime that reads them ([decision 072](/decision-log#decision-072)), with the General, Domains and Forms and email screens.
+- Forms, menus, redirects and page status edited as whole values in drafts ([decision 073](/decision-log#decision-073)).
+- [Forms and submissions](/product-spec#forms-and-submissions): the form editor in the editor's settings panel, intake into `SiteSubmissions` with the 64 KB cap, notification emails retried from its alarm ([decision 074](/decision-log#decision-074)), pre-flight's checks for a notification address and for consent, the submissions screen, CSV export and deletion by email.
+- The [media library](/product-spec#media): brand and site libraries, uploads from the Media screen and from the editor's image popover, resizing with the Images binding ([decision 075](/decision-log#decision-075)), alt text, and retention by a daily job.
+- [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): pages and menus in each draft, unpublishing and deleting pages with their menu items and an offer to redirect, and 410 for removed addresses.
+- [SEO](/product-spec#seo-and-domains): each page's sharing image, canonical address and no-index option, the sitemap, robots.txt, the blog RSS feed and redirects.
+- [Custom domains](/technical-design#domains): the domains screen with the CNAME and TXT records, and a scheduled check. In the dev stack only names under `.localhost` are proven ([decision 076](/decision-log#decision-076)).
+- [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window and a daily purge ([decision 077](/decision-log#decision-077)).
 
 **Demo:** build a site with a registration form, connect a custom subdomain, submit the form, see the notification, and export the submission.
 
@@ -308,8 +309,8 @@ Deploy Pakshi to Cloudflare and run real sites on it.
 
 - The `prod` stack in its own Cloudflare account, on Workers Paid.
 - Staff sign-in through the organization's identity provider over OIDC, beside email and password.
-- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the fallback origin, and every site's platform subdomain on the sites domain.
-- Email from a sender domain on Cloudflare DNS.
+- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the fallback origin, and every site's platform subdomain on the sites domain. It replaces the dev stack's `.localhost` check ([decision 076](/decision-log#decision-076)).
+- Email from a sender domain on Cloudflare DNS, with the sender setting the Forms and email screen shows in the designs.
 - The [restore drill](/technical-design#operations).
 
 **Demo:** the Pakshi team launches its first real site on a custom domain.

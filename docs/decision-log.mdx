@@ -9,6 +9,11 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 078 | Site settings leave out a default description and the email sender, for now        | 2026-10-01 | Accepted            |
+| 077 | Deleted sites are kept for 30 days, then purged by the daily job                   | 2026-10-01 | Accepted            |
+| 076 | In the dev stack, only `.localhost` domains are proven                             | 2026-10-01 | Accepted            |
+| 075 | Library images are resized on `sites` with the Images binding                      | 2026-10-01 | Accepted            |
+| 074 | Form notifications retry from `SiteSubmissions`' alarm                             | 2026-10-01 | Accepted            |
 | 073 | Forms, menus and redirects are edited as whole values in drafts                    | 2026-10-01 | Accepted            |
 | 072 | Site settings are a registry of definitions with one home in SiteDoc               | 2026-10-01 | Accepted            |
 | 071 | Build and test in the dev stack as real people; production comes last              | 2026-10-01 | Accepted            |
@@ -82,6 +87,52 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 078 — Site settings leave out a default description and the email sender, for now [#decision-078]
+
+**Context.** The Studio designs show a default description among the General settings and a choice of sender on Forms and email.
+
+**Decision.** Neither is built. Every page needs its own description before it publishes, so a default would never be shown. Choosing a sender needs a sender domain on Cloudflare DNS, which comes with [checkpoint 12](/build-plan#12-production); until then every email comes from the stage's shared sender.
+
+**Consequences.** Adding either later is a field in the settings registry ([decision 072](#decision-072)).
+
+## 077 — Deleted sites are kept for 30 days, then purged by the daily job [#decision-077]
+
+**Context.** A deleted site must stop serving at once, stay restorable by an org admin for 30 days, and then be deleted for good.
+
+**Decision.** Deleting marks the site in D1, takes its hosts out of KV and releases its domains; every list leaves deleted sites out. Restoring clears the mark and puts its platform subdomain back in KV, while its domains have to be added again. The daily job erases each site deleted more than 30 days ago: its `SiteDoc` and `SiteSubmissions` storage, its snapshots and agent documents in R2, its library, and its rows in D1. A brand can be deleted only once it has no sites, counting ones still restorable.
+
+**Rejected.** An alarm on each site's `SiteDoc` to purge itself, which can't reach D1's rows or the site's other objects as simply as one job can.
+
+**Consequences.** The agent's conversations live in their own `SiteAgent`s, named by site, draft and person, which nothing lists; they aren't erased yet, and checkpoint 11's audit work should record them so the purge can.
+
+## 076 — In the dev stack, only `.localhost` domains are proven [#decision-076]
+
+**Context.** Custom domains are proven and served through Cloudflare for SaaS, which needs production. The dev stack still needs to show a site at its own domain.
+
+**Decision.** A domain is a row in D1 with an ownership token, shown as a TXT record beside the CNAME. Checking a waiting domain, on schedule or from Check now, proves a name under `.localhost` at once, since it can only reach the machine Pakshi runs on, and writes its host to KV. Other names wait. Checkpoint 12 replaces the check with Cloudflare for SaaS's verification and certificate status.
+
+**Consequences.** The dev stack serves a site at a domain such as `rooms.riverton.localhost` on the Sites Worker's port.
+
+## 075 — Library images are resized on `sites` with the Images binding [#decision-075]
+
+**Context.** Images must be resized and optimized automatically, and the library keeps one original per file.
+
+**Decision.** Uploads go to R2 as they are, with their format and size read from their own bytes. Blocks give each library image a `srcset` of the widths `sites` serves below its own, and `sites` resizes the original with the Images binding into AVIF or WebP when the browser takes them, caching each copy. When resizing fails, the original is served.
+
+**Rejected.** Cloudflare Images' hosted storage, which would keep a second copy of every file outside R2.
+
+**Consequences.** Studio's editor and previews show originals. Under `alchemy dev` the binding resizes locally.
+
+## 074 — Form notifications retry from `SiteSubmissions`' alarm [#decision-074]
+
+**Context.** Each new entry emails its form's addresses, and a failed send has to be tried again.
+
+**Decision.** `SiteSubmissions` stores each email it owes beside the entry, and its alarm sends what's due, waiting twice as long after each failure, up to six hours. The addresses and the Studio address the emails link to reach it with the site's live settings.
+
+**Rejected.** A scheduled job across all sites, which would have to find every site's waiting emails.
+
+**Consequences.** A site's emails wait only on its own object, and the entry is stored whether or not its email goes.
 
 ## 073 — Forms, menus and redirects are edited as whole values in drafts [#decision-073]
 
