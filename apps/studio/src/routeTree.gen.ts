@@ -18,6 +18,7 @@ import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
 import { Route as AuthedBlocksRouteImport } from './routes/_authed/blocks'
+import { Route as AuthedMetricsRouteImport } from './routes/_authed/metrics'
 import { Route as AuthedPeopleRouteImport } from './routes/_authed/people'
 import { Route as AuthedRolesRouteImport } from './routes/_authed/roles'
 import { Route as ApiMediaRouteImport } from './routes/api/media'
@@ -96,6 +97,11 @@ const AuthedAuditRoute = AuthedAuditRouteImport.update({
 const AuthedBlocksRoute = AuthedBlocksRouteImport.update({
   id: '/blocks',
   path: '/blocks',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedMetricsRoute = AuthedMetricsRouteImport.update({
+  id: '/metrics',
+  path: '/metrics',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedPeopleRoute = AuthedPeopleRouteImport.update({
@@ -304,6 +310,7 @@ export interface FileRoutesByFullPath {
   '/sign-out': typeof SignOutRoute
   '/audit': typeof AuthedAuditRoute
   '/blocks': typeof AuthedBlocksRoute
+  '/metrics': typeof AuthedMetricsRoute
   '/people': typeof AuthedPeopleRoute
   '/roles': typeof AuthedRolesRoute
   '/api/media': typeof ApiMediaRoute
@@ -348,6 +355,7 @@ export interface FileRoutesByTo {
   '/sign-out': typeof SignOutRoute
   '/audit': typeof AuthedAuditRoute
   '/blocks': typeof AuthedBlocksRoute
+  '/metrics': typeof AuthedMetricsRoute
   '/people': typeof AuthedPeopleRoute
   '/roles': typeof AuthedRolesRoute
   '/api/media': typeof ApiMediaRoute
@@ -395,6 +403,7 @@ export interface FileRoutesById {
   '/sign-out': typeof SignOutRoute
   '/_authed/audit': typeof AuthedAuditRoute
   '/_authed/blocks': typeof AuthedBlocksRoute
+  '/_authed/metrics': typeof AuthedMetricsRoute
   '/_authed/people': typeof AuthedPeopleRoute
   '/_authed/roles': typeof AuthedRolesRoute
   '/api/media': typeof ApiMediaRoute
@@ -443,6 +452,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/audit'
     | '/blocks'
+    | '/metrics'
     | '/people'
     | '/roles'
     | '/api/media'
@@ -487,6 +497,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/audit'
     | '/blocks'
+    | '/metrics'
     | '/people'
     | '/roles'
     | '/api/media'
@@ -533,6 +544,7 @@ export interface FileRouteTypes {
     | '/sign-out'
     | '/_authed/audit'
     | '/_authed/blocks'
+    | '/_authed/metrics'
     | '/_authed/people'
     | '/_authed/roles'
     | '/api/media'
@@ -652,6 +664,13 @@ declare module '@tanstack/react-router' {
       path: '/blocks'
       fullPath: '/blocks'
       preLoaderRoute: typeof AuthedBlocksRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/metrics': {
+      id: '/_authed/metrics'
+      path: '/metrics'
+      fullPath: '/metrics'
+      preLoaderRoute: typeof AuthedMetricsRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/people': {
@@ -905,6 +924,7 @@ declare module '@tanstack/react-router' {
 interface AuthedRouteChildren {
   AuthedAuditRoute: typeof AuthedAuditRoute
   AuthedBlocksRoute: typeof AuthedBlocksRoute
+  AuthedMetricsRoute: typeof AuthedMetricsRoute
   AuthedPeopleRoute: typeof AuthedPeopleRoute
   AuthedRolesRoute: typeof AuthedRolesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
@@ -937,6 +957,7 @@ interface AuthedRouteChildren {
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAuditRoute: AuthedAuditRoute,
   AuthedBlocksRoute: AuthedBlocksRoute,
+  AuthedMetricsRoute: AuthedMetricsRoute,
   AuthedPeopleRoute: AuthedPeopleRoute,
   AuthedRolesRoute: AuthedRolesRoute,
   AuthedIndexRoute: AuthedIndexRoute,

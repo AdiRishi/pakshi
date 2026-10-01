@@ -249,6 +249,32 @@ export const RolesView = Schema.Struct({
 });
 export type RolesView = typeof RolesView.Type;
 
+/**
+ * Pakshi's success metrics over a period, as the product spec defines them,
+ * with how many cases each is measured over.
+ */
+export const SuccessMetrics = Schema.Struct({
+  since: Timestamp,
+  /** Site created to its first publish, in business days, for sites first published in the period. */
+  timeToLaunch: Schema.Struct({ median: Schema.NullOr(Schema.Finite), sites: Schema.Int }),
+  /** Draft started to first submitted, in minutes. */
+  timeToChange: Schema.Struct({ median: Schema.NullOr(Schema.Finite), drafts: Schema.Int }),
+  /** Block requests, and the sites people worked on, by month, oldest first. */
+  blockRequests: Schema.Array(
+    Schema.Struct({ month: Schema.String, requests: Schema.Int, activeSites: Schema.Int }),
+  ),
+  /** Submitted for approval to the final decision, in business days. */
+  approvalTurnaround: Schema.Struct({
+    median: Schema.NullOr(Schema.Finite),
+    submissions: Schema.Int,
+  }),
+  /** The agent's turns that changed a draft, and how many of them no one undid. */
+  agentSuccess: Schema.Struct({ turns: Schema.Int, kept: Schema.Int }),
+  /** Times a site served something no publish or rollback made, and Pakshi put it right. */
+  untrackedChanges: Schema.Int,
+});
+export type SuccessMetrics = typeof SuccessMetrics.Type;
+
 /** There's no role with that ID. */
 export class RoleNotFound extends Schema.TaggedError<RoleNotFound>()("RoleNotFound", {}) {}
 
@@ -1029,6 +1055,12 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("exportAudit", {
     payload: { query: AuditQuery },
     success: Schema.Struct({ filename: Schema.String, csv: Schema.String }),
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  /** Pakshi's success metrics since a moment, for someone who may read the audit log. */
+  Rpc.make("successMetrics", {
+    payload: { since: Timestamp },
+    success: SuccessMetrics,
     error: Schema.Union([StudioUnavailable, NotPermitted]),
   }),
   /** Every role, with who holds it where. */

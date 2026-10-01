@@ -158,6 +158,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     blockRequests: unused,
     requestBlock: unused,
     closeBlockRequest: unused,
+    successMetrics: unused,
   });
   const server = rpcWebHandler(
     StudioRpcs,
