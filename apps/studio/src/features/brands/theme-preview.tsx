@@ -6,7 +6,7 @@ import type { BrandIdentity } from "@repo/contracts/brand";
 import type { BlockType, BrandId, MediaId } from "@repo/contracts/ids";
 import { brandMediaBasePath, type MediaSummary } from "@repo/contracts/studio";
 import { SiteFrame } from "@repo/editor";
-import { type ColorScheme, type ResolvedTheme, themeCss } from "@repo/tokens";
+import type { ColorScheme, ResolvedTheme } from "@repo/tokens";
 import { use, useEffect, useMemo, useState } from "react";
 
 import siteCss from "@repo/blocks/site.css?url";
@@ -101,7 +101,6 @@ export function ThemePreview(props: {
       },
     });
   }, [props.brand, props.identity, props.media]);
-  const css = useMemo(() => themeCss(props.theme, props.scheme), [props.theme, props.scheme]);
 
   useEffect(() => {
     const body = frameDocument?.body;
@@ -121,7 +120,8 @@ export function ThemePreview(props: {
     <SiteFrame
       title={`Preview of the ${props.brand.name} theme`}
       siteCss={siteCss}
-      themeCss={css}
+      theme={props.theme}
+      scheme={props.scheme}
       extraCss={labelCss}
       inert
       className="w-full rounded-md border"

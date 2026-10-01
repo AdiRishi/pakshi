@@ -1,4 +1,5 @@
-import { type CSSProperties, type ReactNode, useEffect, useRef, useState } from "react";
+import { type ColorScheme, type ResolvedTheme, themeFontFaces, themeVariables } from "@repo/tokens";
+import { type CSSProperties, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 
 import { presenceColorCount } from "../presence.ts";
@@ -77,20 +78,32 @@ ${Array.from(
 ).join("\n")}
 `;
 
-const shell = (siteCss: string) =>
+const shell = (siteCss: string, fonts: string, variables: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
-  `<link rel="stylesheet" href="${siteCss}"><style data-pakshi-theme></style>` +
+  `<link rel="stylesheet" href="${siteCss}"><style data-pakshi-fonts>${fonts}</style>` +
+  `<style data-pakshi-theme>${variables}</style>` +
   `<style data-pakshi-editor></style></head><body><div data-pakshi-canvas></div></body></html>`;
+
+/** Replaces the text of one of the frame's style elements. */
+const setStyle = (document: Document | undefined, name: string, css: string) => {
+  const style = document?.querySelector(`style[data-pakshi-${name}]`);
+  if (style !== null && style !== undefined) style.textContent = css;
+};
 
 /**
  * A same-origin frame that Studio's React tree renders into through a portal.
- * It loads only the site stylesheet, the draft's theme and `extraCss`, never
- * Studio's styles, and its width is the page's own, so its media queries apply.
+ * It loads only the site stylesheet, a theme in one color scheme and
+ * `extraCss`, never Studio's styles, and its width is the page's own, so its
+ * media queries apply.
+ *
+ * The theme's font faces sit in a style of their own, so switching schemes
+ * keeps the loaded fonts.
  */
 export function Frame(props: {
   readonly title: string;
   readonly siteCss: string;
-  readonly themeCss: string;
+  readonly theme: ResolvedTheme;
+  readonly scheme: ColorScheme;
   readonly extraCss?: string;
   readonly className?: string;
   readonly style?: CSSProperties;
@@ -101,8 +114,15 @@ export function Frame(props: {
 }) {
   const frame = useRef<HTMLIFrameElement>(null);
   const [root, setRoot] = useState<HTMLElement | null>(null);
-  const [srcDoc] = useState(() => shell(props.siteCss));
+  const fonts = useMemo(() => themeFontFaces(props.theme), [props.theme]);
+  const variables = useMemo(
+    () => themeVariables(props.theme, props.scheme),
+    [props.theme, props.scheme],
+  );
+  const [srcDoc] = useState(() => shell(props.siteCss, fonts, variables));
   const { onDocument } = props;
+
+  const attaching = useRef(false);
 
   const attach = () => {
     const document = frame.current?.contentDocument;
@@ -111,11 +131,20 @@ export function Frame(props: {
       document === undefined ||
       document === null ||
       container === null ||
-      container === undefined
+      container === undefined ||
+      attaching.current
     )
       return;
-    setRoot(container);
-    onDocument?.(document);
+    attaching.current = true;
+    // The page renders once the theme's fonts have loaded, as it lays out on
+    // the site: a form's select keeps where it placed its text with the
+    // fallback font even after the theme's font arrives.
+    Promise.allSettled(Array.from(document.fonts, (face) => face.load()))
+      .then(() => {
+        setRoot(container);
+        onDocument?.(document);
+      })
+      .catch(reportError);
   };
 
   // A frame that finished loading before React attached its load handler never fires it again.
@@ -123,17 +152,12 @@ export function Frame(props: {
     if (root === null && frame.current?.contentDocument?.readyState === "complete") attach();
   });
 
-  useEffect(() => {
-    const document = root?.ownerDocument;
-    const theme = document?.querySelector("style[data-pakshi-theme]");
-    if (theme !== null && theme !== undefined) theme.textContent = props.themeCss;
-  }, [root, props.themeCss]);
-
-  useEffect(() => {
-    const document = root?.ownerDocument;
-    const extra = document?.querySelector("style[data-pakshi-editor]");
-    if (extra !== null && extra !== undefined) extra.textContent = props.extraCss ?? "";
-  }, [root, props.extraCss]);
+  useEffect(() => setStyle(root?.ownerDocument, "fonts", fonts), [root, fonts]);
+  useEffect(() => setStyle(root?.ownerDocument, "theme", variables), [root, variables]);
+  useEffect(
+    () => setStyle(root?.ownerDocument, "editor", props.extraCss ?? ""),
+    [root, props.extraCss],
+  );
 
   return (
     <>
@@ -157,7 +181,8 @@ export function Frame(props: {
 export function CanvasFrame(props: {
   readonly title: string;
   readonly siteCss: string;
-  readonly themeCss: string;
+  readonly theme: ResolvedTheme;
+  readonly scheme: ColorScheme;
   /** The editor's own accent color, read from Studio's theme. */
   readonly accent: string;
   /** The colors that tell other people apart, from Studio's theme, in order. */
@@ -170,7 +195,8 @@ export function CanvasFrame(props: {
     <Frame
       title={props.title}
       siteCss={props.siteCss}
-      themeCss={props.themeCss}
+      theme={props.theme}
+      scheme={props.scheme}
       extraCss={`:root { --pakshi-editor-accent: ${props.accent}; ${props.presence
         .map((color, index) => `--pakshi-presence-${index + 1}: ${color};`)
         .join(" ")} }${editorCss}`}

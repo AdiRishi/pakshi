@@ -59,18 +59,21 @@ const schemeRules = (scheme: SchemeColors, colorScheme: ColorScheme) =>
     ),
   ].join("\n");
 
+/** The `@font-face` rules that load a theme's heading and body fonts. */
+export const themeFontFaces = (theme: ResolvedTheme) =>
+  Array.from(new Set([theme.fonts.heading, theme.fonts.body]), fontFaces).join("\n");
+
 /**
- * The CSS a site's pages read for one resolved theme: its fonts' faces and
- * its variables. Every site shares one Tailwind build that maps these
- * variables to utilities, so sites differ only in this file.
+ * The CSS variables a site's pages read for one resolved theme. Every site
+ * shares one Tailwind build that maps these variables to utilities, so sites
+ * differ only in these and their fonts.
  *
  * Pages follow the visitor's color scheme. Pass `scheme` to fix one instead,
  * as the editor's canvas does when someone switches between light and dark.
  */
-export const themeCss = (theme: ResolvedTheme, scheme?: ColorScheme) => {
+export const themeVariables = (theme: ResolvedTheme, scheme?: ColorScheme) => {
   const ratio = typeRatios[theme.typeScale];
   const density = densities[theme.density];
-  const faces = Array.from(new Set([theme.fonts.heading, theme.fonts.body]), fontFaces);
   const shared = declarations([
     ["theme-font-heading", fontStack(theme.fonts.heading)],
     ["theme-font-body", fontStack(theme.fonts.body)],
@@ -96,5 +99,9 @@ export const themeCss = (theme: ResolvedTheme, scheme?: ColorScheme) => {
           `@media (prefers-color-scheme: dark) {\n${schemeRules(theme.colors.dark, "dark")}\n}`,
         ]
       : [schemeRules(theme.colors[scheme], scheme)];
-  return [...faces, `:root {\n${shared}\n}`, ...colors].join("\n");
+  return [`:root {\n${shared}\n}`, ...colors].join("\n");
 };
+
+/** A theme's whole CSS, as a page loads it: its fonts' faces and its variables. */
+export const themeCss = (theme: ResolvedTheme, scheme?: ColorScheme) =>
+  `${themeFontFaces(theme)}\n${themeVariables(theme, scheme)}`;

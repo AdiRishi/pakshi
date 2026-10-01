@@ -1,5 +1,5 @@
 export { contrast, hexToOklch, oklchToHex, parseOklch } from "./color.ts";
-export { themeCss } from "./css.ts";
+export { themeCss, themeFontFaces, themeVariables } from "./css.ts";
 export type { FontFile } from "./fonts.ts";
 export { allFontFiles, fontCatalog, FontId, fontPath, fontStack } from "./fonts.ts";
 export { contrastIssues, generatePalette } from "./palette.ts";

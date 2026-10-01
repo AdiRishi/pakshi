@@ -2,7 +2,6 @@ import { renderBlock, SiteDataProvider } from "@repo/blocks";
 import type { BlockId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
-import { themeCss } from "@repo/tokens";
 import { useEffect, useMemo, useState } from "react";
 
 import { Frame } from "./canvas/frame.tsx";
@@ -42,7 +41,6 @@ export function BlockPreview(props: { readonly tree: BlockTree; readonly title: 
   const { definitions, siteCss, scheme } = useServices();
   const theme = useEditorState((state) => state.view.brand.theme);
   const data = useDraftSiteData();
-  const css = useMemo(() => themeCss(theme, scheme), [theme, scheme]);
   const element = useMemo(
     () => renderBlock(definitions, flatten(props.tree), props.tree.id),
     [definitions, props.tree],
@@ -78,7 +76,8 @@ export function BlockPreview(props: { readonly tree: BlockTree; readonly title: 
       <Frame
         title={props.title}
         siteCss={siteCss}
-        themeCss={css}
+        theme={theme}
+        scheme={scheme}
         inert
         className="pointer-events-none absolute top-0 left-0 origin-top-left border-0"
         style={{ width: pageWidth, height: maxHeight, transform: `scale(${scale})` }}
