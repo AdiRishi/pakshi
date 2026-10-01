@@ -87,6 +87,7 @@ export const sampleSite = async () => {
       meta: page.meta,
       object: hash,
     })),
+    unpublished: [],
     gone: site.gone,
   });
   const media = await Promise.all(

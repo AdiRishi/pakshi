@@ -510,9 +510,11 @@ export class Site extends Context.Service<
           return known;
         }
         const manifest = yield* snapshots.manifest(snapshot);
-        const pages = yield* Effect.forEach(manifest.pages, (page) => snapshots.page(page.object), {
-          concurrency: "unbounded",
-        });
+        const pages = yield* Effect.forEach(
+          [...manifest.pages.map((page) => page.object), ...manifest.unpublished],
+          snapshots.page,
+          { concurrency: "unbounded" },
+        );
         const content: SiteContent = {
           parts: manifest.parts,
           forms: manifest.forms,
@@ -723,7 +725,7 @@ export class Site extends Context.Service<
       const writeSnapshot = Effect.fn("Site.writeSnapshot")(function* (
         content: SiteContent,
         frozen: Frozen,
-        previous: Pick<SnapshotManifest, "pages">,
+        previous: Pick<SnapshotManifest, "pages" | "unpublished">,
       ) {
         const settings = publishedOf((yield* settingsStore.current).settings);
         const shown = Array.from(
@@ -737,15 +739,23 @@ export class Site extends Context.Service<
         const missing = shown.filter((id) => !files.has(id));
         if (missing.length > 0)
           return yield* Effect.die(`${missing.join(", ")} aren't in the media library.`);
-        const written = new Set(previous.pages.map((page) => page.object));
+        const written = new Set([
+          ...previous.pages.map((page) => page.object),
+          ...previous.unpublished,
+        ]);
+        const write = Effect.fn("Site.writePage")(function* (page: PageDocument) {
+          const hash = yield* Effect.promise(() => contentHash(encodePage(page)));
+          if (!written.has(hash)) yield* snapshots.writePage(hash, page);
+          return hash;
+        });
         const pages = yield* Effect.forEach(
           frozen.pages,
-          (page) =>
-            Effect.gen(function* () {
-              const hash = yield* Effect.promise(() => contentHash(encodePage(page)));
-              if (!written.has(hash)) yield* snapshots.writePage(hash, page);
-              return { ...listingOf(page), object: hash };
-            }),
+          (page) => Effect.map(write(page), (hash) => ({ ...listingOf(page), object: hash })),
+          { concurrency: "unbounded" },
+        );
+        const unpublished = yield* Effect.forEach(
+          Object.values(content.pages).filter((page) => page.status === "unpublished"),
+          write,
           { concurrency: "unbounded" },
         );
         const manifest: SnapshotManifest = {
@@ -760,6 +770,7 @@ export class Site extends Context.Service<
           brand: content.brand,
           media: Object.fromEntries(files),
           pages,
+          unpublished,
           gone: frozen.gone,
         };
         yield* snapshots.writeManifest(manifest);
@@ -1096,7 +1107,7 @@ export class Site extends Context.Service<
               const manifest = yield* writeSnapshot(
                 content,
                 { pages: [], gone: [], media: shownMedia(content, contracts) },
-                { pages: [] },
+                { pages: [], unpublished: [] },
               );
               contents.set(manifest.id, content);
               const release = Release.cases.Created.make({

@@ -68,6 +68,7 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
       },
     },
   ],
+  unpublished: [],
   gone: [],
 });
 

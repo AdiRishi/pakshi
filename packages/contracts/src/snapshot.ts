@@ -63,6 +63,8 @@ export const SnapshotManifest = Schema.Struct({
   brand: BrandRevision,
   media: Schema.Record(MediaId, MediaFile),
   pages: Schema.Array(SnapshotPage),
+  /** Page objects of unpublished pages, which `sites` never reads, kept so a later draft can publish them again. */
+  unpublished: Schema.Array(ContentHash),
   /** Addresses of unpublished and deleted pages, which answer 410 Gone. */
   gone: Schema.Array(PagePath),
 });

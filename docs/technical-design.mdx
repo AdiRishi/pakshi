@@ -165,7 +165,7 @@ A page is a flat map of block instances plus an ordered list of top-level IDs, i
 - **References** to media, forms and other pages are IDs, resolved at render time from the same snapshot. Media files never change, so a media ID always renders the same file. A media reference carries the image's alt text for that placement; an empty alt marks it as decorative ([decision 030](/decision-log#decision-030)).
 - **Rich text** is stored as TipTap JSON, with allowed marks and nodes set per field. The agent writes restricted Markdown, which is converted and validated.
 - **Links** allow only `https`, `http`, `mailto` and `tel`, checked on save and again when rendering. There is no raw HTML anywhere.
-- **Unpublished pages** stay in the draft with `status: "unpublished"`. Freezing leaves them out of the snapshot and adds their addresses to the manifest's `gone` list, so `sites` answers them with 410 unless a redirect exists.
+- **Unpublished pages** stay in the draft with `status: "unpublished"`. Freezing leaves them out of the pages the snapshot serves and adds their addresses to the manifest's `gone` list, so `sites` answers them with 410 unless a redirect exists. The manifest keeps their page objects in its `unpublished` list, which `sites` never reads, so later drafts start with them and can publish them again.
 - A reserved `locale` field keeps localization possible later without a migration.
 
 **Site-level parts** live in the draft beside its pages, and merge the same way:
@@ -266,7 +266,7 @@ Light and dark: palette generation produces both modes from the same brand color
 
 ## Publishing, serving and previews
 
-Everything that leaves a draft to be published is a **snapshot**. A snapshot is an immutable manifest in R2 that holds the site's published settings, navigation, header and footer, forms, redirects, block lockfile and brand revision with its resolved theme and identity, plus one entry per page with its meta, so menus and blog lists need no page objects. Each entry points at a page object stored under its content hash. Snapshots share unchanged pages, so a site with hundreds of posts doesn't rewrite them on every save, and rendering one page reads only the manifest and that page. Submissions and releases are both pointers to snapshots.
+Everything that leaves a draft to be published is a **snapshot**. A snapshot is an immutable manifest in R2 that holds the site's published settings, navigation, header and footer, forms, redirects, block lockfile and brand revision with its resolved theme and identity, plus one entry per page with its meta, so menus and blog lists need no page objects. Each entry points at a page object stored under its content hash, and the manifest also lists the page objects of unpublished pages. Snapshots share unchanged pages, so a site with hundreds of posts doesn't rewrite them on every save, and rendering one page reads only the manifest and that page. Submissions and releases are both pointers to snapshots.
 
 ```mermaid
 flowchart LR
