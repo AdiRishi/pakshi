@@ -37,10 +37,11 @@ import { SiteHeader } from "../sites/site-header";
 import { releaseNamed, releaseTitle } from "./describe";
 
 /** Who made a release: who submitted and approved a publish, or who rolled back. */
-const whoBy = (release: Release) => {
+const whoBy = (release: Release): string => {
   switch (release._tag) {
     case "Imported":
       return "Pakshi";
+    case "Created":
     case "RolledBack":
       return release.by.name;
     case "Published":
