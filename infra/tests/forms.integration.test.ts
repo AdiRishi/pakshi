@@ -4,19 +4,20 @@ import {
   addFormSection,
   addTextSection,
   browserFor,
+  connectDomain,
   createBrand,
   createSite,
   describePage,
+  domainAddress,
   emailEntriesTo,
   openHome,
-  siteAddress,
   studioUrl,
   submit,
   unique,
   uniqueAddress,
 } from "./support/studio.ts";
 
-test("a visitor sends a site's form, and the site's admin reads, exports and deletes the entry", async ({
+test("a visitor sends a form on a site's own domain, and its admin reads, exports and deletes the entry", async ({
   browser,
 }) => {
   const priya = await browserFor(browser, "admin");
@@ -35,8 +36,11 @@ test("a visitor sends a site's form, and the site's admin reads, exports and del
   await priya.getByRole("link", { name: "Edit" }).first().click();
   await submit(priya, "Publish");
 
+  const hostname = `${address}.riverton.localhost`;
+  await connectDomain(priya, site, hostname);
+
   const visitor = await browserFor(browser, "visitor");
-  const home = siteAddress(address);
+  const home = domainAddress(hostname);
   await expect
     .poll(async () => (await visitor.request.get(home)).text())
     .toContain("Ask for a room");

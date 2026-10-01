@@ -65,6 +65,7 @@ import {
   saveLook,
   saveVoice,
 } from "./brands.ts";
+import { addDomain, checkDomains, removeDomain, routedHost, siteDomains } from "./domains.ts";
 import { acceptInvitation, invitationView, invite, revokeInvitation } from "./invitations.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
 import { mailerFor } from "./notifications.ts";
@@ -267,6 +268,22 @@ const handlers = (env: StudioApiEnv) =>
           can: { edit: site.permissions.includes("site.settings.edit") },
         };
       });
+      /** Writes a proven domain's host to KV, so `sites` serves the site there. */
+      const route = (hostname: string, site: SiteId) =>
+        Effect.promise(() =>
+          env.ROUTING.put(routingKeys.host(routedHost(hostname, env.SITES_HOST)), site),
+        );
+      /** A site's addresses, to someone who works on it. */
+      const domainsView = Effect.fn("StudioRpc.domainsView")(function* (
+        site: Effect.Success<ReturnType<typeof siteOf>>,
+      ) {
+        return {
+          site: { id: site.id, name: site.name },
+          platform: site.address === null ? null : `${site.address}.${env.SITES_HOST}`,
+          domains: yield* siteDomains(site.id, env.SITES_HOST),
+          can: { edit: site.permissions.includes("site.settings.edit") },
+        };
+      });
       /** A site's form entries, in its own SiteSubmissions. */
       const entriesOf = (site: SiteId) => env.SITE_SUBMISSIONS.getByName(site);
       const liveOf = (doc: Effect.Success<ReturnType<typeof siteDoc>>) =>
@@ -375,6 +392,59 @@ const handlers = (env: StudioApiEnv) =>
                     doc.saveSettings(collaborator(person), changes, seen, studio),
                 );
                 return yield* settingsView({ ...found, name: view.settings.name }, view);
+              }),
+            ),
+          ),
+        siteDomains: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("site domains")(Effect.flatMap(siteOf(person, site), domainsView)),
+          ),
+        addDomain: ({ site, hostname }) =>
+          SignedIn.use((person) =>
+            withCore("add domain")(
+              Effect.gen(function* () {
+                const { found } = yield* permitted(
+                  person,
+                  site,
+                  "site.settings.edit",
+                  "change this site's domains",
+                );
+                yield* addDomain(found.id, hostname, person, env.SITES_HOST);
+                return yield* domainsView(found);
+              }),
+            ),
+          ),
+        checkDomains: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("check domain")(
+              Effect.gen(function* () {
+                const { found } = yield* permitted(
+                  person,
+                  site,
+                  "site.settings.edit",
+                  "change this site's domains",
+                );
+                yield* checkDomains(found.id, route);
+                return yield* domainsView(found);
+              }),
+            ),
+          ),
+        removeDomain: ({ site, hostname }) =>
+          SignedIn.use((person) =>
+            withCore("remove domain")(
+              Effect.gen(function* () {
+                const { found } = yield* permitted(
+                  person,
+                  site,
+                  "site.settings.edit",
+                  "change this site's domains",
+                );
+                yield* removeDomain(found.id, hostname, (removed) =>
+                  Effect.promise(() =>
+                    env.ROUTING.delete(routingKeys.host(routedHost(removed, env.SITES_HOST))),
+                  ),
+                );
+                return yield* domainsView(found);
               }),
             ),
           ),

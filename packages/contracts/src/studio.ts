@@ -1,5 +1,5 @@
 import { ContrastIssue, HexColor, PresetId } from "@repo/tokens";
-import { Context, Schema } from "effect";
+import { Context, Schema, SchemaGetter } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
 import { DefaultRole, Scope } from "./access.ts";
@@ -255,6 +255,56 @@ export const SiteForm = Schema.Struct({
   live: Schema.Boolean,
 });
 export type SiteForm = typeof SiteForm.Type;
+
+/**
+ * A site's own domain, such as `www.northbanklibraries.org`: lowercase, and
+ * starting with a word before the domain, because a bare domain can't point
+ * at Pakshi.
+ */
+export const Hostname = Schema.Trim.pipe(
+  Schema.decodeTo(Schema.String, {
+    decode: SchemaGetter.transform((value: string) => value.toLowerCase().replace(/\.$/, "")),
+    encode: SchemaGetter.passthrough(),
+  }),
+).check(
+  Schema.isMaxLength(253, { message: "Use at most 253 characters" }),
+  Schema.isPattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){2,}[a-z0-9-]{2,63}$/, {
+    message: "Enter an address with a word before the domain, such as www.example.org",
+  }),
+);
+export type Hostname = typeof Hostname.Type;
+
+/** One of a site's own domains, and how far it is from serving the site. */
+export const SiteDomain = Schema.Struct({
+  hostname: Schema.String,
+  status: Schema.Literals(["pending", "active"]),
+  addedAt: Timestamp,
+  checkedAt: Schema.NullOr(Timestamp),
+  /** The DNS records that connect it and prove it's the site's: a CNAME, and a TXT record with its token. */
+  records: Schema.Array(
+    Schema.Struct({
+      type: Schema.Literals(["CNAME", "TXT"]),
+      name: Schema.String,
+      value: Schema.String,
+    }),
+  ),
+});
+export type SiteDomain = typeof SiteDomain.Type;
+
+/** A site's addresses: the one Pakshi gives it, and its own. */
+export const SiteDomainsView = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  /** The site's address under the sites host, which always works. */
+  platform: Schema.NullOr(Schema.String),
+  domains: Schema.Array(SiteDomain),
+  can: Schema.Struct({ edit: Schema.Boolean }),
+});
+export type SiteDomainsView = typeof SiteDomainsView.Type;
+
+/** Another site already has this domain, or it's under Pakshi's own host. */
+export class DomainTaken extends Schema.TaggedError<DomainTaken>()("DomainTaken", {
+  hostname: Schema.String,
+}) {}
 
 /** Where Studio sends an image to add to a library: `${mediaUploadPath}?site=` or `?brand=`, with `&name=`. */
 export const mediaUploadPath = "/api/media";
@@ -852,6 +902,29 @@ class SignedInRpcs extends RpcGroup.make(
       SettingsChanged,
       ImageNotFound,
     ]),
+  }),
+  Rpc.make("siteDomains", {
+    payload: { site: SiteId },
+    success: SiteDomainsView,
+    error: siteError,
+  }),
+  /** Adds a domain to a site, waiting for its DNS records. */
+  Rpc.make("addDomain", {
+    payload: { site: SiteId, hostname: Hostname },
+    success: SiteDomainsView,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, DomainTaken]),
+  }),
+  /** Checks a site's waiting domains now, rather than at the next scheduled check. */
+  Rpc.make("checkDomains", {
+    payload: { site: SiteId },
+    success: SiteDomainsView,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  /** Takes a domain off a site. It stops serving the site at once. */
+  Rpc.make("removeDomain", {
+    payload: { site: SiteId, hostname: Schema.String },
+    success: SiteDomainsView,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
   }),
   Rpc.make("mediaLibrary", {
     payload: { site: SiteId },

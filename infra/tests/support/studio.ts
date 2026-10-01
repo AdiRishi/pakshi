@@ -30,6 +30,27 @@ export const siteAddress = (address: string) => {
   return `${sites.protocol}//${address}.${sites.host}`;
 };
 
+/** Where a site's own domain answers, on the Sites Worker's port. */
+export const domainAddress = (hostname: string) => {
+  const sites = new URL(sitesUrl);
+  return `${sites.protocol}//${hostname}${sites.port === "" ? "" : `:${sites.port}`}`;
+};
+
+/**
+ * Connects a domain to a site from its settings. Only names under
+ * .localhost can be proven in a local stack, and they are at the first check.
+ */
+export const connectDomain = async (page: Page, site: string, hostname: string) => {
+  await page.goto(`${studioUrl}/sites/${site}/settings/domains`);
+  const dialog = page.getByRole("dialog", { name: "Add a domain" });
+  await clickWhenReady(page.getByRole("button", { name: "Add domain" }), dialog);
+  await dialog.getByLabel("Domain", { exact: true }).fill(hostname);
+  await dialog.getByRole("button", { name: "Add domain" }).click();
+  await expect(page.getByRole("heading", { name: `Finish connecting ${hostname}` })).toBeVisible();
+  await page.getByRole("button", { name: "Check now" }).click();
+  await expect(page.getByText(`${hostname} is connected`)).toBeVisible();
+};
+
 /** A browser of its own for someone, signed in as the admin or as nobody yet. */
 export const browserFor = async (browser: Browser, as: "admin" | "visitor") => {
   const viewport = { width: 1440, height: 1000 };

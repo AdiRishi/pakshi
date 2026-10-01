@@ -40,6 +40,7 @@ import { Route as AuthedSitesSiteIdReleasesRouteImport } from './routes/_authed/
 import { Route as PreviewSiteIdDraftIdSplatRouteImport } from './routes/preview/$siteId/$draftId/$'
 import { Route as ReviewSiteIdSubmissionIdSplatRouteImport } from './routes/review/$siteId/$submissionId/$'
 import { Route as AuthedSitesSiteIdSettingsIndexRouteImport } from './routes/_authed/sites/$siteId/settings/index'
+import { Route as AuthedSitesSiteIdSettingsDomainsRouteImport } from './routes/_authed/sites/$siteId/settings/domains'
 import { Route as AuthedSitesSiteIdSettingsFormsRouteImport } from './routes/_authed/sites/$siteId/settings/forms'
 import { Route as AuthedSitesSiteIdSettingsWorkflowRouteImport } from './routes/_authed/sites/$siteId/settings/workflow'
 import { Route as AuthedSitesSiteIdSubmissionsIndexRouteImport } from './routes/_authed/sites/$siteId/submissions/index'
@@ -213,6 +214,12 @@ const AuthedSitesSiteIdSettingsIndexRoute =
     path: '/sites/$siteId/settings/',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedSitesSiteIdSettingsDomainsRoute =
+  AuthedSitesSiteIdSettingsDomainsRouteImport.update({
+    id: '/sites/$siteId/settings/domains',
+    path: '/sites/$siteId/settings/domains',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedSitesSiteIdSettingsFormsRoute =
   AuthedSitesSiteIdSettingsFormsRouteImport.update({
     id: '/sites/$siteId/settings/forms',
@@ -286,6 +293,7 @@ export interface FileRoutesByFullPath {
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/brands/$brandId/': typeof AuthedBrandsBrandIdIndexRoute
   '/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/settings/domains': typeof AuthedSitesSiteIdSettingsDomainsRoute
   '/sites/$siteId/settings/forms': typeof AuthedSitesSiteIdSettingsFormsRoute
   '/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
   '/sites/$siteId/submissions/$entryId': typeof AuthedSitesSiteIdSubmissionsEntryIdRoute
@@ -325,6 +333,7 @@ export interface FileRoutesByTo {
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/brands/$brandId': typeof AuthedBrandsBrandIdIndexRoute
   '/sites/$siteId': typeof AuthedSitesSiteIdIndexRoute
+  '/sites/$siteId/settings/domains': typeof AuthedSitesSiteIdSettingsDomainsRoute
   '/sites/$siteId/settings/forms': typeof AuthedSitesSiteIdSettingsFormsRoute
   '/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
   '/sites/$siteId/submissions/$entryId': typeof AuthedSitesSiteIdSubmissionsEntryIdRoute
@@ -366,6 +375,7 @@ export interface FileRoutesById {
   '/review/$siteId/$submissionId/$': typeof ReviewSiteIdSubmissionIdSplatRoute
   '/_authed/brands/$brandId/': typeof AuthedBrandsBrandIdIndexRoute
   '/_authed/sites/$siteId/': typeof AuthedSitesSiteIdIndexRoute
+  '/_authed/sites/$siteId/settings/domains': typeof AuthedSitesSiteIdSettingsDomainsRoute
   '/_authed/sites/$siteId/settings/forms': typeof AuthedSitesSiteIdSettingsFormsRoute
   '/_authed/sites/$siteId/settings/workflow': typeof AuthedSitesSiteIdSettingsWorkflowRoute
   '/_authed/sites/$siteId/submissions/$entryId': typeof AuthedSitesSiteIdSubmissionsEntryIdRoute
@@ -407,6 +417,7 @@ export interface FileRouteTypes {
     | '/review/$siteId/$submissionId/$'
     | '/brands/$brandId/'
     | '/sites/$siteId/'
+    | '/sites/$siteId/settings/domains'
     | '/sites/$siteId/settings/forms'
     | '/sites/$siteId/settings/workflow'
     | '/sites/$siteId/submissions/$entryId'
@@ -446,6 +457,7 @@ export interface FileRouteTypes {
     | '/review/$siteId/$submissionId/$'
     | '/brands/$brandId'
     | '/sites/$siteId'
+    | '/sites/$siteId/settings/domains'
     | '/sites/$siteId/settings/forms'
     | '/sites/$siteId/settings/workflow'
     | '/sites/$siteId/submissions/$entryId'
@@ -486,6 +498,7 @@ export interface FileRouteTypes {
     | '/review/$siteId/$submissionId/$'
     | '/_authed/brands/$brandId/'
     | '/_authed/sites/$siteId/'
+    | '/_authed/sites/$siteId/settings/domains'
     | '/_authed/sites/$siteId/settings/forms'
     | '/_authed/sites/$siteId/settings/workflow'
     | '/_authed/sites/$siteId/submissions/$entryId'
@@ -732,6 +745,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedSitesSiteIdSettingsIndexRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/sites/$siteId/settings/domains': {
+      id: '/_authed/sites/$siteId/settings/domains'
+      path: '/sites/$siteId/settings/domains'
+      fullPath: '/sites/$siteId/settings/domains'
+      preLoaderRoute: typeof AuthedSitesSiteIdSettingsDomainsRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/sites/$siteId/settings/forms': {
       id: '/_authed/sites/$siteId/settings/forms'
       path: '/sites/$siteId/settings/forms'
@@ -801,6 +821,7 @@ interface AuthedRouteChildren {
   AuthedSitesSiteIdReleasesRoute: typeof AuthedSitesSiteIdReleasesRoute
   AuthedBrandsBrandIdIndexRoute: typeof AuthedBrandsBrandIdIndexRoute
   AuthedSitesSiteIdIndexRoute: typeof AuthedSitesSiteIdIndexRoute
+  AuthedSitesSiteIdSettingsDomainsRoute: typeof AuthedSitesSiteIdSettingsDomainsRoute
   AuthedSitesSiteIdSettingsFormsRoute: typeof AuthedSitesSiteIdSettingsFormsRoute
   AuthedSitesSiteIdSettingsWorkflowRoute: typeof AuthedSitesSiteIdSettingsWorkflowRoute
   AuthedSitesSiteIdSubmissionsEntryIdRoute: typeof AuthedSitesSiteIdSubmissionsEntryIdRoute
@@ -829,6 +850,7 @@ const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedSitesSiteIdReleasesRoute: AuthedSitesSiteIdReleasesRoute,
   AuthedBrandsBrandIdIndexRoute: AuthedBrandsBrandIdIndexRoute,
   AuthedSitesSiteIdIndexRoute: AuthedSitesSiteIdIndexRoute,
+  AuthedSitesSiteIdSettingsDomainsRoute: AuthedSitesSiteIdSettingsDomainsRoute,
   AuthedSitesSiteIdSettingsFormsRoute: AuthedSitesSiteIdSettingsFormsRoute,
   AuthedSitesSiteIdSettingsWorkflowRoute:
     AuthedSitesSiteIdSettingsWorkflowRoute,
