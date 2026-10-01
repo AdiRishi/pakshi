@@ -81,3 +81,19 @@ await test("a released version's screenshot changes only with a rendering change
   commit(root);
   assert.deepEqual(releasedBlockProblems(root, "main"), []);
 });
+
+await test("each later screenshot change of a version needs an entry of its own", (context) => {
+  const root = repository(context);
+  const entry = (change: string) => ({ date: "2026-10-01", versions: ["hero@1"], change });
+  write(root, log, JSON.stringify([entry("Tailwind 5")]));
+  commit(root);
+  git(root, "checkout", "--quiet", "main");
+  git(root, "merge", "--quiet", "change");
+  git(root, "checkout", "--quiet", "-b", "later");
+  write(root, baseline, "png 3");
+  commit(root);
+  assert.equal(releasedBlockProblems(root, "main").length, 1);
+  write(root, log, JSON.stringify([entry("Tailwind 5"), entry("React 20")]));
+  commit(root);
+  assert.deepEqual(releasedBlockProblems(root, "main"), []);
+});
