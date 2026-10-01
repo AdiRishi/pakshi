@@ -6,7 +6,9 @@ import {
   BlocksRemoved,
   BrandChanged,
   CannotDecide,
+  DomainTaken,
   DraftNotFound,
+  EntryNotFound,
   ImageNotFound,
   InvitationClosed,
   NotInBrandLibrary,
@@ -41,6 +43,8 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
       "not_found",
       "This draft was published or closed, or doesn't exist.",
     );
+  if (Schema.is(EntryNotFound)(failure))
+    return new AppRequestError("not_found", "This entry was deleted, or doesn't exist.");
   if (Schema.is(ReleaseNotFound)(failure))
     return new AppRequestError("not_found", "This site has no such release.");
   if (Schema.is(SubmissionNotFound)(failure))
@@ -94,6 +98,11 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError(
       "conflict",
       `Another site already has the address ${failure.address}. Choose another.`,
+    );
+  if (Schema.is(DomainTaken)(failure))
+    return new AppRequestError(
+      "conflict",
+      `${failure.hostname} belongs to another site, or to Pakshi itself. A domain can serve one site.`,
     );
   if (Schema.is(AlreadyMember)(failure))
     return new AppRequestError("conflict", "They already have this role there.");

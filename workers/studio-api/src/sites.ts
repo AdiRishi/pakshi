@@ -17,7 +17,12 @@ import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { describeScope, loadAccess } from "./access.ts";
 
-const SiteRow = Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId });
+const SiteRow = Schema.Struct({
+  id: SiteId,
+  name: Schema.String,
+  brand_id: BrandId,
+  address: Schema.NullOr(Schema.String),
+});
 
 /** A site, whoever is asking. Callers decide what the person may see of it. */
 export const findSite = Effect.fn("StudioApi.findSite")(function* (site: SiteId) {
@@ -25,10 +30,16 @@ export const findSite = Effect.fn("StudioApi.findSite")(function* (site: SiteId)
   const found = yield* SqlSchema.findOneOption({
     Request: SiteId,
     Result: SiteRow,
-    execute: (id) => sql`select id, name, brand_id from sites where id = ${id}`,
+    execute: (id) => sql`select id, name, brand_id, address from sites where id = ${id}`,
   })(site);
   if (Option.isNone(found)) return yield* new SiteNotFound({ site });
-  return { id: found.value.id, name: found.value.name, brand: found.value.brand_id };
+  return {
+    id: found.value.id,
+    name: found.value.name,
+    brand: found.value.brand_id,
+    /** Its platform subdomain, which seeded sites don't have. */
+    address: found.value.address,
+  };
 });
 
 /** What a person holds on a site: their permissions, and the roles their grants give them there. */

@@ -20,6 +20,7 @@ import { serveAgent } from "./agent/route.ts";
 import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
+import { checkDomains, routedHost } from "./domains.ts";
 import { serveLive } from "./live.ts";
 import { retainImages } from "./media-retention.ts";
 import {
@@ -72,7 +73,8 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
   /**
    * The scheduled jobs, on the schedules infra sets. Often: the reconcile
    * job, offering brand revisions again to sites that missed them, and asking
-   * sites that haven't reported their block versions for them. Daily: keeping
+   * sites that haven't reported their block versions for them, and checking
+   * waiting domains. Daily: keeping
    * library images while they're used.
    */
   override async scheduled(controller: ScheduledController) {
@@ -101,6 +103,11 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
             ),
         ),
         offerMissedRevisions(this.env),
+        checkDomains(undefined, (hostname, site) =>
+          Effect.promise(() =>
+            this.env.ROUTING.put(routingKeys.host(routedHost(hostname, this.env.SITES_HOST)), site),
+          ),
+        ),
         collectBlockUsage((site) =>
           Effect.tryPromise(async () =>
             (await getServerByName(this.env.SITE_DOC, site)).reportBlocks(),

@@ -14,7 +14,7 @@ import { ConflictKey, Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
 import { SettingsChanges, SiteName } from "@repo/contracts/settings";
 import { DraftSharing } from "@repo/contracts/sharing";
-import { Decision, SiteAddress } from "@repo/contracts/studio";
+import { Decision, Hostname, SiteAddress } from "@repo/contracts/studio";
 import { Workflow } from "@repo/contracts/workflow";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -30,6 +30,24 @@ const forDraft = Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, draft: 
 /** Calls studio-api for a suggestion, which waits on a model, so it gets longer to answer. */
 const suggestion = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
   callStudio({ binding: env.STUDIO_RPC, request: getRequest(), timeout: "90 seconds" }, use);
+
+/** A site's Pakshi address and its own domains. */
+export const getSiteDomains = createServerFn({ method: "GET" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.siteDomains(data)));
+
+export const addDomain = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, hostname: Hostname })))
+  .handler(({ data }) => studio((client) => client.addDomain(data)));
+
+/** Checks a site's waiting domains now. */
+export const checkDomains = createServerFn({ method: "POST" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.checkDomains(data)));
+
+export const removeDomain = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, hostname: Schema.String })))
+  .handler(({ data }) => studio((client) => client.removeDomain(data)));
 
 /** A site's settings, with the images it can choose from. */
 export const getSiteSettings = createServerFn({ method: "GET" })
