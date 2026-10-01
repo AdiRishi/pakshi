@@ -13,7 +13,6 @@ const createAuth = (env: StudioApiEnv, origin: string) =>
     basePath: authBasePath,
     trustedOrigins: [origin],
     advanced: { ipAddress: { ipAddressHeaders: ["cf-connecting-ip"] } },
-    session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: passwordLength.min,
