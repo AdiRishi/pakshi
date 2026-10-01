@@ -408,8 +408,9 @@ export class Site extends Context.Service<
     /** The site's forms, in the live site and its open drafts, with the pages each is on. */
     readonly forms: Effect.Effect<ReadonlyArray<SiteForm>, StorageError>;
     /**
-     * The library images the live site and its open drafts show, with the
-     * pages that show each, or "Header and footer".
+     * The library images the live site, its open drafts and its settings
+     * show, with the pages that show each, or "Header and footer" or
+     * "Site settings".
      */
     readonly imagesInUse: Effect.Effect<
       ReadonlyArray<{ readonly media: MediaId; readonly pages: ReadonlyArray<string> }>,
@@ -1543,6 +1544,12 @@ export class Site extends Context.Service<
             for (const page of Object.values(content.pages))
               for (const media of imagesOnPage(page)) use(media, page.meta.title || page.path);
           }
+          const served = yield* snapshots.manifest((yield* liveRelease).snapshot);
+          for (const { sharingImage } of [
+            served.settings,
+            publishedOf((yield* settingsStore.current).settings),
+          ])
+            if (sharingImage !== null) use(sharingImage.id, "Site settings");
           return Array.from(found, ([media, pages]) => ({ media, pages: Array.from(pages) }));
         }),
         forms: Effect.gen(function* () {
