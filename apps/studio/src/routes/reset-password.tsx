@@ -78,9 +78,7 @@ export const Route = createFileRoute("/reset-password")({
               name="password"
               type="password"
               autoComplete="new-password"
-              minLength={passwordLength.min}
               maxLength={passwordLength.max}
-              description={`At least ${passwordLength.min} characters.`}
             />
             <Button type="submit" size="lg" className="h-11 font-bold">
               Change password

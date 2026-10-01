@@ -34,7 +34,7 @@ const problems = {
   invalid: {
     kind: "problem",
     title: "Check the details",
-    text: `Enter your name and a password of at least ${passwordLength.min} characters.`,
+    text: "Enter your name and a password.",
   },
 } as const satisfies Record<string, Notice>;
 
@@ -163,9 +163,7 @@ export const Route = createFileRoute("/join/$token")({
             name="password"
             type="password"
             autoComplete="new-password"
-            minLength={passwordLength.min}
             maxLength={passwordLength.max}
-            description={`At least ${passwordLength.min} characters.`}
           />
           <Button type="submit" size="lg" className="h-11 font-bold">
             Join

@@ -14,7 +14,7 @@ const notices = {
   invalid: {
     kind: "problem",
     title: "Check the details",
-    text: `Fill in every field, with a password of at least ${passwordLength.min} characters.`,
+    text: "Fill in every field.",
   },
   failed: {
     kind: "problem",
@@ -76,9 +76,7 @@ export const Route = createFileRoute("/set-up")({
             name="password"
             type="password"
             autoComplete="new-password"
-            minLength={passwordLength.min}
             maxLength={passwordLength.max}
-            description={`At least ${passwordLength.min} characters.`}
           />
           <Button type="submit" size="lg" className="h-11 font-bold">
             Set up Pakshi

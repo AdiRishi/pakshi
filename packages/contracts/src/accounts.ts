@@ -29,11 +29,11 @@ const trimmed = (min: number, max: number, message: string) =>
 export const OrganizationName = trimmed(1, 80, "Name the organization");
 export const PersonName = trimmed(1, 80, "Enter your name");
 
-export const passwordLength = { min: 10, max: 128 } as const;
+export const passwordLength = { min: 1, max: 128 } as const;
 
 export const Password = Schema.String.check(
   Schema.isMinLength(passwordLength.min, {
-    message: `Use at least ${passwordLength.min} characters`,
+    message: "Enter a password",
   }),
   Schema.isMaxLength(passwordLength.max, {
     message: `Use at most ${passwordLength.max} characters`,
@@ -68,7 +68,7 @@ export const AccountRefusal = Schema.Struct({
     "invitation",
     /** An account with this email address exists, so its owner signs in to accept. */
     "account-exists",
-    /** The details don't meet the rules, such as a password too short. */
+    /** The details don't meet the rules, such as a missing password. */
     "invalid",
   ]),
 });

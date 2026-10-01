@@ -47,12 +47,13 @@ it.live("an invitation's link makes the account it was sent to, once", () =>
     expect(linkIn(email.text)).toBe(link);
     const token = InvitationToken.make(link.split("/").at(-1) ?? "");
 
-    const join = { token, name: "Sam Okafor", password: "sam-password" };
+    const join = { token, name: "Sam Okafor", password: "s" };
     const joined = yield* Effect.promise(() => post(accountsPaths.join, join));
     expect(joined.status).toBe(204);
     const sam = yield* (yield* studio(sessionOf(joined))).viewer();
     expect(sam.roles).toEqual([{ role: "Editor", scope: "Northbank Libraries" }]);
     expect(sam.sites.map(({ id }) => id)).toEqual([site.site.id]);
+    yield* signIn("sam@riverton.test", join.password);
 
     const again = yield* Effect.promise(() =>
       post(accountsPaths.join, { ...join, password: "another-password" }),
@@ -122,10 +123,10 @@ it.live(
       const token = landing.searchParams.get("token") ?? "";
 
       const reset = yield* Effect.promise(() =>
-        post(`${authBasePath}/reset-password`, { token, newPassword: "a-new-password" }),
+        post(`${authBasePath}/reset-password`, { token, newPassword: "j" }),
       );
       expect(reset.ok).toBe(true);
-      yield* signIn(jonah.email, "a-new-password");
+      yield* signIn(jonah.email, "j");
       const stale = yield* Effect.flip((yield* studio(before)).viewer());
       expect(stale._tag).toBe("Unauthenticated");
     }).pipe(Effect.scoped),

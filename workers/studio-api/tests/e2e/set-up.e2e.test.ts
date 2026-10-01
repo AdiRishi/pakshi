@@ -3,13 +3,13 @@ import { accountsPaths, authBasePath } from "@repo/contracts/accounts";
 import { exports } from "cloudflare:workers";
 import { Effect } from "effect";
 
-import { post, setUp, studio, studioOrigin } from "./support/studio.ts";
+import { post, setUp, signIn, studio, studioOrigin } from "./support/studio.ts";
 
 const priya = {
   organization: "Riverton Council",
   name: "Priya Shah",
   email: "priya@riverton.test",
-  password: "priya-password",
+  password: "p",
 };
 
 it.live("the first person sets Pakshi up, and nobody after them can", () =>
@@ -31,6 +31,7 @@ it.live("the first person sets Pakshi up, and nobody after them can", () =>
     const viewer = yield* (yield* studio(session)).viewer();
     expect(viewer.organization).toBe("Riverton Council");
     expect(viewer.roles).toEqual([{ role: "Org admin", scope: "Riverton Council" }]);
+    yield* signIn(priya.email, priya.password);
 
     const again = yield* Effect.promise(() =>
       post(accountsPaths.setUp, { ...priya, email: "mallory@evil.test" }),
