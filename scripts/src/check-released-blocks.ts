@@ -30,12 +30,26 @@ const git = (root: string, args: ReadonlyArray<string>) =>
 
 /** The rendering changes log, as far as this check reads it. */
 const RenderingLog = Schema.fromJsonString(
-  Schema.Array(Schema.Struct({ versions: Schema.Array(Schema.String) })),
+  Schema.Array(
+    Schema.Struct({
+      date: Schema.String,
+      versions: Schema.Array(Schema.String),
+      change: Schema.String,
+    }),
+  ),
 );
 
-/** The versions the log's entries name, as `hero@1`. */
-const loggedVersions = (text: string) =>
-  new Set(Schema.decodeSync(RenderingLog)(text).flatMap((entry) => entry.versions));
+const decodeLog = Schema.decodeSync(RenderingLog);
+
+/** The versions named by entries in `now` that `before` doesn't have, as `hero@1`. */
+const newlyLoggedVersions = (before: string, now: string) => {
+  const earlier = new Set(decodeLog(before).map((entry) => JSON.stringify(entry)));
+  return new Set(
+    decodeLog(now)
+      .filter((entry) => !earlier.has(JSON.stringify(entry)))
+      .flatMap((entry) => entry.versions),
+  );
+};
 
 /** Every problem with the changes since `base`, in the repository at `root`. */
 export const releasedBlockProblems = (root: string, base: string) => {
@@ -50,13 +64,10 @@ export const releasedBlockProblems = (root: string, base: string) => {
   );
   const released = (type: string, version: string) =>
     Array.from(atBase).some((path) => path.startsWith(`${blocksSource}${type}/v${version}/`));
-  const logAtBase = atBase.has(renderingLog)
-    ? loggedVersions(git(root, ["show", `${mergeBase}:${renderingLog}`]))
-    : new Set<string>();
-  const logNow = existsSync(join(root, renderingLog))
-    ? loggedVersions(readFileSync(join(root, renderingLog), "utf8"))
-    : new Set<string>();
-  const newlyLogged = new Set(Array.from(logNow).filter((version) => !logAtBase.has(version)));
+  const newlyLogged = newlyLoggedVersions(
+    atBase.has(renderingLog) ? git(root, ["show", `${mergeBase}:${renderingLog}`]) : "[]",
+    existsSync(join(root, renderingLog)) ? readFileSync(join(root, renderingLog), "utf8") : "[]",
+  );
 
   const problems: Array<string> = [];
   for (const path of changed) {
