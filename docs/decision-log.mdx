@@ -9,7 +9,9 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
-| 070 | Measuring `sites` startup moves to checkpoint 9, with production                   | 2026-10-01 | Accepted            |
+| 072 | Site settings are a registry of definitions with one home in SiteDoc               | 2026-10-01 | Accepted            |
+| 071 | Build and test in the dev stack as real people; production comes last              | 2026-10-01 | Accepted            |
+| 070 | Measuring `sites` startup moves to checkpoint 9, with production                   | 2026-10-01 | Amended by 071      |
 | 069 | A brand color too light to read fails the contrast check rather than being changed | 2026-10-01 | Accepted            |
 | 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Accepted            |
 | 067 | A new draft offers every block in the library                                      | 2026-10-01 | Accepted            |
@@ -27,7 +29,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 055 | A draft's sharing lives with the draft in SiteDoc                                  | 2026-10-01 | Accepted            |
 | 054 | Studio serves previews from the draft itself                                       | 2026-10-01 | Accepted            |
 | 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted            |
-| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Accepted            |
+| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Amended by 071      |
 | 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted            |
 | 050 | A site's first release is the one KV serves                                        | 2026-09-30 | Accepted            |
 | 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts         | 2026-09-30 | Accepted            |
@@ -51,7 +53,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted            |
 | 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted            |
 | 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted            |
-| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Accepted            |
+| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Amended by 071      |
 | 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted            |
 | 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted            |
 | 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted            |
@@ -70,7 +72,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted            |
 | 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted            |
 | 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted            |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054      |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054, 071 |
 | 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Amended by 058, 059 |
 | 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted            |
 | 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Amended by 063      |
@@ -79,6 +81,26 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 072 — Site settings are a registry of definitions with one home in SiteDoc [#decision-072]
+
+**Context.** A site's only setting was its name, stored in every draft, changed only by merges, and merged as a conflict. Checkpoint 10 adds a default sharing image, where each form's entries are emailed, and the sender, and more settings will follow. The Studio designs say general settings "aren't part of any draft" and reach the live site with the next publish, while form email settings "take effect as soon as you save."
+
+**Decision.** Each setting is one definition in a registry in `@repo/contracts`: its title, its schema, its default, and its delivery. A `published` setting changes what visitors see, so freezing copies it into the snapshot and it goes live with the next publish. A `live` setting changes how the site runs, so it takes effect when it's saved. Every type, the save payload and the snapshot's settings are derived from the registry. `SiteDoc` is the one home: a row per setting someone has set, with who and when; anything unset reads as its default. Saving names the settings revision the screen started from and is refused if someone saved since. A save that changes `live` settings sends them, through the outbox, to the runtime that reads them, which today is the site's `SiteSubmissions`. Drafts, merges and `rebase` no longer carry settings.
+
+**Rejected.** Settings in drafts, which puts every change through approval and can't take effect at once; a home per setting, such as form addresses in `SiteSubmissions`, which needs a new decision for every new setting; settings inherited from brands or the organization, until one needs it.
+
+**Consequences.** A new setting is one definition, with no migration, and older snapshots read its default. A rollback brings back the published settings its snapshot holds. Settings screens are built by hand and save through one call.
+
+## 071 — Build and test in the dev stack as real people; production comes last [#decision-071]
+
+**Context.** Several checkpoints moved their checks to whichever checkpoint first needed production, which pulled production setup into the middle of the plan. Meanwhile every stage but production seeded test users, a sample site and the block fixture sites, and signed people in through a test identity provider, so tests and demos never went through setting Pakshi up.
+
+**Decision.** Every checkpoint is built and checked in the dev stack, and a final checkpoint deploys production and runs the checks that need Cloudflare's network. Pakshi gains email and password sign-in through Better Auth. An empty stack is set up by its first visitor, who names the organization and becomes its org admin; everyone after joins by invitation with a default role. Org admins create brands, and org and brand admins create sites. The test identity provider, the seeded users and the sample site go, and tests set up what they need through Studio or the endpoints it calls. Sign-in through the organization's identity provider returns with production.
+
+**Rejected.** Keeping seeded test users and sites in dev, which tests a Pakshi no one will run; open sign-up, which lets anyone who reaches Studio in.
+
+**Consequences.** `pnpm dev` starts empty. Each browser suite pays for its own setup. Decisions 052 and 070 point at the production checkpoint, and a stage holds one organization, as each deployment of Pakshi does.
 
 ## 070 — Measuring `sites` startup moves to checkpoint 9, with production [#decision-070]
 

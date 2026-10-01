@@ -2,6 +2,7 @@ import { BrandId, type SiteId } from "@repo/contracts/ids";
 import { currentStep, type Submission } from "@repo/contracts/submission";
 import { permissionsOn, rolesOn } from "@repo/domain/access";
 import { eligibility } from "@repo/domain/approvals";
+import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -122,6 +123,12 @@ export interface Mailer {
     readonly text: string;
   }) => Promise<void>;
 }
+
+/** Studio's notifications through the Email Service binding. */
+export const mailerFor = (env: StudioApiEnv): Mailer => ({
+  from: env.EMAIL_SENDER,
+  send: async (message) => void (await env.EMAIL.send(message)),
+});
 
 /**
  * Emails the people a notification is for: the approvers of the

@@ -2,6 +2,7 @@ import { Scope } from "@repo/contracts/access";
 import { DraftName } from "@repo/contracts/draft";
 import {
   BlockId,
+  BrandId,
   DraftId,
   MediaId,
   ReleaseId,
@@ -12,7 +13,7 @@ import {
 import { ConflictKey, Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
 import { DraftSharing } from "@repo/contracts/sharing";
-import { Decision } from "@repo/contracts/studio";
+import { Decision, SiteAddress, SiteName } from "@repo/contracts/studio";
 import { Workflow } from "@repo/contracts/workflow";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
@@ -208,3 +209,17 @@ export const decide = createServerFn({ method: "POST" })
       (client) => client.decide(data),
     ),
   );
+
+/** The brands the person may make a site in, and the host its address goes under. */
+export const getNewSiteOptions = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.newSiteOptions()),
+);
+
+/** Makes a site with its platform subdomain and first draft. */
+export const createSite = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ brand: BrandId, name: SiteName, address: SiteAddress }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.createSite(data)));

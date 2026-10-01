@@ -10,14 +10,19 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthedRouteImport } from './routes/_authed'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
+import { Route as SetUpRouteImport } from './routes/set-up'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedBlocksRouteImport } from './routes/_authed/blocks'
-import { Route as SignInStartRouteImport } from './routes/sign-in_.start'
+import { Route as AuthedPeopleRouteImport } from './routes/_authed/people'
+import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as AuthedApprovalsIndexRouteImport } from './routes/_authed/approvals/index'
 import { Route as AuthedBrandsIndexRouteImport } from './routes/_authed/brands/index'
 import { Route as AuthedOrganizationWorkflowRouteImport } from './routes/_authed/organization/workflow'
+import { Route as AuthedSitesNewRouteImport } from './routes/_authed/sites/new'
 import { Route as ApiAuthSplatRouteImport } from './routes/api/auth/$'
 import { Route as BrandMediaBrandIdMediaIdRouteImport } from './routes/brand-media/$brandId/$mediaId'
 import { Route as AuthedApprovalsSiteIdSubmissionIdRouteImport } from './routes/_authed/approvals/$siteId/$submissionId'
@@ -37,6 +42,21 @@ import { Route as AuthedSitesSiteIdDraftsDraftIdPagesPageIdRouteImport } from '.
 
 const AuthedRoute = AuthedRouteImport.update({
   id: '/_authed',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SetUpRoute = SetUpRouteImport.update({
+  id: '/set-up',
+  path: '/set-up',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignInRoute = SignInRouteImport.update({
@@ -59,9 +79,14 @@ const AuthedBlocksRoute = AuthedBlocksRouteImport.update({
   path: '/blocks',
   getParentRoute: () => AuthedRoute,
 } as any)
-const SignInStartRoute = SignInStartRouteImport.update({
-  id: '/sign-in_/start',
-  path: '/sign-in/start',
+const AuthedPeopleRoute = AuthedPeopleRouteImport.update({
+  id: '/people',
+  path: '/people',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const JoinTokenRoute = JoinTokenRouteImport.update({
+  id: '/join/$token',
+  path: '/join/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthedApprovalsIndexRoute = AuthedApprovalsIndexRouteImport.update({
@@ -80,6 +105,11 @@ const AuthedOrganizationWorkflowRoute =
     path: '/organization/workflow',
     getParentRoute: () => AuthedRoute,
   } as any)
+const AuthedSitesNewRoute = AuthedSitesNewRouteImport.update({
+  id: '/sites/new',
+  path: '/sites/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
 const ApiAuthSplatRoute = ApiAuthSplatRouteImport.update({
   id: '/api/auth/$',
   path: '/api/auth/$',
@@ -176,11 +206,16 @@ const AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof AuthedIndexRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/set-up': typeof SetUpRoute
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/blocks': typeof AuthedBlocksRoute
-  '/sign-in/start': typeof SignInStartRoute
+  '/people': typeof AuthedPeopleRoute
+  '/join/$token': typeof JoinTokenRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
+  '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
   '/approvals/': typeof AuthedApprovalsIndexRoute
@@ -201,12 +236,17 @@ export interface FileRoutesByFullPath {
   '/sites/$siteId/drafts/$draftId/pages/$pageId': typeof AuthedSitesSiteIdDraftsDraftIdPagesPageIdRoute
 }
 export interface FileRoutesByTo {
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/set-up': typeof SetUpRoute
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/blocks': typeof AuthedBlocksRoute
-  '/sign-in/start': typeof SignInStartRoute
+  '/people': typeof AuthedPeopleRoute
+  '/join/$token': typeof JoinTokenRoute
   '/': typeof AuthedIndexRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
+  '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
   '/approvals': typeof AuthedApprovalsIndexRoute
@@ -229,12 +269,17 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/_authed': typeof AuthedRouteWithChildren
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/reset-password': typeof ResetPasswordRoute
+  '/set-up': typeof SetUpRoute
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/_authed/blocks': typeof AuthedBlocksRoute
-  '/sign-in_/start': typeof SignInStartRoute
+  '/_authed/people': typeof AuthedPeopleRoute
+  '/join/$token': typeof JoinTokenRoute
   '/_authed/': typeof AuthedIndexRoute
   '/_authed/organization/workflow': typeof AuthedOrganizationWorkflowRoute
+  '/_authed/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
   '/brand-media/$brandId/$mediaId': typeof BrandMediaBrandIdMediaIdRoute
   '/_authed/approvals/': typeof AuthedApprovalsIndexRoute
@@ -258,11 +303,16 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/forgot-password'
+    | '/reset-password'
+    | '/set-up'
     | '/sign-in'
     | '/sign-out'
     | '/blocks'
-    | '/sign-in/start'
+    | '/people'
+    | '/join/$token'
     | '/organization/workflow'
+    | '/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
     | '/approvals/'
@@ -283,12 +333,17 @@ export interface FileRouteTypes {
     | '/sites/$siteId/drafts/$draftId/pages/$pageId'
   fileRoutesByTo: FileRoutesByTo
   to:
+    | '/forgot-password'
+    | '/reset-password'
+    | '/set-up'
     | '/sign-in'
     | '/sign-out'
     | '/blocks'
-    | '/sign-in/start'
+    | '/people'
+    | '/join/$token'
     | '/'
     | '/organization/workflow'
+    | '/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
     | '/approvals'
@@ -310,12 +365,17 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/_authed'
+    | '/forgot-password'
+    | '/reset-password'
+    | '/set-up'
     | '/sign-in'
     | '/sign-out'
     | '/_authed/blocks'
-    | '/sign-in_/start'
+    | '/_authed/people'
+    | '/join/$token'
     | '/_authed/'
     | '/_authed/organization/workflow'
+    | '/_authed/sites/new'
     | '/api/auth/$'
     | '/brand-media/$brandId/$mediaId'
     | '/_authed/approvals/'
@@ -338,9 +398,12 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   AuthedRoute: typeof AuthedRouteWithChildren
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
+  SetUpRoute: typeof SetUpRoute
   SignInRoute: typeof SignInRoute
   SignOutRoute: typeof SignOutRoute
-  SignInStartRoute: typeof SignInStartRoute
+  JoinTokenRoute: typeof JoinTokenRoute
   ApiAuthSplatRoute: typeof ApiAuthSplatRoute
   BrandMediaBrandIdMediaIdRoute: typeof BrandMediaBrandIdMediaIdRoute
   PreviewSiteIdDraftIdSplatRoute: typeof PreviewSiteIdDraftIdSplatRoute
@@ -354,6 +417,27 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AuthedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/set-up': {
+      id: '/set-up'
+      path: '/set-up'
+      fullPath: '/set-up'
+      preLoaderRoute: typeof SetUpRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/sign-in': {
@@ -384,11 +468,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedBlocksRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/sign-in_/start': {
-      id: '/sign-in_/start'
-      path: '/sign-in/start'
-      fullPath: '/sign-in/start'
-      preLoaderRoute: typeof SignInStartRouteImport
+    '/_authed/people': {
+      id: '/_authed/people'
+      path: '/people'
+      fullPath: '/people'
+      preLoaderRoute: typeof AuthedPeopleRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/join/$token': {
+      id: '/join/$token'
+      path: '/join/$token'
+      fullPath: '/join/$token'
+      preLoaderRoute: typeof JoinTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authed/approvals/': {
@@ -410,6 +501,13 @@ declare module '@tanstack/react-router' {
       path: '/organization/workflow'
       fullPath: '/organization/workflow'
       preLoaderRoute: typeof AuthedOrganizationWorkflowRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/sites/new': {
+      id: '/_authed/sites/new'
+      path: '/sites/new'
+      fullPath: '/sites/new'
+      preLoaderRoute: typeof AuthedSitesNewRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/api/auth/$': {
@@ -529,8 +627,10 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedBlocksRoute: typeof AuthedBlocksRoute
+  AuthedPeopleRoute: typeof AuthedPeopleRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
   AuthedOrganizationWorkflowRoute: typeof AuthedOrganizationWorkflowRoute
+  AuthedSitesNewRoute: typeof AuthedSitesNewRoute
   AuthedApprovalsIndexRoute: typeof AuthedApprovalsIndexRoute
   AuthedBrandsIndexRoute: typeof AuthedBrandsIndexRoute
   AuthedApprovalsSiteIdSubmissionIdRoute: typeof AuthedApprovalsSiteIdSubmissionIdRoute
@@ -549,8 +649,10 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedBlocksRoute: AuthedBlocksRoute,
+  AuthedPeopleRoute: AuthedPeopleRoute,
   AuthedIndexRoute: AuthedIndexRoute,
   AuthedOrganizationWorkflowRoute: AuthedOrganizationWorkflowRoute,
+  AuthedSitesNewRoute: AuthedSitesNewRoute,
   AuthedApprovalsIndexRoute: AuthedApprovalsIndexRoute,
   AuthedBrandsIndexRoute: AuthedBrandsIndexRoute,
   AuthedApprovalsSiteIdSubmissionIdRoute:
@@ -576,9 +678,12 @@ const AuthedRouteWithChildren =
 
 const rootRouteChildren: RootRouteChildren = {
   AuthedRoute: AuthedRouteWithChildren,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
+  SetUpRoute: SetUpRoute,
   SignInRoute: SignInRoute,
   SignOutRoute: SignOutRoute,
-  SignInStartRoute: SignInStartRoute,
+  JoinTokenRoute: JoinTokenRoute,
   ApiAuthSplatRoute: ApiAuthSplatRoute,
   BrandMediaBrandIdMediaIdRoute: BrandMediaBrandIdMediaIdRoute,
   PreviewSiteIdDraftIdSplatRoute: PreviewSiteIdDraftIdSplatRoute,

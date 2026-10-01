@@ -25,6 +25,7 @@ export const core = Layer.effectDiscard(
       .map((statement) => statement.trim())
       .filter((statement) => statement !== "");
     for (const statement of statements) yield* sql.unsafe(statement);
+    yield* sql`insert into organization (id, name) values (1, 'Riverton Council')`;
     yield* sql`insert into brands (id, name) values ('brand_a', 'City Libraries'), ('brand_b', 'City Parks')`;
     for (const brand of ["brand_a", "brand_b"]) {
       const theme = { preset: "editorial", changes: {} } as const;

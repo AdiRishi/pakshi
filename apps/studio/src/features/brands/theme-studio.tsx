@@ -185,7 +185,7 @@ function Section(props: {
 }
 
 /** The brand color, as a picker and as text, which only takes a whole color. */
-function BrandColor(props: {
+export function BrandColor(props: {
   readonly value: HexColor;
   readonly disabled: boolean;
   readonly onChange: (value: HexColor) => void;

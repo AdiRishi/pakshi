@@ -2,7 +2,7 @@ import type { BrandId } from "@repo/contracts/ids";
 import type { Viewer } from "@repo/contracts/studio";
 import { presetTitles } from "@repo/tokens";
 import { Badge } from "@repo/ui/components/badge";
-import { buttonVariants } from "@repo/ui/components/button";
+import { Button, buttonVariants } from "@repo/ui/components/button";
 import {
   Card,
   CardAction,
@@ -15,20 +15,32 @@ import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/compo
 import { Item, ItemActions, ItemContent, ItemGroup, ItemTitle } from "@repo/ui/components/item";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon } from "lucide-react";
+import { ChevronRightIcon, PlusIcon } from "lucide-react";
+import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 
 import { BrandHeader } from "./brand-header";
+import { NewBrandDialog } from "./new-brand-dialog";
 import { brandQuery, brandsQuery } from "./queries";
 
 /** Every brand the person works on, with its look and sites. */
 export function BrandsPage(props: { readonly viewer: Viewer }) {
   const { data: brands } = useSuspenseQuery(brandsQuery);
+  const [creating, setCreating] = useState(false);
   return (
     <AppShell viewer={props.viewer}>
+      <NewBrandDialog open={creating} onOpenChange={setCreating} />
       <header className="flex flex-col gap-2 bg-accent px-10 pt-6 pb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Brands</h1>
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight">Brands</h1>
+          {props.viewer.can.createBrand && (
+            <Button className="ml-auto" onClick={() => setCreating(true)}>
+              <PlusIcon />
+              New brand
+            </Button>
+          )}
+        </div>
         <p className="text-secondary-foreground">
           Each brand sets the theme, logo, voice guide and approval workflow for its sites.
         </p>
@@ -38,7 +50,11 @@ export function BrandsPage(props: { readonly viewer: Viewer }) {
           <Empty>
             <EmptyHeader>
               <EmptyTitle>No brands to show</EmptyTitle>
-              <EmptyDescription>Brands you can work on appear here.</EmptyDescription>
+              <EmptyDescription>
+                {props.viewer.can.createBrand
+                  ? "Make the first brand to set the theme and voice its sites use."
+                  : "Brands you can work on appear here."}
+              </EmptyDescription>
             </EmptyHeader>
           </Empty>
         ) : (

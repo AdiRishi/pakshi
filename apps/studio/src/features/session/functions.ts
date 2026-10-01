@@ -1,17 +1,27 @@
+import { InvitationToken } from "@repo/contracts/accounts";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
-import { Effect } from "effect";
+import { Effect, Schema } from "effect";
 
-import { callStudio } from "@/server/studio-rpc";
+import { callStudio, type StudioClient } from "@/server/studio-rpc";
+
+const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
+  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
 
 /** The signed-in person, or null when nobody is signed in. */
 export const getViewer = createServerFn({ method: "GET" }).handler(() =>
-  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, (studio) =>
-    studio.viewer().pipe(Effect.catchTag("Unauthenticated", () => Effect.succeed(null))),
+  studio((client) =>
+    client.viewer().pipe(Effect.catchTag("Unauthenticated", () => Effect.succeed(null))),
   ),
 );
 
-export const getOrganizationName = createServerFn({ method: "GET" }).handler(
-  () => env.ORGANIZATION_NAME,
+/** The organization's name, or null before anyone has set Pakshi up. */
+export const getOrganization = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.organization()),
 );
+
+/** What an invitation's link offers. */
+export const getInvitation = createServerFn({ method: "GET" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ token: InvitationToken })))
+  .handler(({ data }) => studio((client) => client.invitation(data)));

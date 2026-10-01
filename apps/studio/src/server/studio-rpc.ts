@@ -1,10 +1,13 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/contracts/rpc/client";
 import {
+  AddressTaken,
+  AlreadyMember,
   BlocksRemoved,
   BrandChanged,
   CannotDecide,
   DraftNotFound,
+  InvitationClosed,
   NotInBrandLibrary,
   NothingToRollBack,
   NotPermitted,
@@ -74,6 +77,18 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError(
       "conflict",
       "This site already uses the newest version of that block.",
+    );
+  if (Schema.is(AddressTaken)(failure))
+    return new AppRequestError(
+      "conflict",
+      `Another site already has the address ${failure.address}. Choose another.`,
+    );
+  if (Schema.is(AlreadyMember)(failure))
+    return new AppRequestError("conflict", "They already have this role there.");
+  if (Schema.is(InvitationClosed)(failure))
+    return new AppRequestError(
+      "conflict",
+      "This invitation was used, withdrawn or has expired, or it's for someone else.",
     );
   if (Schema.is(StudioUnavailable)(failure) || failure instanceof RpcClientError.RpcClientError)
     return new AppRequestError(

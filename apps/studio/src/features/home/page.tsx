@@ -1,6 +1,6 @@
 import type { Home, Viewer } from "@repo/contracts/studio";
 import { buttonVariants } from "@repo/ui/components/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
+import { Card, CardAction, CardContent, CardHeader, CardTitle } from "@repo/ui/components/card";
 import {
   Empty,
   EmptyDescription,
@@ -18,7 +18,7 @@ import {
 } from "@repo/ui/components/item";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { ChevronRightIcon, GlobeIcon } from "lucide-react";
+import { ChevronRightIcon, GlobeIcon, PlusIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -135,6 +135,14 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
                   Your sites
                 </h2>
               </CardTitle>
+              {viewer.can.createSite && (
+                <CardAction>
+                  <Link to="/sites/new" className={buttonVariants({ size: "sm" })}>
+                    <PlusIcon />
+                    New site
+                  </Link>
+                </CardAction>
+              )}
             </CardHeader>
             <CardContent className="px-0">
               {viewer.sites.length === 0 ? (
@@ -145,7 +153,11 @@ export function HomePage({ viewer }: { readonly viewer: Viewer }) {
                     </EmptyMedia>
                     <EmptyTitle>No sites yet</EmptyTitle>
                     <EmptyDescription>
-                      You can't edit any sites yet. Ask your team's Pakshi admin for access.
+                      {viewer.can.createSite
+                        ? "Make a site, and build it in its first draft."
+                        : viewer.can.createBrand
+                          ? "Make a brand first, then make sites in it."
+                          : "You can't edit any sites yet. Ask your team's Pakshi admin for access."}
                     </EmptyDescription>
                   </EmptyHeader>
                 </Empty>

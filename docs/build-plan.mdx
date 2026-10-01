@@ -12,7 +12,8 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - **Build the checkpoints in order.** Each one starts from the finished state of the one before it.
 - **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
 - **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
-- **Every checkpoint ends in a demo** someone can run locally with `pnpm dev`. Checks that need Cloudflare's network, such as custom hostnames or KV propagation, run against production.
+- **Every checkpoint is built and checked in the dev stack.** Each ends in a demo someone can run locally with `pnpm dev`. Nothing before the [last checkpoint](#12-production) deploys to production; checks that need Cloudflare's network, such as custom hostnames or KV propagation, wait for it.
+- **Tests and demos act as real people.** They start from an empty stack, set up the organization, create brands and sites, and invite the people they need, through Studio or the endpoints Studio calls. Nothing writes to D1, KV or R2 behind the product's back.
 - **The riskiest work comes first.** Checkpoints 1 to 5 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
 - **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
 - **This doc changes as we learn.** Tick checkpoints off, and split or reorder them when that makes the work clearer.
@@ -27,8 +28,10 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [6. Approvals, sharing and previews](#6-approvals-sharing-and-previews)
 - [x] [7. The agent](#7-the-agent)
 - [x] [8. Brands, themes and block versions](#8-brands-themes-and-block-versions)
-- [ ] [9. Site essentials](#9-site-essentials)
-- [ ] [10. Ready for real sites](#10-ready-for-real-sites)
+- [ ] [9. Real accounts and setup](#9-real-accounts-and-setup)
+- [ ] [10. Site essentials](#10-site-essentials)
+- [ ] [11. Ready for real sites](#11-ready-for-real-sites)
+- [ ] [12. Production](#12-production)
 
 ## 1. Skeleton
 
@@ -123,7 +126,7 @@ Several people and their presence in one draft, and no one loses their place whe
 - Each rule for remote changes has a browser test that fails without it.
 - Undo in one browser never removes the other person's edits.
 
-The check that removing a person's permission stops their next batch moved to checkpoint 10, which adds the grant changes that cause it ([decision 041](/decision-log#decision-041)).
+The check that removing a person's permission stops their next batch moved to [checkpoint 11](#11-ready-for-real-sites), which adds the grant changes that cause it ([decision 041](/decision-log#decision-041)).
 
 **Proves:** live co-editing in the editor.
 
@@ -148,7 +151,7 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 - The reconcile job restores a KV entry that was changed by hand.
 - A draft edited after it was submitted stays open after publishing, and keeps only its later edits.
 
-The checks that a publish and a rollback are live on a production platform subdomain within 60 seconds, and that no cached page links to CSS or JavaScript a `sites` deploy removed, moved to checkpoint 9, which builds domains and needs production ([decision 052](/decision-log#decision-052)).
+The checks that a publish and a rollback are live on a production platform subdomain within 60 seconds, and that no cached page links to CSS or JavaScript a `sites` deploy removed, moved to [checkpoint 12](#12-production), which deploys production ([decision 052](/decision-log#decision-052)).
 
 **Proves:** the three-way merge.
 
@@ -223,39 +226,60 @@ Brands own their look, and blocks improve without surprising live sites.
 - An upgrade from v1 to v3 migrates content through both steps.
 - CI rejects an edit to a released block's folder.
 
-The check that `sites` startup stays well under 1 second with several versions of a block live moved to checkpoint 9, because Cloudflare reports startup time only for uploaded code, and checkpoint 9 needs production anyway ([decision 070](/decision-log#decision-070)).
+The check that `sites` startup stays well under 1 second with several versions of a block live moved to [checkpoint 12](#12-production), because Cloudflare reports startup time only for uploaded code ([decision 070](/decision-log#decision-070)).
 
 **Proves:** block versions at runtime.
 
-## 9. Site essentials
+## 9. Real accounts and setup
+
+Pakshi starts empty, and people set it up the way a real organization would: no seeded users, sites or test sign-in ([decision 071](/decision-log#decision-071)).
+
+**Build:**
+
+- [Staff sign-in](/technical-design#security-and-access) with email and password through Better Auth, with password reset by email. The test identity provider, its users and the OIDC wiring go; signing in through the organization's identity provider returns in [checkpoint 12](#12-production).
+- [Setting up the organization](/product-spec#roles-and-permissions): on an empty stack, the first person to open Studio names the organization and creates their account, and becomes its org admin. After that, nobody signs up without an invitation.
+- Invitations: someone who may manage members invites a person by email with a default role on the organization, a brand or a site. The invitation is emailed, its link can be copied, and opening it creates the person's account with that grant, or adds the grant to their account. A person can't invite with a role holding permissions they don't hold there.
+- [Creating brands and sites](/product-spec#sites-and-brands): org admins create brands, from a name, a preset and a brand color, and org and brand admins create sites in them. A new site gets its platform subdomain at once, starts from a release with its brand's newest revision, a header, a footer and no pages, and opens in its first draft.
+- Platform subdomains in the dev stack, at `{site}.localhost` on the Sites Worker's port.
+- The seeded sample site and the seeded test users go. Every browser test sets up its own organization, brands, sites and people through Studio or its endpoints.
+
+**Demo:** on an empty `pnpm dev` stack, set up the organization, create a brand and a site, invite an editor, sign in as them in another browser, build a page and publish it at the site's subdomain.
+
+**Done when:**
+
+- An empty stack sends the first visitor to set up the organization, and refuses a second setup.
+- Nobody can create an account without an invitation once the organization exists, and an invitation's link works once, for its own email address, before it expires.
+- A person can't invite someone with a role that holds a permission they don't hold on that scope.
+- A new site answers at its platform subdomain as soon as it's created, and serves its first published page there.
+- Every browser test starts from its own setup, and nothing writes to D1, KV or R2 behind the product's back.
+
+## 10. Site essentials
 
 Everything else a real site needs.
 
 **Build:**
 
+- [Site settings](/technical-design#site-settings) as a registry of definitions in one home in `SiteDoc`, saved together and delivered to the snapshot or straight to the runtime that reads them ([decision 072](/decision-log#decision-072)), with the general and forms and email settings screens.
 - [Forms and submissions](/product-spec#forms-and-submissions): the form editor, intake into `SiteSubmissions` with the 64 KB cap, notification emails with retry, pre-flight's check for a notification address, the submissions screen, CSV export and deletion by email.
 - The [media library](/product-spec#media): brand and site libraries, uploads from the library and from the editor's media popover, Cloudflare Images, alt text, and retention.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): the menus screen, unpublishing and deleting pages, and 410 for removed addresses.
 - [SEO](/product-spec#seo-and-domains): page metadata, sitemap, robots.txt, the blog RSS feed and redirects.
-- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the TXT ownership check, and every site's platform subdomain in production. Serving from a custom domain is also what turns on the page cache ([decision 027](/decision-log#decision-027)).
+- [Custom domains](/technical-design#domains): the domains screen and the TXT ownership check, with Cloudflare for SaaS emulated in the dev stack.
 - [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window.
 
-**Demo:** build a site with a registration form on a custom subdomain, submit the form, see the notification, and export the submission.
+**Demo:** build a site with a registration form, connect a custom subdomain, submit the form, see the notification, and export the submission.
 
 **Done when:**
 
 - A form post lands only in that site's `SiteSubmissions` and sends its notification.
 - Flooding one site's form leaves another site's forms working.
-- A custom hostname serves over HTTPS in production.
-- A publish and a rollback are each live on a production platform subdomain within 60 seconds.
-- With several versions of a block live, the `sites` Worker's startup time Cloudflare reports is well under 1 second.
-- After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
+- A custom hostname serves its site once its ownership is proven.
 - An unpublished page returns 410 and leaves the sitemap and menus.
 - A deleted site stops serving at once, and an org admin can restore it within 30 days.
 
-## 10. Ready for real sites
+## 11. Ready for real sites
 
-Finish access control, safety and operations, then run real sites on Pakshi.
+Finish access control, safety and operations.
 
 **Build:**
 
@@ -263,19 +287,40 @@ Finish access control, safety and operations, then run real sites on Pakshi.
 - The audit log's viewer, with every audited action recorded.
 - Pre-flight's [accessibility checks](/product-spec#accessibility), and Studio at WCAG 2.2 AA.
 - The content security policy on every site.
-- [Operations](/technical-design#operations): alerts, and the restore drill in production.
+- Alerts for the failures [operations](/technical-design#operations) lists.
 - Block requests filed into the platform team's tracker.
 - Recording for every [success metric](/product-spec#success-metrics).
 
-**Demo:** the Pakshi team launches its first real site on a custom domain, using only Studio and the agent.
+**Demo:** the Pakshi team builds its first real site in the dev stack, using only Studio and the agent.
 
 **Done when:**
 
 - Delegation tests show no one can grant a permission they don't hold or a scope they don't control.
 - Removing a person's permission stops their next batch.
-- The restore drill has been run, and its steps are written down.
 - A security review has passed.
 - Every success metric is being recorded.
+
+## 12. Production
+
+Deploy Pakshi to Cloudflare and run real sites on it.
+
+**Build:**
+
+- The `prod` stack in its own Cloudflare account, on Workers Paid.
+- Staff sign-in through the organization's identity provider over OIDC, beside email and password.
+- [Custom domains](/technical-design#domains) through Cloudflare for SaaS, with the fallback origin, and every site's platform subdomain on the sites domain.
+- Email from a sender domain on Cloudflare DNS.
+- The [restore drill](/technical-design#operations).
+
+**Demo:** the Pakshi team launches its first real site on a custom domain.
+
+**Done when:**
+
+- A custom hostname serves over HTTPS.
+- A publish and a rollback are each live on a platform subdomain within 60 seconds.
+- With several versions of a block live, the `sites` Worker's startup time Cloudflare reports is well under 1 second.
+- After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
+- The restore drill has been run, and its steps are written down.
 - The first real site is live, and every change to it went through Pakshi.
 
 ## After the last checkpoint

@@ -1,4 +1,5 @@
 import { D1Client } from "@effect/sql-d1";
+import { accountsBasePath, authBasePath } from "@repo/contracts/accounts";
 import { agentBasePath } from "@repo/contracts/agent";
 import { liveBasePath } from "@repo/contracts/live";
 import { routingKeys } from "@repo/contracts/snapshot";
@@ -8,8 +9,9 @@ import { WorkerEntrypoint } from "cloudflare:workers";
 import { Effect } from "effect";
 import { getServerByName } from "partyserver";
 
+import { serveAccounts } from "./accounts.ts";
 import { serveAgent } from "./agent/route.ts";
-import { authBasePath, authFor } from "./auth.ts";
+import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
 import { serveLive } from "./live.ts";
@@ -28,8 +30,8 @@ export class StudioRpc extends WorkerEntrypoint<StudioApiEnv> {
 }
 
 /**
- * Sign-in, which Studio forwards unchanged because OAuth needs real HTTP
- * redirects and cookies, the editor's live connections, conversations with
+ * Sign-in and making accounts, which Studio forwards unchanged for their
+ * cookies, the editor's live connections, conversations with
  * the agent, and the images of drafts and submissions. studio-api has no public address;
  * only Studio's service bindings reach it.
  */
@@ -38,6 +40,7 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
     const url = new URL(request.url);
     if (url.pathname.startsWith(`${authBasePath}/`))
       return authFor(this.env, url.origin).handler(request);
+    if (url.pathname.startsWith(`${accountsBasePath}/`)) return serveAccounts(request, this.env);
     if (url.pathname.startsWith(`${liveBasePath}/`)) return serveLive(request, this.env);
     if (url.pathname.startsWith(`${agentBasePath}/`)) return serveAgent(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${previewBasePath}/`))

@@ -29,6 +29,8 @@ const releaseFields = {
 export const Release = Schema.TaggedUnion({
   /** A snapshot the site was already serving when its SiteDoc first started. */
   Imported: releaseFields,
+  /** The site's first release, made with the site: its header and footer, and no pages yet. */
+  Created: { ...releaseFields, by: Collaborator },
   Published: {
     ...releaseFields,
     /** Who made it live: whoever gave the final approval, or submitted it when no one had to. */

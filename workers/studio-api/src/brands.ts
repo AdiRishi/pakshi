@@ -1,5 +1,11 @@
-import { BrandIdentity, type BrandLook, BrandRevision, VoiceGuide } from "@repo/contracts/brand";
-import { BrandId, SiteId } from "@repo/contracts/ids";
+import {
+  BrandIdentity,
+  type BrandLook,
+  type BrandRevision,
+  noIdentity,
+  VoiceGuide,
+} from "@repo/contracts/brand";
+import { BrandId, randomId, SiteId } from "@repo/contracts/ids";
 import { Collaborator } from "@repo/contracts/live";
 import { now, Timestamp } from "@repo/contracts/release";
 import {
@@ -11,7 +17,14 @@ import {
   ThemeUnreadable,
 } from "@repo/contracts/studio";
 import { authorize, permissionsOn } from "@repo/domain/access";
-import { BrandTheme, ResolvedTheme, resolveTheme, themeValues } from "@repo/tokens";
+import {
+  BrandTheme,
+  type HexColor,
+  type PresetId,
+  ResolvedTheme,
+  resolveTheme,
+  themeValues,
+} from "@repo/tokens";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -172,7 +185,6 @@ export const saveLook = Effect.fn("StudioApi.saveLook")(function* (
   look: BrandLook,
   seen: number,
 ) {
-  const sql = yield* SqlClient.SqlClient;
   const found = yield* brandFor(person, brand);
   if (!found.edit) return yield* new NotPermitted({ action: "change this brand's look" });
   const { theme, issues } = resolveTheme(look.theme);
@@ -192,14 +204,52 @@ export const saveLook = Effect.fn("StudioApi.saveLook")(function* (
     created_at: now(),
   };
   // Two saves from the same revision race for one number; the primary key lets one win.
+  if (!(yield* recordRevision(row))) return yield* new BrandChanged({ revision: row.number });
+  return row;
+});
+
+/** Records a revision, unless the brand has one with its number already. */
+const recordRevision = Effect.fn("StudioApi.recordRevision")(function* (row: RevisionRow) {
+  const sql = yield* SqlClient.SqlClient;
   const inserted = yield* sql`insert into brand_revisions
       (brand_id, number, theme, resolved, identity, created_by, created_at)
-    values (${brand}, ${row.number}, ${encode(BrandTheme, row.theme)},
+    values (${row.brand_id}, ${row.number}, ${encode(BrandTheme, row.theme)},
       ${encode(ResolvedTheme, row.resolved)}, ${encode(BrandIdentity, row.identity)},
       ${encode(Collaborator, row.created_by)}, ${row.created_at})
     on conflict (brand_id, number) do nothing returning number`;
-  if (inserted.length === 0) return yield* new BrandChanged({ revision: row.number });
-  return row;
+  return inserted.length > 0;
+});
+
+/**
+ * Makes a brand from a preset and a brand color, as its first revision. Only
+ * the organization's admins make brands, and a color too light to read is
+ * refused as it is in Theme Studio.
+ */
+export const createBrand = Effect.fn("StudioApi.createBrand")(function* (
+  person: Person,
+  name: string,
+  preset: PresetId,
+  brandColor: HexColor,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const { access } = yield* loadAccess(person.id);
+  if (!authorize(access, "brand.create", { kind: "organization" }))
+    return yield* new NotPermitted({ action: "create brands" });
+  const look: BrandTheme = { preset, changes: { brandColor } };
+  const { theme, issues } = resolveTheme(look);
+  if (issues.length > 0) return yield* new ThemeUnreadable({ issues });
+  const id = BrandId.make(randomId("brand"));
+  yield* sql`insert into brands (id, name) values (${id}, ${name})`;
+  yield* recordRevision({
+    brand_id: id,
+    number: 1,
+    theme: look,
+    resolved: theme,
+    identity: noIdentity,
+    created_by: { id: person.id, name: person.name },
+    created_at: now(),
+  });
+  return { id };
 });
 
 /** Replaces a brand's voice guide. The agent follows it from its next turn. */

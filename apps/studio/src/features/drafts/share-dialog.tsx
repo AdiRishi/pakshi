@@ -27,7 +27,7 @@ import { previewPath } from "@/features/preview/address";
 import { initials } from "@/lib/initials";
 
 import { PersonPicker } from "../people/person-picker";
-import { getOrganizationName } from "../session/functions";
+import { getOrganization } from "../session/functions";
 import { getDraftSharing, shareDraft } from "../sites/functions";
 
 const sharingQuery = (site: SiteId, draft: DraftId) =>
@@ -37,8 +37,8 @@ const sharingQuery = (site: SiteId, draft: DraftId) =>
   });
 
 const organizationQuery = queryOptions({
-  queryKey: ["organization-name"],
-  queryFn: () => getOrganizationName(),
+  queryKey: ["organization"],
+  queryFn: () => getOrganization(),
   staleTime: Number.POSITIVE_INFINITY,
 });
 
@@ -121,7 +121,10 @@ export function ShareDialog(props: {
   const change = (next: DraftSharing) => setEdited(next);
   const audiences: ReadonlyArray<{ readonly value: Audience; readonly label: string }> = [
     { value: "people", label: "Only people added" },
-    { value: "organization", label: `Everyone at ${organization.data ?? "your organization"}` },
+    {
+      value: "organization",
+      label: `Everyone at ${organization.data?.name ?? "your organization"}`,
+    },
     { value: "link", label: "Anyone with the link" },
   ];
 

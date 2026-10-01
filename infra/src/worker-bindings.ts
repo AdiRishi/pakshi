@@ -3,28 +3,13 @@ import * as Cloudflare from "alchemy/Cloudflare";
 import type * as Output from "alchemy/Output";
 import * as Config from "effect/Config";
 import * as Effect from "effect/Effect";
-import type * as Redacted from "effect/Redacted";
 
 import type { SiteSubmissions } from "../../workers/sites-api/src/index.ts";
 import type { SiteAgent, SiteDoc } from "../../workers/studio-api/src/index.ts";
 import type { agentGateway } from "./agent.ts";
 import type { DataPlane } from "./data-plane.ts";
 import type { DeploymentConfig } from "./deployment-config.ts";
-import type { IdentityProvider } from "./identity.ts";
 import type { SitesApi, StudioApi } from "./workers.ts";
-
-export const testIdentityProviderBindings = (keys: {
-  readonly signingKey: Output.Output<Redacted.Redacted<string>>;
-  readonly clientId: string;
-  readonly clientSecret: Output.Output<Redacted.Redacted<string>>;
-}) => ({
-  SIGNING_KEY: keys.signingKey,
-  CLIENT_ID: keys.clientId,
-  CLIENT_SECRET: keys.clientSecret,
-});
-export interface TestIdentityProviderEnv extends Cloudflare.InferEnv<
-  ReturnType<typeof testIdentityProviderBindings>
-> {}
 
 export const sitesApiBindings = (environment: DeploymentConfig["environment"]) => ({
   SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions"),
@@ -37,12 +22,12 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
   data: DataPlane,
   sitesApi: Effect.Success<typeof SitesApi>,
   sitesApiWorkerName: string,
-  identity: IdentityProvider,
+  sitesHost: Output.Output<string>,
   gateway: Effect.Success<typeof agentGateway>,
 ) {
   const authSecret = yield* Alchemy.makeRandom("AuthSecret");
   return {
-    /** Approval notifications. Under `alchemy dev` they land in Alchemy's local email simulator. */
+    /** Approval notifications, invitations and password resets. Under `alchemy dev` they land in Alchemy's local email simulator. */
     EMAIL: yield* Cloudflare.Email.SendEmail("Email"),
     EMAIL_SENDER:
       environment === "production" ? Config.String("EMAIL_SENDER") : "notifications@pakshi.test",
@@ -66,9 +51,8 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
     ROUTING: data.routing,
     ENVIRONMENT: environment,
     AUTH_SECRET: authSecret,
-    OIDC_DISCOVERY_URL: identity.discoveryUrl,
-    OIDC_CLIENT_ID: identity.clientId,
-    OIDC_CLIENT_SECRET: identity.clientSecret,
+    /** The host every site's platform subdomain goes under, such as `localhost:1339` in dev. */
+    SITES_HOST: sitesHost,
   };
 });
 export interface StudioApiEnv extends Cloudflare.InferEnv<
@@ -77,15 +61,13 @@ export interface StudioApiEnv extends Cloudflare.InferEnv<
 
 export const studioBindings = (
   environment: DeploymentConfig["environment"],
-  studioApi: Effect.Success<typeof StudioApi>,
-  identity: IdentityProvider,
+  studioApi: Effect.Success<ReturnType<typeof StudioApi>>,
 ) => ({
-  /** Sign-in, forwarded as plain HTTP. */
+  /** Sign-in and making accounts, forwarded as plain HTTP. */
   STUDIO_API: studioApi,
   /** Everything else, as the StudioRpcs contract in @repo/contracts/studio. */
   STUDIO_RPC: Cloudflare.WorkerEntrypoint(studioApi, "StudioRpc"),
   ENVIRONMENT: environment,
-  ORGANIZATION_NAME: identity.organizationName,
 });
 export interface StudioEnv extends Cloudflare.InferEnv<ReturnType<typeof studioBindings>> {}
 

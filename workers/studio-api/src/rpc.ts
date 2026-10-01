@@ -7,6 +7,7 @@ import type { DraftId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
+import { routingKeys } from "@repo/contracts/snapshot";
 import {
   BlocksRemoved,
   CannotDecide,
@@ -49,8 +50,20 @@ import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { authFor } from "./auth.ts";
 import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
 import { offerRevision } from "./brand-updates.ts";
-import { brandsFor, brandView, saveLook, saveVoice } from "./brands.ts";
+import {
+  brandsFor,
+  brandView,
+  createBrand,
+  latestRevision,
+  pinnedRevision,
+  saveLook,
+  saveVoice,
+} from "./brands.ts";
+import { acceptInvitation, invitationView, invite, revokeInvitation } from "./invitations.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
+import { mailerFor } from "./notifications.ts";
+import { organizationName } from "./organization.ts";
+import { organizationPeople } from "./people.ts";
 import type { Outcome, SiteDocError } from "./site-doc.ts";
 import type { BatchResult } from "./site/drafts.ts";
 import type {
@@ -62,6 +75,8 @@ import type {
 } from "./site/site.ts";
 import {
   approverOn,
+  brandsForNewSites,
+  createSite,
   findSite,
   inSiteLibrary,
   siteFor,
@@ -222,6 +237,62 @@ const handlers = (env: StudioApiEnv) =>
 
       return StudioRpcs.of({
         viewer: () => SignedIn.use((person) => withCore("viewer")(describeViewer(person))),
+        organization: () =>
+          withCore("organization")(
+            Effect.map(
+              organizationName,
+              Option.match({ onNone: () => null, onSome: (name) => ({ name }) }),
+            ),
+          ),
+        invitation: ({ token }) => withCore("invitation")(invitationView(token)),
+        organizationPeople: () =>
+          SignedIn.use((person) => withCore("people")(organizationPeople(person))),
+        invite: ({ email, role, scope }) =>
+          SignedIn.use((person) =>
+            withCore("invite")(
+              Effect.gen(function* () {
+                const studio = yield* StudioAddress;
+                return yield* invite(mailerFor(env), person, email, role, scope, studio);
+              }),
+            ),
+          ),
+        revokeInvitation: ({ invitation }) =>
+          SignedIn.use((person) =>
+            withCore("revoke invitation")(revokeInvitation(person, invitation)),
+          ),
+        acceptInvitation: ({ token }) =>
+          SignedIn.use((person) => withCore("accept invitation")(acceptInvitation(person, token))),
+        createBrand: ({ name, preset, brandColor }) =>
+          SignedIn.use((person) =>
+            withCore("create brand")(createBrand(person, name, preset, brandColor)),
+          ),
+        newSiteOptions: () =>
+          SignedIn.use((person) =>
+            withCore("new site options")(
+              Effect.map(brandsForNewSites(person), (brands) => ({
+                brands,
+                sitesHost: env.SITES_HOST,
+              })),
+            ),
+          ),
+        createSite: ({ brand, name, address }) =>
+          SignedIn.use((person) =>
+            withCore("create site")(
+              Effect.gen(function* () {
+                const created = yield* createSite(person, brand, name, address);
+                const revision = pinnedRevision(yield* latestRevision(brand));
+                const doc = yield* siteDoc(env, created.id);
+                const draft = yield* Effect.tryPromise(async (): Promise<DraftSummary> =>
+                  doc.start(collaborator(person), { name }, revision),
+                );
+                // The host is written last, so sites never finds a site with no release.
+                yield* Effect.tryPromise(() =>
+                  env.ROUTING.put(routingKeys.host(`${address}.${env.SITES_HOST}`), created.id),
+                );
+                return { site: { id: created.id, name: created.name }, draft: draft.id };
+              }),
+            ),
+          ),
         home: () =>
           SignedIn.use((person) =>
             withCore("home")(

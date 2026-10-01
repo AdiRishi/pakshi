@@ -39,7 +39,7 @@ pnpm dev
 
 Alchemy runs the whole stack locally, with emulated databases, storage, and Durable Objects. It keeps the stack's state in your Cloudflare account, so it needs a Cloudflare profile: run `pnpm --filter @repo/infra exec alchemy profile edit --profile default --reconfigure Cloudflare` and give it an API token.
 
-`pnpm dev` prints two addresses. Studio signs you in through a test identity provider: choose any test user. The sites address serves a sample site.
+`pnpm dev` prints two addresses. Open Studio and set Pakshi up: name your organization and make your account. Then create a brand and a site, and invite people by email. Locally, emails land in `infra/.alchemy/local/email/text/`, and each site answers at its own subdomain of the sites address, such as `northbank-libraries.localhost:1339`.
 
 To read the documentation locally, run `pnpm docs:dev`. It needs no Cloudflare credentials.
 

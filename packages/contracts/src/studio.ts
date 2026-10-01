@@ -2,7 +2,15 @@ import { ContrastIssue, HexColor, PresetId } from "@repo/tokens";
 import { Context, Schema } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
-import { Scope } from "./access.ts";
+import { DefaultRole, Scope } from "./access.ts";
+import {
+  EmailAddress,
+  InvitationToken,
+  InvitationView,
+  NamedScope,
+  OrganizationName,
+  PendingInvitation,
+} from "./accounts.ts";
 import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
 import { FormDefinition } from "./form.ts";
@@ -12,6 +20,7 @@ import {
   BrandId,
   DraftId,
   FormId,
+  InvitationId,
   MediaId,
   PageId,
   ReleaseId,
@@ -93,14 +102,94 @@ export const studioSessionHeaders = { cookie: "cookie", origin: "x-studio-origin
 
 export const Viewer = Schema.Struct({
   user: Person,
+  organization: Schema.String,
   roles: Schema.Array(Schema.Struct({ role: Schema.String, scope: Schema.String })),
   sites: Schema.Array(Schema.Struct({ id: SiteId, name: Schema.String, brand: Schema.String })),
   /** How many submissions are waiting for this person's decision. */
   approvalsWaiting: Schema.Int,
   /** Whether the person works on any brand, so Studio shows them the brands. */
   brands: Schema.Boolean,
+  can: Schema.Struct({
+    /** Make brands, which only the organization's admins do. */
+    createBrand: Schema.Boolean,
+    /** Make sites in at least one brand. */
+    createSite: Schema.Boolean,
+    /** Invite people somewhere, so Studio shows them the people screen. */
+    invite: Schema.Boolean,
+  }),
 });
 export type Viewer = typeof Viewer.Type;
+
+/** What a site's platform subdomain starts with, such as `northbank-libraries`. */
+export const SiteAddress = Schema.String.check(
+  Schema.isPattern(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/, {
+    message:
+      "Use lowercase letters, digits and hyphens, starting and ending with a letter or digit",
+  }),
+);
+export type SiteAddress = typeof SiteAddress.Type;
+
+export const SiteName = Schema.Trim.check(
+  Schema.isMinLength(1, { message: "Name the site" }),
+  Schema.isMaxLength(80, { message: "Use at most 80 characters" }),
+);
+
+export const BrandName = Schema.Trim.check(
+  Schema.isMinLength(1, { message: "Name the brand" }),
+  Schema.isMaxLength(80, { message: "Use at most 80 characters" }),
+);
+
+/** What a person needs to make a site: the brands they may make one in, and where its address goes. */
+export const NewSiteOptions = Schema.Struct({
+  brands: Schema.Array(Schema.Struct({ id: BrandId, name: Schema.String })),
+  /** The host platform subdomains go under, such as `pakshi.site`. */
+  sitesHost: Schema.String,
+});
+export type NewSiteOptions = typeof NewSiteOptions.Type;
+
+/** Another site already has this platform subdomain. */
+export class AddressTaken extends Schema.TaggedError<AddressTaken>()("AddressTaken", {
+  address: SiteAddress,
+}) {}
+
+/** A site made with its first draft, which the person goes to next. */
+export const CreatedSite = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  draft: DraftId,
+});
+export type CreatedSite = typeof CreatedSite.Type;
+
+/** One person in the organization and the grants they hold. */
+export const Member = Schema.Struct({
+  person: Person,
+  grants: Schema.Array(Schema.Struct({ role: DefaultRole, scope: NamedScope })),
+});
+export type Member = typeof Member.Type;
+
+/** Where a person may invite people, and which roles they may give there. */
+export const InvitePlace = Schema.Struct({ scope: NamedScope, roles: Schema.Array(DefaultRole) });
+export type InvitePlace = typeof InvitePlace.Type;
+
+/** The organization's people, the invitations waiting, and where the viewer may invite. */
+export const People = Schema.Struct({
+  members: Schema.Array(Member),
+  invitations: Schema.Array(PendingInvitation),
+  places: Schema.Array(InvitePlace),
+});
+export type People = typeof People.Type;
+
+/** An invitation just made, with the link it sends, for the inviter to copy. */
+export const SentInvitation = Schema.Struct({ invitation: PendingInvitation, link: Schema.String });
+export type SentInvitation = typeof SentInvitation.Type;
+
+/** The person already holds this role there. */
+export class AlreadyMember extends Schema.TaggedError<AlreadyMember>()("AlreadyMember", {}) {}
+
+/** The invitation was used, revoked or has expired, or was sent to someone else. */
+export class InvitationClosed extends Schema.TaggedError<InvitationClosed>()(
+  "InvitationClosed",
+  {},
+) {}
 
 /**
  * There's no site with this ID that the person may work on. A site they can't
@@ -175,11 +264,12 @@ export const SiteAbilities = Schema.Struct({
 });
 export type SiteAbilities = typeof SiteAbilities.Type;
 
-const SiteName = Schema.Struct({ id: SiteId, name: Schema.String });
+/** A site as lists name it. */
+const SiteLabel = Schema.Struct({ id: SiteId, name: Schema.String });
 
 /** A site's drafts, with the release that's live. */
 export const SiteDrafts = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   live: Release,
   drafts: Schema.Array(DraftSummary),
   can: SiteAbilities,
@@ -188,7 +278,7 @@ export type SiteDrafts = typeof SiteDrafts.Type;
 
 /** A draft's pages and posts. */
 export const DraftPages = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   live: LiveRelease,
   draft: DraftSummary,
   pages: Schema.Array(PageSummary),
@@ -225,7 +315,7 @@ export type BatchOutcome = typeof BatchOutcome.Type;
 
 /** A behind draft's update, as it stands with the sides chosen so far. */
 export const DraftUpdate = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   draft: DraftSummary,
   /** The release the draft started from, and the one it's being brought up to. */
   from: Release,
@@ -404,7 +494,7 @@ export const BrandSummary = Schema.Struct({
   name: Schema.String,
   preset: PresetId,
   brandColor: HexColor,
-  sites: Schema.Array(SiteName),
+  sites: Schema.Array(SiteLabel),
 });
 export type BrandSummary = typeof BrandSummary.Type;
 
@@ -422,7 +512,7 @@ export const BrandView = Schema.Struct({
   revision: RevisionInfo,
   look: BrandLook,
   voice: VoiceGuide,
-  sites: Schema.Array(SiteName),
+  sites: Schema.Array(SiteLabel),
   /** The brand's library, where its logos and icon come from. */
   media: Schema.Array(MediaSummary),
   can: Schema.Struct({ edit: Schema.Boolean }),
@@ -431,7 +521,7 @@ export type BrandView = typeof BrandView.Type;
 
 /** What bringing a brand revision to one site did. */
 export const BrandUpdateResult = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   /** The Brand update draft, or null when the site needed none or couldn't be reached yet. */
   draft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
   /** The site couldn't be reached. Pakshi tries again on its own. */
@@ -504,7 +594,7 @@ export const SiteBlock = Schema.Struct({
 export type SiteBlock = typeof SiteBlock.Type;
 
 export const SiteBlocks = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   blocks: Schema.Array(SiteBlock),
   can: Schema.Struct({ upgrade: Schema.Boolean }),
 });
@@ -512,7 +602,7 @@ export type SiteBlocks = typeof SiteBlocks.Type;
 
 /** What creating an upgrade draft on one site did. */
 export const UpgradeResult = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   draft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
   /** The site couldn't be reached. Trying again creates only the drafts still missing. */
   failed: Schema.Boolean,
@@ -524,7 +614,7 @@ export class UpToDate extends Schema.TaggedError<UpToDate>()("UpToDate", { type:
 
 /** A site's releases, newest first. */
 export const SiteReleases = Schema.Struct({
-  site: SiteName,
+  site: SiteLabel,
   releases: Schema.Array(Release),
   can: SiteAbilities,
 });
@@ -604,6 +694,34 @@ class SignedInRpcs extends RpcGroup.make(
     payload: { search: Schema.String },
     success: Schema.Array(Person),
     error: StudioUnavailable,
+  }),
+  Rpc.make("organizationPeople", { success: People, error: StudioUnavailable }),
+  /** Invites someone by email with a role on a scope, which they get when they accept. */
+  Rpc.make("invite", {
+    payload: { email: EmailAddress, role: DefaultRole, scope: Scope },
+    success: SentInvitation,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, AlreadyMember]),
+  }),
+  Rpc.make("revokeInvitation", {
+    payload: { invitation: InvitationId },
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
+  /** Adds an invitation's grant to the signed-in person, whose address it must have been sent to. */
+  Rpc.make("acceptInvitation", {
+    payload: { token: InvitationToken },
+    error: Schema.Union([StudioUnavailable, InvitationClosed]),
+  }),
+  Rpc.make("createBrand", {
+    payload: { name: BrandName, preset: PresetId, brandColor: HexColor },
+    success: Schema.Struct({ id: BrandId }),
+    error: Schema.Union([StudioUnavailable, NotPermitted, ThemeUnreadable]),
+  }),
+  Rpc.make("newSiteOptions", { success: NewSiteOptions, error: StudioUnavailable }),
+  /** Makes a site with its platform subdomain, its first release and a first draft. */
+  Rpc.make("createSite", {
+    payload: { brand: BrandId, name: SiteName, address: SiteAddress },
+    success: CreatedSite,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted, AddressTaken]),
   }),
   Rpc.make("siteDrafts", { payload: { site: SiteId }, success: SiteDrafts, error: siteError }),
   Rpc.make("createDraft", {
@@ -760,6 +878,16 @@ class SignedInRpcs extends RpcGroup.make(
 
 /** What Studio asks of studio-api for anyone, signed in or not. */
 class VisitorRpcs extends RpcGroup.make(
+  /** The organization's name, or null on a stage nobody has set up yet. */
+  Rpc.make("organization", {
+    success: Schema.NullOr(Schema.Struct({ name: OrganizationName })),
+    error: StudioUnavailable,
+  }),
+  Rpc.make("invitation", {
+    payload: { token: InvitationToken },
+    success: InvitationView,
+    error: StudioUnavailable,
+  }),
   Rpc.make("previewPage", {
     payload: { ...forDraft, path: PagePath },
     success: PreviewPage,

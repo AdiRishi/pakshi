@@ -1,5 +1,7 @@
 import {
+  latestLockfile,
   loadBlock,
+  loadBlocks,
   loadBlockVersions,
   removedBlockVersions,
   withNewBlockTypes,
@@ -8,9 +10,10 @@ import type { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, type DraftName, isBehind, type SiteContent } from "@repo/contracts/draft";
 import {
   BatchId,
+  BlockId,
   type BlockType,
   type DraftId,
-  type PageId,
+  PageId,
   randomId,
   ReleaseId,
   SnapshotId,
@@ -20,10 +23,11 @@ import {
 import { type CatchUp, type Collaborator, ServerMessage } from "@repo/contracts/live";
 import type { Conflict, MergedChange, Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
-import { PageDocument, type PagePath } from "@repo/contracts/page";
+import { type BlockInstance, PageDocument, type PagePath } from "@repo/contracts/page";
 import type { PreflightIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
 import type { DraftSharing, ShareAccess } from "@repo/contracts/sharing";
+import type { SiteSettings } from "@repo/contracts/site";
 import {
   contentHash,
   type LiveRelease,
@@ -59,6 +63,7 @@ import {
 } from "@repo/domain/merge";
 import { rebaseOps } from "@repo/domain/rebase";
 import { draftAccess, type Visitor } from "@repo/domain/sharing";
+import type { Surface } from "@repo/tokens";
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 
@@ -170,6 +175,16 @@ const approversOf = (submission: Submission) =>
 export class Site extends Context.Service<
   Site,
   {
+    /**
+     * Starts a new site: its first release, with the brand's revision, every
+     * block at its newest version, a header, a footer and no pages, and a
+     * first draft with an empty home page to build the site in.
+     */
+    readonly start: (
+      by: Collaborator,
+      settings: SiteSettings,
+      brand: BrandRevision,
+    ) => Effect.Effect<DraftSummary, StorageError>;
     /** The release the site serves. */
     readonly live: Effect.Effect<Release, StorageError>;
     /** Every release, newest first. */
@@ -429,9 +444,7 @@ export class Site extends Context.Service<
       const liveRelease = Effect.flatMap(releases.live, (latest) =>
         Option.isSome(latest)
           ? Effect.succeed(releaseOf(latest.value))
-          : Effect.die(
-              "This site has never been published, so it has nothing to start a draft from.",
-            ),
+          : Effect.die("This site hasn't started, so it has nothing to start a draft from."),
       );
 
       const contents = new Map<SnapshotId, SiteContent>();
@@ -643,7 +656,7 @@ export class Site extends Context.Service<
       const writeSnapshot = Effect.fn("Site.writeSnapshot")(function* (
         content: SiteContent,
         frozen: Frozen,
-        previous: SnapshotManifest,
+        previous: Pick<SnapshotManifest, "pages">,
       ) {
         const files = yield* media.files(frozen.media);
         const missing = frozen.media.filter((id) => !files.has(id));
@@ -958,6 +971,86 @@ export class Site extends Context.Service<
       });
 
       return Site.of({
+        start: (by, settings, brand) =>
+          inReleaseTurn(
+            Effect.gen(function* () {
+              if (Option.isSome(yield* releases.live))
+                return yield* Effect.die(`${site} has started already.`);
+              const lockfile = latestLockfile;
+              const contracts = yield* Effect.promise(() => loadBlocks(lockfile));
+              const part = (placement: "header" | "footer", surface: Surface) => {
+                const contract = Array.from(contracts.values()).find(
+                  (candidate) => candidate.placement === placement,
+                );
+                if (contract === undefined || contract.placement === "item")
+                  throw new Error(`The library has no ${placement} block.`);
+                const [variant] = contract.variants;
+                const chosen = contract.surfaces.includes(surface) ? surface : contract.surfaces[0];
+                if (variant === undefined || chosen === undefined)
+                  throw new Error(`The ${placement} block has no variant or surface.`);
+                return {
+                  type: contract.type,
+                  variant,
+                  surface: chosen,
+                  props: {},
+                } satisfies BlockInstance;
+              };
+              const header = BlockId.make(randomId("b"));
+              const footer = BlockId.make(randomId("b"));
+              const content: SiteContent = {
+                settings,
+                parts: {
+                  header,
+                  footer,
+                  blocks: {
+                    [header]: part("header", "default"),
+                    [footer]: part("footer", "muted"),
+                  },
+                  menus: { main: [], footer: [] },
+                },
+                forms: {},
+                lockfile,
+                brand,
+                pages: {},
+              };
+              const manifest = yield* writeSnapshot(
+                content,
+                { pages: [], gone: [], media: shownMedia(content, contracts) },
+                { pages: [] },
+              );
+              contents.set(manifest.id, content);
+              const release = Release.cases.Created.make({
+                id: ReleaseId.make(randomId("rel")),
+                snapshot: manifest.id,
+                at: now(),
+                by,
+              });
+              const home: PageDocument = {
+                schema: "pakshi.page/1",
+                id: PageId.make(randomId("pg")),
+                type: "page",
+                path: "/",
+                meta: { title: settings.name, description: "" },
+                root: [],
+                blocks: {},
+              };
+              return yield* inStorageTurn(
+                Effect.gen(function* () {
+                  yield* releases.append(release, lockfile);
+                  yield* brandTaken(brand.number);
+                  yield* routing.write(liveReleaseOf(release));
+                  const info = yield* drafts.create({
+                    name: "Launch",
+                    kind: { _tag: "Edit" },
+                    by,
+                    base: liveReleaseOf(release),
+                    content: { ...content, pages: { [home.id]: home } },
+                  });
+                  return { ...info, review: null };
+                }),
+              );
+            }),
+          ),
         live: liveRelease,
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
         drafts: Effect.gen(function* () {

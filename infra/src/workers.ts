@@ -1,11 +1,11 @@
 import * as Cloudflare from "alchemy/Cloudflare";
+import * as Output from "alchemy/Output";
 import * as Effect from "effect/Effect";
 
 import { agentGateway } from "./agent.ts";
 import { workerCompatibility, workerObservability } from "./cloudflare-config.ts";
 import { dataPlane } from "./data-plane.ts";
 import { deploymentConfig, workerName } from "./deployment-config.ts";
-import { identityProvider } from "./identity.ts";
 import {
   sitesApiBindings,
   sitesBindings,
@@ -30,15 +30,18 @@ export const SitesApi = Effect.gen(function* () {
   });
 });
 
+/** The sites Worker, whose host every site's platform subdomain goes under. */
+type SitesWorker = Effect.Success<ReturnType<typeof Sites>>;
+
 /** Domain logic, sign-in, the agent, and the SiteDoc and SiteAgent Durable Objects. */
-export const StudioApi = Effect.gen(function* () {
+export const StudioApi = Effect.fn("Pakshi.StudioApi")(function* (sites: SitesWorker) {
   const config = yield* deploymentConfig();
   const env = yield* studioApiBindings(
     config.environment,
     yield* dataPlane,
     yield* SitesApi,
     workerName("sites-api", config.stage),
-    yield* identityProvider,
+    Output.map(sites.url, (url) => new URL(url ?? "").host),
     yield* agentGateway,
   );
   return yield* Cloudflare.Worker("StudioApi", {
@@ -64,7 +67,7 @@ const studioMemo = {
 };
 
 /** Studio, the admin app. */
-export const Studio = Effect.gen(function* () {
+export const Studio = Effect.fn("Pakshi.Studio")(function* (sites: SitesWorker) {
   const config = yield* deploymentConfig();
   return yield* Cloudflare.Website.Vite("Studio", {
     ...workerDefaults,
@@ -72,12 +75,12 @@ export const Studio = Effect.gen(function* () {
     rootDir: "../apps/studio",
     workersDev: true,
     memo: studioMemo,
-    env: studioBindings(config.environment, yield* StudioApi, yield* identityProvider),
+    env: studioBindings(config.environment, yield* StudioApi(sites)),
   });
 });
 
 /**
- * Every published site and preview, rendered from snapshots.
+ * Every published site, rendered from snapshots.
  *
  * `rootDir` must be absolute: in dev, Alchemy starts Astro with the resolved
  * root as its working directory, then resolves a relative `rootDir` again from

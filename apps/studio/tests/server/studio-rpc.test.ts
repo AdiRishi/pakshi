@@ -45,6 +45,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
   const answer = SignedIn.use((user): Effect.Effect<Viewer> =>
     Effect.succeed({
       user,
+      organization: "Harbour Schools",
       roles: [{ role: "Editor", scope: "Harbour Summer School" }],
       sites: [
         {
@@ -55,6 +56,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
       ],
       approvalsWaiting: 0,
       brands: false,
+      can: { createBrand: false, createSite: false, invite: false },
     }),
   );
   const unused = () => Effect.die(new Error(onlyViewer));
@@ -71,6 +73,15 @@ const fakeStudioApi = (behaviour: Behaviour) => {
           return Effect.never;
       }
     },
+    organization: unused,
+    invitation: unused,
+    organizationPeople: unused,
+    invite: unused,
+    revokeInvitation: unused,
+    acceptInvitation: unused,
+    createBrand: unused,
+    newSiteOptions: unused,
+    createSite: unused,
     home: unused,
     people: unused,
     siteDrafts: unused,

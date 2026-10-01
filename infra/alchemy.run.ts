@@ -15,9 +15,10 @@ export const Infrastructure = Effect.gen(function* () {
   if (stack.stage === "placeholder") return {};
 
   const config = yield* deploymentConfig();
-  const studio = yield* Studio;
   const sites = yield* Sites(join(import.meta.dirname, "../apps/sites"));
-  if (!config.production) yield* seedTestData(sites);
+  const studio = yield* Studio(sites);
+  // Test stages get the block fixture sites the browser suite compares renderers on.
+  if (config.environment === "test") yield* seedTestData(sites);
 
   return {
     studioUrl: studio.url.as<string>(),

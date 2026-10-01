@@ -1,5 +1,5 @@
 import type { Scope } from "@repo/contracts/access";
-import { BrandId, type SiteId } from "@repo/contracts/ids";
+import type { BrandId, SiteId } from "@repo/contracts/ids";
 import {
   NotPermitted,
   type Person,
@@ -7,11 +7,11 @@ import {
   ScopeNotFound,
 } from "@repo/contracts/studio";
 import { Workflow } from "@repo/contracts/workflow";
-import { authorize, permissionsOn, type Resource } from "@repo/domain/access";
+import { authorize, permissionsOn } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
-import { loadAccess } from "./access.ts";
+import { describeScope, loadAccess } from "./access.ts";
 
 /*
  * Approval workflows, as rows in D1. Each scope may set its own; one that
@@ -62,32 +62,6 @@ const above = (scope: Scope, brand: BrandId | null): ReadonlyArray<Scope> => {
 /** The workflow a site's submissions go through. */
 export const siteWorkflow = (site: { readonly id: SiteId; readonly brand: BrandId }) =>
   nearest([{ kind: "site", id: site.id }, ...above({ kind: "site", id: site.id }, site.brand)]);
-
-/** A scope's name and what it is, for permission checks, or ScopeNotFound when it doesn't exist. */
-const describeScope = Effect.fn("StudioApi.describeScope")(function* (scope: Scope) {
-  const sql = yield* SqlClient.SqlClient;
-  const Row = Schema.Struct({ name: Schema.String, brand_id: Schema.NullOr(BrandId) });
-  const row =
-    scope.kind === "organization"
-      ? Option.some({ name: "Organization", brand_id: null })
-      : yield* SqlSchema.findOneOption({
-          Request: Schema.Void,
-          Result: Row,
-          execute: () =>
-            scope.kind === "brand"
-              ? sql`select name, null as brand_id from brands where id = ${scope.id}`
-              : sql`select name, brand_id from sites where id = ${scope.id}`,
-        })(undefined);
-  if (Option.isNone(row)) return yield* new ScopeNotFound({});
-  const brand = row.value.brand_id;
-  const resource: Resource =
-    scope.kind === "site" && brand !== null
-      ? { kind: "site", id: scope.id, brand }
-      : scope.kind === "brand"
-        ? { kind: "brand", id: scope.id }
-        : { kind: "organization" };
-  return { name: row.value.name, brand, resource };
-});
 
 /**
  * A scope's workflow as the workflow editor shows it, for someone who holds
