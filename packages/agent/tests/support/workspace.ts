@@ -84,7 +84,7 @@ export const desk = async (
         }),
       typing: Effect.sync(() => state.typing),
       check: Effect.sync(() => {
-        const frozen = freeze(state.draft, contracts, { pages: [], gone: [] });
+        const frozen = freeze(state.draft, contracts, { pages: [], gone: [] }, new Set());
         return { issues: frozen.ok ? [] : frozen.issues, behind: false };
       }),
       previewLink: (path) => `https://studio.pakshi.test/preview/site_harbour/dr_harbour${path}`,

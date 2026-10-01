@@ -71,6 +71,7 @@ export const sampleSite = async () => {
     settings: { name: site.site.name, sharingImage: null },
     parts: site.parts,
     forms: site.forms,
+    redirects: {},
     lockfile: site.lockfile,
     brand: revision,
     media: Object.fromEntries(

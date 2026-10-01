@@ -27,6 +27,8 @@ import { type BlockInstance, PageDocument, type PagePath } from "@repo/contracts
 import type { PreflightIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
 import {
+  liveOf,
+  notifiedForms,
   publishedOf,
   type SettingsChanges,
   type SettingsView,
@@ -484,6 +486,7 @@ export class Site extends Context.Service<
         const content: SiteContent = {
           parts: manifest.parts,
           forms: manifest.forms,
+          redirects: manifest.redirects,
           lockfile: manifest.lockfile,
           brand: manifest.brand,
           pages: Object.fromEntries(pages.map((page) => [page.id, page])),
@@ -493,6 +496,11 @@ export class Site extends Context.Service<
         if (contents.size > keptSnapshots && oldest !== undefined) contents.delete(oldest);
         return content;
       });
+
+      /** The forms the site's settings email new entries from, which pre-flight needs. */
+      const notified = Effect.map(settingsStore.current, ({ settings }) =>
+        notifiedForms(liveOf(settings)),
+      );
 
       /** Loads every version of each block the contents pin, and the ones between. */
       const libraryFor = (sides: ReadonlyArray<SiteContent>) =>
@@ -639,8 +647,6 @@ export class Site extends Context.Service<
                   base: draft.base,
                   lockfile: draft.lockfile,
                   brand: revision,
-                  forms: draft.forms,
-                  menus: draft.parts.menus,
                 },
               ],
             },
@@ -707,6 +713,7 @@ export class Site extends Context.Service<
           settings,
           parts: content.parts,
           forms: content.forms,
+          redirects: content.redirects,
           lockfile: content.lockfile,
           brand: content.brand,
           media: Object.fromEntries(files),
@@ -763,6 +770,7 @@ export class Site extends Context.Service<
           result.content,
           contractsAt(library, result.content.lockfile),
           previous,
+          yield* notified,
         );
         if (!frozen.ok) return null;
         const manifest = yield* writeSnapshot(result.content, frozen.frozen, previous);
@@ -1038,6 +1046,7 @@ export class Site extends Context.Service<
                   menus: { main: [], footer: [] },
                 },
                 forms: {},
+                redirects: {},
                 lockfile,
                 brand,
                 pages: {},
@@ -1219,7 +1228,7 @@ export class Site extends Context.Service<
           return yield* inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              const frozen = freeze(draft, yield* drafts.contracts(id), previous);
+              const frozen = freeze(draft, yield* drafts.contracts(id), previous, yield* notified);
               return {
                 issues: frozen.ok ? [] : frozen.issues,
                 behind: isBehind(draft.base, liveReleaseOf(target)),
@@ -1240,7 +1249,7 @@ export class Site extends Context.Service<
                   return {
                     draft,
                     name: (yield* drafts.summary(id)).name,
-                    frozen: freeze(draft, yield* drafts.contracts(id), previous),
+                    frozen: freeze(draft, yield* drafts.contracts(id), previous, yield* notified),
                   };
                 }),
               );

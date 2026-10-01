@@ -122,4 +122,8 @@ export const migrations = Migrator.fromRecord({
     )`;
     yield* sql`alter table drafts drop column settings`;
   }),
+  "0008_redirects": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    yield* sql`alter table drafts add column redirects text not null default '{}'`;
+  }),
 });

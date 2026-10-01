@@ -106,6 +106,10 @@ const describeIssue = (issue: PreflightIssue) => {
       return `${issue.place.title}: no ${issue.field}`;
     case "BrokenLink":
       return `${issue.place.title}, ${issue.field}: links to ${issue.page}, which isn't served`;
+    case "NoFormEmails":
+      return `Form ${issue.name} (${issue.form}): no one is set to receive its entries. A person adds addresses in the site's settings; you can't.`;
+    case "MissingConsent":
+      return `Form ${issue.name} (${issue.form}): asks for an email or phone number, so it needs a checkbox field linking to the privacy policy`;
   }
 };
 

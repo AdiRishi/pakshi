@@ -32,6 +32,15 @@ export const ExternalUrl = Schema.String.check(
   }),
 );
 
+/** A web page's full address, such as a canonical address on another site. */
+export const WebUrl = Schema.String.check(
+  Schema.makeFilter((value) =>
+    URL.canParse(value) && ["https:", "http:"].includes(new URL(value).protocol)
+      ? undefined
+      : "Enter a full web address, such as https://example.org/page",
+  ),
+);
+
 /** A link to a page on the same site, which follows the page when its address changes, or to an external address. */
 export const Link = Schema.Union([PageRef, ExternalUrl]);
 export type Link = typeof Link.Type;

@@ -5,7 +5,8 @@ import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BatchId, BlockId, BlockType, FormId, PageId } from "./ids.ts";
 import { PageDocument, PagePath } from "./page.ts";
-import { Menus } from "./site.ts";
+import { Link } from "./references.ts";
+import { MenuItem, Menus } from "./site.ts";
 import { LiveRelease, Lockfile } from "./snapshot.ts";
 
 /** Where a block lives: a page, or the site-level parts that hold the header and footer. */
@@ -55,6 +56,9 @@ export const MetaField = Schema.Literals([
   "tags",
   "excerpt",
   "cover",
+  "image",
+  "canonical",
+  "noindex",
 ]);
 export type MetaField = typeof MetaField.Type;
 
@@ -138,9 +142,48 @@ export type CreatePage = typeof CreatePage.Type;
 export const DeletePage = Schema.Struct({ op: Schema.Literal("deletePage"), page: PageId });
 export type DeletePage = typeof DeletePage.Type;
 
+/** Publishes or unpublishes a page. An unpublished page stays in the draft but leaves the live site. */
+export const SetStatus = Schema.Struct({
+  op: Schema.Literal("setStatus"),
+  page: PageId,
+  status: Schema.Literals(["published", "unpublished"]),
+});
+export type SetStatus = typeof SetStatus.Type;
+
+/** Adds a form, or replaces the one with its ID. */
+export const SetForm = Schema.Struct({ op: Schema.Literal("setForm"), form: FormDefinition });
+export type SetForm = typeof SetForm.Type;
+
+/** Removes a form that no block uses. */
+export const RemoveForm = Schema.Struct({ op: Schema.Literal("removeForm"), form: FormId });
+export type RemoveForm = typeof RemoveForm.Type;
+
+/** Replaces one of the site's menus. Only the main menu's items have children. */
+export const SetMenu = Schema.Union([
+  Schema.Struct({
+    op: Schema.Literal("setMenu"),
+    menu: Schema.Literal("main"),
+    items: Schema.Array(MenuItem),
+  }),
+  Schema.Struct({
+    op: Schema.Literal("setMenu"),
+    menu: Schema.Literal("footer"),
+    items: Menus.fields.footer,
+  }),
+]);
+export type SetMenu = typeof SetMenu.Type;
+
+/** Sends an address on to a link. Leaving out `to` removes the redirect. */
+export const SetRedirect = Schema.Struct({
+  op: Schema.Literal("setRedirect"),
+  from: PagePath,
+  to: Schema.optionalKey(Link),
+});
+export type SetRedirect = typeof SetRedirect.Type;
+
 /**
  * Moves a draft onto a release, with the site-wide values only a merge
- * changes: the block lockfile, the brand revision, forms and menus.
+ * changes: the block lockfile and the brand revision.
  * SiteDoc makes it when it merges a release into a draft, publishes the
  * draft, or moves a Brand update draft to a newer revision; people's batches
  * can't carry it.
@@ -150,8 +193,6 @@ export const Rebase = Schema.Struct({
   base: LiveRelease,
   lockfile: Lockfile,
   brand: BrandRevision,
-  forms: Schema.Record(FormId, FormDefinition),
-  menus: Menus,
 });
 export type Rebase = typeof Rebase.Type;
 
@@ -167,6 +208,11 @@ export const Op = Schema.Union([
   SetPath,
   CreatePage,
   DeletePage,
+  SetStatus,
+  SetForm,
+  RemoveForm,
+  SetMenu,
+  SetRedirect,
   Rebase,
 ]);
 export type Op = typeof Op.Type;
@@ -214,6 +260,10 @@ export const BatchRule = Schema.Literals([
   "meta",
   /** A new page's document breaks the page rules. */
   "page",
+  /** No form has this ID. */
+  "unknown-form",
+  /** A block still uses the form. */
+  "in-use",
   /** The person may no longer edit this draft. */
   "permission",
   /** Only SiteDoc makes this change, when it merges or publishes. */

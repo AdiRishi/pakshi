@@ -61,6 +61,14 @@ export const publishedOf = (settings: SiteSettings): PublishedSettings =>
 export const liveOf = (settings: SiteSettings): LiveSettings =>
   Schema.decodeSync(LiveSettings)(settings);
 
+/** The forms whose new entries the settings email to someone. */
+export const notifiedForms = (settings: LiveSettings): ReadonlySet<FormId> =>
+  new Set(
+    Object.entries(settings.formEmails).flatMap(([form, to]) =>
+      to.length > 0 ? [FormId.make(form)] : [],
+    ),
+  );
+
 /** A site's settings as the settings screens show them, with the revision a save starts from. */
 export const SettingsView = Schema.Struct({ settings: SiteSettings, revision: Schema.Int });
 export type SettingsView = typeof SettingsView.Type;

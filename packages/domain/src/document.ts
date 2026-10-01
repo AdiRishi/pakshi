@@ -2,7 +2,7 @@ import type { BlockContract } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import { fieldParts, propsSchema } from "@repo/blocks/fields";
 import type { Draft } from "@repo/contracts/draft";
-import type { BlockId, BlockType, PageId } from "@repo/contracts/ids";
+import type { BlockId, BlockType, FormId, PageId } from "@repo/contracts/ids";
 import type {
   BatchError,
   BatchRule,
@@ -12,11 +12,15 @@ import type {
   ItemTree,
   MoveBlock,
   Op,
+  SetForm,
   SetMeta,
   SetProp,
+  SetRedirect,
+  SetStatus,
   Target,
 } from "@repo/contracts/ops";
 import { type BlockInstance, PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
+import { FormRef } from "@repo/contracts/references";
 import type { SiteParts } from "@repo/contracts/site";
 import { Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 
@@ -468,11 +472,13 @@ const removeBlock = (draft: Draft, page: PageId, id: BlockId) => {
 
 const postOnly = new Set<SetMeta["field"]>(["date", "author", "tags", "excerpt", "cover"]);
 
+const optionalMeta = new Set<SetMeta["field"]>(["cover", "image", "canonical", "noindex"]);
+
 const setMeta = (draft: Draft, op: SetMeta) => {
   const page = pageOf(draft, op.page);
   if (page.type === "page" && postOnly.has(op.field))
     throw reject("meta", `A page has no ${op.field}; only posts do.`, [op.field]);
-  if (op.value === undefined && op.field !== "cover")
+  if (op.value === undefined && !optionalMeta.has(op.field))
     throw reject("meta", `A ${page.type}'s ${op.field} can't be removed.`, [op.field]);
   const meta: Props = page.meta;
   const next = withKey(meta, op.field, op.value);
@@ -544,6 +550,74 @@ const deletePage = (draft: Draft, id: PageId) => {
   };
 };
 
+const setStatus = (draft: Draft, op: SetStatus) => {
+  const { status, ...page } = pageOf(draft, op.page);
+  const updated: Draft["pages"][PageId] =
+    op.status === "unpublished" ? { ...page, status: "unpublished" } : page;
+  return {
+    draft: { ...draft, pages: { ...draft.pages, [op.page]: updated } },
+    inverse: {
+      op: "setStatus",
+      page: op.page,
+      status: status ?? "published",
+    } satisfies Op,
+  };
+};
+
+// Forms, menus and redirects ---------------------------------------------------
+
+const isFormRef = Schema.is(FormRef);
+
+/** The forms a value uses, wherever they sit in it. */
+const formsIn = (value: Json): ReadonlyArray<FormId> => {
+  if (isFormRef(value)) return [value.id];
+  if (isItemList(value)) return value.flatMap(formsIn);
+  return isRecord(value) ? Object.values(value).flatMap(formsIn) : [];
+};
+
+/** The forms some blocks use. */
+export const formsUsedBy = (blocks: BlockHolder["blocks"]): ReadonlySet<FormId> =>
+  new Set(Object.values(blocks).flatMap((block) => Object.values(block.props).flatMap(formsIn)));
+
+const setForm = (draft: Draft, op: SetForm) => {
+  const previous = draft.forms[op.form.id];
+  return {
+    draft: { ...draft, forms: { ...draft.forms, [op.form.id]: op.form } },
+    inverse:
+      previous === undefined
+        ? ({ op: "removeForm", form: op.form.id } satisfies Op)
+        : ({ op: "setForm", form: previous } satisfies Op),
+  };
+};
+
+const removeForm = (draft: Draft, id: FormId) => {
+  const { [id]: previous, ...forms } = draft.forms;
+  if (previous === undefined) throw reject("unknown-form", `There's no form ${id}.`);
+  const holders = [
+    { title: "the header or footer", blocks: draft.parts.blocks },
+    ...Object.values(draft.pages).map((page) => ({
+      title: page.meta.title || page.path,
+      blocks: page.blocks,
+    })),
+  ];
+  const user = holders.find((holder) => formsUsedBy(holder.blocks).has(id));
+  if (user !== undefined)
+    throw reject("in-use", `${previous.name} is still on ${user.title}. Remove it there first.`);
+  return { draft: { ...draft, forms }, inverse: { op: "setForm", form: previous } satisfies Op };
+};
+
+const setRedirect = (draft: Draft, op: SetRedirect) => {
+  const { [op.from]: previous, ...others } = draft.redirects;
+  const undo: SetRedirect = { op: "setRedirect", from: op.from };
+  return {
+    draft: {
+      ...draft,
+      redirects: op.to === undefined ? others : { ...others, [op.from]: op.to },
+    },
+    inverse: previous === undefined ? undo : { ...undo, to: previous },
+  };
+};
+
 // Batches ------------------------------------------------------------------
 
 /** A draft after one op, and the op that undoes it. */
@@ -592,23 +666,38 @@ const applyOp = (draft: Draft, op: Op, contracts: BlockContracts) => {
       return createPage(draft, op.page, contracts);
     case "deletePage":
       return deletePage(draft, op.page);
-    case "rebase":
+    case "setStatus":
+      return setStatus(draft, op);
+    case "setForm":
+      return setForm(draft, op);
+    case "removeForm":
+      return removeForm(draft, op.form);
+    case "setMenu": {
+      const menus = draft.parts.menus;
       return {
         draft: {
           ...draft,
-          base: op.base,
-          lockfile: op.lockfile,
-          brand: op.brand,
-          forms: op.forms,
-          parts: { ...draft.parts, menus: op.menus },
+          parts: {
+            ...draft.parts,
+            menus:
+              op.menu === "main" ? { ...menus, main: op.items } : { ...menus, footer: op.items },
+          },
         },
+        inverse: (op.menu === "main"
+          ? { op: "setMenu", menu: "main", items: menus.main }
+          : { op: "setMenu", menu: "footer", items: menus.footer }) satisfies Op,
+      };
+    }
+    case "setRedirect":
+      return setRedirect(draft, op);
+    case "rebase":
+      return {
+        draft: { ...draft, base: op.base, lockfile: op.lockfile, brand: op.brand },
         inverse: {
           op: "rebase",
           base: draft.base,
           lockfile: draft.lockfile,
           brand: draft.brand,
-          forms: draft.forms,
-          menus: draft.parts.menus,
         } satisfies Op,
       };
   }

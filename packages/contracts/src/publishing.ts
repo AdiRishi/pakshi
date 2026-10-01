@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { PageId } from "./ids.ts";
+import { FormId, PageId } from "./ids.ts";
 import { NamedBlock, Place } from "./merge.ts";
 import { PropPath } from "./ops.ts";
 
@@ -33,5 +33,9 @@ export const PreflightIssue = Schema.TaggedUnion({
     field: Schema.String,
     page: PageId,
   },
+  /** A form on a served page whose entries would be emailed to no one. */
+  NoFormEmails: { form: FormId, name: Schema.String },
+  /** A form that asks for an email address or phone number without a consent checkbox linking to a privacy policy. */
+  MissingConsent: { form: FormId, name: Schema.String },
 });
 export type PreflightIssue = typeof PreflightIssue.Type;

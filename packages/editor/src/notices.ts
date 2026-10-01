@@ -16,6 +16,9 @@ const metaTitles: Readonly<Record<Extract<Op, { op: "setMeta" }>["field"], strin
   tags: "tags",
   excerpt: "excerpt",
   cover: "cover image",
+  image: "sharing image",
+  canonical: "canonical address",
+  noindex: "search engine setting",
 };
 
 /** The part of the draft an op changes, in words, such as "Heading in Hero". */
@@ -45,6 +48,16 @@ export const partChanged = (op: Op, draft: Draft, contracts: BlockContracts) => 
     case "createPage":
     case "deletePage":
       return "the site's pages";
+    case "setStatus":
+      return "whether the page is published";
+    case "setForm":
+      return `the ${op.form.name} form`;
+    case "removeForm":
+      return `the ${draft.forms[op.form]?.name ?? "removed"} form`;
+    case "setMenu":
+      return `the ${op.menu} menu`;
+    case "setRedirect":
+      return `the redirect from ${op.from}`;
     case "rebase":
       return "the site";
   }

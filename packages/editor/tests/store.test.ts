@@ -436,8 +436,6 @@ describe("the draft's standing", () => {
           base: release,
           lockfile: values.lockfile,
           brand: values.brand,
-          forms: values.forms,
-          menus: values.parts.menus,
         },
         setHeading("Merged from live"),
       ],
@@ -461,8 +459,6 @@ describe("the draft's standing", () => {
           base: release,
           lockfile: { ...fixtureDraft.lockfile, hero: 2 },
           brand: fixtureDraft.brand,
-          forms: fixtureDraft.forms,
-          menus: fixtureDraft.parts.menus,
         },
       ],
     });

@@ -74,6 +74,18 @@ export const describeChange = (change: MergedChange) => {
 
 /** What pre-flight found, in a sentence, and the page to fix it on, if it's on one. */
 export const describeIssue = (issue: PreflightIssue) => {
+  switch (issue._tag) {
+    case "NoFormEmails":
+      return {
+        page: null,
+        text: `${issue.name} would email its entries to no one. Add an address in the site's settings, under Forms and email`,
+      };
+    case "MissingConsent":
+      return {
+        page: null,
+        text: `${issue.name} asks for an email address or phone number, so it needs a consent checkbox that links to a privacy policy`,
+      };
+  }
   const page = issue.place.target === "site" ? null : issue.place.target;
   switch (issue._tag) {
     case "Incomplete":
@@ -106,6 +118,11 @@ export const preflightChecks = [
   },
   { title: "Page titles and descriptions", passed: "Set on every page", tags: ["MissingMeta"] },
   { title: "Internal links", passed: "No broken links", tags: ["BrokenLink"] },
+  {
+    title: "Forms",
+    passed: "Each form emails its entries and asks for consent",
+    tags: ["NoFormEmails", "MissingConsent"],
+  },
 ] as const satisfies ReadonlyArray<{
   readonly title: string;
   readonly passed: string;

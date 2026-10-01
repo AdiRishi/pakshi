@@ -24,6 +24,7 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     menus: { main: [], footer: [] },
   },
   forms: {},
+  redirects: {},
   lockfile: Object.fromEntries(
     [
       "call-to-action",

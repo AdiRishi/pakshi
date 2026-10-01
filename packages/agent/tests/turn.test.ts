@@ -109,7 +109,7 @@ describe("a turn", () => {
         insertAfterHero({ type: "rich-text", props: { heading: "Visit" } }),
       ]);
       const added = state.draft.pages[home]?.root[1];
-      const frozen = freeze(state.draft, contracts, { pages: [], gone: [] });
+      const frozen = freeze(state.draft, contracts, { pages: [], gone: [] }, new Set());
       expect(frozen.ok ? [] : frozen.issues).toContainEqual(
         expect.objectContaining({
           _tag: "Placeholder",

@@ -17,7 +17,7 @@ import { type Batch, type BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { now, Timestamp } from "@repo/contracts/release";
 import { DraftSharing, unshared } from "@repo/contracts/sharing";
-import { SiteParts } from "@repo/contracts/site";
+import { Redirects, SiteParts } from "@repo/contracts/site";
 import { type LiveRelease, Lockfile } from "@repo/contracts/snapshot";
 import {
   DraftKind,
@@ -58,6 +58,7 @@ const DraftRow = Schema.Struct({
   revision: Schema.Int,
   parts: json(SiteParts),
   forms: json(Forms),
+  redirects: json(Redirects),
   lockfile: json(Lockfile),
   brand: json(BrandRevision),
   sharing: json(DraftSharing),
@@ -374,6 +375,7 @@ export class SiteDrafts extends Context.Service<
           revision: row.revision,
           parts: row.parts,
           forms: row.forms,
+          redirects: row.redirects,
           lockfile: row.lockfile,
           brand: row.brand,
           pages: Object.fromEntries(pages.map(({ document }) => [document.id, document])),
@@ -406,6 +408,7 @@ export class SiteDrafts extends Context.Service<
               base_snapshot = ${next.base.snapshot},
               parts = ${encode(SiteParts, next.parts)},
               forms = ${encode(Forms, next.forms)},
+              redirects = ${encode(Redirects, next.redirects)},
               lockfile = ${encode(Lockfile, next.lockfile)},
               brand = ${encode(BrandRevision, next.brand)}
               where id = ${next.id}`;
@@ -465,12 +468,13 @@ export class SiteDrafts extends Context.Service<
             Effect.gen(function* () {
               yield* sql`insert into drafts
                 (id, name, kind, status, created_by, created_at, base_release, base_snapshot,
-                  revision, parts, forms, lockfile, brand)
+                  revision, parts, forms, redirects, lockfile, brand)
                 values (${id}, ${name}, ${encode(DraftKind, kind)}, 'open',
                   ${encode(Collaborator, by)}, ${createdAt},
                   ${base.release}, ${base.snapshot}, 0,
                   ${encode(SiteParts, content.parts)},
-                  ${encode(Forms, content.forms)}, ${encode(Lockfile, content.lockfile)},
+                  ${encode(Forms, content.forms)}, ${encode(Redirects, content.redirects)},
+                  ${encode(Lockfile, content.lockfile)},
                   ${encode(BrandRevision, content.brand)})`;
               for (const page of Object.values(content.pages)) yield* writePage(id, page);
               yield* sendBlocks(id, content.lockfile);

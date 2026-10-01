@@ -171,6 +171,10 @@ const issueLine = (issue: PreflightIssue) => {
       return `${issue.place.title} has no ${issue.field}.`;
     case "BrokenLink":
       return `${issue.place.title}: ${issue.field} links to a page that isn't published.`;
+    case "NoFormEmails":
+      return `${issue.name} would email its entries to no one. Add an address in the site's settings.`;
+    case "MissingConsent":
+      return `${issue.name} asks for contact details without a consent checkbox linking to a privacy policy.`;
   }
 };
 

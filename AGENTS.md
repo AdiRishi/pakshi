@@ -71,8 +71,9 @@ make it. E2E tests use `it.live`, because Effect's test clock never lets a
 real wait finish. `infra/src/test-bindings.ts` lists the stand-in for every
 Worker binding under E2E tests; give a new binding one there.
 
-Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing. `pnpm
-test` runs unit and E2E tests; the integration journeys need an Alchemy profile.
+Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing.
+`pnpm test:unit` runs only the unit and E2E tests; `pnpm test` adds the
+integration journeys, which need an Alchemy profile.
 
 `.repos/` contains read-only source references. When writing Effect code, read
 `.repos/effect/LLMS.md` and inspect the matching version there before choosing
