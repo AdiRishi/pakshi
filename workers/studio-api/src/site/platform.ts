@@ -33,6 +33,7 @@ export class Snapshots extends Context.Service<
 export class Routing extends Context.Service<
   Routing,
   {
+    /** The release KV serves, or none when it holds nothing it can read. */
     readonly read: Effect.Effect<Option.Option<LiveRelease>>;
     readonly write: (live: LiveRelease) => Effect.Effect<void>;
   }
