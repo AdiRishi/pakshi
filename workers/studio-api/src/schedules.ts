@@ -2,6 +2,6 @@
 export const schedules = {
   /** Reconciling KV, offering brand revisions again, collecting block versions and checking domains. */
   frequent: "*/5 * * * *",
-  /** Keeping library images while they're used, and deleting the rest after three months. */
+  /** Deleting library images unused for three months, and sites deleted 30 days ago. */
   daily: "23 3 * * *",
 } as const;

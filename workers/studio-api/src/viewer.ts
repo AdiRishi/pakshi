@@ -29,6 +29,7 @@ const reachableSites = Effect.fn("StudioApi.reachableSites")(function* (access: 
       execute: () => sql`
         select s.id, s.name, s.brand_id, b.name as brand_name
         from sites s join brands b on b.id = s.brand_id
+        where s.deleted_at is null
         order by s.name`,
     })(undefined);
   }
@@ -41,8 +42,9 @@ const reachableSites = Effect.fn("StudioApi.reachableSites")(function* (access: 
     execute: ({ brands, sites }) => sql`
       select s.id, s.name, s.brand_id, b.name as brand_name
       from sites s join brands b on b.id = s.brand_id
-      where s.brand_id in (select value from json_each(${JSON.stringify(brands)}))
-        or s.id in (select value from json_each(${JSON.stringify(sites)}))
+      where s.deleted_at is null and (
+        s.brand_id in (select value from json_each(${JSON.stringify(brands)}))
+        or s.id in (select value from json_each(${JSON.stringify(sites)})))
       order by s.name`,
   })({
     brands: scopes.flatMap((scope) => (scope.kind === "brand" ? [scope.id] : [])),

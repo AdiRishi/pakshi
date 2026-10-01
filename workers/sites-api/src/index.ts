@@ -72,6 +72,14 @@ export class SiteSubmissions extends DurableObject<SitesApiEnv> {
     return this.#run((entries) => entries.removeFor(email));
   }
 
+  /** Deletes every entry and email still to send, for a site deleted for good. */
+  async erase() {
+    await this.#runtime?.dispose();
+    this.#runtime = undefined;
+    await this.ctx.storage.deleteAlarm();
+    await this.ctx.storage.deleteAll();
+  }
+
   /** Sends the new entry emails that are due, and wakes again for the next one. */
   override async alarm() {
     const next = await this.#run((entries) =>

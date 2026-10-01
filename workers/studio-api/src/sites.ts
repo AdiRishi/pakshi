@@ -30,7 +30,8 @@ export const findSite = Effect.fn("StudioApi.findSite")(function* (site: SiteId)
   const found = yield* SqlSchema.findOneOption({
     Request: SiteId,
     Result: SiteRow,
-    execute: (id) => sql`select id, name, brand_id, address from sites where id = ${id}`,
+    execute: (id) => sql`select id, name, brand_id, address from sites
+      where id = ${id} and deleted_at is null`,
   })(site);
   if (Option.isNone(found)) return yield* new SiteNotFound({ site });
   return {

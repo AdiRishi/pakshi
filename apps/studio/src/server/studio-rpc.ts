@@ -3,6 +3,7 @@ import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/co
 import {
   AddressTaken,
   AlreadyMember,
+  BrandHasSites,
   BlocksRemoved,
   BrandChanged,
   CannotDecide,
@@ -103,6 +104,11 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError(
       "conflict",
       `${failure.hostname} belongs to another site, or to Pakshi itself. A domain can serve one site.`,
+    );
+  if (Schema.is(BrandHasSites)(failure))
+    return new AppRequestError(
+      "conflict",
+      `This brand still has ${failure.sites === 1 ? "a site" : `${failure.sites} sites`}, counting any deleted in the last 30 days, which can still be restored.`,
     );
   if (Schema.is(AlreadyMember)(failure))
     return new AppRequestError("conflict", "They already have this role there.");

@@ -3,7 +3,7 @@ import { describe, expect, test } from "vitest";
 
 import { Hostname } from "../src/studio.ts";
 
-const decode = (typed: string) => Option.getOrNull(Schema.decodeUnknownOption(Hostname)(typed));
+const decode = (typed: string) => Option.getOrNull(Schema.decodeOption(Hostname)(typed));
 
 describe("a site's own domain", () => {
   test("is kept lowercase, without a trailing dot or spaces", () => {

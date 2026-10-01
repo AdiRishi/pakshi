@@ -69,6 +69,7 @@ it.effect(
         id: created.id,
         name: "Archives",
         brand: "brand_a",
+        address: "archives",
       });
       const taken = yield* Effect.flip(
         createSite(person("user_org"), libraries, "Old archives", "archives"),

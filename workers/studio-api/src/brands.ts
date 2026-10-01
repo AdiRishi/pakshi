@@ -96,7 +96,7 @@ const brandSites = Effect.fn("StudioApi.brandSites")(function* () {
   return yield* SqlSchema.findAll({
     Request: Schema.Void,
     Result: SiteRow,
-    execute: () => sql`select id, name, brand_id from sites order by name`,
+    execute: () => sql`select id, name, brand_id from sites where deleted_at is null order by name`,
   })(undefined);
 });
 
@@ -150,7 +150,11 @@ const brandFor = Effect.fn("StudioApi.brandFor")(function* (person: Person, bran
   const resource = { kind: "brand", id: brand } as const;
   if (Option.isNone(row) || permissionsOn(access, resource).length === 0)
     return yield* new ScopeNotFound({});
-  return { ...row.value, edit: authorize(access, "brand.theme.edit", resource) };
+  return {
+    ...row.value,
+    edit: authorize(access, "brand.theme.edit", resource),
+    delete: authorize(access, "brand.delete", resource),
+  };
 });
 
 /** Everything Theme Studio shows for a brand. */
@@ -170,7 +174,7 @@ export const brandView = Effect.fn("StudioApi.brandView")(function* (
     voice: found.voice,
     sites: sites.filter((site) => site.brand_id === brand).map(({ id, name }) => ({ id, name })),
     media,
-    can: { edit: found.edit },
+    can: { edit: found.edit, delete: found.delete },
   };
 });
 
@@ -289,7 +293,7 @@ export const sitesBehindTheirBrand = Effect.fn("StudioApi.sitesBehindTheirBrand"
       brand_id: BrandId,
       brand_revision: Schema.NullOr(Schema.Int),
     }),
-    execute: () => sql`select id, brand_id, brand_revision from sites`,
+    execute: () => sql`select id, brand_id, brand_revision from sites where deleted_at is null`,
   })(undefined);
   const latest = new Map((yield* latestRevisions()).map((row) => [row.brand_id, row]));
   return sites.flatMap((site) => {

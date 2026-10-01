@@ -20,7 +20,9 @@ import { serveAgent } from "./agent/route.ts";
 import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
+import { purgeDeletedSites } from "./deletion.ts";
 import { checkDomains, routedHost } from "./domains.ts";
+import { eraseSite } from "./erase.ts";
 import { serveLive } from "./live.ts";
 import { retainImages } from "./media-retention.ts";
 import {
@@ -75,7 +77,7 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
    * job, offering brand revisions again to sites that missed them, and asking
    * sites that haven't reported their block versions for them, and checking
    * waiting domains. Daily: keeping
-   * library images while they're used.
+   * library images while they're used, and deleting for good the sites deleted 30 days ago.
    */
   override async scheduled(controller: ScheduledController) {
     if (controller.cron === schedules.daily) {
@@ -91,6 +93,13 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
         ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
       );
       if (deleted.length > 0) console.info("Deleted library images nothing used", deleted);
+      const purged = await Effect.runPromise(
+        purgeDeletedSites(
+          (site) => eraseSite(this.env, site),
+          (media) => Effect.promise(() => this.env.CONTENT.delete(objectKeys.media(media))),
+        ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
+      );
+      if (purged.length > 0) console.info("Deleted sites for good after 30 days", purged);
       return;
     }
     const [reconciled, offered] = await Effect.runPromise(

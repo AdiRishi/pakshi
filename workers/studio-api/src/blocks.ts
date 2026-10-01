@@ -112,7 +112,7 @@ export const sitesWithoutBlockUsage = Effect.fn("StudioApi.sitesWithoutBlockUsag
     Request: Schema.Void,
     Result: Schema.Struct({ id: SiteId }),
     execute: () => sql`select id from sites
-      where id not in (select site_id from block_usage where holder = 'live')`,
+      where deleted_at is null and id not in (select site_id from block_usage where holder = 'live')`,
   })(undefined);
 });
 
