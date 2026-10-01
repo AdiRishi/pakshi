@@ -1,4 +1,5 @@
-import { BlockType, SiteId } from "@repo/contracts/ids";
+import { BlockRequestId, BlockType, SiteId } from "@repo/contracts/ids";
+import { BlockExample, BlockNeed } from "@repo/contracts/studio";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";
 import { env } from "cloudflare:workers";
@@ -32,3 +33,20 @@ export const upgradeEverywhere = createServerFn({ method: "POST" })
       (client) => client.upgradeEverywhere(data),
     ),
   );
+
+/** The block requests the person may see, and the sites they may ask for blocks on. */
+export const getBlockRequests = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.blockRequests()),
+);
+
+export const requestBlock = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(
+      Schema.Struct({ site: Schema.NullOr(SiteId), need: BlockNeed, example: BlockExample }),
+    ),
+  )
+  .handler(({ data }) => studio((client) => client.requestBlock(data)));
+
+export const closeBlockRequest = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ request: BlockRequestId })))
+  .handler(({ data }) => studio((client) => client.closeBlockRequest(data)));

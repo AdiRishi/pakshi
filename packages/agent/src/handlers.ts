@@ -357,7 +357,8 @@ export const agentHandlers = AgentTools.toLayer({
 
   request_block: ({ need, example, nearest }, { toolCallId }) =>
     Effect.gen(function* () {
-      yield* (yield* BlockRequests).file({ need, example, nearest });
+      if (!(yield* (yield* BlockRequests).file({ need, example, nearest })))
+        return "Nothing was filed: the person can't ask for blocks on this site. Tell them someone who manages the site can.";
       yield* show(toolCallId, { _tag: "BlockRequest", id: toolCallId ?? "", need });
       return "The request is filed with the platform team.";
     }),

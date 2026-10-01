@@ -21,14 +21,16 @@ import {
   TableRow,
 } from "@repo/ui/components/table";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
+import { PlusIcon } from "lucide-react";
 import { useId, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 import { formatDay } from "@/lib/dates";
 
+import { BlockRequestList, RequestBlockDialog } from "./block-requests";
 import { upgradeEverywhere } from "./functions";
-import { blockCatalogQuery } from "./queries";
+import { blockCatalogQuery, blockRequestsQuery } from "./queries";
 
 const placementTitles = {
   section: "Section",
@@ -116,6 +118,8 @@ function BlockCard(props: { readonly block: CatalogBlock; readonly canUpgrade: b
 /** Every block in the library, its versions, and where each is live. */
 export function CatalogPage(props: { readonly viewer: Viewer }) {
   const { data } = useSuspenseQuery(blockCatalogQuery);
+  const { data: requests } = useSuspenseQuery(blockRequestsQuery);
+  const [requesting, setRequesting] = useState(false);
   const searchId = useId();
   const [search, setSearch] = useState("");
   const shown = data.blocks.filter((block) =>
@@ -124,7 +128,15 @@ export function CatalogPage(props: { readonly viewer: Viewer }) {
   return (
     <AppShell viewer={props.viewer}>
       <header className="flex flex-col gap-2 bg-accent px-10 pt-6 pb-8">
-        <h1 className="text-3xl font-semibold tracking-tight">Blocks</h1>
+        <div className="flex flex-wrap items-center gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight">Blocks</h1>
+          {requests.sites.length > 0 && (
+            <Button className="ml-auto" variant="outline" onClick={() => setRequesting(true)}>
+              <PlusIcon />
+              Request a new block
+            </Button>
+          )}
+        </div>
         <p className="text-secondary-foreground">
           The sections every page is built from. Sites keep their version of each block until
           someone adopts an upgrade, which goes through the site's approval workflow.
@@ -150,8 +162,10 @@ export function CatalogPage(props: { readonly viewer: Viewer }) {
             </li>
           ))}
         </ul>
+        <BlockRequestList data={requests} />
         {data.removable !== null && <Removable versions={data.removable} titles={data.blocks} />}
       </div>
+      <RequestBlockDialog open={requesting} onOpenChange={setRequesting} sites={requests.sites} />
     </AppShell>
   );
 }

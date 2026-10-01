@@ -26,6 +26,7 @@ import { Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
+import { requestBlock } from "../block-requests.ts";
 import type { Outcome } from "../site-doc.ts";
 import type { BatchResult } from "../site/drafts.ts";
 import type { DraftView, Site } from "../site/site.ts";
@@ -147,11 +148,11 @@ export const turnServices = (
       const sql = yield* SqlClient.SqlClient;
       return BlockRequests.of({
         file: ({ need, example, nearest }) =>
-          Effect.orDie(
-            Effect.asVoid(sql`insert into block_requests
-              (id, site_id, requested_by, need, example, nearest)
-              values (${randomId("breq")}, ${who.site}, ${who.person.id},
-                ${need}, ${example}, ${nearest})`),
+          requestBlock(who.person, { site: who.site, need, example, nearest }).pipe(
+            Effect.as(true),
+            Effect.catchTag("NotPermitted", () => Effect.succeed(false)),
+            Effect.provideService(SqlClient.SqlClient, sql),
+            Effect.orDie,
           ),
       });
     }),

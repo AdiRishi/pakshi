@@ -57,6 +57,10 @@ export type MenuItemId = typeof MenuItemId.Type;
 export const CustomRoleId = prefixed("role").pipe(Schema.brand("CustomRoleId"));
 export type CustomRoleId = typeof CustomRoleId.Type;
 
+/** A request for a block the library doesn't have, for the platform team. */
+export const BlockRequestId = prefixed("breq").pipe(Schema.brand("BlockRequestId"));
+export type BlockRequestId = typeof BlockRequestId.Type;
+
 /** An invitation for someone to join the organization. */
 export const InvitationId = prefixed("inv").pipe(Schema.brand("InvitationId"));
 export type InvitationId = typeof InvitationId.Type;

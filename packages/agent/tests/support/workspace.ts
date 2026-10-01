@@ -109,7 +109,7 @@ export const desk = async (
         }),
     }),
     Layer.succeed(BlockRequests)({
-      file: ({ need }) => Effect.sync(() => void state.requests.push(need)),
+      file: ({ need }) => Effect.sync(() => state.requests.push(need) > 0),
     }),
     Layer.succeed(Turn)({
       id: turn,

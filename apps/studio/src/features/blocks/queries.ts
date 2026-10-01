@@ -1,7 +1,7 @@
 import type { SiteId } from "@repo/contracts/ids";
 import { queryOptions } from "@tanstack/react-query";
 
-import { getBlockCatalog, getSiteBlocks } from "./functions";
+import { getBlockCatalog, getBlockRequests, getSiteBlocks } from "./functions";
 
 export const blockCatalogQuery = queryOptions({
   queryKey: ["blocks"],
@@ -13,3 +13,8 @@ export const siteBlocksQuery = (site: SiteId) =>
     queryKey: ["sites", site, "blocks"],
     queryFn: () => getSiteBlocks({ data: { site } }),
   });
+
+export const blockRequestsQuery = queryOptions({
+  queryKey: ["block-requests"],
+  queryFn: () => getBlockRequests(),
+});
