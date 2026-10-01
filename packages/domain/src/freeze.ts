@@ -196,10 +196,12 @@ const brokenRedirects = (
       : [],
   );
 
-/** Whether a form asks for an email address or phone number without a consent checkbox linking to a privacy policy. */
+/** Whether a form asks for an email address or phone number without a required consent checkbox linking to a privacy policy. */
 const lacksConsent = (form: FormDefinition) =>
   form.fields.some((field) => field.kind === "email" || field.kind === "phone") &&
-  !form.fields.some((field) => field.kind === "checkbox" && field.link !== undefined);
+  !form.fields.some(
+    (field) => field.kind === "checkbox" && field.required && field.link !== undefined,
+  );
 
 const formIssues = (
   content: SiteContent,

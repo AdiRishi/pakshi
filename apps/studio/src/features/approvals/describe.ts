@@ -83,7 +83,7 @@ export const describeIssue = (issue: PreflightIssue) => {
     case "MissingConsent":
       return {
         page: null,
-        text: `${issue.name} asks for an email address or phone number, so it needs a consent checkbox that links to a privacy policy`,
+        text: `${issue.name} asks for an email address or phone number, so it needs a required consent checkbox that links to a privacy policy`,
       };
   }
   const page = issue.place.target === "site" ? null : issue.place.target;

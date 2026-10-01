@@ -171,7 +171,7 @@ describe("freezing", () => {
     ]);
   });
 
-  test("needs somewhere to send a served form's entries, and consent when it asks for an email", () => {
+  test("needs somewhere to send a served form's entries, and required consent when it asks for an email", () => {
     const visit = FormId.make("frm_visit");
     const withForm = edit(complete, [
       {
@@ -192,27 +192,31 @@ describe("freezing", () => {
       { _tag: "NoFormEmails", form: visit, name: "Plan a visit" },
       { _tag: "MissingConsent", form: visit, name: "Plan a visit" },
     ]);
-    const withConsent = edit(withForm, [
-      {
-        op: "setForm",
-        form: {
-          id: "frm_visit",
-          name: "Plan a visit",
-          submitLabel: "Send",
-          fields: [
-            { kind: "email", id: "ff_email", label: "Email", required: true },
-            {
-              kind: "checkbox",
-              id: "ff_consent",
-              label: "I agree to the privacy policy",
-              required: true,
-              link: { $ref: "page", id: "pg_about" },
-            },
-          ],
+    const withConsent = (required: boolean) =>
+      edit(withForm, [
+        {
+          op: "setForm",
+          form: {
+            id: "frm_visit",
+            name: "Plan a visit",
+            submitLabel: "Send",
+            fields: [
+              { kind: "email", id: "ff_email", label: "Email", required: true },
+              {
+                kind: "checkbox",
+                id: "ff_consent",
+                label: "I agree to the privacy policy",
+                required,
+                link: { $ref: "page", id: "pg_about" },
+              },
+            ],
+          },
         },
-      },
+      ]);
+    expect(issuesIn(withConsent(false), new Set([visit]))).toEqual([
+      { _tag: "MissingConsent", form: visit, name: "Plan a visit" },
     ]);
-    expect(issuesIn(withConsent, new Set([visit]))).toEqual([]);
+    expect(issuesIn(withConsent(true), new Set([visit]))).toEqual([]);
   });
 
   test("lists a redirect to a page that isn't served as a broken link", () => {
