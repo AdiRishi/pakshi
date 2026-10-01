@@ -9,6 +9,13 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 069 | A brand color too light to read fails the contrast check rather than being changed | 2026-10-01 | Accepted            |
+| 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Accepted            |
+| 067 | A new draft offers every block in the library                                      | 2026-10-01 | Accepted            |
+| 066 | Brand revisions reach sites through SiteDoc, and the scheduled job catches misses  | 2026-10-01 | Accepted            |
+| 065 | A draft's brand pin carries the revision, and merges keep the newer one            | 2026-10-01 | Accepted            |
+| 064 | Theme fonts are static assets of each app                                          | 2026-10-01 | Accepted            |
+| 063 | Lockfiles pin version numbers; a released folder is one on the base branch         | 2026-10-01 | Accepted            |
 | 062 | The agent's evals run on demand, never as routine                                  | 2026-10-01 | Accepted            |
 | 061 | One conversation per person per draft                                              | 2026-10-01 | Accepted            |
 | 060 | The agent proposes a site plan with a tool, and the plan becomes its brief         | 2026-10-01 | Accepted            |
@@ -52,7 +59,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted            |
 | 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted            |
 | 020 | Share drafts like documents                                                        | 2026-09-28 | Amended by 054      |
-| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Accepted            |
+| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Amended by 065      |
 | 018 | Media files never change                                                           | 2026-09-28 | Accepted            |
 | 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted            |
 | 016 | Keep all site data: submissions and releases are never deleted automatically       | 2026-09-29 | Accepted            |
@@ -65,12 +72,74 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054      |
 | 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Amended by 058, 059 |
 | 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted            |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Accepted            |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Amended by 063      |
 | 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025      |
 | 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted            |
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 069 — A brand color too light to read fails the contrast check rather than being changed [#decision-069]
+
+**Context.** Theme Studio generates the palette from one brand color, picks every text color to read clearly on its background, and can't save a theme with a pair that fails WCAG 2.2 AA. Generated pairs always pass, so the only color that can fail is the brand color itself, used for buttons, links and focus outlines on light pages. Pakshi could quietly darken it until it passed.
+
+**Decision.** The light scheme uses the brand color exactly as chosen. When it's too light to read on the page background, Theme Studio lists each failing pair with its contrast and refuses to save, and studio-api refuses it too. The dark scheme, the brand surfaces and every text color are generated to pass.
+
+**Rejected.** Darkening the brand color behind the person's back, which changes the brand without saying so.
+
+**Consequences.** A pale brand color, such as a light yellow, needs a darker shade for the site. The person sees why and chooses it.
+
+## 068 — Released versions' changed screenshots are logged and shown to their sites [#decision-068]
+
+**Context.** A dependency upgrade or a change to shared code, such as the field components or Tailwind, can change how a released block version looks on live sites. The design asked for a reviewed screenshot update that's recorded in the audit log and announced to site admins. The browser suite only compared the editor canvas with `sites`, so nothing noticed such a change, and the audit log arrives in checkpoint 10.
+
+**Decision.** The browser suite keeps a baseline screenshot of every fixture of every block version, in light and dark. A released version's baselines change only with a new entry in `packages/blocks/src/rendering-changes.json` that names the version, says what changed and gives the date, and the released blocks check fails a change without one. Each site's Blocks screen shows the entries for the versions it uses. Recording these changes in the audit log comes with the audit log in checkpoint 10.
+
+**Consequences.** An accepted change to a live site's look is a reviewed commit with its reason, and the sites it reaches hear about it. Baselines are rendered on the platform the browser suite runs on.
+
+## 067 — A new draft offers every block in the library [#decision-067]
+
+**Context.** A draft can use only the block types its lockfile pins, and the lockfile changes only through upgrades and merges. A site that started before a block existed could never use it.
+
+**Decision.** A new draft takes the live release's lockfile and adds every block type it doesn't pin, at that type's newest version. Types already pinned keep their versions.
+
+**Consequences.** A type no page uses changes nothing a site shows, so adding it needs no review. New blocks reach every site with its next draft, and other drafts take them when they merge a release that has them.
+
+## 066 — Brand revisions reach sites through SiteDoc, and the scheduled job catches misses [#decision-066]
+
+**Context.** Saving a brand's look makes a revision in D1 and must bring a Brand update draft to every site in the brand. D1 and each site's `SiteDoc` can't share a transaction, so a save could reach some sites and not others.
+
+**Decision.** studio-api records the revision, then asks each site's `SiteDoc` to take it. `SiteDoc` moves its open Brand update draft to the revision, or makes one from what's live, and records the newest revision it has taken, which its outbox copies to D1. Taking a revision again, or an older one, changes nothing. The scheduled job offers each brand's newest revision again to any site whose copy is behind. A newer revision moving a Brand update draft that's under review counts as an edit after submitting, so the draft stays open with it when the older submission publishes.
+
+**Consequences.** A save that couldn't reach a site still reaches it within one run of the scheduled job. Closing a Brand update draft without publishing leaves the site on its older revision until the next save.
+
+## 065 — A draft's brand pin carries the revision, and merges keep the newer one [#decision-065]
+
+**Context.** [Decision 019](#decision-019) has each draft pin a brand revision. Pinning only the revision's ID would make every render, freeze and preview read the revision from D1.
+
+**Decision.** A draft and a snapshot carry the whole revision they pin: the brand, its number, the resolved theme and the identity. Revisions never change, so the copy can't go stale. A merge keeps whichever side has the newer revision and reports it as a change; it's never a conflict, because sites only move forward through their brand's revisions. A restored release takes the live site's revision.
+
+**Consequences.** `SiteDoc`, `sites` and the editor render from the draft or snapshot alone. A palette generator fix changes only revisions saved after it.
+
+## 064 — Theme fonts are static assets of each app [#decision-064]
+
+**Context.** The design self-hosted theme fonts from R2. Serving them from R2 needs an upload step at deploy, a Worker invocation per font request in `sites`, and a route through `studio-api` for the editor canvas and previews.
+
+**Decision.** Fonts come from their Fontsource packages, and a Vite plugin in `@repo/tokens` serves them at `/_fonts/` in development and emits them as static assets of `sites` and Studio in a build. The theme names fonts from a curated list, and the theme CSS declares their faces from `/_fonts/`.
+
+**Rejected.** Fonts in R2, served by each Worker.
+
+**Consequences.** Cloudflare serves fonts without running a Worker, and the canvas and previews load them from Studio's own origin. Fonts are shared code: a font package upgrade reaches live sites like any other, under the same screenshot checks.
+
+## 063 — Lockfiles pin version numbers; a released folder is one on the base branch [#decision-063]
+
+**Context.** [Decision 006](#decision-006) gave each released version an opaque ID for lockfiles to record. Versions are numbered per block and never reused, so `hero@2` already names one folder of code for good, and an opaque ID would add a mapping every lockfile read, migration chain and comparison of versions goes through. What keeps a pin safe is that a released folder never changes, which an ID doesn't enforce.
+
+**Decision.** Lockfiles pin version numbers. A version is released once its folder is on the base branch. A CI check fails a change that edits, adds or removes a file in a released version's folder, unless the whole folder goes, which is how the platform team removes a version nothing uses any more.
+
+**Rejected.** Opaque IDs per released version.
+
+**Consequences.** Ordering versions, for migration chains and merges, is comparing numbers. Within a pull request a new version can still change until it merges.
 
 ## 062 — The agent's evals run on demand, never as routine [#decision-062]
 
