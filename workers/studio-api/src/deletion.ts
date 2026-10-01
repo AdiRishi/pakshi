@@ -33,12 +33,13 @@ export interface SiteHosts {
 }
 
 /**
- * Deletes a site for someone who may, and returns the hosts it answered at,
- * for the caller to take out of KV. Its domains are released at once.
+ * Deletes a site for someone who may. `unroute` takes the hosts it answered
+ * at out of KV, and its domains are released at once.
  */
 export const deleteSite = Effect.fn("StudioApi.deleteSite")(function* (
   person: Person,
   site: SiteId,
+  unroute: (hosts: SiteHosts) => Effect.Effect<void>,
 ) {
   const sql = yield* SqlClient.SqlClient;
   const found = yield* siteFor(person, site, "site.delete").pipe(
@@ -46,13 +47,12 @@ export const deleteSite = Effect.fn("StudioApi.deleteSite")(function* (
       Effect.fail(new NotPermitted({ action: "delete this site" })),
     ),
   );
-  const domains = yield* sql<{ readonly hostname: string }>`delete from domains
-    where site_id = ${site} returning hostname`;
+  const domains = yield* sql<{ readonly hostname: string }>`select hostname from domains
+    where site_id = ${site}`;
+  // KV first, so a deletion that stops partway leaves a site that can be deleted again.
+  yield* unroute({ address: found.address, domains: domains.map((domain) => domain.hostname) });
+  yield* sql`delete from domains where site_id = ${site}`;
   yield* sql`update sites set deleted_at = ${now()}, deleted_by = ${person.id} where id = ${site}`;
-  return {
-    address: found.address,
-    domains: domains.map((domain) => domain.hostname),
-  } satisfies SiteHosts;
 });
 
 const DeletedRow = Schema.Struct({
@@ -97,13 +97,14 @@ export const deletedSites = Effect.fn("StudioApi.deletedSites")(function* (perso
 });
 
 /**
- * Brings back a site deleted in the last 30 days, and returns its platform
- * subdomain for the caller to put back in KV. Its domains were released, so
- * they have to be added again.
+ * Brings back a site deleted in the last 30 days. `route` puts its platform
+ * subdomain back in KV. Its domains were released, so they have to be added
+ * again.
  */
 export const restoreSite = Effect.fn("StudioApi.restoreSite")(function* (
   person: Person,
   site: SiteId,
+  route: (address: string) => Effect.Effect<void>,
 ) {
   const sql = yield* SqlClient.SqlClient;
   if (!(yield* restores(person))) return yield* new NotPermitted({ action: "restore sites" });
@@ -111,8 +112,9 @@ export const restoreSite = Effect.fn("StudioApi.restoreSite")(function* (
     (row) => row.id === site,
   );
   if (found === undefined) return yield* new SiteNotFound({ site });
+  // KV first, so a restore that stops partway leaves a site that can be restored again.
+  if (found.address !== null) yield* route(found.address);
   yield* sql`update sites set deleted_at = null, deleted_by = null where id = ${site}`;
-  return found.address;
 });
 
 /** Tables whose rows belong to a site by their `site_id`. */
