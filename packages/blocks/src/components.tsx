@@ -15,6 +15,8 @@ export interface ResolvedMedia {
   readonly src: string;
   readonly width: number;
   readonly height: number;
+  /** The same image at other widths, as `srcset` lists them, when they're served. */
+  readonly srcSet?: string;
 }
 
 export interface ResolvedMenuItem {
@@ -262,6 +264,7 @@ export const Media = (options: MediaProps) => {
   return (
     <img
       src={file.src}
+      srcSet={file.srcSet}
       alt={options.value.alt ?? ""}
       width={file.width}
       height={file.height}
