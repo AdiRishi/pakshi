@@ -428,9 +428,13 @@ export class EditorStore {
         { ...last, batch: { ...last.batch, ops: batch.ops } },
       ];
     else this.#pending = [...this.#pending, { batch, burst, sent: false }];
+    if (burst === null) {
+      // A batch that isn't typing ends the batch typing was extending, which goes first.
+      this.endBurstBatch();
+      return;
+    }
     clearTimeout(this.#burstTimer);
-    if (burst === null) this.#flush();
-    else this.#burstTimer = setTimeout(() => this.endBurstBatch(), typingDelay);
+    this.#burstTimer = setTimeout(() => this.endBurstBatch(), typingDelay);
   }
 
   /** Closes the batch typing is extending, so it can be sent; the undo step keeps growing. */
