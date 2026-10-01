@@ -15,8 +15,6 @@ export interface Editor {
   readonly site: { readonly id: SiteId; readonly brand: BrandId };
   readonly draft: DraftId;
   readonly permissions: ReadonlyArray<Permission>;
-  /** Whether they edit the site's pages, rather than this draft through a share. */
-  readonly editsSite: boolean;
 }
 
 /**
@@ -63,6 +61,5 @@ export const editorOf = async (
     site: { id: found.value.site.id, brand: found.value.site.brand },
     draft: draft.value,
     permissions,
-    editsSite,
   });
 };

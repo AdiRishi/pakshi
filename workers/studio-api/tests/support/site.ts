@@ -16,6 +16,7 @@ import { Deferred, Effect, Layer, Option, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
 
 import { SiteApprovals } from "../../src/site/approvals.ts";
+import { SiteAudit } from "../../src/site/audit.ts";
 import { SiteDrafts, SiteIdentity } from "../../src/site/drafts.ts";
 import { migrations } from "../../src/site/migrations.ts";
 import { type IndexedRelease, Outbox, type OutboxMessage } from "../../src/site/outbox.ts";
@@ -227,6 +228,7 @@ export const siteService = <R>(
           SiteReleases.layer,
           SiteApprovals.layer,
           SiteSettingsStore.layer,
+          SiteAudit.layer,
         ),
       ),
       Layer.provideMerge(Outbox.layer),

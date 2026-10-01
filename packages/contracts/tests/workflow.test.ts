@@ -13,7 +13,14 @@ const issues = (step: typeof WorkflowStep.Encoded) => {
 
 test("a step can always gather the approvals it needs", () => {
   expect(issues({ name: "Comms", roles: [], people: [sam, ana], required: 2 })).toBe("");
-  expect(issues({ name: "Comms", roles: ["approver"], people: [], required: 3 })).toBe("");
+  expect(
+    issues({
+      name: "Comms",
+      roles: [{ id: "approver", name: "Approver" }],
+      people: [],
+      required: 3,
+    }),
+  ).toBe("");
   expect(issues({ name: "Comms", roles: [], people: [sam], required: 2 })).toContain(
     "A step can't need more approvals than it has people",
   );

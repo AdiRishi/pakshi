@@ -1,6 +1,12 @@
-import { DefaultRole, Permission, Scope } from "@repo/contracts/access";
+import {
+  type DefaultRole,
+  defaultRoleDetails,
+  Permission,
+  type Role,
+  type RoleId,
+  type Scope,
+} from "@repo/contracts/access";
 import type { BrandId, SiteId } from "@repo/contracts/ids";
-import { Schema } from "effect";
 
 const siteWork = [
   "page.edit",
@@ -36,21 +42,35 @@ export const defaultRoles = {
   "submissions-viewer": ["submissions.read", "submissions.export"],
 } as const satisfies Record<DefaultRole, ReadonlyArray<Permission>>;
 
+export const isDefaultRole = (role: RoleId): role is DefaultRole =>
+  Object.hasOwn(defaultRoles, role);
+
+/** A default role as a role. */
+export const defaultRole = (id: DefaultRole): Role => ({
+  id,
+  ...defaultRoleDetails[id],
+  permissions: defaultRoles[id],
+});
+
 /** The thing being acted on. A site names its brand, because a brand's grants reach its sites. */
 export type Resource =
   | { readonly kind: "organization" }
   | { readonly kind: "brand"; readonly id: BrandId }
   | { readonly kind: "site"; readonly id: SiteId; readonly brand: BrandId };
 
-export const Grant = Schema.Struct({ role: DefaultRole, scope: Scope });
-export type Grant = typeof Grant.Type;
+/** A role a person holds on a scope, with the permissions the role holds now. */
+export interface Grant {
+  readonly role: RoleId;
+  readonly permissions: ReadonlyArray<Permission>;
+  readonly scope: Scope;
+}
 
-export const Override = Schema.Struct({
-  permission: Permission,
-  scope: Scope,
-  allowed: Schema.Boolean,
-});
-export type Override = typeof Override.Type;
+/** One permission switched on or off for one person on one scope. */
+export interface Override {
+  readonly permission: Permission;
+  readonly scope: Scope;
+  readonly allowed: boolean;
+}
 
 /** A person's grants and overrides, as stored in D1 `core`. */
 export interface Access {
@@ -73,6 +93,9 @@ const reach = (scope: Scope, resource: Resource) => {
   }
 };
 
+/** Whether a grant, an override or a workflow on this scope reaches this thing. */
+export const covers = (scope: Scope, resource: Resource) => reach(scope, resource) !== null;
+
 /**
  * May this person do this action on this thing? The most specific override
  * that covers the resource decides; without one, any grant that covers the
@@ -88,9 +111,7 @@ export const authorize = (access: Access, permission: Permission, resource: Reso
   }
   if (decidingOverride !== null) return decidingOverride.allowed;
   return access.grants.some(
-    (grant) =>
-      reach(grant.scope, resource) !== null &&
-      defaultRoles[grant.role].some((held) => held === permission),
+    (grant) => reach(grant.scope, resource) !== null && grant.permissions.includes(permission),
   );
 };
 
@@ -99,7 +120,36 @@ export const permissionsOn = (access: Access, resource: Resource) =>
   Permission.literals.filter((permission) => authorize(access, permission, resource));
 
 /** The roles a person holds through grants that cover this thing. */
-export const rolesOn = (access: Access, resource: Resource) =>
-  DefaultRole.literals.filter((role) =>
-    access.grants.some((grant) => grant.role === role && reach(grant.scope, resource) !== null),
+export const rolesOn = (access: Access, resource: Resource): ReadonlyArray<RoleId> =>
+  Array.from(
+    new Set(
+      access.grants.flatMap((grant) => (reach(grant.scope, resource) === null ? [] : [grant.role])),
+    ),
   );
+
+/*
+ * Delegation: a person can grant only permissions they hold, on scopes they
+ * control. They control a scope where they hold `members.manage`.
+ */
+
+/** May this person give, or take away, a role with these permissions on this thing? */
+export const mayGrant = (
+  access: Access,
+  permissions: ReadonlyArray<Permission>,
+  resource: Resource,
+) =>
+  authorize(access, "members.manage", resource) &&
+  permissions.every((permission) => authorize(access, permission, resource));
+
+/** May this person switch this permission on or off for someone on this thing? */
+export const mayOverride = (access: Access, permission: Permission, resource: Resource) =>
+  mayGrant(access, [permission], resource);
+
+/**
+ * May this person define a role holding these permissions? A role reaches
+ * wherever it's granted, so they need `roles.manage` and every permission
+ * across the organization.
+ */
+export const mayDefineRole = (access: Access, permissions: ReadonlyArray<Permission>) =>
+  permissions.every((permission) => authorize(access, permission, { kind: "organization" })) &&
+  authorize(access, "roles.manage", { kind: "organization" });

@@ -1,28 +1,19 @@
-import { DefaultRole, Scope } from "@repo/contracts/access";
-import {
-  InvitationToken,
-  type InvitationView,
-  NamedScope,
-  PendingInvitation,
-} from "@repo/contracts/accounts";
+import { RoleId, Scope } from "@repo/contracts/access";
+import { InvitationToken, type InvitationView, PendingInvitation } from "@repo/contracts/accounts";
 import type { EmailAddress } from "@repo/contracts/email";
-import { BrandId, InvitationId, randomId, SiteId } from "@repo/contracts/ids";
+import { InvitationId, randomId } from "@repo/contracts/ids";
 import { Collaborator } from "@repo/contracts/live";
 import { now, Timestamp } from "@repo/contracts/release";
-import {
-  AlreadyMember,
-  InvitationClosed,
-  type InvitePlace,
-  NotPermitted,
-  type Person,
-} from "@repo/contracts/studio";
-import { type Access, authorize, defaultRoles, type Resource } from "@repo/domain/access";
+import { AlreadyMember, InvitationClosed, NotPermitted, type Person } from "@repo/contracts/studio";
+import { type Access, authorize, mayGrant } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
-import { describeScope, loadAccess } from "./access.ts";
+import { describeScope, filedUnder, loadAccess, nameScope, scopeOf } from "./access.ts";
+import { audit } from "./audit.ts";
 import type { Mailer } from "./notifications.ts";
 import { grantRole, organizationName } from "./organization.ts";
+import { findRole, refOf } from "./roles.ts";
 
 /*
  * Invitations to join the organization, each with the grant its person gets
@@ -54,7 +45,7 @@ const hashOf = (token: InvitationToken) =>
 const InvitationRow = Schema.Struct({
   id: InvitationId,
   email: Schema.String,
-  role: DefaultRole,
+  role: RoleId,
   scope_kind: Schema.Literals(["organization", "brand", "site"]),
   scope_id: Schema.NullOr(Schema.String),
   invited_by: Schema.fromJsonString(Collaborator),
@@ -62,23 +53,17 @@ const InvitationRow = Schema.Struct({
 });
 type InvitationRow = typeof InvitationRow.Type;
 
-const scopeOf = (row: Pick<InvitationRow, "scope_kind" | "scope_id">) =>
-  Schema.decodeUnknownEffect(Scope)(
-    row.scope_kind === "organization"
-      ? { kind: "organization" }
-      : { kind: row.scope_kind, id: row.scope_id },
-  );
-
 const named = Effect.fn("StudioApi.namedScope")(function* (scope: Scope) {
   const { name } = yield* describeScope(scope);
-  return yield* Schema.decodeEffect(NamedScope)({ ...scope, name });
+  return nameScope(scope, name);
 });
 
 const pendingOf = Effect.fn("StudioApi.pendingOf")(function* (row: InvitationRow) {
   return {
     id: row.id,
     email: row.email,
-    role: row.role,
+    // A role can't be deleted while an invitation names it.
+    role: refOf(yield* Effect.orDie(findRole(row.role))),
     scope: yield* named(yield* scopeOf(row)),
     invitedBy: row.invited_by,
     expiresAt: row.expires_at,
@@ -99,55 +84,6 @@ const openInvitation = Effect.fn("StudioApi.openInvitation")(function* (token: I
 });
 
 /**
- * The roles a person may give on a resource: they manage its members, and
- * hold every permission the role holds there, so no one can give more than
- * they have.
- */
-export const rolesGivable = (access: Access, resource: Resource) =>
-  authorize(access, "members.manage", resource)
-    ? DefaultRole.literals.filter((role) =>
-        defaultRoles[role].every((permission) => authorize(access, permission, resource)),
-      )
-    : [];
-
-/** Every place a person may invite people to, and the roles they may give there. */
-export const invitePlaces = Effect.fn("StudioApi.invitePlaces")(function* (access: Access) {
-  const sql = yield* SqlClient.SqlClient;
-  const [organization, brands, sites] = yield* Effect.all(
-    [
-      organizationName,
-      SqlSchema.findAll({
-        Request: Schema.Void,
-        Result: Schema.Struct({ id: BrandId, name: Schema.String }),
-        execute: () => sql`select id, name from brands order by name`,
-      })(undefined),
-      SqlSchema.findAll({
-        Request: Schema.Void,
-        Result: Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId }),
-        execute: () =>
-          sql`select id, name, brand_id from sites where deleted_at is null order by name`,
-      })(undefined),
-    ],
-    { concurrency: "unbounded" },
-  );
-  const places: Array<InvitePlace> = [];
-  const add = (scope: NamedScope, resource: Resource) => {
-    const roles = rolesGivable(access, resource);
-    if (roles.length > 0) places.push({ scope, roles });
-  };
-  if (Option.isSome(organization))
-    add({ kind: "organization", name: organization.value }, { kind: "organization" });
-  for (const brand of brands)
-    add({ kind: "brand", id: brand.id, name: brand.name }, { kind: "brand", id: brand.id });
-  for (const site of sites)
-    add(
-      { kind: "site", id: site.id, name: site.name },
-      { kind: "site", id: site.id, brand: site.brand_id },
-    );
-  return places;
-});
-
-/**
  * Invites someone by email to hold a role on a scope, and emails them the
  * link, which is returned for the inviter to copy too. `studio` is Studio's
  * address, which the link points at.
@@ -156,19 +92,20 @@ export const invite = Effect.fn("StudioApi.invite")(function* (
   mailer: Mailer,
   person: Person,
   email: EmailAddress,
-  role: DefaultRole,
+  roleId: RoleId,
   scope: Scope,
   studio: string,
 ) {
   const sql = yield* SqlClient.SqlClient;
   const described = yield* describeScope(scope);
   const { access } = yield* loadAccess(person.id);
-  if (!rolesGivable(access, described.resource).includes(role))
+  const role = yield* findRole(roleId);
+  if (!mayGrant(access, role.permissions, described.resource))
     return yield* new NotPermitted({ action: "give this role here" });
   const address = email.toLowerCase();
   const scopeId = scope.kind === "organization" ? null : scope.id;
   const held = yield* sql`select 1 from grants g join "user" u on u.id = g.user_id
-    where lower(u.email) = ${address} and g.role = ${role} and g.scope_kind = ${scope.kind}
+    where lower(u.email) = ${address} and g.role = ${role.id} and g.scope_kind = ${scope.kind}
       and coalesce(g.scope_id, '') = ${scopeId ?? ""}`;
   if (held.length > 0) return yield* new AlreadyMember({});
   const token = newToken();
@@ -176,7 +113,7 @@ export const invite = Effect.fn("StudioApi.invite")(function* (
   const row: InvitationRow = {
     id: InvitationId.make(randomId("inv")),
     email: address,
-    role,
+    role: role.id,
     scope_kind: scope.kind,
     scope_id: scopeId,
     invited_by: { id: person.id, name: person.name },
@@ -186,7 +123,7 @@ export const invite = Effect.fn("StudioApi.invite")(function* (
   };
   yield* sql`insert into invitations
       (id, token_hash, email, role, scope_kind, scope_id, invited_by, created_at, expires_at)
-    values (${row.id}, ${yield* hashOf(token)}, ${row.email}, ${role}, ${scope.kind}, ${scopeId},
+    values (${row.id}, ${yield* hashOf(token)}, ${row.email}, ${role.id}, ${scope.kind}, ${scopeId},
       ${yield* Schema.encodeEffect(Schema.fromJsonString(Collaborator))(row.invited_by)}, ${createdAt},
       ${row.expires_at})`;
   const link = `${studio}/join/${token}`;
@@ -199,7 +136,14 @@ export const invite = Effect.fn("StudioApi.invite")(function* (
       text: `Hello,\n\n${person.name} invited you to work on ${described.name} in Pakshi, where ${organization} builds and updates its websites.\n\nAccept the invitation:\n\n${link}\n\nThe link works for ${invitationDays} days.\n`,
     }),
   );
-  return { invitation: yield* pendingOf(row), link };
+  const invitation = yield* pendingOf(row);
+  yield* audit(person, filedUnder(scope), {
+    _tag: "Invited",
+    email: invitation.email,
+    role: invitation.role,
+    scope: invitation.scope,
+  });
+  return { invitation, link };
 });
 
 /** The invitations waiting on the scopes a person manages, newest first. */
@@ -239,12 +183,23 @@ export const revokeInvitation = Effect.fn("StudioApi.revokeInvitation")(function
       from invitations where id = ${id} and accepted_at is null`,
   })(undefined);
   if (Option.isNone(row)) return;
-  // Scopes are never removed, so an invitation's is always there.
-  const described = yield* Effect.orDie(describeScope(yield* scopeOf(row.value)));
+  // An invitation to a site deleted since is listed nowhere, so nobody withdraws it.
+  const described = yield* describeScope(yield* scopeOf(row.value)).pipe(
+    Effect.catchTag("ScopeNotFound", () =>
+      Effect.fail(new NotPermitted({ action: "withdraw this invitation" })),
+    ),
+  );
   const { access } = yield* loadAccess(person.id);
   if (!authorize(access, "members.manage", described.resource))
     return yield* new NotPermitted({ action: "withdraw this invitation" });
   yield* sql`delete from invitations where id = ${id}`;
+  const withdrawn = yield* Effect.orDie(pendingOf(row.value));
+  yield* audit(person, filedUnder(yield* scopeOf(row.value)), {
+    _tag: "InvitationWithdrawn",
+    email: withdrawn.email,
+    role: withdrawn.role,
+    scope: withdrawn.scope,
+  });
 });
 
 /** What an invitation's link shows: who it's for and what it gives, or that it's closed. */
@@ -287,14 +242,24 @@ export const invitationToJoin = Effect.fn("StudioApi.invitationToJoin")(function
  * else.
  */
 export const acceptInvitation = Effect.fn("StudioApi.acceptInvitation")(function* (
-  person: Pick<Person, "id" | "email">,
+  person: Person,
   token: InvitationToken,
 ) {
   const sql = yield* SqlClient.SqlClient;
   const row = yield* invitationToJoin(token);
   if (row.email !== person.email.toLowerCase()) return yield* new InvitationClosed({});
-  const accepted = yield* sql`update invitations set accepted_at = ${now()}
+  const closed = yield* sql`update invitations set accepted_at = ${now()}
     where id = ${row.id} and accepted_at is null returning id`;
-  if (accepted.length === 0) return yield* new InvitationClosed({});
-  yield* grantRole(person.id, row.role, yield* scopeOf(row));
+  if (closed.length === 0) return yield* new InvitationClosed({});
+  // An invitation to a site deleted since it was sent is closed with it.
+  const accepted = yield* pendingOf(row).pipe(
+    Effect.catchTag("ScopeNotFound", () => Effect.fail(new InvitationClosed({}))),
+  );
+  const scope = yield* scopeOf(row);
+  yield* grantRole(person.id, row.role, scope);
+  yield* audit(person, filedUnder(scope), {
+    _tag: "InvitationAccepted",
+    role: accepted.role,
+    scope: accepted.scope,
+  });
 });

@@ -20,7 +20,14 @@ const siteWithOneStep = (address: string) =>
     const created = yield* newSite(client, `Site ${address}`, address);
     yield* client.saveWorkflow({
       scope: { kind: "site", id: created.site },
-      steps: [{ name: "Communications", roles: ["approver"], people: [], required: 1 }],
+      steps: [
+        {
+          name: "Communications",
+          roles: [{ id: "approver", name: "Approver" }],
+          people: [],
+          required: 1,
+        },
+      ],
     });
     yield* edit(client, created.site, created.draft, readyPage(created.home, "Welcome"));
     return { client, ...created };

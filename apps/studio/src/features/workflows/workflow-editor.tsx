@@ -1,4 +1,4 @@
-import { DefaultRole, roleTitles, type Scope } from "@repo/contracts/access";
+import type { RoleRef, Scope } from "@repo/contracts/access";
 import type { WorkflowView } from "@repo/contracts/studio";
 import { type Workflow, WorkflowStep } from "@repo/contracts/workflow";
 import { Button } from "@repo/ui/components/button";
@@ -44,13 +44,19 @@ const problemOf = (step: WorkflowStep) => {
   return result.issues?.[0]?.message ?? null;
 };
 
-const blankStep: WorkflowStep = { name: "", roles: ["approver"], people: [], required: 1 };
+const blankStep: WorkflowStep = {
+  name: "",
+  roles: [{ id: "approver", name: "Approver" }],
+  people: [],
+  required: 1,
+};
 
 /** One step's name, who can approve it, and how many approvals it needs. */
 function StepEditor(props: {
   readonly index: number;
   readonly count: number;
   readonly step: WorkflowStep;
+  readonly roles: ReadonlyArray<RoleRef>;
   readonly showProblem: boolean;
   readonly onChange: (step: WorkflowStep) => void;
   readonly onMove: (by: -1 | 1) => void;
@@ -113,20 +119,20 @@ function StepEditor(props: {
               named below. They also need permission to approve.
             </FieldDescription>
             <div className="grid gap-3 sm:grid-cols-2">
-              {DefaultRole.literals.map((role) => (
-                <Label key={role} className="font-normal">
+              {props.roles.map((role) => (
+                <Label key={role.id} className="font-normal">
                   <Checkbox
-                    checked={step.roles.includes(role)}
+                    checked={step.roles.some((named) => named.id === role.id)}
                     onCheckedChange={(checked) =>
                       props.onChange({
                         ...step,
                         roles: checked
                           ? [...step.roles, role]
-                          : step.roles.filter((held) => held !== role),
+                          : step.roles.filter((named) => named.id !== role.id),
                       })
                     }
                   />
-                  {roleTitles[role]}s
+                  {role.name}s
                 </Label>
               ))}
             </div>
@@ -302,6 +308,7 @@ export function WorkflowEditor(props: { readonly view: WorkflowView }) {
               index={index}
               count={own.length}
               step={step}
+              roles={view.roles}
               showProblem={tried}
               onChange={(next) => changeStep(index, next)}
               onMove={(by) =>

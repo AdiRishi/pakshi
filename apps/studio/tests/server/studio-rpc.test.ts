@@ -56,7 +56,13 @@ const fakeStudioApi = (behaviour: Behaviour) => {
       ],
       approvalsWaiting: 0,
       brands: false,
-      can: { createBrand: false, createSite: false, invite: false },
+      can: {
+        createBrand: false,
+        createSite: false,
+        invite: false,
+        manageRoles: false,
+        readAudit: false,
+      },
     }),
   );
   const unused = () => Effect.die(new Error(onlyViewer));
@@ -136,6 +142,19 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     reviewPage: unused,
     decide: unused,
     previewPage: unused,
+    auditLog: unused,
+    auditFilters: unused,
+    exportAudit: unused,
+    roles: unused,
+    saveRole: unused,
+    deleteRole: unused,
+    scopeMembers: unused,
+    grantRole: unused,
+    changeRole: unused,
+    revokeRole: unused,
+    setOverride: unused,
+    removeOverride: unused,
+    removeAllAccess: unused,
   });
   const server = rpcWebHandler(
     StudioRpcs,

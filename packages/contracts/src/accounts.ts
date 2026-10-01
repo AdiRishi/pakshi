@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { DefaultRole } from "./access.ts";
+import { RoleRef, type Scope } from "./access.ts";
 import { EmailAddress } from "./email.ts";
 import { BrandId, InvitationId, SiteId } from "./ids.ts";
 import { Collaborator } from "./live.ts";
@@ -82,11 +82,23 @@ export const NamedScope = Schema.Union([
 ]);
 export type NamedScope = typeof NamedScope.Type;
 
+/** A named scope as grants and workflows name it, without its name. */
+export const scopeOf = (scope: NamedScope): Scope => {
+  switch (scope.kind) {
+    case "organization":
+      return { kind: "organization" };
+    case "brand":
+      return { kind: "brand", id: scope.id };
+    case "site":
+      return { kind: "site", id: scope.id };
+  }
+};
+
 /** An invitation waiting for its person, as the people screen lists it. */
 export const PendingInvitation = Schema.Struct({
   id: InvitationId,
   email: EmailAddress,
-  role: DefaultRole,
+  role: RoleRef,
   scope: NamedScope,
   invitedBy: Collaborator,
   expiresAt: Timestamp,
@@ -98,7 +110,7 @@ export const InvitationView = Schema.TaggedUnion({
   Open: {
     organization: Schema.String,
     email: EmailAddress,
-    role: DefaultRole,
+    role: RoleRef,
     scope: NamedScope,
     invitedBy: Collaborator,
     /** Whether an account with the invitation's address exists, so they sign in rather than join. */

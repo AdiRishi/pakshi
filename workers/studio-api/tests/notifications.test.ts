@@ -26,7 +26,7 @@ it.effect("a step's start emails the people who may decide on it, with a link to
     const submission = northbankSubmission([
       {
         name: "Approvers",
-        roles: ["approver"],
+        roles: [{ id: "approver", name: "Approver" }],
         people: [{ id: "user_org", name: "user_org" }],
         required: 1,
       },

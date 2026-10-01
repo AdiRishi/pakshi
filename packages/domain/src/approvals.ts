@@ -1,4 +1,4 @@
-import type { DefaultRole, Permission } from "@repo/contracts/access";
+import type { Permission, RoleId } from "@repo/contracts/access";
 import type { Collaborator } from "@repo/contracts/live";
 import { currentStep, type Submission } from "@repo/contracts/submission";
 
@@ -6,7 +6,7 @@ import { currentStep, type Submission } from "@repo/contracts/submission";
 export interface Approver {
   readonly person: Collaborator;
   /** The roles they hold through grants that cover the site. */
-  readonly roles: ReadonlyArray<DefaultRole>;
+  readonly roles: ReadonlyArray<RoleId>;
   readonly permissions: ReadonlyArray<Permission>;
 }
 
@@ -35,7 +35,7 @@ export const eligibility = (
     return { ok: false, reason: "You've already approved this submission." };
   const named =
     step.people.some((person) => person.id === approver.person.id) ||
-    step.roles.some((role) => approver.roles.includes(role));
+    step.roles.some((role) => approver.roles.includes(role.id));
   if (!named) return { ok: false, reason: `This step is for ${step.name}.` };
   if (
     submission.editedBy.some((person) => person.id === approver.person.id) &&

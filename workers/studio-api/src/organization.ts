@@ -1,6 +1,9 @@
-import type { DefaultRole, Scope } from "@repo/contracts/access";
+import type { RoleId, Scope } from "@repo/contracts/access";
+import type { Collaborator } from "@repo/contracts/live";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
+
+import { audit } from "./audit.ts";
 
 /*
  * The organization this deployment of Pakshi serves, and the grants that let
@@ -25,20 +28,21 @@ export const organizationName = Effect.gen(function* () {
  */
 export const startOrganization = Effect.fn("StudioApi.startOrganization")(function* (
   name: string,
-  admin: string,
+  admin: Collaborator,
 ) {
   const sql = yield* SqlClient.SqlClient;
   const started = yield* sql`insert into organization (id, name) values (1, ${name})
     on conflict (id) do nothing returning id`;
   if (started.length === 0) return false;
-  yield* grantRole(admin, "org-admin", { kind: "organization" });
+  yield* grantRole(admin.id, "org-admin", { kind: "organization" });
+  yield* audit(admin, {}, { _tag: "OrganizationSetUp", name });
   return true;
 });
 
 /** Gives a person a role on a scope. Holding it already changes nothing. */
 export const grantRole = Effect.fn("StudioApi.grantRole")(function* (
   user: string,
-  role: DefaultRole,
+  role: RoleId,
   scope: Scope,
 ) {
   const sql = yield* SqlClient.SqlClient;

@@ -60,7 +60,7 @@ const setUp = (env: StudioApiEnv, origin: string, body: SetUp) =>
     if (Option.isSome(yield* organizationName)) return refuse("set-up");
     const account = yield* signUp(env, origin, body);
     if (account === null) return refuse("account-exists");
-    if (!(yield* startOrganization(body.organization, account.user.id))) return refuse("set-up");
+    if (!(yield* startOrganization(body.organization, account.user))) return refuse("set-up");
     return signedIn(account.cookies);
   });
 

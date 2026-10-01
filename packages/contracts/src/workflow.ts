@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { DefaultRole } from "./access.ts";
+import { RoleRef } from "./access.ts";
 import { Collaborator } from "./live.ts";
 
 /**
@@ -13,7 +13,7 @@ export const WorkflowStep = Schema.Struct({
     Schema.isMinLength(1, { message: "Give the step a name" }),
     Schema.isMaxLength(60, { message: "Use at most 60 characters" }),
   ),
-  roles: Schema.Array(DefaultRole),
+  roles: Schema.Array(RoleRef),
   people: Schema.Array(Collaborator),
   required: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
 }).check(

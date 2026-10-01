@@ -20,6 +20,10 @@
       "types": "./src/app.ts",
       "default": "./src/app.ts"
     },
+    "./audit": {
+      "types": "./src/audit.ts",
+      "default": "./src/audit.ts"
+    },
     "./brand": {
       "types": "./src/brand.ts",
       "default": "./src/brand.ts"

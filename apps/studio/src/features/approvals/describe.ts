@@ -1,4 +1,3 @@
-import { roleTitles } from "@repo/contracts/access";
 import type { MergedChange } from "@repo/contracts/merge";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import { currentStep, type Submission } from "@repo/contracts/submission";
@@ -7,7 +6,7 @@ import type { WorkflowStep } from "@repo/contracts/workflow";
 /** Who a step names, such as "Approvers, or Meera Kapoor". */
 export const approversOf = (step: WorkflowStep) => {
   const names = [
-    ...step.roles.map((role) => `${roleTitles[role]}s`),
+    ...step.roles.map((role) => `${role.name}s`),
     ...step.people.map((person) => person.name),
   ];
   return names.length <= 1

@@ -126,4 +126,29 @@ export const migrations = Migrator.fromRecord({
     const sql = yield* SqlClient.SqlClient;
     yield* sql`alter table drafts add column redirects text not null default '{}'`;
   }),
+  "0009_permissions": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // What studio-api last found each person may do on the site, for
+    // everyone who has opened a live connection or a conversation with the
+    // agent here. Their batches are checked against it.
+    yield* sql`create table permissions (
+      person text primary key,
+      permissions text not null
+    )`;
+  }),
+  "0010_editing_sessions": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // Each person's latest run of edits in each draft, which the audit log
+    // records as one editing session.
+    yield* sql`create table editing_sessions (
+      draft_id text not null,
+      person text not null,
+      id text not null,
+      started_at text not null,
+      last_at text not null,
+      batches integer not null,
+      reported_at text not null,
+      primary key (draft_id, person)
+    )`;
+  }),
 });

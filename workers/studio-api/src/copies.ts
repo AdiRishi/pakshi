@@ -1,3 +1,4 @@
+import { AuditId } from "@repo/contracts/audit";
 import type { SiteId } from "@repo/contracts/ids";
 import { Release } from "@repo/contracts/release";
 import { Lockfile } from "@repo/contracts/snapshot";
@@ -5,7 +6,34 @@ import { Submission } from "@repo/contracts/submission";
 import { Effect, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
+import { writeAudit } from "./audit.ts";
 import type { OutboxMessage } from "./site/outbox.ts";
+
+/**
+ * The audit log's entry for a release that changed what the site serves.
+ * It's made from the release itself, so no publish or rollback goes live
+ * without one.
+ */
+const auditOfRelease = (site: SiteId, release: Release) => {
+  const filed = { id: AuditId.make(`aud_${release.id}`), at: release.at, site, brand: null };
+  switch (release._tag) {
+    case "Published":
+      return writeAudit({
+        ...filed,
+        actor: release.by,
+        event: { _tag: "Published", draft: release.draft, release: release.id },
+      });
+    case "RolledBack":
+      return writeAudit({
+        ...filed,
+        actor: release.by,
+        event: { _tag: "RolledBack", release: release.id, undid: release.undid },
+      });
+    case "Created":
+    case "Imported":
+      return Effect.void;
+  }
+};
 
 /*
  * D1's copies of what each site's SiteDoc holds, for queries across sites.
@@ -30,6 +58,7 @@ export const recordCopy = Effect.fn("StudioApi.recordCopy")(function* (
         on conflict (id) do update set site_id = excluded.site_id, seq = excluded.seq,
           snapshot = excluded.snapshot, release = excluded.release,
           published_at = excluded.published_at`;
+      yield* auditOfRelease(site, release);
       return;
     }
     case "Submission": {
@@ -70,6 +99,10 @@ export const recordCopy = Effect.fn("StudioApi.recordCopy")(function* (
     }
     case "Settings": {
       yield* sql`update sites set name = ${message.settings.name} where id = ${site}`;
+      return;
+    }
+    case "Audit": {
+      yield* writeAudit(message.entry);
       return;
     }
     case "BrandTaken": {

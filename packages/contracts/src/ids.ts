@@ -53,6 +53,10 @@ export type ItemId = typeof ItemId.Type;
 export const MenuItemId = prefixed("mi").pipe(Schema.brand("MenuItemId"));
 export type MenuItemId = typeof MenuItemId.Type;
 
+/** A role the organization's admins made, beside the default roles. */
+export const CustomRoleId = prefixed("role").pipe(Schema.brand("CustomRoleId"));
+export type CustomRoleId = typeof CustomRoleId.Type;
+
 /** An invitation for someone to join the organization. */
 export const InvitationId = prefixed("inv").pipe(Schema.brand("InvitationId"));
 export type InvitationId = typeof InvitationId.Type;

@@ -1,4 +1,5 @@
 import { D1Client } from "@effect/sql-d1";
+import { renderingChanges } from "@repo/blocks/rendering-changes";
 import { accountsBasePath, authBasePath } from "@repo/contracts/accounts";
 import { agentBasePath } from "@repo/contracts/agent";
 import { liveBasePath } from "@repo/contracts/live";
@@ -17,6 +18,7 @@ import { getServerByName } from "partyserver";
 
 import { serveAccounts } from "./accounts.ts";
 import { serveAgent } from "./agent/route.ts";
+import { recordRenderingChanges } from "./audit.ts";
 import { authFor } from "./auth.ts";
 import { collectBlockUsage } from "./blocks.ts";
 import { offerMissedRevisions } from "./brand-updates.ts";
@@ -77,7 +79,8 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
    * job, offering brand revisions again to sites that missed them, and asking
    * sites that haven't reported their block versions for them, and checking
    * waiting domains. Daily: keeping
-   * library images while they're used, and deleting for good the sites deleted 30 days ago.
+   * library images while they're used, deleting for good the sites deleted
+   * 30 days ago, and filing accepted rendering changes in the audit log.
    */
   override async scheduled(controller: ScheduledController) {
     if (controller.cron === schedules.daily) {
@@ -100,6 +103,11 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
         ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
       );
       if (purged.length > 0) console.info("Deleted sites for good after 30 days", purged);
+      await Effect.runPromise(
+        recordRenderingChanges(renderingChanges).pipe(
+          Effect.provide(D1Client.layer({ db: this.env.CORE })),
+        ),
+      );
       return;
     }
     const [reconciled, offered] = await Effect.runPromise(

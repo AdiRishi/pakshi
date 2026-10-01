@@ -108,7 +108,7 @@ export const ServerMessage = Schema.TaggedUnion({
   /** A release went live, sent to everyone on the site. Drafts that started from another are behind. */
   LiveChanged: { live: LiveRelease },
   /**
-   * The person can no longer edit the draft, because its sharing changed.
+   * The person can no longer edit the draft, because its sharing or their access changed.
    * SiteDoc closes their connection after sending it.
    */
   AccessEnded: {},

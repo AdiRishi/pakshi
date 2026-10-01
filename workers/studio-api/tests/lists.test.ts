@@ -10,7 +10,14 @@ import { northbankSubmission } from "./support/submissions.ts";
 
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
 const northbank = SiteId.make("site_a1");
-const approvers = [{ name: "Approvers", roles: ["approver" as const], people: [], required: 1 }];
+const approvers = [
+  {
+    name: "Approvers",
+    roles: [{ id: "approver" as const, name: "Approver" }],
+    people: [],
+    required: 1,
+  },
+];
 
 it.effect("a submission waits only for the people who may decide on its current step", () =>
   Effect.gen(function* () {

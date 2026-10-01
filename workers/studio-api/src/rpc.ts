@@ -47,12 +47,13 @@ import { authorize } from "@repo/domain/access";
 import { eligibility } from "@repo/domain/approvals";
 import { entriesCsv } from "@repo/domain/forms";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
-import { Cause, Effect, Layer, Option, Schema } from "effect";
+import { Cause, Effect, Layer, Option, Schedule, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
 import { describeScope, loadAccess } from "./access.ts";
 import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
+import { audit, auditFilters, auditLog, exportAudit } from "./audit.ts";
 import { authFor } from "./auth.ts";
 import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
 import { offerRevision } from "./brand-updates.ts";
@@ -69,9 +70,20 @@ import { deleteBrand, deletedSites, deleteSite, restoreSite } from "./deletion.t
 import { addDomain, checkDomains, removeDomain, routedHost, siteDomains } from "./domains.ts";
 import { acceptInvitation, invitationView, invite, revokeInvitation } from "./invitations.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
+import { LiveAccess } from "./live-access.ts";
+import {
+  changeRoleOf,
+  grantRoleTo,
+  peopleView,
+  removeAllAccessOf,
+  removeOverrideFor,
+  revokeRoleFrom,
+  scopeMembers,
+  setOverrideFor,
+} from "./members.ts";
 import { mailerFor } from "./notifications.ts";
 import { organizationName } from "./organization.ts";
-import { organizationPeople } from "./people.ts";
+import { deleteRole, rolesView, saveRole } from "./roles.ts";
 import type { Outcome, SiteDocError } from "./site-doc.ts";
 import type { BatchResult } from "./site/drafts.ts";
 import type {
@@ -187,10 +199,26 @@ const pageSummaries = (draft: Draft) =>
     .map((page) => ({ id: page.id, type: page.type, path: page.path, title: page.meta.title }))
     .toSorted((a, b) => (a.path < b.path ? -1 : 1));
 
+/** Each site's SiteDoc, told of changes of access. */
+const liveAccessOf = (env: StudioApiEnv) =>
+  Layer.succeed(LiveAccess)({
+    refresh: (site, people) =>
+      Effect.tryPromise(async () =>
+        (await getServerByName(env.SITE_DOC, site)).refreshPermissions(people),
+      ).pipe(
+        Effect.retry({ schedule: Schedule.exponential("100 millis"), times: 3 }),
+        // The change is made; the site's own record catches up when the person next connects.
+        Effect.catch((error) =>
+          Effect.logError("A site couldn't take a change of access", site, error),
+        ),
+      ),
+  });
+
 const handlers = (env: StudioApiEnv) =>
   StudioRpcs.toLayer(
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
+      const liveAccess = yield* LiveAccess;
       /** Runs a handler against core, turning storage failures into a retryable error. */
       const withCore =
         (operation: string) =>
@@ -198,11 +226,12 @@ const handlers = (env: StudioApiEnv) =>
           effect: Effect.Effect<
             A,
             E | SqlError.SqlError | Schema.SchemaError | Cause.UnknownError,
-            R | SqlClient.SqlClient
+            R | SqlClient.SqlClient | LiveAccess
           >,
         ) =>
           effect.pipe(
             Effect.provideService(SqlClient.SqlClient, sql),
+            Effect.provideService(LiveAccess, liveAccess),
             Effect.catchIf(isOutage, unavailable(operation)),
             // A row that doesn't match its schema is a bug, not an outage.
             Effect.catchIf(isSchemaError, Effect.die),
@@ -303,8 +332,40 @@ const handlers = (env: StudioApiEnv) =>
             ),
           ),
         invitation: ({ token }) => withCore("invitation")(invitationView(token)),
-        organizationPeople: () =>
-          SignedIn.use((person) => withCore("people")(organizationPeople(person))),
+        organizationPeople: () => SignedIn.use((person) => withCore("people")(peopleView(person))),
+        auditLog: ({ query, before }) =>
+          SignedIn.use((person) => withCore("audit log")(auditLog(person, query, before))),
+        auditFilters: () =>
+          SignedIn.use((person) => withCore("audit filters")(auditFilters(person))),
+        exportAudit: ({ query }) =>
+          SignedIn.use((person) => withCore("export audit log")(exportAudit(person, query))),
+        roles: () => SignedIn.use((person) => withCore("roles")(rolesView(person))),
+        saveRole: ({ role, ...details }) =>
+          SignedIn.use((person) => withCore("save role")(saveRole(person, role, details))),
+        deleteRole: ({ role }) =>
+          SignedIn.use((person) => withCore("delete role")(deleteRole(person, role))),
+        scopeMembers: ({ scope }) =>
+          SignedIn.use((person) => withCore("members")(scopeMembers(person, scope))),
+        grantRole: ({ person: who, role, scope }) =>
+          SignedIn.use((person) => withCore("grant role")(grantRoleTo(person, who, role, scope))),
+        changeRole: ({ person: who, from, to, scope }) =>
+          SignedIn.use((person) =>
+            withCore("change role")(changeRoleOf(person, who, from, to, scope)),
+          ),
+        revokeRole: ({ person: who, role, scope }) =>
+          SignedIn.use((person) =>
+            withCore("revoke role")(revokeRoleFrom(person, who, role, scope)),
+          ),
+        setOverride: ({ person: who, permission, scope, allowed }) =>
+          SignedIn.use((person) =>
+            withCore("set override")(setOverrideFor(person, who, permission, scope, allowed)),
+          ),
+        removeOverride: ({ person: who, permission, scope }) =>
+          SignedIn.use((person) =>
+            withCore("remove override")(removeOverrideFor(person, who, permission, scope)),
+          ),
+        removeAllAccess: ({ person: who }) =>
+          SignedIn.use((person) => withCore("remove access")(removeAllAccessOf(person, who))),
         invite: ({ email, role, scope }) =>
           SignedIn.use((person) =>
             withCore("invite")(
@@ -348,6 +409,7 @@ const handlers = (env: StudioApiEnv) =>
                 yield* Effect.tryPromise(() =>
                   env.ROUTING.put(routingKeys.host(`${address}.${env.SITES_HOST}`), created.id),
                 );
+                yield* audit(person, { site: created.id }, { _tag: "SiteCreated", name });
                 return { site: { id: created.id, name: created.name }, draft: draft.id };
               }),
             ),
@@ -479,7 +541,7 @@ const handlers = (env: StudioApiEnv) =>
                   "site.settings.edit",
                   "change this site's domains",
                 );
-                yield* removeDomain(found.id, hostname, (removed) =>
+                yield* removeDomain(found.id, hostname, person, (removed) =>
                   Effect.promise(() =>
                     env.ROUTING.delete(routingKeys.host(routedHost(removed, env.SITES_HOST))),
                   ),
@@ -578,6 +640,18 @@ const handlers = (env: StudioApiEnv) =>
                 const entries = yield* Effect.tryPromise(() =>
                   entriesOf(site).entries({ form, search, before, limit: entriesPage + 1 }),
                 );
+                // Each look at a list is logged once, when it opens, not as it pages.
+                if (before === null)
+                  yield* audit(
+                    person,
+                    { site },
+                    {
+                      _tag: "EntriesViewed",
+                      form: entries[0]?.formName ?? form,
+                      formId: form,
+                      entry: null,
+                    },
+                  );
                 return {
                   entries: entries.slice(0, entriesPage),
                   more: entries.length > entriesPage,
@@ -591,7 +665,13 @@ const handlers = (env: StudioApiEnv) =>
               Effect.gen(function* () {
                 yield* permitted(person, site, "submissions.read", "read this site's form entries");
                 const found = yield* Effect.tryPromise(() => entriesOf(site).entry(entry));
-                return found ?? (yield* new EntryNotFound({}));
+                if (found === null) return yield* new EntryNotFound({});
+                yield* audit(
+                  person,
+                  { site },
+                  { _tag: "EntriesViewed", form: found.formName, formId: found.form, entry },
+                );
+                return found;
               }),
             ),
           ),
@@ -607,6 +687,11 @@ const handlers = (env: StudioApiEnv) =>
                 );
                 const entries = yield* Effect.tryPromise(() => entriesOf(site).everyEntry(form));
                 const name = entries.at(-1)?.formName ?? form;
+                yield* audit(
+                  person,
+                  { site },
+                  { _tag: "EntriesExported", form: name, formId: form, entries: entries.length },
+                );
                 return {
                   filename: `${found.name} - ${name}.csv`.replaceAll(/[\\/:*?"<>|]/g, ""),
                   csv: entriesCsv(entries),
@@ -621,6 +706,11 @@ const handlers = (env: StudioApiEnv) =>
                 yield* permitted(person, site, "submissions.delete", "delete form entries");
                 const removed = yield* Effect.tryPromise(() => entriesOf(site).remove(entry));
                 if (!removed) return yield* new EntryNotFound({});
+                yield* audit(
+                  person,
+                  { site },
+                  { _tag: "EntriesDeleted", entries: 1, onePerson: false },
+                );
               }),
             ),
           ),
@@ -639,6 +729,11 @@ const handlers = (env: StudioApiEnv) =>
               Effect.gen(function* () {
                 yield* permitted(person, site, "submissions.delete", "delete form entries");
                 const deleted = yield* Effect.tryPromise(() => entriesOf(site).removeFor(email));
+                yield* audit(
+                  person,
+                  { site },
+                  { _tag: "EntriesDeleted", entries: deleted, onePerson: true },
+                );
                 return { deleted };
               }),
             ),
@@ -889,7 +984,8 @@ const handlers = (env: StudioApiEnv) =>
                 );
                 const summary = yield* outcome(
                   DraftNotFound,
-                  async (): Promise<Outcome<DraftSummary>> => doc.shareDraft(draft, sharing),
+                  async (): Promise<Outcome<DraftSummary>> =>
+                    doc.shareDraft(collaborator(person), draft, sharing),
                 );
                 return {
                   draft: { id: draft, name: summary.name },
@@ -1014,6 +1110,15 @@ const handlers = (env: StudioApiEnv) =>
                     ),
                   { concurrency: 10 },
                 );
+                yield* audit(
+                  person,
+                  { brand },
+                  {
+                    _tag: "BrandLookSaved",
+                    revision: revision.number,
+                    sites: updates.filter((update) => update.draft !== null).length,
+                  },
+                );
                 return {
                   revision: {
                     number: revision.number,
@@ -1121,7 +1226,7 @@ const handlers = (env: StudioApiEnv) =>
                 const latest = latestLockfile[type];
                 if (latest === undefined) return [];
                 const sites = yield* sitesBehind(type, latest);
-                return yield* Effect.forEach(
+                const upgrades = yield* Effect.forEach(
                   sites,
                   (id) =>
                     Effect.gen(function* () {
@@ -1146,6 +1251,17 @@ const handlers = (env: StudioApiEnv) =>
                     }),
                   { concurrency: 10 },
                 );
+                yield* audit(
+                  person,
+                  {},
+                  {
+                    _tag: "BlockUpgradeEverywhere",
+                    block: type,
+                    version: latest,
+                    sites: upgrades.filter((upgrade) => upgrade.draft !== null).length,
+                  },
+                );
+                return upgrades;
               }),
             ),
           ),
@@ -1250,7 +1366,10 @@ const handlers = (env: StudioApiEnv) =>
           ),
       });
     }),
-  ).pipe(Layer.provide(D1Client.layer({ db: env.CORE })), Layer.orDie);
+  ).pipe(
+    Layer.provide(Layer.merge(D1Client.layer({ db: env.CORE }), liveAccessOf(env))),
+    Layer.orDie,
+  );
 
 const makeHandler = (env: StudioApiEnv) =>
   rpcWebHandler(StudioRpcs, Layer.mergeAll(handlers(env), sessions(env)));

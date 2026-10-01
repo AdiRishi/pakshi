@@ -4,6 +4,8 @@ import { DomainTaken, type Hostname, type Person, type SiteDomain } from "@repo/
 import { Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
+import { audit } from "./audit.ts";
+
 /*
  * A site's own domains. Each waits until its ownership is proven, then KV
  * sends its host to the site. Until production brings Cloudflare for SaaS,
@@ -93,6 +95,7 @@ export const addDomain = Effect.fn("StudioApi.addDomain")(function* (
     values (${hostname}, ${site}, ${newToken()}, ${by.id})
     on conflict (hostname) do nothing returning hostname`;
   if (added.length === 0) return yield* new DomainTaken({ hostname });
+  yield* audit(by, { site }, { _tag: "DomainAdded", hostname });
 });
 
 /**
@@ -115,6 +118,7 @@ export const checkDomains = Effect.fn("StudioApi.checkDomains")(function* (
     yield* route(row.hostname, row.site_id);
     yield* sql`update domains set status = 'active', checked_at = ${checkedAt},
       active_at = ${checkedAt} where hostname = ${row.hostname}`;
+    yield* audit(null, { site: row.site_id }, { _tag: "DomainProven", hostname: row.hostname });
   }
 });
 
@@ -122,6 +126,7 @@ export const checkDomains = Effect.fn("StudioApi.checkDomains")(function* (
 export const removeDomain = Effect.fn("StudioApi.removeDomain")(function* (
   site: SiteId,
   hostname: string,
+  by: Person,
   unroute: (hostname: string) => Effect.Effect<void>,
 ) {
   const sql = yield* SqlClient.SqlClient;
@@ -131,4 +136,5 @@ export const removeDomain = Effect.fn("StudioApi.removeDomain")(function* (
   // KV first, so a removal that stops partway leaves a domain that can be removed again.
   yield* unroute(hostname);
   yield* sql`delete from domains where hostname = ${hostname} and site_id = ${site}`;
+  yield* audit(by, { site }, { _tag: "DomainRemoved", hostname });
 });

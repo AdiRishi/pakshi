@@ -40,7 +40,12 @@ const approver = (person: Collaborator, roles: Approver["roles"] = []): Approver
 
 /** Any approver, then Meera. */
 const twoSteps: Workflow = [
-  { name: "Communications team", roles: ["approver"], people: [], required: 1 },
+  {
+    name: "Communications team",
+    roles: [{ id: "approver", name: "Approver" }],
+    people: [],
+    required: 1,
+  },
   { name: "Library manager", roles: [], people: [meera], required: 1 },
 ];
 
@@ -700,7 +705,7 @@ it.effect("a draft's sharing decides who may open it, until the draft closes", (
   withSite((site, state) =>
     Effect.gen(function* () {
       const { id } = yield* site.createDraft(sam, name("Shared"));
-      yield* site.share(id, {
+      yield* site.share(sam, id, {
         people: [{ person: { ...priya, email: "priya@pakshi.test" }, access: "edit" }],
         general: { audience: "link", access: "view" },
       });
