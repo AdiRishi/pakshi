@@ -402,17 +402,17 @@ const handlers = (env: StudioApiEnv) =>
         deleteSite: ({ site }) =>
           SignedIn.use((person) =>
             withCore("delete site")(
-              Effect.gen(function* () {
-                const hosts = yield* deleteSite(person, site);
-                // The site stops serving at once: no host leads to it.
-                const routed = [
-                  ...(hosts.address === null ? [] : [`${hosts.address}.${env.SITES_HOST}`]),
-                  ...hosts.domains.map((hostname) => routedHost(hostname, env.SITES_HOST)),
-                ];
-                yield* Effect.forEach(routed, (host) =>
-                  Effect.promise(() => env.ROUTING.delete(routingKeys.host(host))),
-                );
-              }),
+              // The site stops serving at once: no host leads to it.
+              deleteSite(person, site, (hosts) =>
+                Effect.forEach(
+                  [
+                    ...(hosts.address === null ? [] : [`${hosts.address}.${env.SITES_HOST}`]),
+                    ...hosts.domains.map((hostname) => routedHost(hostname, env.SITES_HOST)),
+                  ],
+                  (host) => Effect.promise(() => env.ROUTING.delete(routingKeys.host(host))),
+                  { discard: true },
+                ),
+              ),
             ),
           ),
         deletedSites: () =>
@@ -420,13 +420,11 @@ const handlers = (env: StudioApiEnv) =>
         restoreSite: ({ site }) =>
           SignedIn.use((person) =>
             withCore("restore site")(
-              Effect.gen(function* () {
-                const address = yield* restoreSite(person, site);
-                if (address !== null)
-                  yield* Effect.promise(() =>
-                    env.ROUTING.put(routingKeys.host(`${address}.${env.SITES_HOST}`), site),
-                  );
-              }),
+              restoreSite(person, site, (address) =>
+                Effect.promise(() =>
+                  env.ROUTING.put(routingKeys.host(`${address}.${env.SITES_HOST}`), site),
+                ),
+              ),
             ),
           ),
         deleteBrand: ({ brand }) =>

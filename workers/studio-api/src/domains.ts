@@ -125,7 +125,10 @@ export const removeDomain = Effect.fn("StudioApi.removeDomain")(function* (
   unroute: (hostname: string) => Effect.Effect<void>,
 ) {
   const sql = yield* SqlClient.SqlClient;
-  const removed = yield* sql`delete from domains
-    where hostname = ${hostname} and site_id = ${site} returning hostname`;
-  if (removed.length > 0) yield* unroute(hostname);
+  const [found] =
+    yield* sql`select 1 from domains where hostname = ${hostname} and site_id = ${site}`;
+  if (found === undefined) return;
+  // KV first, so a removal that stops partway leaves a domain that can be removed again.
+  yield* unroute(hostname);
+  yield* sql`delete from domains where hostname = ${hostname} and site_id = ${site}`;
 });
