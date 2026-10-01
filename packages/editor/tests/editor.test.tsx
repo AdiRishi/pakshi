@@ -273,7 +273,9 @@ describe("a post's settings", () => {
     await userEvent.keyboard("{Tab}");
     await expect.poll(() => meta()?.tags).toEqual(["news", "july"]);
 
-    await userEvent.click(page.getByRole("list", { name: "Library" }).getByRole("button").first());
+    await userEvent.click(
+      page.getByRole("list", { name: "Library for the cover image" }).getByRole("button").first(),
+    );
     await expect.poll(() => meta()?.cover?.id).toBe("med_harbour");
     await userEvent.fill(page.getByLabelText("Alt text"), "The harbour at dawn");
     await expect.poll(() => meta()?.cover?.alt).toBe("The harbour at dawn");

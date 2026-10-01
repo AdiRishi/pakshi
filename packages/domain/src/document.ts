@@ -21,8 +21,8 @@ import type {
 } from "@repo/contracts/ops";
 import { type BlockInstance, PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
 import { FormRef } from "@repo/contracts/references";
-import type { SiteParts } from "@repo/contracts/site";
-import { Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
+import type { MenuItem, Menus, SiteParts } from "@repo/contracts/site";
+import { Equal, Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 
 /*
  * The document module: how ops change a draft, what they may not do, and how
@@ -604,6 +604,33 @@ const removeForm = (draft: Draft, id: FormId) => {
   if (user !== undefined)
     throw reject("in-use", `${previous.name} is still on ${user.title}. Remove it there first.`);
   return { draft: { ...draft, forms }, inverse: { op: "setForm", form: previous } satisfies Op };
+};
+
+const linksTo = (target: MenuItem["target"], page: PageId) =>
+  !Predicate.isString(target) && target.id === page;
+
+/**
+ * The ops that take every link to a page out of the draft's menus, with the
+ * sub-items under a main menu item that goes. Unpublishing or deleting a
+ * page sends them in the same batch.
+ */
+export const menusWithout = (menus: Menus, page: PageId): ReadonlyArray<Op> => {
+  const { main, footer } = menus;
+  const keptMain = main.flatMap((item) =>
+    linksTo(item.target, page)
+      ? []
+      : [
+          item.children === undefined
+            ? item
+            : { ...item, children: item.children.filter((child) => !linksTo(child.target, page)) },
+        ],
+  );
+  const keptFooter = footer.filter((item) => !linksTo(item.target, page));
+  const ops: Array<Op> = [];
+  if (!Equal.equals(keptMain, main)) ops.push({ op: "setMenu", menu: "main", items: keptMain });
+  if (keptFooter.length !== footer.length)
+    ops.push({ op: "setMenu", menu: "footer", items: keptFooter });
+  return ops;
 };
 
 const setRedirect = (draft: Draft, op: SetRedirect) => {

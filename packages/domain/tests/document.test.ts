@@ -7,7 +7,7 @@ import { PageDocument } from "@repo/contracts/page";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { applyOps } from "../src/document.ts";
+import { applyOps, menusWithout } from "../src/document.ts";
 import { contracts, harbourDraft } from "./support/draft.ts";
 
 /** An op as it arrives over the wire, before decoding brands its IDs. */
@@ -610,4 +610,31 @@ test("a new page with blocks in no list is refused, even when it was never decod
   expect(result.ok ? [] : result.errors).toEqual(
     expect.arrayContaining([expect.objectContaining({ rule: "page" })]),
   );
+});
+
+test("taking a page out of the menus removes its items and their sub-items, and nothing else", () => {
+  const draft = applied({
+    op: "setMenu",
+    menu: "main",
+    items: [
+      {
+        id: "mi_about",
+        label: "About",
+        target: { $ref: "page", id: "pg_about" },
+        children: [{ id: "mi_dates", label: "Dates", target: { $ref: "page", id: "pg_dates" } }],
+      },
+      {
+        id: "mi_home",
+        label: "Home",
+        target: { $ref: "page", id: "pg_home" },
+        children: [{ id: "mi_more", label: "More", target: { $ref: "page", id: "pg_about" } }],
+      },
+    ],
+  }).draft;
+  const menus = draft.parts.menus;
+  const result = applyOps(draft, menusWithout(menus, PageId.make("pg_about")), contracts);
+  expect(result.ok && result.draft.parts.menus.main).toEqual([
+    { id: "mi_home", label: "Home", target: { $ref: "page", id: "pg_home" }, children: [] },
+  ]);
+  expect(menusWithout(menus, PageId.make("pg_dates")).map((op) => op.op)).toEqual(["setMenu"]);
 });
