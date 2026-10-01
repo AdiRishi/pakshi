@@ -208,16 +208,16 @@ Brands own their look, and blocks improve without surprising live sites.
 
 **Build:**
 
-- [Theme Studio](/product-spec#brands-and-themes): presets, palette generation, contrast checks in light and dark, fonts from R2, identity and the voice guide.
+- [Theme Studio](/product-spec#brands-and-themes): presets, palette generation, contrast checks in light and dark, fonts served by each app, identity and the voice guide.
 - [Brand revisions](/technical-design#themes) pinned per draft, and Brand update drafts.
-- [Block versioning](/technical-design#blocks-and-versioning): opaque IDs, the lockfile, `migrate` chains, adopting an upgrade, upgrade drafts on every affected site, retention, the frozen-folder CI check, golden JSON Schema tests, and the reviewed screenshot-update path.
+- [Block versioning](/technical-design#blocks-and-versioning): the lockfile of version numbers, `migrate` chains, adopting an upgrade, upgrade drafts on every affected site, retention, the frozen-folder CI check, golden JSON Schema tests, and the reviewed screenshot-update path.
 - The library grows to about 20 blocks and 4 recipes, chosen from the sites the Pakshi team plans to build.
 
 **Demo:** change a brand's color and watch Brand update drafts appear on its sites; release a block's v2 and upgrade one site to it through a draft.
 
 **Done when:**
 
-- Two versions of one block are live on one site, with `sites` startup measured well under 1 second.
+- Two versions of one block are live at once, on two sites the `sites` Worker serves, with its startup measured well under 1 second. A lockfile pins one version of each block, so one site can't show two.
 - A theme with a failing contrast pair can't be saved.
 - A brand change reaches a site's live pages only when its Brand update draft publishes.
 - An upgrade from v1 to v3 migrates content through both steps.
