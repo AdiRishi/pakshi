@@ -128,6 +128,18 @@ describe("typing", () => {
     expect(store.getState().status).toBe("saved");
   });
 
+  test("a command made while typing sends the typing first, then the command", async () => {
+    const siteDoc = fakeSiteDoc();
+    const { store } = open(siteDoc);
+    await settle();
+    store.run([setHeading("Sail")], "heading");
+    const setVariant: Op = { op: "setVariant", target: page, block: hero, variant: "split-image" };
+    store.run([setVariant]);
+    await settle();
+    expect(siteDoc.log().map((batch) => batch.ops)).toEqual([[setHeading("Sail")], [setVariant]]);
+    expect(store.getState().status).toBe("saved");
+  });
+
   test("cancelling a burst puts the field back as it was", async () => {
     const siteDoc = fakeSiteDoc();
     const { store } = open(siteDoc);
