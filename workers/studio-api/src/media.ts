@@ -7,6 +7,7 @@ import {
   type Person,
   previewBasePath,
   reviewBasePath,
+  siteMediaBasePath,
 } from "@repo/contracts/studio";
 import { permissionsOn } from "@repo/domain/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
@@ -125,5 +126,27 @@ export const serveReviewMedia = (request: Request, env: StudioApiEnv) =>
       if (Option.isNone(site) || !(yield* inSiteLibrary(site.value, path.value.media)))
         return notFound();
       return yield* image(env, path.value.media);
+    }),
+  );
+
+/** An image a site can place, from its library or its brand's, for anyone who holds a permission on the site. */
+export const serveSiteMedia = (request: Request, env: StudioApiEnv) =>
+  answer(
+    env,
+    Effect.gen(function* () {
+      const [site = "", media = "", ...rest] = new URL(request.url).pathname
+        .slice(siteMediaBasePath.length + 1)
+        .split("/");
+      const ids = Option.all({
+        site: Schema.decodeOption(SiteId)(site),
+        media: Schema.decodeOption(MediaId)(media),
+      });
+      if (Option.isNone(ids) || rest.length > 0) return notFound();
+      const person = yield* signedIn(request, env);
+      if (person === null) return signInFirst();
+      const found = yield* Effect.option(siteOf(person, ids.value.site));
+      if (Option.isNone(found) || !(yield* inSiteLibrary(found.value, ids.value.media)))
+        return notFound();
+      return yield* image(env, ids.value.media);
     }),
   );

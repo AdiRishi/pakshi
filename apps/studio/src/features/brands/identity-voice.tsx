@@ -1,6 +1,6 @@
 import { type BrandIdentity, type VoiceGuide } from "@repo/contracts/brand";
-import type { BrandId, MediaId } from "@repo/contracts/ids";
-import type { BrandView, MediaSummary, Viewer } from "@repo/contracts/studio";
+import type { BrandId } from "@repo/contracts/ids";
+import type { BrandView, Viewer } from "@repo/contracts/studio";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -11,14 +11,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@repo/ui/components/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@repo/ui/components/dialog";
-import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from "@repo/ui/components/empty";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { Textarea } from "@repo/ui/components/textarea";
@@ -30,6 +22,7 @@ import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 
+import { LibraryPicker } from "../media/library-picker";
 import { BrandHeader } from "./brand-header";
 import { saveBrandLook, saveVoiceGuide } from "./functions";
 import { brandQuery } from "./queries";
@@ -52,56 +45,6 @@ const slots = [
   readonly title: string;
   readonly description: string;
 }>;
-
-/** Images from the brand's library to choose one from. */
-function LibraryPicker(props: {
-  readonly brand: BrandId;
-  readonly title: string;
-  readonly media: ReadonlyArray<MediaSummary>;
-  readonly open: boolean;
-  readonly onOpenChange: (open: boolean) => void;
-  readonly onPick: (media: MediaId) => void;
-}) {
-  return (
-    <Dialog open={props.open} onOpenChange={props.onOpenChange}>
-      <DialogContent className="sm:max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>Choose the {props.title.toLowerCase()}</DialogTitle>
-          <DialogDescription>From the brand's library.</DialogDescription>
-        </DialogHeader>
-        {props.media.length === 0 ? (
-          <Empty>
-            <EmptyHeader>
-              <EmptyTitle>The brand's library is empty</EmptyTitle>
-              <EmptyDescription>
-                Images uploaded to the brand's library appear here.
-              </EmptyDescription>
-            </EmptyHeader>
-          </Empty>
-        ) : (
-          <ul className="grid grid-cols-3 gap-3">
-            {props.media.map((file) => (
-              <li key={file.id}>
-                <Button
-                  variant="outline"
-                  className="h-auto w-full flex-col gap-2 p-2"
-                  onClick={() => props.onPick(file.id)}
-                >
-                  <img
-                    src={brandMediaSrc(props.brand, file.id)}
-                    alt=""
-                    className="aspect-video w-full rounded-sm object-contain"
-                  />
-                  <span className="w-full truncate text-xs">{file.alt || file.id}</span>
-                </Button>
-              </li>
-            ))}
-          </ul>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
 
 function IdentityCard(props: { readonly view: BrandView }) {
   const { view } = props;
@@ -197,13 +140,14 @@ function IdentityCard(props: { readonly view: BrandView }) {
       )}
       {slot !== undefined && (
         <LibraryPicker
-          brand={view.brand.id}
-          title={slot.title}
+          title={`Choose the ${slot.title.toLowerCase()}`}
+          description="From the brand's library."
           media={view.media}
+          src={(media) => brandMediaSrc(view.brand.id, media)}
           open
           onOpenChange={(open) => !open && setPicking(null)}
           onPick={(media) => {
-            setIdentity((current) => ({ ...current, [slot.key]: media }));
+            setIdentity((current) => ({ ...current, [slot.key]: media.id }));
             setPicking(null);
           }}
         />
