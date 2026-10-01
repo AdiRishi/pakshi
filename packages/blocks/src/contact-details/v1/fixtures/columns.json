@@ -1,0 +1,12 @@
+{
+  "variant": "columns",
+  "surface": "default",
+  "props": {
+    "heading": "Find us",
+    "intro": "The boat shed is at the far end of North Quay, past the lifeboat station.",
+    "address": "The Boat Shed\nNorth Quay\nWestbay\nWB3 4HQ",
+    "phone": "01632 960431",
+    "email": "hello@example.org",
+    "hours": "Monday to Friday, 9am to 4pm\nOpen every day during summer school"
+  }
+}

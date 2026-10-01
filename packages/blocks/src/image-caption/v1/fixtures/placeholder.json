@@ -1,0 +1,9 @@
+{
+  "variant": "wide",
+  "surface": "default",
+  "props": {
+    "image": { "$ref": "media", "id": "med_pakshiSea", "alt": "" },
+    "caption": "Say what's happening in the picture, or why it's worth a closer look.",
+    "credit": "Photo: who took it"
+  }
+}

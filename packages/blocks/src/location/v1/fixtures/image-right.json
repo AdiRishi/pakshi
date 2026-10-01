@@ -1,0 +1,14 @@
+{
+  "variant": "image-right",
+  "surface": "default",
+  "props": {
+    "heading": "Drop-off and pick-up",
+    "address": "Main gate\nHarbour Road\nPortlow PL12 3AB",
+    "map": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "The harbour seen from the main gate on Harbour Road"
+    },
+    "directions": "Drop students at the main gate from 8:45. Pick-up is at the same gate at 16:00."
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "variant": "with-photo",
+  "surface": "default",
+  "props": {
+    "quote": "The mentors never did it for you. They showed you once, then let you get it wrong until you got it right.",
+    "name": "Jonah Reed",
+    "role": "Student, summer 2026",
+    "photo": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Jonah's finished boat moored in the harbour"
+    }
+  }
+}

@@ -1,0 +1,105 @@
+{
+  "title": "Stats",
+  "placement": "section",
+  "variants": [
+    "row",
+    "cards"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 12
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "value",
+              "label"
+            ],
+            "additionalProperties": true
+          },
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "stats"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "stats": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "value": {
+                "type": "string",
+                "maxLength": 12
+              },
+              "label": {
+                "type": "string",
+                "maxLength": 80
+              }
+            },
+            "required": [
+              "id",
+              "value",
+              "label"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 2,
+          "maxItems": 6
+        }
+      },
+      "required": [
+        "stats"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

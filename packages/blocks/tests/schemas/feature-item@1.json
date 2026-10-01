@@ -1,0 +1,51 @@
+{
+  "title": "Feature",
+  "placement": "item",
+  "variants": [
+    "default"
+  ],
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 240
+        }
+      },
+      "required": [
+        "title",
+        "body"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

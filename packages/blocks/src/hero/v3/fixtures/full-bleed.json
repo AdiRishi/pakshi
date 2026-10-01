@@ -1,0 +1,23 @@
+{
+  "variant": "full-bleed",
+  "surface": "inverse",
+  "props": {
+    "heading": "Learn by building",
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      }
+    ],
+    "summary": "Mornings are for making. Afternoons are for trying what you made on the water.",
+    "kicker": "Summer 2027"
+  }
+}

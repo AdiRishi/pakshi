@@ -1,0 +1,90 @@
+{
+  "title": "Contact details",
+  "placement": "section",
+  "variants": [
+    "columns",
+    "stacked"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "hours": {
+          "type": "string",
+          "maxLength": 400
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "intro": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "address": {
+          "type": "string",
+          "maxLength": 240
+        },
+        "phone": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "hours": {
+          "type": "string",
+          "maxLength": 400
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

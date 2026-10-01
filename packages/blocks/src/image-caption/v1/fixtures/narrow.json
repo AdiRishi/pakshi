@@ -1,0 +1,8 @@
+{
+  "variant": "narrow",
+  "surface": "muted",
+  "props": {
+    "image": { "$ref": "media", "id": "med_harbour", "alt": "Boats moored close to the quay" },
+    "caption": "Our boats are moored by North Quay, a short walk from the boatshed."
+  }
+}

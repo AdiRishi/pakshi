@@ -1,0 +1,224 @@
+{
+  "title": "Call to action",
+  "placement": "section",
+  "variants": [
+    "banner",
+    "centered"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "primary": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        },
+        "secondary": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "heading",
+        "primary"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 200
+        },
+        "primary": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        },
+        "secondary": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "heading",
+        "primary"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

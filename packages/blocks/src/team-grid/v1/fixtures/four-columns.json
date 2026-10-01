@@ -1,0 +1,41 @@
+{
+  "variant": "four-columns",
+  "surface": "muted",
+  "props": { "heading": "Who runs the summer school" },
+  "slots": {
+    "people": [
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "name": "Ruth Hollis",
+          "role": "Director",
+          "bio": "Ruth set up the summer school in 2019."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "name": "Ola Nowak",
+          "role": "Bookings and places",
+          "bio": "Ola answers questions about dates, places and bursaries."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": { "name": "Ben Tregear", "role": "Safety officer" }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "name": "Asha Patel",
+          "role": "Kitchen",
+          "bio": "Asha cooks lunch for everyone, every day."
+        }
+      }
+    ]
+  }
+}

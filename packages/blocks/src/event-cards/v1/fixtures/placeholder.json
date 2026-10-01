@@ -1,0 +1,46 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "heading": "What's on",
+    "intro": "Dates, times and places for everything coming up."
+  },
+  "slots": {
+    "events": [
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sat 14 June, 10am",
+          "title": "Open morning",
+          "place": "The main hall",
+          "summary": "Come and see what we do, meet the people who run it and ask anything you like.",
+          "image": { "$ref": "media", "id": "med_pakshiSea", "alt": "" },
+          "link": { "label": "Find out more", "link": "https://example.com" }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Wed 2 July, 6pm",
+          "title": "Evening talk",
+          "place": "Online, with a link sent when you book",
+          "summary": "A short talk, then time for questions. Bring a cup of tea.",
+          "image": { "$ref": "media", "id": "med_pakshiHills", "alt": "" }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sun 20 July, all day",
+          "title": "Summer fair",
+          "place": "Out on the green",
+          "summary": "Stalls, music and food. Free to come along, and everyone's welcome.",
+          "image": { "$ref": "media", "id": "med_pakshiCircles", "alt": "" }
+        }
+      }
+    ]
+  }
+}

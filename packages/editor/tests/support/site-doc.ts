@@ -1,5 +1,6 @@
-import { loadBlocks } from "@repo/blocks";
+import { loadBlocks, registeredVersions } from "@repo/blocks";
 import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
+import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
 import { BatchId, randomId, type TurnId } from "@repo/contracts/ids";
 import type {
@@ -12,16 +13,23 @@ import type {
 } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { commitBatch, type Writes } from "@repo/domain/commit";
-import { harbour } from "@repo/tokens";
+import { resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
 import type { Connection } from "../../src/store.ts";
 
-const lockfile = Object.fromEntries(blockFixtures.map((entry) => [entry.type, entry.version]));
+// Each block's first version, whose fields these tests were written against.
+const lockfile = Object.fromEntries(
+  registeredVersions.toReversed().map(({ type, version }) => [type, version]),
+);
 
 const definitionsOf = await loadBlocks(lockfile);
 const placed = (placement: string) =>
-  blockFixtures.filter((entry) => definitionsOf.get(entry.type)?.placement === placement);
+  blockFixtures.filter(
+    (entry) =>
+      lockfile[entry.type] === entry.version &&
+      definitionsOf.get(entry.type)?.placement === placement,
+  );
 
 const sections = placed("section").map(fixtureTree);
 const [header] = placed("header").map(fixtureTree);
@@ -29,7 +37,10 @@ const [footer] = placed("footer").map(fixtureTree);
 if (header === undefined || footer === undefined)
   throw new Error("Blocks need header and footer fixtures.");
 
-/** A draft whose home page holds every section fixture, under a header and footer from their fixtures. */
+/**
+ * A draft whose home page holds every section fixture of each block's first
+ * version, under a header and footer from their fixtures.
+ */
 export const fixtureDraft = Schema.decodeSync(Draft)({
   id: "dr_fixtures",
   site: "site_fixtures",
@@ -44,7 +55,12 @@ export const fixtureDraft = Schema.decodeSync(Draft)({
   },
   forms: fixtureSite.forms,
   lockfile,
-  theme: harbour,
+  brand: {
+    brand: "brand_harbour",
+    number: 1,
+    theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+    identity: noIdentity,
+  },
   pages: {
     pg_home: {
       schema: "pakshi.page/1",

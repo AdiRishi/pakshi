@@ -50,6 +50,16 @@ draft runs only with `PAKSHI_AGENT_TESTS=1`.
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
 
+A block version is released once its folder is on `main`, and a released
+folder never changes: change a block by adding its next version folder, with
+`changes` and `migrate`. CI runs `node scripts/src/check-released-blocks.ts
+origin/main` to enforce this. A new version also needs golden files: run
+`pnpm --filter @repo/blocks exec vitest run tests/schemas.test.ts -u`, and
+update only the new version's file. The browser suite keeps a baseline
+screenshot of every block fixture (`infra/tests/blocks.browser.test.ts`).
+Accepting changed baselines of a released version needs an entry naming it in
+`packages/blocks/src/rendering-changes.json`, which the sites using it see.
+
 Run `pnpm check`, `pnpm typecheck`, and `pnpm test` before committing.
 
 `.repos/` contains read-only source references. When writing Effect code, read

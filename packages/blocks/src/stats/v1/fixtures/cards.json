@@ -1,0 +1,11 @@
+{
+  "variant": "cards",
+  "surface": "default",
+  "props": {
+    "stats": [
+      { "id": "it_days", "value": "5 days", "label": "Monday to Friday, 9:00 to 16:00" },
+      { "id": "it_ratio", "value": "1 to 6", "label": "One mentor for every six students" },
+      { "id": "it_workshops", "value": "2", "label": "Hands-on workshops every day" }
+    ]
+  }
+}

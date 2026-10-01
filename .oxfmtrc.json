@@ -20,6 +20,7 @@
     ".windsurf/**",
     "tooling/oxlint/anti-slop/**",
     "**/*.gen.ts",
+    "packages/blocks/tests/schemas/**",
     "**/.astro/**",
     "**/worker-configuration.d.ts",
     "pnpm-lock.yaml"

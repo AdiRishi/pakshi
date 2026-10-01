@@ -1,0 +1,12 @@
+{
+  "variant": "row",
+  "surface": "muted",
+  "props": {
+    "heading": "A few numbers that matter",
+    "stats": [
+      { "id": "it_first", "value": "12", "label": "Years running" },
+      { "id": "it_second", "value": "1,500", "label": "People who came last time" },
+      { "id": "it_third", "value": "9 in 10", "label": "Would tell a friend about it" }
+    ]
+  }
+}
