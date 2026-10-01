@@ -1,5 +1,6 @@
 import type { SiteId } from "@repo/contracts/ids";
 import { Release } from "@repo/contracts/release";
+import { Lockfile } from "@repo/contracts/snapshot";
 import { Submission } from "@repo/contracts/submission";
 import { Effect, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
@@ -13,6 +14,7 @@ import type { OutboxMessage } from "./site/outbox.ts";
 
 const encodeRelease = Schema.encodeSync(Schema.fromJsonString(Release));
 const encodeSubmission = Schema.encodeSync(Schema.fromJsonString(Submission));
+const encodeLockfile = Schema.encodeSync(Schema.fromJsonString(Lockfile));
 
 /** Writes one of a site's outbox copies into D1. */
 export const recordCopy = Effect.fn("StudioApi.recordCopy")(function* (
@@ -50,6 +52,25 @@ export const recordCopy = Effect.fn("StudioApi.recordCopy")(function* (
             draft_name = excluded.draft_name, access = excluded.access`;
       yield* sql`delete from draft_shares where draft_id = ${message.draft}
         and user_id not in (select value from json_each(${JSON.stringify(message.people.map((person) => person.id))}))`;
+      return;
+    }
+    case "Blocks": {
+      // The versions the holder pinned until now are in use until this moment.
+      yield* sql`insert into block_versions (type, version, last_used_at)
+        select key, value, ${new Date().toISOString()} from block_usage, json_each(block_usage.lockfile)
+        where site_id = ${site} and holder = ${message.holder}
+        on conflict (type, version) do update set last_used_at = excluded.last_used_at`;
+      if (message.lockfile === null)
+        yield* sql`delete from block_usage where site_id = ${site} and holder = ${message.holder}`;
+      else
+        yield* sql`insert into block_usage (site_id, holder, lockfile)
+          values (${site}, ${message.holder}, ${encodeLockfile(message.lockfile)})
+          on conflict (site_id, holder) do update set lockfile = excluded.lockfile`;
+      return;
+    }
+    case "BrandTaken": {
+      yield* sql`update sites set brand_revision = max(coalesce(brand_revision, 0), ${message.number})
+        where id = ${site}`;
       return;
     }
   }

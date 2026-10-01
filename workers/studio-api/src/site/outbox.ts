@@ -2,6 +2,7 @@ import { DraftName } from "@repo/contracts/draft";
 import { DraftId } from "@repo/contracts/ids";
 import { Release } from "@repo/contracts/release";
 import { ShareAccess } from "@repo/contracts/sharing";
+import { Lockfile } from "@repo/contracts/snapshot";
 import { Submission } from "@repo/contracts/submission";
 import { Context, Effect, Layer, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
@@ -33,6 +34,16 @@ export const OutboxMessage = Schema.TaggedUnion({
     name: DraftName,
     people: Schema.Array(Schema.Struct({ id: Schema.String, access: ShareAccess })),
   },
+  /**
+   * The block versions one of the site's holders renders with: the live
+   * release, or an open draft. A null lockfile means the draft closed.
+   */
+  Blocks: {
+    holder: Schema.Union([Schema.Literal("live"), DraftId]),
+    lockfile: Schema.NullOr(Lockfile),
+  },
+  /** The newest brand revision the site has taken in. */
+  BrandTaken: { number: Schema.Int },
   Notify: {
     notification: Notification,
     submission: Submission,

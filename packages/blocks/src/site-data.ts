@@ -1,3 +1,4 @@
+import type { BrandIdentity } from "@repo/contracts/brand";
 import type { FormDefinition } from "@repo/contracts/form";
 import type { FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
@@ -35,6 +36,7 @@ const newestFirst = Order.combine(
  */
 export const siteData = (site: {
   readonly settings: SiteSettings;
+  readonly identity: BrandIdentity;
   readonly menus: Menus;
   readonly pages: ReadonlyArray<PageEntry>;
   readonly forms: Readonly<Record<FormId, FormDefinition>>;
@@ -47,8 +49,12 @@ export const siteData = (site: {
     label: item.label,
     href: href(item.target),
   });
+  const logo = site.identity.logo === null ? undefined : site.media(site.identity.logo);
+  const logoOnDark =
+    site.identity.logoOnDark === null ? undefined : site.media(site.identity.logoOnDark);
   return {
     name: site.settings.name,
+    logo: logo === undefined ? null : { light: logo, onDark: logoOnDark ?? null },
     menus: {
       main: site.menus.main.map((item) => ({
         ...resolve(item),

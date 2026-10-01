@@ -2,7 +2,7 @@ import { D1Client } from "@effect/sql-d1";
 import { agentBasePath } from "@repo/contracts/agent";
 import { liveBasePath } from "@repo/contracts/live";
 import { routingKeys } from "@repo/contracts/snapshot";
-import { previewBasePath, reviewBasePath } from "@repo/contracts/studio";
+import { brandMediaBasePath, previewBasePath, reviewBasePath } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { WorkerEntrypoint } from "cloudflare:workers";
 import { Effect } from "effect";
@@ -10,8 +10,9 @@ import { getServerByName } from "partyserver";
 
 import { serveAgent } from "./agent/route.ts";
 import { authBasePath, authFor } from "./auth.ts";
+import { offerMissedRevisions } from "./brand-updates.ts";
 import { serveLive } from "./live.ts";
-import { servePreviewMedia, serveReviewMedia } from "./media.ts";
+import { serveBrandMedia, servePreviewMedia, serveReviewMedia } from "./media.ts";
 import { reconcileSites } from "./reconcile.ts";
 import { serveStudioRpc } from "./rpc.ts";
 
@@ -42,19 +43,34 @@ export default class StudioApi extends WorkerEntrypoint<StudioApiEnv> {
       return servePreviewMedia(request, this.env);
     if (request.method === "GET" && url.pathname.startsWith(`${reviewBasePath}/`))
       return serveReviewMedia(request, this.env);
+    if (request.method === "GET" && url.pathname.startsWith(`${brandMediaBasePath}/`))
+      return serveBrandMedia(request, this.env);
     return Response.json({ code: "not_found", message: "Route not found." }, { status: 404 });
   }
 
-  /** The reconcile job, on the cron schedule infra sets. */
+  /**
+   * The scheduled jobs, on the cron schedule infra sets: the reconcile job,
+   * and offering brand revisions again to sites that missed them.
+   */
   override async scheduled() {
-    const reconciled = await Effect.runPromise(
-      reconcileSites(
-        (site) => this.env.ROUTING.get(routingKeys.site(site)),
-        (site) =>
-          Effect.promise(async () => (await getServerByName(this.env.SITE_DOC, site)).reconcile()),
-      ).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
+    const [reconciled, offered] = await Effect.runPromise(
+      Effect.all([
+        reconcileSites(
+          (site) => this.env.ROUTING.get(routingKeys.site(site)),
+          (site) =>
+            Effect.promise(async () =>
+              (await getServerByName(this.env.SITE_DOC, site)).reconcile(),
+            ),
+        ),
+        offerMissedRevisions(this.env),
+      ]).pipe(Effect.provide(D1Client.layer({ db: this.env.CORE }))),
     );
     if (reconciled.length > 0)
       console.warn("KV didn't serve the live release, so SiteDoc wrote it again", reconciled);
+    if (offered.length > 0)
+      console.warn(
+        "Sites hadn't taken their brand's newest revision, so it was offered again",
+        offered,
+      );
   }
 }

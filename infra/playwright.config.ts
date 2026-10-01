@@ -17,6 +17,8 @@ export default defineConfig({
     browserName: "chromium",
     headless: true,
     viewport: { width: 1280, height: 800 },
+    // Sections fade in on scroll with a theme's motion on, which a full-page screenshot would catch half done.
+    reducedMotion: "reduce",
     actionTimeout: 60_000,
     trace: "retain-on-failure",
     screenshot: "only-on-failure",

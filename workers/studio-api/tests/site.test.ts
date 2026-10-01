@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest";
+import type { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, DraftName } from "@repo/contracts/draft";
-import { BlockId, type DraftId, PageId, TurnId } from "@repo/contracts/ids";
+import { BlockId, BlockType, type DraftId, PageId, TurnId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import type { ConflictKey, Side } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
@@ -9,11 +10,19 @@ import { liveReleaseOf } from "@repo/contracts/release";
 import type { Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import type { Approver } from "@repo/domain/approvals";
-import { ResolvedTheme } from "@repo/tokens";
+import { resolveTheme } from "@repo/tokens";
 import { Deferred, Effect, Fiber, Layer, Option, Schema } from "effect";
 
 import { Site } from "../src/site/site.ts";
-import { harbourLive, platform, siteService, storage } from "./support/site.ts";
+import {
+  encodeBrand,
+  harbourBrand,
+  harbourLive,
+  platform,
+  type PlatformState,
+  siteService,
+  storage,
+} from "./support/site.ts";
 
 const sam = { id: "user_sam", name: "Sam Okafor" };
 const meera = { id: "user_meera", name: "Meera Kapoor" };
@@ -34,7 +43,6 @@ const twoSteps: Workflow = [
 
 const name = Schema.decodeSync(DraftName);
 const decodeBatch = Schema.decodeSync(Batch);
-const encodeTheme = Schema.encodeSync(ResolvedTheme);
 
 let batches = 0;
 const setHeading = (value: string) => {
@@ -307,7 +315,7 @@ it.effect("people can't move a draft onto a release, or change a closed draft", 
             op: "rebase",
             base: { release: "rel_other", snapshot: "snap_other" },
             lockfile: draft.lockfile,
-            theme: encodeTheme(draft.theme),
+            brand: encodeBrand(draft.brand),
             settings: draft.settings,
             forms: {},
             menus: { main: [], footer: [] },
@@ -661,6 +669,127 @@ describe("the agent's turns", () => {
         expect(heading(draft)).toBe("Learn by building");
         expect(heading(draft, "b_intro")).toBe("Why you'll love it");
         expect(yield* site.undoTurn(sam, id, turn)).toEqual({ status: "nothing" });
+      }),
+    ),
+  );
+});
+
+describe("brand revisions", () => {
+  const revision = (number: number, brandColor: `#${string}`): BrandRevision => ({
+    ...harbourBrand,
+    number,
+    theme: resolveTheme({ preset: "editorial", changes: { brandColor } }).theme,
+  });
+  const liveBrand = (site: Site["Service"], state: PlatformState) =>
+    Effect.map(site.live, (live) => state.manifests.get(live.snapshot)?.brand.number);
+
+  it.effect("reach the live site only when the Brand update draft publishes", () =>
+    withSite((site, state) =>
+      Effect.gen(function* () {
+        const update = yield* site.takeBrandRevision(meera, revision(2, "#7a1f5c"));
+        if (update._tag !== "Draft") return yield* Effect.die("Expected a Brand update draft.");
+        expect(update.draft).toMatchObject({ name: "Brand update", kind: { _tag: "BrandUpdate" } });
+        expect((yield* opened(site, update.draft.id)).brand.number).toBe(2);
+        expect(yield* liveBrand(site, state)).toBe(1);
+
+        // Another draft keeps the revision it started with.
+        const other = yield* site.createDraft(sam, name("Summer copy"));
+        expect((yield* opened(site, other.id)).brand.number).toBe(1);
+
+        yield* published(site, update.draft.id, meera);
+        expect(yield* liveBrand(site, state)).toBe(2);
+        // The other draft takes the revision once it merges what's live.
+        expect((yield* opened(site, other.id)).brand.number).toBe(2);
+      }),
+    ),
+  );
+
+  it.effect("move an unpublished Brand update draft rather than making a second", () =>
+    withSite((site) =>
+      Effect.gen(function* () {
+        const first = yield* site.takeBrandRevision(meera, revision(2, "#7a1f5c"));
+        const second = yield* site.takeBrandRevision(meera, revision(3, "#1f5c44"));
+        if (first._tag !== "Draft" || second._tag !== "Draft")
+          return yield* Effect.die("Expected a Brand update draft.");
+        expect(second.draft.id).toBe(first.draft.id);
+        expect((yield* opened(site, first.draft.id)).brand.number).toBe(3);
+        expect(
+          (yield* site.drafts).filter((draft) => draft.kind._tag === "BrandUpdate"),
+        ).toHaveLength(1);
+      }),
+    ),
+  );
+
+  it.effect("are taken once, and never move a site back to an older one", () =>
+    withSite((site, state) =>
+      Effect.gen(function* () {
+        yield* site.takeBrandRevision(meera, revision(3, "#7a1f5c"));
+        expect(yield* site.takeBrandRevision(meera, revision(3, "#7a1f5c"))).toEqual({
+          _tag: "Taken",
+        });
+        expect(yield* site.takeBrandRevision(meera, revision(2, "#1f5c44"))).toEqual({
+          _tag: "Taken",
+        });
+        // The live site already has revision 1.
+        expect(yield* site.takeBrandRevision(meera, harbourBrand)).toEqual({ _tag: "Taken" });
+        yield* site.deliverOutbox;
+        expect(state.delivered.filter((message) => message._tag === "BrandTaken").at(-1)).toEqual({
+          _tag: "BrandTaken",
+          number: 3,
+        });
+      }),
+    ),
+  );
+
+  it.effect(
+    "stay in a Brand update draft submitted before them, once that submission publishes",
+    () =>
+      withSite((site, state) =>
+        Effect.gen(function* () {
+          const update = yield* site.takeBrandRevision(meera, revision(2, "#7a1f5c"));
+          if (update._tag !== "Draft") return yield* Effect.die("Expected a Brand update draft.");
+          const submission = yield* submitted(site, update.draft.id);
+          yield* site.takeBrandRevision(meera, revision(3, "#1f5c44"));
+          yield* approve(site, approver(jonah, ["approver"]), submission);
+          yield* approve(site, approver(meera), submission);
+          expect(yield* liveBrand(site, state)).toBe(2);
+          const draft = yield* opened(site, update.draft.id);
+          expect(draft.brand.number).toBe(3);
+        }),
+      ),
+  );
+});
+
+describe("block upgrades", () => {
+  it.effect("make one draft that moves the live content to the newer version", () =>
+    withSite((site, state) =>
+      Effect.gen(function* () {
+        const adopted = yield* site.adoptUpgrade(meera, BlockType.make("hero"), 3);
+        if (Option.isNone(adopted)) return yield* Effect.die("Expected an upgrade draft.");
+        expect(adopted.value).toMatchObject({
+          name: "Hero v3 upgrade",
+          kind: { _tag: "BlockUpgrade", type: "hero", version: 3 },
+        });
+        const draft = yield* opened(site, adopted.value.id);
+        expect(draft.lockfile["hero"]).toBe(3);
+        expect(draft.pages[PageId.make("pg_home")]?.blocks[BlockId.make("b_hero")]?.props).toEqual({
+          heading: "Learn by building",
+          image: expect.anything(),
+          actions: [],
+        });
+        // Adopting again finds the same draft; the live site is untouched.
+        const again = yield* site.adoptUpgrade(meera, BlockType.make("hero"), 3);
+        expect(Option.map(again, (draft) => draft.id)).toEqual(Option.some(adopted.value.id));
+        const live = yield* site.live;
+        expect(state.manifests.get(live.snapshot)?.lockfile["hero"]).toBe(1);
+      }),
+    ),
+  );
+
+  it.effect("aren't made for a version the site already has", () =>
+    withSite((site) =>
+      Effect.gen(function* () {
+        expect(yield* site.adoptUpgrade(meera, BlockType.make("hero"), 1)).toEqual(Option.none());
       }),
     ),
   );

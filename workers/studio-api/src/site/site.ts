@@ -1,7 +1,14 @@
-import { loadBlockVersions } from "@repo/blocks";
+import {
+  loadBlock,
+  loadBlockVersions,
+  removedBlockVersions,
+  withNewBlockTypes,
+} from "@repo/blocks";
+import type { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, type DraftName, isBehind, type SiteContent } from "@repo/contracts/draft";
 import {
   BatchId,
+  type BlockType,
   type DraftId,
   type PageId,
   randomId,
@@ -24,6 +31,7 @@ import {
   type SnapshotManifest,
 } from "@repo/contracts/snapshot";
 import {
+  BlocksRemoved,
   CannotDecide,
   type Decision,
   DecisionOutcome,
@@ -42,7 +50,13 @@ import type { Workflow } from "@repo/contracts/workflow";
 import { type Approver, eligibility } from "@repo/domain/approvals";
 import type { BlockContracts } from "@repo/domain/document";
 import { type Frozen, freeze, shownMedia } from "@repo/domain/freeze";
-import { changesBetween, contractsAt, isResolved, mergeSites } from "@repo/domain/merge";
+import {
+  changesBetween,
+  contractsAt,
+  isResolved,
+  mergeSites,
+  migrateContent,
+} from "@repo/domain/merge";
 import { rebaseOps } from "@repo/domain/rebase";
 import { draftAccess, type Visitor } from "@repo/domain/sharing";
 import { Context, Effect, Layer, Option, Schema, Semaphore } from "effect";
@@ -51,6 +65,7 @@ import { type SqlError, SqlClient } from "effect/unstable/sql";
 import { SiteApprovals, type Stored } from "./approvals.ts";
 import {
   type BatchResult,
+  byBrand,
   byPerson,
   bySite,
   type DraftInfo,
@@ -92,6 +107,22 @@ export interface UpdatePreview {
 export type TurnUndo =
   | { readonly status: "undone"; readonly kept: boolean }
   | { readonly status: "nothing" };
+
+/** What bringing a brand revision to a site did. */
+export type BrandUpdate =
+  | { readonly _tag: "Draft"; readonly draft: DraftSummary }
+  /** The site already had this revision, or a newer one. */
+  | { readonly _tag: "Taken" };
+
+/** A block type the live site pins, and how much of the site uses it. */
+export interface BlockInUse {
+  readonly type: BlockType;
+  readonly version: number;
+  /** The pages and posts with the block on them. */
+  readonly pages: number;
+  /** Whether the site's header or footer is this block. */
+  readonly sitewide: boolean;
+}
 
 /** An open draft, and how the drafts list sums it up. */
 export interface DraftView {
@@ -287,17 +318,44 @@ export class Site extends Context.Service<
       note: string,
       studio: string,
     ) => Effect.Effect<DecisionOutcome, StorageError | SubmissionNotFound | CannotDecide>;
-    /** Makes the release that was live before the latest publish live again. */
+    /**
+     * Makes the release that was live before the latest publish live again,
+     * while the registry still holds every block version it pins.
+     */
     readonly rollBack: (
       actor: Collaborator,
       studio: string,
-    ) => Effect.Effect<Release, StorageError | NothingToRollBack>;
-    /** A new draft holding an earlier release's content, to publish through the workflow. */
+    ) => Effect.Effect<Release, StorageError | NothingToRollBack | BlocksRemoved>;
+    /**
+     * A new draft holding an earlier release's content, to publish through
+     * the workflow, while the registry still holds every block version it pins.
+     */
     readonly restore: (
       by: Collaborator,
       release: ReleaseId,
       name: DraftName,
+    ) => Effect.Effect<Option.Option<DraftSummary>, StorageError | BlocksRemoved>;
+    /**
+     * Brings a brand revision to the site, once: a Brand update draft moves
+     * to it, or one is made from what's live. A site whose live release
+     * already has the revision, or a newer one, needs no draft.
+     */
+    readonly takeBrandRevision: (
+      by: Collaborator,
+      revision: BrandRevision,
+    ) => Effect.Effect<BrandUpdate, StorageError>;
+    /**
+     * A draft that moves the site's live content to a newer version of one
+     * block, migrating it through each version between. A site that already
+     * has an open draft for that version gets it back.
+     */
+    readonly adoptUpgrade: (
+      by: Collaborator,
+      type: BlockType,
+      version: number,
     ) => Effect.Effect<Option.Option<DraftSummary>, StorageError>;
+    /** The block versions the live site pins, and where each block is used. */
+    readonly blocksInUse: Effect.Effect<ReadonlyArray<BlockInUse>, StorageError>;
     /** Writes the live release to KV, and its copy to D1, again. */
     readonly reconcile: Effect.Effect<void, StorageError>;
     /** Whether the outbox holds anything still to deliver. */
@@ -327,18 +385,40 @@ export class Site extends Context.Service<
       const inReleaseTurn = <A, E, R>(effect: Effect.Effect<A, E, R>) =>
         releaseTurn.withPermit(effect);
 
+      /** Records that the site has a brand revision, and queues D1's copy of the newest it has. */
+      const brandTaken = (number: number) =>
+        sql.withTransaction(
+          Effect.gen(function* () {
+            yield* sql`insert or ignore into brand_revisions (number, taken_at)
+              values (${number}, ${now()})`;
+            const [newest] = yield* sql<{
+              readonly number: number;
+            }>`select max(number) as number from brand_revisions`;
+            yield* outbox.send({ _tag: "BrandTaken", number: newest?.number ?? number });
+          }),
+        );
+
+      const newestBrandTaken = Effect.map(
+        sql<{ readonly number: number | null }>`select max(number) as number from brand_revisions`,
+        ([row]) => row?.number ?? 0,
+      );
+
       // A site whose SiteDoc has recorded nothing yet serves what KV names,
       // such as a seeded snapshot, and SiteDoc takes it from there.
       if (Option.isNone(yield* releases.live)) {
         const served = yield* routing.read;
-        if (Option.isSome(served))
+        if (Option.isSome(served)) {
+          const manifest = yield* snapshots.manifest(served.value.snapshot);
           yield* releases.append(
             Release.cases.Imported.make({
               id: served.value.release,
               snapshot: served.value.snapshot,
               at: now(),
             }),
+            manifest.lockfile,
           );
+          yield* brandTaken(manifest.brand.number);
+        }
       }
 
       const liveRelease = Effect.flatMap(releases.live, (latest) =>
@@ -370,7 +450,7 @@ export class Site extends Context.Service<
           parts: manifest.parts,
           forms: manifest.forms,
           lockfile: manifest.lockfile,
-          theme: manifest.theme,
+          brand: manifest.brand,
           pages: Object.fromEntries(pages.map((page) => [page.id, page])),
         };
         contents.set(snapshot, content);
@@ -479,6 +559,21 @@ export class Site extends Context.Service<
         return resolved;
       });
 
+      /**
+       * Live content as a new draft starts from it: with every block type in
+       * the library, so new blocks reach sites that started before them.
+       */
+      const startingContent = (content: SiteContent): SiteContent => ({
+        ...content,
+        lockfile: withNewBlockTypes(content.lockfile),
+      });
+
+      /** Fails when the registry no longer holds a block version the content pins. */
+      const keptBlocks = (content: SiteContent) => {
+        const removed = removedBlockVersions(content.lockfile);
+        return removed.length === 0 ? Effect.void : Effect.fail(new BlocksRemoved({ removed }));
+      };
+
       const findRelease = Effect.fn("Site.findRelease")(function* (id: ReleaseId) {
         const history = yield* releases.history;
         return Option.fromNullishOr(history.find((indexed) => indexed.release.id === id)?.release);
@@ -522,7 +617,7 @@ export class Site extends Context.Service<
           parts: content.parts,
           forms: content.forms,
           lockfile: content.lockfile,
-          theme: content.theme,
+          brand: content.brand,
           media: Object.fromEntries(files),
           pages,
           gone: frozen.gone,
@@ -648,7 +743,7 @@ export class Site extends Context.Service<
             const edited = yield* drafts.editedSince(id, stored.revision);
             yield* sql.withTransaction(
               Effect.gen(function* () {
-                yield* releases.append(release);
+                yield* releases.append(release, published.lockfile);
                 yield* recordSubmission(
                   {
                     ...stored,
@@ -706,7 +801,7 @@ export class Site extends Context.Service<
           parts: manifest.parts,
           forms: manifest.forms,
           lockfile: manifest.lockfile,
-          theme: manifest.theme,
+          brand: manifest.brand,
           pages: manifest.pages.map(listingOf),
           media: manifest.media,
           page,
@@ -821,9 +916,9 @@ export class Site extends Context.Service<
         summary,
         createDraft: Effect.fn("Site.createDraft")(function* (by, name) {
           const base = yield* liveRelease;
-          const content = yield* contentOf(base.snapshot);
+          const content = startingContent(yield* contentOf(base.snapshot));
           const info = yield* inStorageTurn(
-            drafts.create({ name, by, base: liveReleaseOf(base), content }),
+            drafts.create({ name, kind: { _tag: "Edit" }, by, base: liveReleaseOf(base), content }),
           );
           return { ...info, review: null };
         }),
@@ -1045,7 +1140,7 @@ export class Site extends Context.Service<
                 parts: draft.parts,
                 forms: draft.forms,
                 lockfile: draft.lockfile,
-                theme: draft.theme,
+                brand: draft.brand,
                 pages: served.map(listingOf),
                 media: Object.fromEntries(files),
                 page: served.find((page) => page.path === path) ?? null,
@@ -1072,22 +1167,24 @@ export class Site extends Context.Service<
         rollBack: (actor, studio) =>
           inReleaseTurn(
             Effect.gen(function* () {
-              const release = yield* inStorageTurn(
+              // Only the release turn adds releases, so the history read here stays the latest.
+              const history = yield* releases.history;
+              const [before, latest] = history.slice(-2).map(releaseOf);
+              if (latest?._tag !== "Published" || before === undefined)
+                return yield* new NothingToRollBack({});
+              const content = yield* contentOf(before.snapshot);
+              yield* keptBlocks(content);
+              const release = Release.cases.RolledBack.make({
+                id: ReleaseId.make(randomId("rel")),
+                snapshot: before.snapshot,
+                at: now(),
+                by: actor,
+                undid: latest.id,
+              });
+              yield* inStorageTurn(
                 Effect.gen(function* () {
-                  const history = yield* releases.history;
-                  const [before, latest] = history.slice(-2).map(releaseOf);
-                  if (latest?._tag !== "Published" || before === undefined)
-                    return yield* new NothingToRollBack({});
-                  const release = Release.cases.RolledBack.make({
-                    id: ReleaseId.make(randomId("rel")),
-                    snapshot: before.snapshot,
-                    at: now(),
-                    by: actor,
-                    undid: latest.id,
-                  });
-                  yield* releases.append(release);
+                  yield* releases.append(release, content.lockfile);
                   yield* goLive(release);
-                  return release;
                 }),
               );
               yield* mergeUnderReview(studio);
@@ -1098,11 +1195,115 @@ export class Site extends Context.Service<
           const restored = yield* findRelease(id);
           if (Option.isNone(restored)) return Option.none();
           const base = yield* liveRelease;
-          const content = yield* contentOf(restored.value.snapshot);
+          const restoredContent = yield* contentOf(restored.value.snapshot);
+          yield* keptBlocks(restoredContent);
+          // The live site's brand revision stays: a site never goes back to an older one.
+          const current = yield* contentOf(base.snapshot);
+          const content = startingContent({ ...restoredContent, brand: current.brand });
           const info = yield* inStorageTurn(
-            drafts.create({ name, by, base: liveReleaseOf(base), content }),
+            drafts.create({ name, kind: { _tag: "Edit" }, by, base: liveReleaseOf(base), content }),
           );
           return Option.some({ ...info, review: null });
+        }),
+        takeBrandRevision: (by, revision) =>
+          inReleaseTurn(
+            Effect.gen(function* (): Effect.fn.Return<BrandUpdate, StorageError> {
+              if ((yield* newestBrandTaken) >= revision.number) return { _tag: "Taken" };
+              const base = yield* liveRelease;
+              const content = yield* contentOf(base.snapshot);
+              return yield* inStorageTurn(
+                Effect.gen(function* () {
+                  if (content.brand.number >= revision.number) {
+                    yield* brandTaken(revision.number);
+                    return { _tag: "Taken" } as const;
+                  }
+                  const open = yield* drafts.openOfKind({ _tag: "BrandUpdate" });
+                  if (Option.isSome(open)) {
+                    const draft = yield* drafts.draft(open.value.id);
+                    const result = yield* commit(
+                      by,
+                      draft.id,
+                      {
+                        id: BatchId.make(randomId("bat")),
+                        ops: [
+                          {
+                            op: "rebase",
+                            base: draft.base,
+                            lockfile: draft.lockfile,
+                            brand: revision,
+                            settings: draft.settings,
+                            forms: draft.forms,
+                            menus: draft.parts.menus,
+                          },
+                        ],
+                      },
+                      byBrand,
+                    );
+                    if (result.status !== "committed")
+                      return yield* Effect.die(`SiteDoc couldn't move ${draft.id} to a new brand.`);
+                  }
+                  const info = Option.isSome(open)
+                    ? open.value
+                    : yield* drafts.create({
+                        name: "Brand update",
+                        kind: { _tag: "BrandUpdate" },
+                        by,
+                        base: liveReleaseOf(base),
+                        content: startingContent({ ...content, brand: revision }),
+                      });
+                  yield* brandTaken(revision.number);
+                  return { _tag: "Draft", draft: yield* summary(info.id) } as const;
+                }),
+              ).pipe(
+                // The draft was found open in this storage turn, so it's still there.
+                Effect.catchTag("DraftNotFound", Effect.die),
+              );
+            }),
+          ),
+        adoptUpgrade: Effect.fn("Site.adoptUpgrade")(function* (by, type, version) {
+          const kind = { _tag: "BlockUpgrade", type, version } as const;
+          const open = yield* drafts.openOfKind(kind);
+          if (Option.isSome(open))
+            return Option.some(
+              yield* summary(open.value.id).pipe(
+                // The draft was just found open, and a draft is never removed.
+                Effect.catchTag("DraftNotFound", Effect.die),
+              ),
+            );
+          const base = yield* liveRelease;
+          const content = yield* contentOf(base.snapshot);
+          const current = content.lockfile[type];
+          if (current === undefined || current >= version) return Option.none();
+          const target = { [type]: version };
+          const library = yield* Effect.promise(() =>
+            loadBlockVersions([content.lockfile, target]),
+          );
+          const definition = yield* Effect.promise(() => loadBlock(type, target));
+          const info = yield* inStorageTurn(
+            drafts.create({
+              name: `${definition.title} v${version} upgrade`,
+              kind,
+              by,
+              base: liveReleaseOf(base),
+              content: startingContent(migrateContent(library, content, target)),
+            }),
+          );
+          return Option.some({ ...info, review: null });
+        }),
+        blocksInUse: Effect.gen(function* () {
+          const content = yield* contentOf((yield* liveRelease).snapshot);
+          const pages = Object.values(content.pages).filter(
+            (page) => page.status !== "unpublished",
+          );
+          const sitewide = new Set(Object.values(content.parts.blocks).map((block) => block.type));
+          return Object.entries(content.lockfile).map(([type, version]) => ({
+            type,
+            version,
+            pages: pages.filter((page) =>
+              Object.values(page.blocks).some((block) => block.type === type),
+            ).length,
+            sitewide: sitewide.has(type),
+          }));
         }),
         reconcile: inStorageTurn(
           Effect.gen(function* () {

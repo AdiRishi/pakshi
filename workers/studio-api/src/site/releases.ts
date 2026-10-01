@@ -1,4 +1,5 @@
 import { Release } from "@repo/contracts/release";
+import type { Lockfile } from "@repo/contracts/snapshot";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -26,8 +27,14 @@ export class SiteReleases extends Context.Service<
     readonly history: Effect.Effect<ReadonlyArray<IndexedRelease>, StorageError>;
     /** The release the site serves, if it has ever served one. */
     readonly live: Effect.Effect<Option.Option<IndexedRelease>, StorageError>;
-    /** Records a release as the live one, and queues its copy for D1. */
-    readonly append: (release: Release) => Effect.Effect<IndexedRelease, StorageError>;
+    /**
+     * Records a release as the live one, and queues its copy for D1, with the
+     * block versions its snapshot pins.
+     */
+    readonly append: (
+      release: Release,
+      lockfile: Lockfile,
+    ) => Effect.Effect<IndexedRelease, StorageError>;
     /** Queues a release's copy for D1 again. */
     readonly resend: (release: IndexedRelease) => Effect.Effect<void, StorageError>;
   }
@@ -52,7 +59,7 @@ export class SiteReleases extends Context.Service<
       return SiteReleases.of({
         history: findAll(undefined),
         live: findLatest(undefined),
-        append: (release) =>
+        append: (release, lockfile) =>
           sql.withTransaction(
             Effect.gen(function* () {
               yield* sql`insert into releases (id, release)
@@ -60,6 +67,7 @@ export class SiteReleases extends Context.Service<
               const latest = yield* findLatest(undefined);
               if (Option.isNone(latest)) return yield* Effect.die("A release was just recorded.");
               yield* send(latest.value);
+              yield* outbox.send({ _tag: "Blocks", holder: "live", lockfile });
               return latest.value;
             }),
           ),

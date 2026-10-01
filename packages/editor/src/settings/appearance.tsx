@@ -74,7 +74,7 @@ export function Appearance(props: {
 }) {
   const store = useStore();
   const { scheme } = useServices();
-  const colors = useEditorState((state) => state.view.theme.colors[scheme]);
+  const colors = useEditorState((state) => state.view.brand.theme.colors[scheme]);
   const tree = useSettled(useTree(props.target, props.block, props.instance));
   const { variants } = props.contract;
   const variantTrees = useMemo(

@@ -1,7 +1,16 @@
 {
   "brand": {
     "id": "brand_harbour",
-    "name": "Harbour Schools"
+    "name": "Harbour Schools",
+    "theme": {
+      "preset": "editorial",
+      "changes": {}
+    },
+    "identity": {
+      "logo": "med_harbourlogo",
+      "logoOnDark": "med_harbourlogolight",
+      "favicon": "med_harbouricon"
+    }
   },
   "site": {
     "id": "site_harbour",
@@ -81,6 +90,24 @@
       "width": 1600,
       "height": 1067,
       "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "med_harbourlogo": {
+      "contentType": "image/png",
+      "width": 678,
+      "height": 136,
+      "alt": "Harbour Schools"
+    },
+    "med_harbourlogolight": {
+      "contentType": "image/png",
+      "width": 678,
+      "height": 136,
+      "alt": "Harbour Schools, for dark backgrounds"
+    },
+    "med_harbouricon": {
+      "contentType": "image/png",
+      "width": 512,
+      "height": 512,
+      "alt": "Harbour Schools icon"
     }
   },
   "gone": ["/old-programme"]

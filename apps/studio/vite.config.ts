@@ -1,3 +1,4 @@
+import { themeFonts } from "@repo/tokens/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { devtools } from "@tanstack/devtools-vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
@@ -19,7 +20,7 @@ const config = defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  plugins: [devtools(), tailwindcss(), tanstackStart(), viteReact()],
+  plugins: [devtools(), tailwindcss(), themeFonts(), tanstackStart(), viteReact()],
 });
 
 export default config;

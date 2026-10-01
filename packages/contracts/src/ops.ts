@@ -1,6 +1,7 @@
-import { ResolvedTheme, Surface } from "@repo/tokens";
+import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 
+import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BatchId, BlockId, BlockType, FormId, PageId } from "./ids.ts";
 import { PageDocument, PagePath } from "./page.ts";
@@ -139,15 +140,16 @@ export type DeletePage = typeof DeletePage.Type;
 
 /**
  * Moves a draft onto a release, with the site-wide values only a merge
- * changes: the block lockfile, the theme, settings, forms and menus. SiteDoc
- * makes it when it merges a release into a draft or publishes the draft;
- * people's batches can't carry it.
+ * changes: the block lockfile, the brand revision, settings, forms and menus.
+ * SiteDoc makes it when it merges a release into a draft, publishes the
+ * draft, or moves a Brand update draft to a newer revision; people's batches
+ * can't carry it.
  */
 export const Rebase = Schema.Struct({
   op: Schema.Literal("rebase"),
   base: LiveRelease,
   lockfile: Lockfile,
-  theme: ResolvedTheme,
+  brand: BrandRevision,
   settings: SiteSettings,
   forms: Schema.Record(FormId, FormDefinition),
   menus: Menus,

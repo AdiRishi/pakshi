@@ -1,4 +1,6 @@
 import { D1Client } from "@effect/sql-d1";
+import { blockKey, latestLockfile } from "@repo/blocks";
+import { renderingChanges } from "@repo/blocks/rendering-changes";
 import type { Permission } from "@repo/contracts/access";
 import type { Draft } from "@repo/contracts/draft";
 import type { DraftId, SiteId } from "@repo/contracts/ids";
@@ -6,6 +8,7 @@ import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import {
+  BlocksRemoved,
   CannotDecide,
   type DecisionOutcome,
   DraftNotFound,
@@ -29,22 +32,34 @@ import {
   type SubmitOutcome,
   Unauthenticated,
   type UpdateOutcome,
+  UpToDate,
   Visitor,
   VisitorSession,
 } from "@repo/contracts/studio";
 import type { Submission } from "@repo/contracts/submission";
+import { authorize } from "@repo/domain/access";
 import { eligibility } from "@repo/domain/approvals";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Cause, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
+import { loadAccess } from "./access.ts";
 import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { authFor } from "./auth.ts";
+import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
+import { offerRevision } from "./brand-updates.ts";
+import { brandsFor, brandView, saveLook, saveVoice } from "./brands.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
 import type { Outcome, SiteDocError } from "./site-doc.ts";
 import type { BatchResult } from "./site/drafts.ts";
-import type { DraftView, Opened, SubmissionReview, UpdatePreview } from "./site/site.ts";
+import type {
+  BlockInUse,
+  DraftView,
+  Opened,
+  SubmissionReview,
+  UpdatePreview,
+} from "./site/site.ts";
 import {
   approverOn,
   findSite,
@@ -522,8 +537,9 @@ const handlers = (env: StudioApiEnv) =>
                   "roll back this site",
                 );
                 const studio = yield* StudioAddress;
-                return yield* outcome(NothingToRollBack, async (): Promise<Outcome<Release>> =>
-                  doc.rollBack(collaborator(person), studio),
+                return yield* outcome(
+                  Schema.Union([NothingToRollBack, BlocksRemoved]),
+                  async (): Promise<Outcome<Release>> => doc.rollBack(collaborator(person), studio),
                 );
               }),
             ),
@@ -533,10 +549,178 @@ const handlers = (env: StudioApiEnv) =>
             withCore("restore release")(
               Effect.gen(function* () {
                 const { doc } = yield* editable(person, site);
-                const draft = yield* Effect.tryPromise(async (): Promise<DraftSummary | null> =>
-                  doc.restore(collaborator(person), release, name),
+                const draft = yield* outcome(
+                  BlocksRemoved,
+                  async (): Promise<Outcome<DraftSummary | null>> =>
+                    doc.restore(collaborator(person), release, name),
                 );
                 return draft ?? (yield* new ReleaseNotFound({ release }));
+              }),
+            ),
+          ),
+        brands: () => SignedIn.use((person) => withCore("brands")(brandsFor(person))),
+        brand: ({ brand }) => SignedIn.use((person) => withCore("brand")(brandView(person, brand))),
+        saveBrandLook: ({ brand, look, seen }) =>
+          SignedIn.use((person) =>
+            withCore("save brand look")(
+              Effect.gen(function* () {
+                const revision = yield* saveLook(person, brand, look, seen);
+                const { sites } = yield* brandView(person, brand);
+                // A site that can't be reached now gets the revision from the scheduled job.
+                const updates = yield* Effect.forEach(
+                  sites,
+                  (site) =>
+                    offerRevision(env, site.id, revision).pipe(
+                      Effect.map((update) => ({
+                        site,
+                        draft:
+                          update._tag === "Draft"
+                            ? { id: update.draft.id, name: update.draft.name }
+                            : null,
+                        pending: false,
+                      })),
+                      Effect.catch((cause) =>
+                        Effect.as(Effect.logError(`Offering ${site.id} a revision failed`, cause), {
+                          site,
+                          draft: null,
+                          pending: true,
+                        }),
+                      ),
+                    ),
+                  { concurrency: 10 },
+                );
+                return {
+                  revision: {
+                    number: revision.number,
+                    by: revision.created_by,
+                    at: revision.created_at,
+                  },
+                  sites: updates,
+                };
+              }),
+            ),
+          ),
+        saveVoiceGuide: ({ brand, voice }) =>
+          SignedIn.use((person) => withCore("save voice guide")(saveVoice(person, brand, voice))),
+        blockCatalog: () =>
+          SignedIn.use((person) =>
+            withCore("block catalog")(
+              Effect.gen(function* () {
+                const { access } = yield* loadAccess(person.id);
+                const platform = authorize(access, "blocks.upgrade", { kind: "organization" });
+                return {
+                  blocks: yield* catalog(),
+                  removable: platform ? yield* removableVersions() : null,
+                  can: { upgradeEverywhere: platform },
+                };
+              }),
+            ),
+          ),
+        siteBlocks: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("site blocks")(
+              Effect.gen(function* () {
+                const { found, doc } = yield* editable(person, site);
+                const [inUse, drafts] = yield* Effect.all(
+                  [
+                    Effect.tryPromise(async (): Promise<ReadonlyArray<BlockInUse>> =>
+                      doc.blocksInUse(),
+                    ),
+                    Effect.tryPromise(async (): Promise<ReadonlyArray<DraftSummary>> =>
+                      doc.drafts(),
+                    ),
+                  ],
+                  { concurrency: "unbounded" },
+                );
+                const blocks = yield* Effect.forEach(inUse, (block) =>
+                  Effect.gen(function* () {
+                    const latest = latestLockfile[block.type] ?? block.version;
+                    const upgrade = drafts.find(
+                      (draft) =>
+                        draft.status === "open" &&
+                        draft.kind._tag === "BlockUpgrade" &&
+                        draft.kind.type === block.type &&
+                        draft.kind.version === latest,
+                    );
+                    return {
+                      ...block,
+                      title: yield* blockTitle(block.type),
+                      latest,
+                      newer: yield* newerVersions(block.type, block.version),
+                      upgradeDraft:
+                        upgrade === undefined ? null : { id: upgrade.id, name: upgrade.name },
+                      renderingChanges: renderingChanges
+                        .filter((entry) =>
+                          entry.versions.includes(blockKey(block.type, block.version)),
+                        )
+                        .map(({ date, change }) => ({ date, change })),
+                    };
+                  }),
+                );
+                return {
+                  site: { id: found.id, name: found.name },
+                  blocks: blocks.toSorted((a, b) => a.title.localeCompare(b.title)),
+                  can: { upgrade: found.permissions.includes("blocks.upgrade") },
+                };
+              }),
+            ),
+          ),
+        adoptUpgrade: ({ site, type }) =>
+          SignedIn.use((person) =>
+            withCore("adopt upgrade")(
+              Effect.gen(function* () {
+                const { doc } = yield* permitted(
+                  person,
+                  site,
+                  "blocks.upgrade",
+                  "adopt block upgrades on this site",
+                );
+                const latest = latestLockfile[type];
+                const draft =
+                  latest === undefined
+                    ? null
+                    : yield* Effect.tryPromise(async (): Promise<DraftSummary | null> =>
+                        doc.adoptUpgrade(collaborator(person), type, latest),
+                      );
+                return draft ?? (yield* new UpToDate({ type }));
+              }),
+            ),
+          ),
+        upgradeEverywhere: ({ type }) =>
+          SignedIn.use((person) =>
+            withCore("upgrade everywhere")(
+              Effect.gen(function* () {
+                const { access } = yield* loadAccess(person.id);
+                if (!authorize(access, "blocks.upgrade", { kind: "organization" }))
+                  return yield* new NotPermitted({ action: "upgrade a block on every site" });
+                const latest = latestLockfile[type];
+                if (latest === undefined) return [];
+                const sites = yield* sitesBehind(type, latest);
+                return yield* Effect.forEach(
+                  sites,
+                  (id) =>
+                    Effect.gen(function* () {
+                      // The site's ID came from D1's copy of what its SiteDoc pins.
+                      const site = yield* findSite(id).pipe(Effect.orDie);
+                      const draft = yield* siteDoc(env, id).pipe(
+                        Effect.flatMap((doc) =>
+                          Effect.tryPromise(async (): Promise<DraftSummary | null> =>
+                            doc.adoptUpgrade(collaborator(person), type, latest),
+                          ),
+                        ),
+                        Effect.map((found) =>
+                          found === null ? null : { id: found.id, name: found.name },
+                        ),
+                        Effect.option,
+                      );
+                      return {
+                        site: { id: site.id, name: site.name },
+                        draft: Option.getOrNull(draft),
+                        failed: Option.isNone(draft),
+                      };
+                    }),
+                  { concurrency: 10 },
+                );
               }),
             ),
           ),

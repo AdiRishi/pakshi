@@ -107,7 +107,7 @@ export const rebaseOps = (
     op: "rebase",
     base,
     lockfile: content.lockfile,
-    theme: content.theme,
+    brand: content.brand,
     settings: content.settings,
     forms: content.forms,
     menus: content.parts.menus,

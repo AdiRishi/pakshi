@@ -1,6 +1,6 @@
-import { ResolvedTheme } from "@repo/tokens";
 import { Predicate, Schema } from "effect";
 
+import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BlockType, FormId, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
 import { PageDocument, PageMeta, PagePath, PostMeta } from "./page.ts";
@@ -45,9 +45,9 @@ export type SnapshotPage = typeof SnapshotPage.Type;
 
 /**
  * Everything that leaves a draft: the site's settings, header, footer, menus,
- * forms, block lockfile, resolved theme and media, plus one entry per page
- * pointing at its content-addressed page object. Snapshots never change once written, so previews, submissions
- * and releases are all pointers to one.
+ * forms, block lockfile, brand revision and media, plus one entry per page
+ * pointing at its content-addressed page object. Snapshots never change once
+ * written, so submissions and releases are both pointers to one.
  */
 export const SnapshotManifest = Schema.Struct({
   schema: Schema.Literal("pakshi.snapshot/1"),
@@ -57,7 +57,7 @@ export const SnapshotManifest = Schema.Struct({
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
   lockfile: Lockfile,
-  theme: ResolvedTheme,
+  brand: BrandRevision,
   media: Schema.Record(MediaId, MediaFile),
   pages: Schema.Array(SnapshotPage),
   /** Addresses of unpublished and deleted pages, which answer 410 Gone. */

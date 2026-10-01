@@ -1,14 +1,22 @@
 import { D1Client } from "@effect/sql-d1";
-import { DraftId, MediaId, SiteId, SubmissionId } from "@repo/contracts/ids";
+import { BrandId, DraftId, MediaId, SiteId, SubmissionId } from "@repo/contracts/ids";
 import { objectKeys } from "@repo/contracts/snapshot";
-import { mediaSegment, type Person, previewBasePath, reviewBasePath } from "@repo/contracts/studio";
+import {
+  brandMediaBasePath,
+  mediaSegment,
+  type Person,
+  previewBasePath,
+  reviewBasePath,
+} from "@repo/contracts/studio";
+import { permissionsOn } from "@repo/domain/access";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Option, Schema } from "effect";
 import type { SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
+import { loadAccess } from "./access.ts";
 import { authFor } from "./auth.ts";
-import { findSite, inSiteLibrary, siteOf, standingOn } from "./sites.ts";
+import { brandMedia, findSite, inSiteLibrary, siteOf, standingOn } from "./sites.ts";
 
 const notFound = () => new Response("Not found", { status: 404 });
 const signInFirst = () => new Response("Sign in to see this image.", { status: 401 });
@@ -77,6 +85,30 @@ export const servePreviewMedia = (request: Request, env: StudioApiEnv) =>
       );
       if (access === null || !(yield* inSiteLibrary(site.value, media))) return notFound();
       return yield* image(env, media);
+    }),
+  );
+
+/** An image in a brand's library, for anyone who holds a permission on the brand. */
+export const serveBrandMedia = (request: Request, env: StudioApiEnv) =>
+  answer(
+    env,
+    Effect.gen(function* () {
+      const [brand = "", media = "", ...rest] = new URL(request.url).pathname
+        .slice(brandMediaBasePath.length + 1)
+        .split("/");
+      const ids = Option.all({
+        brand: Schema.decodeOption(BrandId)(brand),
+        media: Schema.decodeOption(MediaId)(media),
+      });
+      if (Option.isNone(ids) || rest.length > 0) return notFound();
+      const person = yield* signedIn(request, env);
+      if (person === null) return signInFirst();
+      const { access } = yield* loadAccess(person.id);
+      if (permissionsOn(access, { kind: "brand", id: ids.value.brand }).length === 0)
+        return notFound();
+      const library = yield* brandMedia(ids.value.brand);
+      if (!library.some((file) => file.id === ids.value.media)) return notFound();
+      return yield* image(env, ids.value.media);
     }),
   );
 

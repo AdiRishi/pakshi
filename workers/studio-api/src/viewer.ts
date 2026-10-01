@@ -65,5 +65,8 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
       )
       .map((site) => ({ id: site.id, name: site.name, brand: site.brand_name })),
     approvalsWaiting: (yield* waitingFor(user)).length,
+    brands: [...access.grants, ...access.overrides].some(
+      (held) => held.scope.kind === "organization" || held.scope.kind === "brand",
+    ),
   };
 });

@@ -1,6 +1,7 @@
 import { loadBlocks } from "@repo/blocks";
+import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
-import { harbour } from "@repo/tokens";
+import { resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
 const paragraph = (text: string) => ({
@@ -43,7 +44,12 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
       "split",
     ].map((type) => [type, 1]),
   ),
-  theme: harbour,
+  brand: {
+    brand: "brand_harbour",
+    number: 1,
+    theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+    identity: noIdentity,
+  },
   pages: {
     pg_home: {
       schema: "pakshi.page/1",

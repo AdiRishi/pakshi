@@ -1,3 +1,4 @@
+import { D1Client } from "@effect/sql-d1";
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { runTurn, systemPrompt, turnContext } from "@repo/agent";
 import { loadBlocks } from "@repo/blocks";
@@ -37,6 +38,7 @@ import {
   conversationName,
   turnServices,
 } from "./agent/services.ts";
+import { voiceOf } from "./brands.ts";
 
 const decodeAuthorization = Schema.decodeUnknownOption(Schema.fromJsonString(AgentAuthorization));
 const decodeMessage = Schema.decodeUnknownOption(AgentClientMessageJson);
@@ -358,7 +360,14 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       );
       return yield* runTurn({
         chat,
-        system: systemPrompt(contracts, yield* conversation.brief),
+        system: systemPrompt(
+          contracts,
+          yield* voiceOf(who.brand).pipe(
+            Effect.provide(D1Client.layer({ db: env.CORE })),
+            Effect.orDie,
+          ),
+          yield* conversation.brief,
+        ),
         message: `${context}\n\n${message.text}`,
         afterStep: saveHistory,
       }).pipe(Effect.ensuring(saveHistory));

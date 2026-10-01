@@ -30,6 +30,7 @@ type BlockSpec<F extends Fields, Variant extends string> = PlacementSpec & {
   readonly variants: readonly [Variant, ...Array<Variant>];
   readonly agent: BlockContract["agent"];
   readonly migrate?: NonNullable<BlockContract["migrate"]>;
+  readonly changes?: NonNullable<BlockContract["changes"]>;
   readonly component: ComponentType<BlockComponentProps<F, Variant>>;
 };
 
@@ -83,6 +84,7 @@ const contractOf = <F extends Fields, Variant extends string>(
     variants: spec.variants,
     agent: spec.agent,
     migrate: spec.migrate ?? null,
+    changes: spec.changes ?? null,
   };
   switch (spec.placement) {
     case "section":

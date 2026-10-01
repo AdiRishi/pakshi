@@ -1,4 +1,5 @@
 import react from "@astrojs/react";
+import { themeFonts } from "@repo/tokens/vite";
 import tailwindcss from "@tailwindcss/vite";
 import { defineConfig } from "astro/config";
 
@@ -8,5 +9,5 @@ export default defineConfig({
   output: "server",
   devToolbar: { enabled: false },
   integrations: [react()],
-  vite: { plugins: [tailwindcss()] },
+  vite: { plugins: [tailwindcss(), themeFonts()] },
 });

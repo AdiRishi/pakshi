@@ -40,7 +40,7 @@ const flatten = (tree: BlockTree): Readonly<Record<BlockId, BlockInstance>> => {
  */
 export function BlockPreview(props: { readonly tree: BlockTree; readonly title: string }) {
   const { definitions, siteCss, scheme } = useServices();
-  const theme = useEditorState((state) => state.view.theme);
+  const theme = useEditorState((state) => state.view.brand.theme);
   const data = useDraftSiteData();
   const css = useMemo(() => themeCss(theme, scheme), [theme, scheme]);
   const element = useMemo(

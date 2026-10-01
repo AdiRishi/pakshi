@@ -1,7 +1,9 @@
 import { SqliteClient } from "@effect/sql-sqlite-do";
 import { Permission } from "@repo/contracts/access";
+import type { BrandRevision } from "@repo/contracts/brand";
 import type { DraftName } from "@repo/contracts/draft";
 import {
+  type BlockType,
   DraftId,
   type ReleaseId,
   SiteId,
@@ -24,6 +26,7 @@ import type { Batch } from "@repo/contracts/ops";
 import type { PagePath } from "@repo/contracts/page";
 import type { DraftSharing } from "@repo/contracts/sharing";
 import {
+  BlocksRemoved,
   CannotDecide,
   type Decision,
   DraftNotFound,
@@ -66,6 +69,7 @@ const encodeMessage = Schema.encodeSync(ServerMessageJson);
 
 /** The failures SiteDoc's RPC methods report, which callers decode on their side. */
 export const SiteDocError = Schema.Union([
+  BlocksRemoved,
   DraftNotFound,
   NothingToRollBack,
   SubmissionNotFound,
@@ -353,7 +357,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   createDraft(by: Collaborator, name: DraftName) {
-    return this.#run((site) => site.createDraft(by, name));
+    return this.#changing(() => this.#run((site) => site.createDraft(by, name)));
   }
 
   renameDraft(id: DraftId, name: DraftName) {
@@ -368,8 +372,9 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#call((site) => site.view(id));
   }
 
+  /** Opens a draft, merging the live release in first when that needs no one. */
   openDraft(by: Collaborator, id: DraftId) {
-    return this.#call((site) => site.open(by, id));
+    return this.#changing(() => this.#call((site) => site.open(by, id)));
   }
 
   applyBatch(actor: Collaborator, id: DraftId, batch: Batch) {
@@ -381,7 +386,7 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   updateDraft(actor: Collaborator, id: DraftId, resolutions: Resolutions, seen: ReleaseId) {
-    return this.#call((site) => site.update(actor, id, resolutions, seen));
+    return this.#changing(() => this.#call((site) => site.update(actor, id, resolutions, seen)));
   }
 
   access(id: DraftId, visitor: Visitor) {
@@ -534,7 +539,25 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   restore(by: Collaborator, release: ReleaseId, name: DraftName) {
-    return this.#run((site) => Effect.map(site.restore(by, release, name), Option.getOrNull));
+    return this.#changing(() =>
+      this.#call((site) => Effect.map(site.restore(by, release, name), Option.getOrNull)),
+    );
+  }
+
+  /** Brings a brand revision to the site, through a Brand update draft when it needs one. */
+  takeBrandRevision(by: Collaborator, revision: BrandRevision) {
+    return this.#changing(() => this.#run((site) => site.takeBrandRevision(by, revision)));
+  }
+
+  /** A draft that upgrades one block to a newer version, or null when the site needs none. */
+  adoptUpgrade(by: Collaborator, type: BlockType, version: number) {
+    return this.#changing(() =>
+      this.#run((site) => Effect.map(site.adoptUpgrade(by, type, version), Option.getOrNull)),
+    );
+  }
+
+  blocksInUse() {
+    return this.#run((site) => site.blocksInUse);
   }
 
   /** Writes the live release to KV and D1 again, for the reconcile job. */

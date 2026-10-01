@@ -16,6 +16,7 @@ const page = entry === undefined ? null : await loadPage(site.id, entry.object);
 const rendered = page === null ? null : await renderPage(page, manifest.parts, manifest.lockfile);
 const data = siteData({
   settings: manifest.settings,
+  identity: manifest.brand.identity,
   menus: manifest.parts.menus,
   pages: manifest.pages,
   forms: manifest.forms,
@@ -24,6 +25,7 @@ const data = siteData({
     return file === undefined ? undefined : { src: `/_media/${id}`, width: file.width, height: file.height };
   },
 });
+const { favicon } = manifest.brand.identity;
 const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed" : "Page not found");
 ---
 
@@ -34,7 +36,8 @@ const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title === manifest.settings.name ? title : `${title} · ${manifest.settings.name}`}</title>
     {page && <meta name="description" content={page.meta.description} />}
-    <style is:inline set:html={themeCss(manifest.theme)}></style>
+    {favicon && <link rel="icon" href={`/_media/${favicon}`} />}
+    <style is:inline set:html={themeCss(manifest.brand.theme)}></style>
   </head>
   <body>
     {
