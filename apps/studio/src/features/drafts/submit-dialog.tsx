@@ -15,21 +15,16 @@ import {
 import { Field, FieldError, FieldLabel } from "@repo/ui/components/field";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
-import { queryOptions, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { CircleAlertIcon, CircleCheckIcon, LoaderIcon } from "lucide-react";
 import { useId, useState } from "react";
 
 import { approversOf, describeIssue, neededOf, checkGroups } from "@/features/approvals/describe";
 
-import { getSubmissionCheck, submitDraft } from "../sites/functions";
-
-const checkQuery = (site: SiteId, draft: DraftId) =>
-  queryOptions({
-    queryKey: ["sites", site, "drafts", draft, "submission-check"],
-    queryFn: () => getSubmissionCheck({ data: { site, draft } }),
-    staleTime: 0,
-  });
+import { issueKey } from "../checks/issues";
+import { checkQuery } from "../checks/queries";
+import { submitDraft } from "../sites/functions";
 
 const workflowSource = {
   site: "this site's",
@@ -83,6 +78,7 @@ function Checks(props: {
                             <Link
                               to="/sites/$siteId/drafts/$draftId/pages/$pageId"
                               params={{ siteId: props.site, draftId: props.draft, pageId: page }}
+                              search={{ checks: issueKey(issue) }}
                               className="text-foreground underline underline-offset-4"
                             >
                               Go to it

@@ -1,6 +1,6 @@
 import { Schema } from "effect";
 
-import { FormId, PageId } from "./ids.ts";
+import { FormFieldId, FormId, PageId } from "./ids.ts";
 import { NamedBlock, Place } from "./merge.ts";
 import { PropPath } from "./ops.ts";
 
@@ -33,6 +33,18 @@ export const CheckIssue = Schema.TaggedUnion({
     field: Schema.String,
     page: PageId,
   },
+  /**
+   * A link that shows no text, so a screen reader can't say where it goes: in
+   * a block's rich text, or a menu item when `block` is null.
+   */
+  LinkWithoutText: {
+    place: Place,
+    block: Schema.NullOr(NamedBlock),
+    path: PropPath,
+    field: Schema.String,
+  },
+  /** A form field without a label, which no one using a screen reader can tell apart. */
+  UnlabelledField: { form: FormId, name: Schema.String, field: FormFieldId },
   /** A form on a served page whose entries would be emailed to no one. */
   NoFormEmails: { form: FormId, name: Schema.String },
   /** A form that asks for an email address or phone number without a required consent checkbox linking to a privacy policy. */

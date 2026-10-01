@@ -276,7 +276,9 @@ function RoleDetail(props: {
               : `${holders.length === 1 ? "1 person has" : `${holders.length} people have`} this role: ${holders
                   .map((holder) => `${holder.person.name}, ${describeScope(holder.scope)}`)
                   .join("; ")}.`}{" "}
-            {holders.length > 0 && <Link to="/people">See them in People</Link>}
+            {holders.length > 0 && <Link to="/people" className="text-foreground underline underline-offset-4">
+                See them in People
+              </Link>}
           </p>
         )}
         <Permissions

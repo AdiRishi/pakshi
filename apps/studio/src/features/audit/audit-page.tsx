@@ -28,11 +28,16 @@ import { auditFiltersQuery, auditLogQuery } from "./queries";
 
 const day = 24 * 60 * 60 * 1000;
 
+/**
+ * The start of the UTC day some days ago. A period starts at a day boundary,
+ * so the server and the browser render the same query.
+ */
+const daysAgo = (days: number) => new Date(Math.floor(Date.now() / day) * day - days * day);
+
 const periods = {
-  today: { title: "Today", since: () => new Date(new Date().setHours(0, 0, 0, 0)) },
-  week: { title: "Last 7 days", since: () => new Date(Date.now() - 7 * day) },
-  month: { title: "Last 30 days", since: () => new Date(Date.now() - 30 * day) },
-  year: { title: "Last 12 months", since: () => new Date(Date.now() - 365 * day) },
+  week: { title: "Last 7 days", since: () => daysAgo(7) },
+  month: { title: "Last 30 days", since: () => daysAgo(30) },
+  year: { title: "Last 12 months", since: () => daysAgo(365) },
   all: { title: "All time", since: () => null },
 } as const;
 type Period = keyof typeof periods;

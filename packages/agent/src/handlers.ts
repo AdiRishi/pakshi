@@ -106,6 +106,12 @@ const describeIssue = (issue: CheckIssue) => {
       return `${issue.place.title}: no ${issue.field}`;
     case "BrokenLink":
       return `${issue.place.title}, ${issue.field}: links to ${issue.page}, which isn't served`;
+    case "LinkWithoutText":
+      return issue.block === null
+        ? `${issue.place.title}: an item has no label. A person edits menus; you can't.`
+        : `${issue.place.title}, ${issue.block.title} (${issue.block.id}) ${issue.field}: a link has no text. Give it words that say where it goes`;
+    case "UnlabelledField":
+      return `Form ${issue.name} (${issue.form}): field ${issue.field} has no label`;
     case "NoFormEmails":
       return `Form ${issue.name} (${issue.form}): no one is set to receive its entries. A person adds addresses in the site's settings; you can't.`;
     case "MissingConsent":

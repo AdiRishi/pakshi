@@ -84,6 +84,11 @@ export const describeIssue = (issue: CheckIssue) => {
         page: null,
         text: `${issue.name} asks for an email address or phone number, so it needs a required consent checkbox that links to a privacy policy`,
       };
+    case "UnlabelledField":
+      return {
+        page: null,
+        text: `A field in ${issue.name} has no label, so people using a screen reader can't tell what it asks for`,
+      };
   }
   const page = issue.place.target === "site" ? null : issue.place.target;
   switch (issue._tag) {
@@ -104,6 +109,14 @@ export const describeIssue = (issue: CheckIssue) => {
         page,
         text: `${issue.field}${issue.block === null ? "" : ` in ${issue.block.title}`}, ${issue.place.title}, links to a page that isn't published`,
       };
+    case "LinkWithoutText":
+      return {
+        page,
+        text:
+          issue.block === null
+            ? `An item in the ${issue.place.title.toLowerCase()} has no label, so its link shows no text`
+            : `A link in ${issue.field}, ${issue.block.title}, ${issue.place.title}, shows no text`,
+      };
   }
 };
 
@@ -117,10 +130,11 @@ export const checkGroups = [
   },
   { title: "Page titles and descriptions", passed: "Set on every page", tags: ["MissingMeta"] },
   { title: "Internal links", passed: "No broken links", tags: ["BrokenLink"] },
+  { title: "Link text", passed: "Every link says where it goes", tags: ["LinkWithoutText"] },
   {
     title: "Forms",
-    passed: "Each form emails its entries and asks for consent",
-    tags: ["NoFormEmails", "MissingConsent"],
+    passed: "Each form labels its fields, emails its entries and asks for consent",
+    tags: ["UnlabelledField", "NoFormEmails", "MissingConsent"],
   },
 ] as const satisfies ReadonlyArray<{
   readonly title: string;

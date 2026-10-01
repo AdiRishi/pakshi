@@ -1,4 +1,5 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
+import { Schema } from "effect";
 
 import { EditorPage } from "@/features/editor/editor-page";
 import { openDraft } from "@/features/sites/functions";
@@ -17,6 +18,10 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
       ...pageParams.stringify(params),
     }),
   },
+  // With `checks`, the checks panel is open, on the issue it names, if any.
+  validateSearch: Schema.toStandardSchemaV1(
+    Schema.Struct({ checks: Schema.optional(Schema.String) }),
+  ),
   // The editor renders on the client only.
   ssr: false,
   // Opening a draft brings it up to date with the live site, or sends it to its update.
@@ -35,6 +40,7 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
   component: function EditPage() {
     const { siteId, draftId, pageId } = Route.useParams();
     const opened = Route.useLoaderData();
+    const { checks } = Route.useSearch();
     const { user } = Route.useRouteContext().viewer;
     // Each page opens in an editor of its own.
     return (
@@ -45,6 +51,7 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
         page={pageId}
         person={{ id: user.id, name: user.name }}
         opened={opened}
+        checks={checks ?? null}
       />
     );
   },

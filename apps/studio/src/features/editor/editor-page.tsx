@@ -43,6 +43,7 @@ import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { cn } from "cn";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
@@ -61,6 +62,8 @@ import { toast } from "sonner";
 import { Logo } from "@/components/logo";
 import { ChatPanel } from "@/features/agent/chat-panel";
 import { standing } from "@/features/approvals/describe";
+import { ChecksButton } from "@/features/checks/checks-button";
+import { ChecksPanel } from "@/features/checks/checks-panel";
 import { DraftActions } from "@/features/drafts/draft-actions";
 import { uploadImage } from "@/features/media/upload";
 import { draftImage } from "@/features/preview/address";
@@ -178,6 +181,7 @@ function Header(props: DraftContext) {
       )}
       <div className="ml-auto flex items-center gap-3">
         <EditorParticipants />
+        <ChecksButton site={props.site.id} draft={props.draft.id} />
         <DraftActions
           site={props.site.id}
           draft={props.draft}
@@ -354,6 +358,8 @@ export function EditorPage(props: {
   readonly page: PageId;
   readonly person: Collaborator;
   readonly opened: OpenedReady;
+  /** The issue the checks panel is on, "" when it's open on none, or null when it's closed. */
+  readonly checks: string | null;
 }) {
   const data = props.opened;
   const { data: definitions } = useSuspenseQuery(blocksQuery(data.draft.lockfile));
@@ -397,9 +403,23 @@ export function EditorPage(props: {
         <Header {...context} />
         <DraftStanding {...context} />
         <div className="flex min-h-0 flex-1">
+          {props.checks !== null && (
+            <aside aria-label="Checks" className="flex w-80 shrink-0 flex-col border-r bg-card">
+              <ChecksPanel
+                site={props.site}
+                draft={context.draft}
+                current={props.checks}
+                onSubmit={() => setSubmitting(true)}
+              />
+            </aside>
+          )}
           <aside
             aria-label="Assistant and outline"
-            className="flex w-80 shrink-0 flex-col border-r bg-card"
+            // Hidden rather than gone, so the conversation keeps its place.
+            className={cn(
+              "w-80 shrink-0 flex-col border-r bg-card",
+              props.checks === null ? "flex" : "hidden",
+            )}
           >
             <Tabs defaultValue="agent" className="min-h-0 flex-1 gap-0">
               <TabsList variant="line" className="w-full shrink-0 justify-start border-b px-3">

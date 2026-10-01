@@ -3,7 +3,7 @@ import type { Selected } from "@repo/contracts/agent";
 import { type Draft, isBehind } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
-import type { Target } from "@repo/contracts/ops";
+import type { Target , PropPath } from "@repo/contracts/ops";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
@@ -466,15 +466,26 @@ export const useSelected = (): Selected | null => {
   );
 };
 
-/** Selects a block on the page being edited and scrolls the canvas to it. */
+/**
+ * Selects a block on the page being edited, or with a path one of its
+ * fields, scrolls the canvas to it, and focuses it there.
+ */
 export const useShowBlock = () => {
   const store = useStore();
   const ui = useEditorUi();
-  return (target: Target, block: BlockId) => {
-    store.select({ kind: "block", target, block });
+  return (target: Target, block: BlockId, path?: PropPath) => {
+    store.select(
+      path === undefined ? { kind: "block", target, block } : { kind: "field", target, block, path },
+    );
     ui.focusSelection("canvas");
   };
 };
+
+/** The draft as the person sees it, their unconfirmed changes included. */
+export const useDraftView = () => useEditorState((state) => state.view);
+
+/** The draft revision SiteDoc last confirmed, which moves on with every committed change. */
+export const useConfirmedRevision = () => useEditorState((state) => state.confirmed.revision);
 
 /** The page being edited. */
 export const usePage = () => useEditorState((state) => state.page);

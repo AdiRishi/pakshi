@@ -36,6 +36,10 @@
       "types": "./src/rendering-changes.ts",
       "default": "./src/rendering-changes.ts"
     },
+    "./rich-text": {
+      "types": "./src/rich-text.ts",
+      "default": "./src/rich-text.ts"
+    },
     "./site.css": "./src/site.css"
   },
   "scripts": {
