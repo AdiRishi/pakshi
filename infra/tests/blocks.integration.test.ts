@@ -53,7 +53,9 @@ const openCanvas = async (
   scheme: "light" | "dark",
 ): Promise<FrameLocator> => {
   await page.goto(`${await draftOf(page, site.site.id)}/pages/${site.page}`);
-  await page.getByRole("button", { name: scheme === "dark" ? "Dark" : "Light" }).click();
+  await page
+    .getByRole("button", { name: scheme === "dark" ? "Dark" : "Light", exact: true })
+    .click();
   const frame = page.frameLocator("iframe[title^='Canvas']");
   await expect(frame.locator("[data-pakshi-block]").first()).toBeVisible();
   // The editor draws its controls, such as a Needs content badge, over the page; this compares the page.
@@ -95,6 +97,9 @@ const openPublished = async (
   await page.evaluate(() =>
     Promise.all(
       Array.from(document.images, (image) => {
+        // sites offers resized copies, where the canvas shows the original. The renderers
+        // are compared, not the resizing, so both show the original.
+        image.removeAttribute("srcset");
         image.loading = "eager";
         return image.decode().catch(() => undefined);
       }),
