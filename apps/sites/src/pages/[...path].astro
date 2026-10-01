@@ -6,6 +6,7 @@ import { themeCss } from "@repo/tokens";
 import { Option, Schema } from "effect";
 
 import { responsiveImage } from "../lib/responsive.ts";
+import { styleHash } from "../lib/security.ts";
 import { pageMeta, redirectFor } from "../lib/seo.ts";
 import { loadManifest, loadPage } from "../lib/snapshot.ts";
 
@@ -36,6 +37,8 @@ const data = {
   sent: Option.getOrNull(sent),
 };
 const { favicon } = manifest.brand.identity;
+const theme = themeCss(manifest.brand.theme);
+Astro.csp.insertStyleHash(await styleHash(theme));
 const seo = page === null ? null : pageMeta(page, manifest, Astro.url.origin);
 // A new site's first release has no pages until its first draft publishes.
 const unpublished = manifest.pages.length === 0;
@@ -84,7 +87,7 @@ const message = unpublished
       )
     }
     {favicon && <link rel="icon" href={`/_media/${favicon}`} />}
-    <style is:inline set:html={themeCss(manifest.brand.theme)}></style>
+    <style is:inline set:html={theme}></style>
   </head>
   <body>
     {

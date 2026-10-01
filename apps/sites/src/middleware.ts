@@ -1,8 +1,10 @@
+import type { APIContext, MiddlewareNext } from "astro";
 import { defineMiddleware } from "astro:middleware";
 import { env } from "cloudflare:workers";
 
 import { takeFormPost } from "./lib/forms.ts";
 import { serveMedia } from "./lib/media.ts";
+import { secured } from "./lib/security.ts";
 import { liveSiteFor } from "./lib/snapshot.ts";
 
 const browserCaching = "public, max-age=0, must-revalidate";
@@ -13,9 +15,14 @@ const mediaPrefix = "/_media/";
  * Workers cache, and passes form posts on to sites-api. The key holds the
  * host, the site's release and this Worker's version, so a publish or a
  * deploy changes the key instead of needing a purge, and a page naming its
- * own address is cached per address. Only reads are cached.
+ * own address is cached per address. Only reads are cached. Every response
+ * carries the headers that limit what the browser loads with it.
  */
-export const onRequest = defineMiddleware(async (context, next) => {
+export const onRequest = defineMiddleware(async (context, next) =>
+  secured(await serve(context, next)),
+);
+
+const serve = async (context: APIContext, next: MiddlewareNext) => {
   // Page paths are lowercase letters, digits and hyphens, so no page can take this prefix.
   if (context.url.pathname.startsWith(mediaPrefix))
     return serveMedia(context.request, (promise) => context.locals.cfContext.waitUntil(promise));
@@ -50,4 +57,4 @@ export const onRequest = defineMiddleware(async (context, next) => {
     context.locals.cfContext.waitUntil(cache.put(key, stored));
   }
   return response;
-});
+};

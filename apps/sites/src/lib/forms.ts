@@ -3,15 +3,25 @@ import { FormId } from "@repo/contracts/ids";
 import { env } from "cloudflare:workers";
 import { Option, Schema } from "effect";
 
+import { plainPagePolicy } from "./security.ts";
 import type { LiveSite } from "./snapshot.ts";
 
 const decodeIntake = Schema.decodeUnknownSync(Intake);
 
+const refusalCss =
+  "main{max-width:36rem;margin:4rem auto;padding:0 1.5rem;font-family:system-ui,sans-serif}";
+
 /** A small page about a form post that didn't go through, in the site's own words. */
-const refusal = (status: number, title: string, message: string) =>
+const refusal = async (status: number, title: string, message: string) =>
   new Response(
-    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title></head><body><main style="max-width:36rem;margin:4rem auto;padding:0 1.5rem;font-family:system-ui,sans-serif"><h1>${title}</h1>${message}</main></body></html>`,
-    { status, headers: { "content-type": "text/html; charset=utf-8" } },
+    `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>${refusalCss}</style></head><body><main><h1>${title}</h1>${message}</main></body></html>`,
+    {
+      status,
+      headers: {
+        "content-type": "text/html; charset=utf-8",
+        "content-security-policy": await plainPagePolicy(refusalCss),
+      },
+    },
   );
 
 const escape = (text: string) =>
