@@ -193,7 +193,7 @@ export const fixtureSites = async () => {
         schema: "pakshi.snapshot/1",
         id: snapshot,
         site: site.id,
-        settings: { name: site.name },
+        settings: { name: site.name, sharingImage: null },
         parts,
         forms: fixtureSite.forms,
         lockfile,

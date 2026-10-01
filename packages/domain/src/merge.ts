@@ -828,13 +828,6 @@ export const mergeSites = (
     if (form !== undefined) forms[id] = form;
   }
   const content: SiteContent = {
-    settings: {
-      name: merge.value(siteSpot("settings/name", "Site settings", "Site name", "text"), {
-        base: base.settings.name,
-        draft: draft.settings.name,
-        live: live.settings.name,
-      }),
-    },
     parts: mergeParts(merge, { base: base.parts, draft: draft.parts, live: live.parts }),
     forms,
     lockfile,

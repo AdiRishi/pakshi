@@ -84,6 +84,8 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     createSite: unused,
     home: unused,
     people: unused,
+    siteSettings: unused,
+    saveSiteSettings: unused,
     siteDrafts: unused,
     createDraft: unused,
     renameDraft: unused,

@@ -7,6 +7,7 @@ import type { DraftId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
+import { publishedOf, type SettingsView } from "@repo/contracts/settings";
 import { routingKeys } from "@repo/contracts/snapshot";
 import {
   BlocksRemoved,
@@ -14,6 +15,7 @@ import {
   type DecisionOutcome,
   DraftNotFound,
   type DraftSummary,
+  ImageNotFound,
   NothingToRollBack,
   NotPermitted,
   OpenedDraft,
@@ -21,6 +23,7 @@ import {
   PreviewPage,
   ReleaseNotFound,
   type ReviewPage,
+  SettingsChanged,
   SignedIn,
   type SiteAbilities,
   type SiteView,
@@ -283,7 +286,7 @@ const handlers = (env: StudioApiEnv) =>
                 const revision = pinnedRevision(yield* latestRevision(brand));
                 const doc = yield* siteDoc(env, created.id);
                 const draft = yield* Effect.tryPromise(async (): Promise<DraftSummary> =>
-                  doc.start(collaborator(person), { name }, revision),
+                  doc.start(collaborator(person), name, revision),
                 );
                 // The host is written last, so sites never finds a site with no release.
                 yield* Effect.tryPromise(() =>
@@ -300,6 +303,53 @@ const handlers = (env: StudioApiEnv) =>
             ),
           ),
         people: ({ search }) => withCore("people")(findPeople(search)),
+        siteSettings: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("site settings")(
+              Effect.gen(function* () {
+                const found = yield* siteOf(person, site);
+                const doc = yield* siteDoc(env, site);
+                const view = yield* Effect.tryPromise(async (): Promise<SettingsView> =>
+                  doc.settings(),
+                );
+                return {
+                  site: { id: found.id, name: found.name },
+                  ...view,
+                  can: { edit: found.permissions.includes("site.settings.edit") },
+                };
+              }),
+            ),
+          ),
+        saveSiteSettings: ({ site, changes, seen }) =>
+          SignedIn.use((person) =>
+            withCore("save site settings")(
+              Effect.gen(function* () {
+                const { found, doc } = yield* permitted(
+                  person,
+                  site,
+                  "site.settings.edit",
+                  "change this site's settings",
+                );
+                const image = changes.sharingImage;
+                if (
+                  image !== undefined &&
+                  image !== null &&
+                  !(yield* inSiteLibrary(found, image.id))
+                )
+                  return yield* new ImageNotFound({});
+                const view = yield* outcome(
+                  SettingsChanged,
+                  async (): Promise<Outcome<SettingsView>> =>
+                    doc.saveSettings(collaborator(person), changes, seen),
+                );
+                return {
+                  site: { id: found.id, name: view.settings.name },
+                  ...view,
+                  can: { edit: true },
+                };
+              }),
+            ),
+          ),
         siteDrafts: ({ site }) =>
           SignedIn.use((person) =>
             withCore("site drafts")(
@@ -389,12 +439,18 @@ const handlers = (env: StudioApiEnv) =>
                   doc.openDraft(collaborator(person), draft),
                 );
                 if (opened._tag === "NeedsUpdate") return OpenedDraft.cases.NeedsUpdate.make({});
-                const [media, live] = yield* Effect.all([siteMedia(found), liveOf(doc)], {
-                  concurrency: "unbounded",
-                });
+                const [media, live, settings] = yield* Effect.all(
+                  [
+                    siteMedia(found),
+                    liveOf(doc),
+                    Effect.tryPromise(async (): Promise<SettingsView> => doc.settings()),
+                  ],
+                  { concurrency: "unbounded" },
+                );
                 return OpenedDraft.cases.Ready.make({
                   draft: opened.draft,
                   summary: opened.summary,
+                  settings: publishedOf(settings.settings),
                   live: liveReleaseOf(live),
                   media,
                   can: abilities(found.permissions),

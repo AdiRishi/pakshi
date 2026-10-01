@@ -366,7 +366,7 @@ export function EditorPage(props: {
     person: props.person,
     submitting,
     onSubmittingChange: setSubmitting,
-    site: { id: props.site, name: data.draft.settings.name },
+    site: { id: props.site, name: data.settings.name },
     draft: { id: props.draft, name: data.summary.name },
     can: data.can,
     review: data.summary.review,
@@ -383,6 +383,7 @@ export function EditorPage(props: {
         suggestAltText({ data: { site: props.site, draft: props.draft, media, block } })
       }
       siteCss={siteCss}
+      settings={data.settings}
       scheme={scheme}
       person={props.person}
       connection={connection}

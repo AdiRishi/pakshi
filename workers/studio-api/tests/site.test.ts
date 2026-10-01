@@ -130,12 +130,13 @@ it.effect(
       (site, state) =>
         Effect.gen(function* () {
           const brand = { ...harbourBrand, number: 4 };
-          const launch = yield* site.start(sam, { name: "Harbour Summer School" }, brand);
+          const launch = yield* site.start(sam, "Harbour Summer School", brand);
           const live = yield* site.live;
           expect(live).toMatchObject({ _tag: "Created", by: sam });
           expect(state.routing).toEqual(Option.some(liveReleaseOf(live)));
           const manifest = state.manifests.get(live.snapshot);
           expect(manifest?.pages).toEqual([]);
+          expect(manifest?.settings.name).toBe("Harbour Summer School");
           expect(manifest?.brand.number).toBe(4);
           expect(manifest?.lockfile).toEqual(latestLockfile);
           expect(
@@ -283,6 +284,30 @@ it.effect("rolling back makes the release before the latest publish live again, 
   ),
 );
 
+it.effect(
+  "a site's name goes live with the next publish, and a rollback brings back the name its release had",
+  () =>
+    withSite((site, state) =>
+      Effect.gen(function* () {
+        const liveName = Effect.map(
+          site.live,
+          (live) => state.manifests.get(live.snapshot)?.settings.name,
+        );
+        const { revision } = yield* site.settings;
+        yield* site.saveSettings(meera, { name: "Harbour Summer Studio" }, revision);
+        expect(yield* liveName).toBe("Harbour Summer School");
+
+        const { id } = yield* site.createDraft(sam, name("Heading"));
+        yield* site.applyBatch(sam, id, setHeading("Build a boat"));
+        yield* published(site, id);
+        expect(yield* liveName).toBe("Harbour Summer Studio");
+
+        yield* site.rollBack(meera, studio);
+        expect(yield* liveName).toBe("Harbour Summer School");
+      }),
+    ),
+);
+
 it.effect("restoring an older release makes a draft of it that starts from what's live", () =>
   withSite((site) =>
     Effect.gen(function* () {
@@ -351,7 +376,6 @@ it.effect("people can't move a draft onto a release", () =>
             base: { release: "rel_other", snapshot: "snap_other" },
             lockfile: draft.lockfile,
             brand: encodeBrand(draft.brand),
-            settings: draft.settings,
             forms: {},
             menus: { main: [], footer: [] },
           },

@@ -67,7 +67,6 @@ export const outline = (draft: Draft, contracts: BlockContracts) => {
       }),
     ]);
   return [
-    `Site "${draft.settings.name}"`,
     "site (header and footer)",
     ...site,
     ...pages,

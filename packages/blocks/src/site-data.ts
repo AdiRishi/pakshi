@@ -3,7 +3,8 @@ import type { FormDefinition } from "@repo/contracts/form";
 import type { FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
 import type { Link } from "@repo/contracts/references";
-import type { Menus, SiteSettings } from "@repo/contracts/site";
+import type { PublishedSettings } from "@repo/contracts/settings";
+import type { Menus } from "@repo/contracts/site";
 import { Order, Predicate } from "effect";
 
 import type { PostSummary, ResolvedMedia, SiteData } from "./components.tsx";
@@ -35,7 +36,7 @@ const newestFirst = Order.combine(
  * on every site.
  */
 export const siteData = (site: {
-  readonly settings: SiteSettings;
+  readonly settings: PublishedSettings;
   readonly identity: BrandIdentity;
   readonly menus: Menus;
   readonly pages: ReadonlyArray<PageEntry>;

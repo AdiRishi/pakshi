@@ -4,7 +4,8 @@ import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BlockType, FormId, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
 import { PageDocument, PageMeta, PagePath, PostMeta } from "./page.ts";
-import { SiteParts, SiteSettings } from "./site.ts";
+import { PublishedSettings } from "./settings.ts";
+import { SiteParts } from "./site.ts";
 
 /** The SHA-256 of a page object's canonical JSON, in lowercase hex. */
 export const ContentHash = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)).pipe(
@@ -44,7 +45,8 @@ export const SnapshotPage = Schema.Union(
 export type SnapshotPage = typeof SnapshotPage.Type;
 
 /**
- * Everything that leaves a draft: the site's settings, header, footer, menus,
+ * Everything that leaves a draft, with the site's published settings as they
+ * were when it was frozen: its header, footer, menus,
  * forms, block lockfile, brand revision and media, plus one entry per page
  * pointing at its content-addressed page object. Snapshots never change once
  * written, so submissions and releases are both pointers to one.
@@ -53,7 +55,7 @@ export const SnapshotManifest = Schema.Struct({
   schema: Schema.Literal("pakshi.snapshot/1"),
   id: SnapshotId,
   site: SiteId,
-  settings: SiteSettings,
+  settings: PublishedSettings,
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
   lockfile: Lockfile,

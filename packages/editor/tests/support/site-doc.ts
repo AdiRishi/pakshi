@@ -46,7 +46,6 @@ export const fixtureDraft = Schema.decodeSync(Draft)({
   site: "site_fixtures",
   base: { release: "rel_fixtures", snapshot: "snap_fixtures" },
   revision: 0,
-  settings: fixtureSite.settings,
   parts: {
     header: header.id,
     footer: footer.id,

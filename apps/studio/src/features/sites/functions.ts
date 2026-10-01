@@ -12,8 +12,9 @@ import {
 } from "@repo/contracts/ids";
 import { ConflictKey, Resolutions } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
+import { SiteName } from "@repo/contracts/settings";
 import { DraftSharing } from "@repo/contracts/sharing";
-import { Decision, SiteAddress, SiteName } from "@repo/contracts/studio";
+import { Decision, SiteAddress } from "@repo/contracts/studio";
 import { Workflow } from "@repo/contracts/workflow";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";

@@ -1,4 +1,5 @@
-import { SiteAddress, SiteName, type Viewer } from "@repo/contracts/studio";
+import { SiteName } from "@repo/contracts/settings";
+import { SiteAddress, type Viewer } from "@repo/contracts/studio";
 import { Button } from "@repo/ui/components/button";
 import { Card, CardContent } from "@repo/ui/components/card";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@repo/ui/components/field";

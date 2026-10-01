@@ -1,6 +1,7 @@
 import type { BlockDefinition, Field } from "@repo/blocks";
 import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
 import type { BlockList, PropPath, Target } from "@repo/contracts/ops";
+import type { PublishedSettings } from "@repo/contracts/settings";
 import type { MediaSummary } from "@repo/contracts/studio";
 import type { Editor } from "@tiptap/core";
 import { createContext, useContext, useRef, useSyncExternalStore } from "react";
@@ -20,6 +21,8 @@ export interface EditorServices {
   readonly mediaSrc: (id: MediaId) => string;
   /** The address of the stylesheet `sites` renders pages with. */
   readonly siteCss: string;
+  /** The site's published settings, which pages show with. */
+  readonly settings: PublishedSettings;
   /** The color scheme the canvas and block previews show the theme in. */
   readonly scheme: "light" | "dark";
   /** Alt text Pakshi suggests for an image where a block places it, or null. */

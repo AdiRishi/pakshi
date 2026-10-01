@@ -27,6 +27,7 @@ import {
   Snapshots,
 } from "../../src/site/platform.ts";
 import { SiteReleases } from "../../src/site/releases.ts";
+import { SiteSettingsStore } from "../../src/site/settings.ts";
 import { Site } from "../../src/site/site.ts";
 
 export const site = SiteId.make("site_harbour");
@@ -117,7 +118,7 @@ export const platform = Effect.fn("platform")(function* (
       schema: "pakshi.snapshot/1",
       id: harbourLive.snapshot,
       site,
-      settings: { name: "Harbour Summer School" },
+      settings: { name: "Harbour Summer School", sharingImage: null },
       parts: {
         header: "b_header",
         footer: "b_footer",
@@ -218,7 +219,14 @@ export const siteService = <R>(
 ) =>
   Layer.fresh(
     Site.layer.pipe(
-      Layer.provide(Layer.mergeAll(SiteDrafts.layer, SiteReleases.layer, SiteApprovals.layer)),
+      Layer.provide(
+        Layer.mergeAll(
+          SiteDrafts.layer,
+          SiteReleases.layer,
+          SiteApprovals.layer,
+          SiteSettingsStore.layer,
+        ),
+      ),
       Layer.provideMerge(Outbox.layer),
       Layer.provide(platformLayer),
     ),

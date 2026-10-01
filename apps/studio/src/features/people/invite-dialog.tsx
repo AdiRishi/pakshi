@@ -1,5 +1,5 @@
 import { type DefaultRole, roleTitles } from "@repo/contracts/access";
-import { EmailAddress } from "@repo/contracts/accounts";
+import { EmailAddress } from "@repo/contracts/email";
 import type { InvitePlace, SentInvitation } from "@repo/contracts/studio";
 import { Button } from "@repo/ui/components/button";
 import {

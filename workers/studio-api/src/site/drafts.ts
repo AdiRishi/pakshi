@@ -17,7 +17,7 @@ import { type Batch, type BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { now, Timestamp } from "@repo/contracts/release";
 import { DraftSharing, unshared } from "@repo/contracts/sharing";
-import { SiteParts, SiteSettings } from "@repo/contracts/site";
+import { SiteParts } from "@repo/contracts/site";
 import { type LiveRelease, Lockfile } from "@repo/contracts/snapshot";
 import {
   DraftKind,
@@ -56,7 +56,6 @@ const DraftRow = Schema.Struct({
   base_release: ReleaseId,
   base_snapshot: SnapshotId,
   revision: Schema.Int,
-  settings: json(SiteSettings),
   parts: json(SiteParts),
   forms: json(Forms),
   lockfile: json(Lockfile),
@@ -373,7 +372,6 @@ export class SiteDrafts extends Context.Service<
           site,
           base: { release: row.base_release, snapshot: row.base_snapshot },
           revision: row.revision,
-          settings: row.settings,
           parts: row.parts,
           forms: row.forms,
           lockfile: row.lockfile,
@@ -406,7 +404,6 @@ export class SiteDrafts extends Context.Service<
               revision = ${next.revision},
               base_release = ${next.base.release},
               base_snapshot = ${next.base.snapshot},
-              settings = ${encode(SiteSettings, next.settings)},
               parts = ${encode(SiteParts, next.parts)},
               forms = ${encode(Forms, next.forms)},
               lockfile = ${encode(Lockfile, next.lockfile)},
@@ -468,11 +465,11 @@ export class SiteDrafts extends Context.Service<
             Effect.gen(function* () {
               yield* sql`insert into drafts
                 (id, name, kind, status, created_by, created_at, base_release, base_snapshot,
-                  revision, settings, parts, forms, lockfile, brand)
+                  revision, parts, forms, lockfile, brand)
                 values (${id}, ${name}, ${encode(DraftKind, kind)}, 'open',
                   ${encode(Collaborator, by)}, ${createdAt},
                   ${base.release}, ${base.snapshot}, 0,
-                  ${encode(SiteSettings, content.settings)}, ${encode(SiteParts, content.parts)},
+                  ${encode(SiteParts, content.parts)},
                   ${encode(Forms, content.forms)}, ${encode(Lockfile, content.lockfile)},
                   ${encode(BrandRevision, content.brand)})`;
               for (const page of Object.values(content.pages)) yield* writePage(id, page);

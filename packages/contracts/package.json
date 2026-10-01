@@ -28,6 +28,10 @@
       "types": "./src/draft.ts",
       "default": "./src/draft.ts"
     },
+    "./email": {
+      "types": "./src/email.ts",
+      "default": "./src/email.ts"
+    },
     "./form": {
       "types": "./src/form.ts",
       "default": "./src/form.ts"
@@ -71,6 +75,10 @@
     "./rpc/server": {
       "types": "./src/rpc/server.ts",
       "default": "./src/rpc/server.ts"
+    },
+    "./settings": {
+      "types": "./src/settings.ts",
+      "default": "./src/settings.ts"
     },
     "./sharing": {
       "types": "./src/sharing.ts",

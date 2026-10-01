@@ -2,7 +2,8 @@ import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import { type BlockInstance, PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
-import { Menus, SiteSettings } from "@repo/contracts/site";
+import { PublishedSettings } from "@repo/contracts/settings";
+import { Menus } from "@repo/contracts/site";
 import { MediaFile } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
 
@@ -26,7 +27,7 @@ const pageEntryFields = { id: PageId, path: PagePath };
  * lists.
  */
 export const FixtureSite = Schema.Struct({
-  settings: SiteSettings,
+  settings: PublishedSettings,
   menus: Menus,
   forms: Schema.Record(FormId, FormDefinition),
   media: Schema.Record(MediaId, MediaFile),

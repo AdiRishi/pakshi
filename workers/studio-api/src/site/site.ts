@@ -26,8 +26,13 @@ import type { Batch } from "@repo/contracts/ops";
 import { type BlockInstance, PageDocument, type PagePath } from "@repo/contracts/page";
 import type { PreflightIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
+import {
+  publishedOf,
+  type SettingsChanges,
+  type SettingsView,
+  type SiteName,
+} from "@repo/contracts/settings";
 import type { DraftSharing, ShareAccess } from "@repo/contracts/sharing";
-import type { SiteSettings } from "@repo/contracts/site";
 import {
   contentHash,
   type LiveRelease,
@@ -44,6 +49,7 @@ import {
   NothingToRollBack,
   type PageSummary,
   ReviewPage,
+  type SettingsChanged,
   type SiteView,
   type SubmissionNotFound,
   SubmitOutcome,
@@ -82,6 +88,7 @@ import {
 import { type IndexedRelease, Outbox, type Notification } from "./outbox.ts";
 import { LiveUpdates, MediaLibrary, OutboxDelivery, Routing, Snapshots } from "./platform.ts";
 import { SiteReleases } from "./releases.ts";
+import { SiteSettingsStore } from "./settings.ts";
 
 /*
  * A site's drafts, submissions and releases, as SiteDoc runs them. Two turns
@@ -176,15 +183,22 @@ export class Site extends Context.Service<
   Site,
   {
     /**
-     * Starts a new site: its first release, with the brand's revision, every
-     * block at its newest version, a header, a footer and no pages, and a
-     * first draft with an empty home page to build the site in.
+     * Starts a new site: its name, its first release, with the brand's
+     * revision, every block at its newest version, a header, a footer and no
+     * pages, and a first draft with an empty home page to build the site in.
      */
     readonly start: (
       by: Collaborator,
-      settings: SiteSettings,
+      name: typeof SiteName.Type,
       brand: BrandRevision,
     ) => Effect.Effect<DraftSummary, StorageError>;
+    readonly settings: Effect.Effect<SettingsView, StorageError>;
+    /** Saves settings, as of the settings revision the person saw. */
+    readonly saveSettings: (
+      by: Collaborator,
+      changes: SettingsChanges,
+      seen: number,
+    ) => Effect.Effect<SettingsView, StorageError | SettingsChanged>;
     /** The release the site serves. */
     readonly live: Effect.Effect<Release, StorageError>;
     /** Every release, newest first. */
@@ -392,6 +406,7 @@ export class Site extends Context.Service<
       const drafts = yield* SiteDrafts;
       const releases = yield* SiteReleases;
       const approvals = yield* SiteApprovals;
+      const settingsStore = yield* SiteSettingsStore;
       const outbox = yield* Outbox;
       const snapshots = yield* Snapshots;
       const routing = yield* Routing;
@@ -438,6 +453,9 @@ export class Site extends Context.Service<
             manifest.lockfile,
           );
           yield* brandTaken(manifest.brand.number);
+          yield* settingsStore
+            .save(null, manifest.settings, 0)
+            .pipe(Effect.catchTag("SettingsChanged", Effect.die));
         }
       }
 
@@ -464,7 +482,6 @@ export class Site extends Context.Service<
           concurrency: "unbounded",
         });
         const content: SiteContent = {
-          settings: manifest.settings,
           parts: manifest.parts,
           forms: manifest.forms,
           lockfile: manifest.lockfile,
@@ -622,7 +639,6 @@ export class Site extends Context.Service<
                   base: draft.base,
                   lockfile: draft.lockfile,
                   brand: revision,
-                  settings: draft.settings,
                   forms: draft.forms,
                   menus: draft.parts.menus,
                 },
@@ -652,14 +668,25 @@ export class Site extends Context.Service<
         yield* routing.write(liveReleaseOf(release));
       });
 
-      /** Writes frozen content to R2 as a snapshot, reusing the page objects `previous` already has. */
+      /**
+       * Writes frozen content to R2 as a snapshot, with the site's published
+       * settings as they are now, reusing the page objects `previous` already has.
+       */
       const writeSnapshot = Effect.fn("Site.writeSnapshot")(function* (
         content: SiteContent,
         frozen: Frozen,
         previous: Pick<SnapshotManifest, "pages">,
       ) {
-        const files = yield* media.files(frozen.media);
-        const missing = frozen.media.filter((id) => !files.has(id));
+        const settings = publishedOf((yield* settingsStore.current).settings);
+        const shown = Array.from(
+          new Set(
+            settings.sharingImage === null
+              ? frozen.media
+              : [...frozen.media, settings.sharingImage.id],
+          ),
+        );
+        const files = yield* media.files(shown);
+        const missing = shown.filter((id) => !files.has(id));
         if (missing.length > 0)
           return yield* Effect.die(`${missing.join(", ")} aren't in the media library.`);
         const written = new Set(previous.pages.map((page) => page.object));
@@ -677,7 +704,7 @@ export class Site extends Context.Service<
           schema: "pakshi.snapshot/1",
           id: SnapshotId.make(randomId("snap")),
           site,
-          settings: content.settings,
+          settings,
           parts: content.parts,
           forms: content.forms,
           lockfile: content.lockfile,
@@ -971,11 +998,14 @@ export class Site extends Context.Service<
       });
 
       return Site.of({
-        start: (by, settings, brand) =>
+        start: (by, name, brand) =>
           inReleaseTurn(
             Effect.gen(function* () {
               if (Option.isSome(yield* releases.live))
                 return yield* Effect.die(`${site} has started already.`);
+              yield* inStorageTurn(settingsStore.save(by, { name }, 0)).pipe(
+                Effect.catchTag("SettingsChanged", Effect.die),
+              );
               const lockfile = latestLockfile;
               const contracts = yield* Effect.promise(() => loadBlocks(lockfile));
               const part = (placement: "header" | "footer", surface: Surface) => {
@@ -998,7 +1028,6 @@ export class Site extends Context.Service<
               const header = BlockId.make(randomId("b"));
               const footer = BlockId.make(randomId("b"));
               const content: SiteContent = {
-                settings,
                 parts: {
                   header,
                   footer,
@@ -1030,7 +1059,7 @@ export class Site extends Context.Service<
                 id: PageId.make(randomId("pg")),
                 type: "page",
                 path: "/",
-                meta: { title: settings.name, description: "" },
+                meta: { title: name, description: "" },
                 root: [],
                 blocks: {},
               };
@@ -1051,6 +1080,8 @@ export class Site extends Context.Service<
               );
             }),
           ),
+        settings: settingsStore.current,
+        saveSettings: (by, changes, seen) => inStorageTurn(settingsStore.save(by, changes, seen)),
         live: liveRelease,
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
         drafts: Effect.gen(function* () {
@@ -1280,7 +1311,7 @@ export class Site extends Context.Service<
               );
               const files = yield* media.files(shownMedia(draft, yield* drafts.contracts(id)));
               const view: SiteView = {
-                settings: draft.settings,
+                settings: publishedOf((yield* settingsStore.current).settings),
                 parts: draft.parts,
                 forms: draft.forms,
                 lockfile: draft.lockfile,

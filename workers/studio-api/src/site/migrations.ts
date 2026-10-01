@@ -110,4 +110,16 @@ export const migrations = Migrator.fromRecord({
       taken_at text not null
     )`;
   }),
+  "0007_settings": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // Each setting someone has saved, with the settings revision that saved it.
+    yield* sql`create table settings (
+      key text primary key,
+      value text not null,
+      revision integer not null,
+      saved_by text,
+      saved_at text not null
+    )`;
+    yield* sql`alter table drafts drop column settings`;
+  }),
 });

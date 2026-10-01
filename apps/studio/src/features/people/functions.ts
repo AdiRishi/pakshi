@@ -1,5 +1,5 @@
 import { DefaultRole, Scope } from "@repo/contracts/access";
-import { EmailAddress } from "@repo/contracts/accounts";
+import { EmailAddress } from "@repo/contracts/email";
 import { InvitationId } from "@repo/contracts/ids";
 import { createServerFn } from "@tanstack/react-start";
 import { getRequest } from "@tanstack/react-start/server";

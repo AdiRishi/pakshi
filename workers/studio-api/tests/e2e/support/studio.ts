@@ -69,15 +69,21 @@ export const emailsTo = (address: string) =>
   );
 
 /**
- * The email to an address whose subject starts as given, once it arrives.
- * Studio sends some email from a Durable Object's alarm, after the request
- * that caused it has answered.
+ * An effect's result once it succeeds, tried again for a few seconds. A
+ * SiteDoc delivers its outbox from its alarm, after the request that filled
+ * it has answered.
  */
+export const eventually = <A, E>(effect: Effect.Effect<A, E>) =>
+  effect.pipe(Effect.retry({ schedule: Schedule.spaced("50 millis"), times: 100 }), Effect.orDie);
+
+/** The email to an address whose subject starts as given, once it arrives. */
 export const emailArriving = (address: string, subject: string) =>
-  Effect.flatMap(emailsTo(address), (emails) => {
-    const email = emails.find((candidate) => candidate.subject.startsWith(subject));
-    return email === undefined ? Effect.fail(new NoEmailYet()) : Effect.succeed(email);
-  }).pipe(Effect.retry({ schedule: Schedule.spaced("50 millis"), times: 100 }), Effect.orDie);
+  eventually(
+    Effect.flatMap(emailsTo(address), (emails) => {
+      const email = emails.find((candidate) => candidate.subject.startsWith(subject));
+      return email === undefined ? Effect.fail(new NoEmailYet()) : Effect.succeed(email);
+    }),
+  );
 
 class NoEmailYet extends Data.TaggedError("NoEmailYet") {}
 

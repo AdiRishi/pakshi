@@ -108,7 +108,6 @@ export const rebaseOps = (
     base,
     lockfile: content.lockfile,
     brand: content.brand,
-    settings: content.settings,
     forms: content.forms,
     menus: content.parts.menus,
   });
