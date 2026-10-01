@@ -21,7 +21,8 @@ export const core = Layer.effectDiscard(
       .split("\n")
       .filter((line) => !line.trimStart().startsWith("--"))
       .join("\n")
-      .split(";")
+      // A trigger's body ends its statements with semicolons of its own, before `end`.
+      .split(/;(?!\s*end\b)/i)
       .map((statement) => statement.trim())
       .filter((statement) => statement !== "");
     for (const statement of statements) yield* sql.unsafe(statement);

@@ -144,7 +144,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** Admins create custom roles, and people change who holds what, but no one may give more than they hold.
 
-**Decision.** Default roles stay in code and can't be changed; custom roles are rows in D1, and a grant names either by ID. Making or changing a role needs `roles.manage` and every permission it held and holds, across the organization. Giving, changing or taking away a role on a scope, and setting or removing an override, needs `members.manage` there and every permission involved. A role someone holds, or a workflow step names, can't be deleted, and the last org admin can't lose the role. Workflow steps name roles by ID and show their current names.
+**Decision.** Default roles stay in code and can't be changed; custom roles are rows in D1, and a grant names either by ID. Making or changing a role needs `roles.manage` and every permission it held and holds, across the organization. Giving, changing or taking away a role on a scope, and setting or removing an override, needs `members.manage` there and every permission involved. A role someone holds, or a workflow step names, can't be deleted, and the last org admin can't lose the role, which a trigger in D1 holds to when two admins give it up at once. Workflow steps name roles by ID and show their current names.
 
 **Consequences.** Editing a custom role changes what everyone who holds it may do at once.
 
