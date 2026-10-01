@@ -73,6 +73,18 @@ const statusOf = (draft: DraftSummary, behind: boolean) => {
     : ({ label: "Up to date", variant: "secondary" } as const);
 };
 
+/** Why Pakshi made a draft, or null for one someone started. */
+const purposeOf = (draft: DraftSummary) => {
+  switch (draft.kind._tag) {
+    case "Edit":
+      return null;
+    case "BrandUpdate":
+      return "Created automatically when the brand's look changed";
+    case "BlockUpgrade":
+      return `Moves the site to v${draft.kind.version} of a block`;
+  }
+};
+
 /** Who a draft is shared with, in a few words. */
 const sharingOf = (draft: DraftSummary) => {
   const { people, general } = draft.sharing;
@@ -122,6 +134,11 @@ function OpenDrafts(props: {
               >
                 {draft.name}
               </Link>
+              {purposeOf(draft) !== null && (
+                <span className="block text-xs font-normal text-muted-foreground">
+                  {purposeOf(draft)}
+                </span>
+              )}
             </TableCell>
             <TableCell className="text-muted-foreground">{peopleOf(draft)}</TableCell>
             <TableCell>

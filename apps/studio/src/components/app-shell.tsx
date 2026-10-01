@@ -15,7 +15,7 @@ import {
   SidebarProvider,
 } from "@repo/ui/components/sidebar";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { CircleCheckIcon, HouseIcon, LogOutIcon } from "lucide-react";
+import { BlocksIcon, CircleCheckIcon, HouseIcon, LogOutIcon, PaletteIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
@@ -61,6 +61,28 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                     </SidebarMenuBadge>
                   )}
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    size="lg"
+                    isActive={matchRoute({ to: "/blocks", fuzzy: true }) !== false}
+                    render={<Link to="/blocks" />}
+                  >
+                    <BlocksIcon />
+                    Blocks
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                {props.viewer.brands && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      size="lg"
+                      isActive={matchRoute({ to: "/brands", fuzzy: true }) !== false}
+                      render={<Link to="/brands" />}
+                    >
+                      <PaletteIcon />
+                      Brands
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
               </SidebarMenu>
             </nav>
           </SidebarGroup>

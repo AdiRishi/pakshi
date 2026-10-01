@@ -1,0 +1,32 @@
+import { BrandLook, VoiceGuide } from "@repo/contracts/brand";
+import { BrandId } from "@repo/contracts/ids";
+import { createServerFn } from "@tanstack/react-start";
+import { getRequest } from "@tanstack/react-start/server";
+import { env } from "cloudflare:workers";
+import { type Effect, Schema } from "effect";
+
+import { callStudio, type StudioClient } from "@/server/studio-rpc";
+
+const studio = <A, E>(use: (client: StudioClient) => Effect.Effect<A, E>) =>
+  callStudio({ binding: env.STUDIO_RPC, request: getRequest() }, use);
+
+/** The brands the person holds a permission on. */
+export const getBrands = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.brands()),
+);
+
+/** A brand's look, voice guide, sites and library. */
+export const getBrand = createServerFn({ method: "GET" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ brand: BrandId })))
+  .handler(({ data }) => studio((client) => client.brand(data)));
+
+/** Saves a brand's theme and identity as its next revision, which reaches each site as a draft. */
+export const saveBrandLook = createServerFn({ method: "POST" })
+  .validator(
+    Schema.toStandardSchemaV1(Schema.Struct({ brand: BrandId, look: BrandLook, seen: Schema.Int })),
+  )
+  .handler(({ data }) => studio((client) => client.saveBrandLook(data)));
+
+export const saveVoiceGuide = createServerFn({ method: "POST" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ brand: BrandId, voice: VoiceGuide })))
+  .handler(({ data }) => studio((client) => client.saveVoiceGuide(data)));

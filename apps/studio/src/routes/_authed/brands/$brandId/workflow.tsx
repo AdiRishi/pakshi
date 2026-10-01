@@ -1,25 +1,22 @@
-import { BrandId } from "@repo/contracts/ids";
-import { createFileRoute, notFound } from "@tanstack/react-router";
-import { Option, Schema } from "effect";
+import { createFileRoute } from "@tanstack/react-router";
 
-import { loadSite } from "@/features/sites/site-route";
+import { brandQuery } from "@/features/brands/queries";
+import { brandParams, loadSite } from "@/features/sites/site-route";
 import { workflowQuery } from "@/features/workflows/workflow-editor";
-import { ScopeWorkflowPage } from "@/features/workflows/workflow-page";
+import { BrandWorkflowPage } from "@/features/workflows/workflow-page";
 
 export const Route = createFileRoute("/_authed/brands/$brandId/workflow")({
-  params: {
-    parse: (params) => {
-      const brandId = Schema.decodeOption(BrandId)(params.brandId);
-      if (Option.isNone(brandId)) throw notFound();
-      return { brandId: brandId.value };
-    },
-    stringify: (params) => ({ brandId: params.brandId }),
-  },
+  params: brandParams,
   loader: ({ context, params }) =>
-    loadSite(() => context.queryClient.query(workflowQuery({ kind: "brand", id: params.brandId }))),
+    loadSite(() =>
+      Promise.all([
+        context.queryClient.query(workflowQuery({ kind: "brand", id: params.brandId })),
+        context.queryClient.query(brandQuery(params.brandId)),
+      ]),
+    ),
   component: function BrandWorkflow() {
     return (
-      <ScopeWorkflowPage
+      <BrandWorkflowPage
         viewer={Route.useRouteContext().viewer}
         scope={{ kind: "brand", id: Route.useParams().brandId }}
       />

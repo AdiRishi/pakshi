@@ -13,6 +13,8 @@ import { Link } from "@tanstack/react-router";
 
 import { AppShell } from "@/components/app-shell";
 
+import { BrandHeader } from "../brands/brand-header";
+import { brandQuery } from "../brands/queries";
 import { SiteHeader } from "../sites/site-header";
 import { WorkflowEditor, workflowQuery } from "./workflow-editor";
 
@@ -39,10 +41,28 @@ export function SiteWorkflowPage(props: {
   );
 }
 
-/** A brand's or the organization's approval workflow, which sites below it use unless they set their own. */
-export function ScopeWorkflowPage(props: {
+/** A brand's approval workflow, among the brand's sections. */
+export function BrandWorkflowPage(props: {
   readonly viewer: Viewer;
-  readonly scope: Exclude<Scope, { kind: "site" }>;
+  readonly scope: Extract<Scope, { kind: "brand" }>;
+}) {
+  const { data } = useSuspenseQuery(workflowQuery(props.scope));
+  const { data: brand } = useSuspenseQuery(brandQuery(props.scope.id));
+  return (
+    <AppShell viewer={props.viewer}>
+      <BrandHeader brand={brand.brand} sites={brand.sites.length} section="workflow" />
+      <div className="flex flex-col gap-6 px-10 py-8">
+        <p className="text-secondary-foreground">{description}</p>
+        <WorkflowEditor key={JSON.stringify(data.own)} view={data} />
+      </div>
+    </AppShell>
+  );
+}
+
+/** The organization's approval workflow, which brands and sites use unless they set their own. */
+export function OrganizationWorkflowPage(props: {
+  readonly viewer: Viewer;
+  readonly scope: Extract<Scope, { kind: "organization" }>;
 }) {
   const { data } = useSuspenseQuery(workflowQuery(props.scope));
   return (
