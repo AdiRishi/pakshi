@@ -45,9 +45,10 @@ export const OutboxMessage = Schema.TaggedUnion({
   },
   /**
    * The site's settings after a save, for D1's copy of its name and for the
-   * site's SiteSubmissions, which reads the settings that take effect at once.
+   * site's SiteSubmissions, which reads the settings that take effect at once
+   * and links its emails to the Studio address the save came from.
    */
-  Settings: { settings: SiteSettings },
+  Settings: { settings: SiteSettings, studio: Schema.NullOr(Schema.String) },
   /** The newest brand revision the site has taken in. */
   BrandTaken: { number: Schema.Int },
   Notify: {

@@ -1,6 +1,7 @@
 import { defineMiddleware } from "astro:middleware";
 import { env } from "cloudflare:workers";
 
+import { takeFormPost } from "./lib/forms.ts";
 import { serveMedia } from "./lib/media.ts";
 import { liveSiteFor } from "./lib/snapshot.ts";
 
@@ -9,7 +10,7 @@ const mediaPrefix = "/_media/";
 
 /**
  * Finds the site for the request's host and serves its pages from the
- * Workers cache. The key holds the site, its release and this Worker's
+ * Workers cache, and passes form posts on to sites-api. The key holds the site, its release and this Worker's
  * version, so a publish or a deploy changes the key instead of needing a
  * purge. Only reads are cached.
  */
@@ -21,8 +22,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
   if (site === null) return new Response("There is no site at this address.", { status: 404 });
 
   context.locals.site = site;
+  if (context.request.method === "POST") return takeFormPost(context.request, site);
   const reading = context.request.method === "GET" || context.request.method === "HEAD";
-  if (!reading) return next();
+  // A page that thanks someone for sending a form is theirs alone.
+  if (!reading || context.url.searchParams.has("sent")) return next();
 
   const key = new Request(
     `https://page-cache.pakshi/${site.id}/${site.live.release}/${env.CF_VERSION_METADATA.id}${context.url.pathname}`,

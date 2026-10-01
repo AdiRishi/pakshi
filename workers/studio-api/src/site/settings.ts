@@ -38,13 +38,15 @@ export class SiteSettingsStore extends Context.Service<
     /**
      * Saves some settings as a new revision, refusing a save made from a
      * revision someone else has moved on from, and queues them for the
-     * runtimes that read them. Call it in the storage turn.
+     * runtimes that read them, with the Studio address the save came from,
+     * which emails about the site link to. Call it in the storage turn.
      */
     readonly save: (
       /** Who saved them, or null when SiteDoc took them from a release it imported. */
       by: Collaborator | null,
       changes: SettingsChanges,
       seen: number,
+      studio: string | null,
     ) => Effect.Effect<SettingsView, StorageError | SettingsChanged>;
   }
 >()("Pakshi/StudioApi/SiteSettingsStore") {
@@ -70,7 +72,7 @@ export class SiteSettingsStore extends Context.Service<
 
       return SiteSettingsStore.of({
         current,
-        save: Effect.fn("SiteSettingsStore.save")(function* (by, changes, seen) {
+        save: Effect.fn("SiteSettingsStore.save")(function* (by, changes, seen, studio) {
           const before = yield* current;
           if (before.revision !== seen)
             return yield* new SettingsChanged({ revision: before.revision });
@@ -87,7 +89,7 @@ export class SiteSettingsStore extends Context.Service<
                   on conflict (key) do update set value = excluded.value,
                     revision = excluded.revision, saved_by = excluded.saved_by,
                     saved_at = excluded.saved_at`;
-              yield* outbox.send({ _tag: "Settings", settings });
+              yield* outbox.send({ _tag: "Settings", settings, studio });
             }),
           );
           return { settings, revision };

@@ -13,6 +13,7 @@ import {
   BlockId,
   type BlockType,
   type DraftId,
+  type FormId,
   PageId,
   randomId,
   ReleaseId,
@@ -52,6 +53,7 @@ import {
   type PageSummary,
   ReviewPage,
   type SettingsChanged,
+  type SiteForm,
   type SiteView,
   type SubmissionNotFound,
   SubmitOutcome,
@@ -60,7 +62,7 @@ import {
 import { currentStep, type Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import { type Approver, eligibility } from "@repo/domain/approvals";
-import type { BlockContracts } from "@repo/domain/document";
+import { type BlockContracts, formsUsedBy } from "@repo/domain/document";
 import { type Frozen, freeze, shownMedia } from "@repo/domain/freeze";
 import {
   changesBetween,
@@ -193,13 +195,15 @@ export class Site extends Context.Service<
       by: Collaborator,
       name: typeof SiteName.Type,
       brand: BrandRevision,
+      studio: string,
     ) => Effect.Effect<DraftSummary, StorageError>;
     readonly settings: Effect.Effect<SettingsView, StorageError>;
-    /** Saves settings, as of the settings revision the person saw. */
+    /** Saves settings, as of the settings revision the person saw, from Studio at `studio`. */
     readonly saveSettings: (
       by: Collaborator,
       changes: SettingsChanges,
       seen: number,
+      studio: string,
     ) => Effect.Effect<SettingsView, StorageError | SettingsChanged>;
     /** The release the site serves. */
     readonly live: Effect.Effect<Release, StorageError>;
@@ -385,6 +389,8 @@ export class Site extends Context.Service<
       type: BlockType,
       version: number,
     ) => Effect.Effect<Option.Option<DraftSummary>, StorageError>;
+    /** The site's forms, in the live site and its open drafts, with the pages each is on. */
+    readonly forms: Effect.Effect<ReadonlyArray<SiteForm>, StorageError>;
     /** The block versions the live site pins, and where each block is used. */
     readonly blocksInUse: Effect.Effect<ReadonlyArray<BlockInUse>, StorageError>;
     /**
@@ -456,7 +462,7 @@ export class Site extends Context.Service<
           );
           yield* brandTaken(manifest.brand.number);
           yield* settingsStore
-            .save(null, manifest.settings, 0)
+            .save(null, manifest.settings, 0, null)
             .pipe(Effect.catchTag("SettingsChanged", Effect.die));
         }
       }
@@ -1006,12 +1012,12 @@ export class Site extends Context.Service<
       });
 
       return Site.of({
-        start: (by, name, brand) =>
+        start: (by, name, brand, studio) =>
           inReleaseTurn(
             Effect.gen(function* () {
               if (Option.isSome(yield* releases.live))
                 return yield* Effect.die(`${site} has started already.`);
-              yield* inStorageTurn(settingsStore.save(by, { name }, 0)).pipe(
+              yield* inStorageTurn(settingsStore.save(by, { name }, 0, studio)).pipe(
                 Effect.catchTag("SettingsChanged", Effect.die),
               );
               const lockfile = latestLockfile;
@@ -1090,7 +1096,8 @@ export class Site extends Context.Service<
             }),
           ),
         settings: settingsStore.current,
-        saveSettings: (by, changes, seen) => inStorageTurn(settingsStore.save(by, changes, seen)),
+        saveSettings: (by, changes, seen, studio) =>
+          inStorageTurn(settingsStore.save(by, changes, seen, studio)),
         live: liveRelease,
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
         drafts: Effect.gen(function* () {
@@ -1470,6 +1477,38 @@ export class Site extends Context.Service<
             // The draft was just listed open, and a draft is never removed.
             Effect.catchTag("DraftNotFound", Effect.die),
           );
+        }),
+        forms: Effect.gen(function* () {
+          const live = yield* contentOf((yield* liveRelease).snapshot);
+          const open = yield* inStorageTurn(
+            Effect.gen(function* () {
+              const infos = (yield* drafts.list).filter((info) => info.status === "open");
+              return yield* Effect.forEach(infos, (info) => drafts.draft(info.id));
+            }),
+          ).pipe(Effect.catchTag("DraftNotFound", Effect.die));
+          const found = new Map<FormId, { name: string; pages: Set<string>; live: boolean }>();
+          for (const [content, isLive] of [
+            [live, true] as const,
+            ...open.map((draft) => [draft, false] as const),
+          ])
+            for (const form of Object.values(content.forms)) {
+              const known = found.get(form.id) ?? {
+                name: form.name,
+                pages: new Set(),
+                live: false,
+              };
+              if (isLive) known.live = true;
+              for (const page of Object.values(content.pages))
+                if (formsUsedBy(page.blocks).has(form.id))
+                  known.pages.add(page.meta.title || page.path);
+              found.set(form.id, known);
+            }
+          return Array.from(found, ([id, form]) => ({
+            id,
+            name: form.name,
+            pages: Array.from(form.pages),
+            live: form.live,
+          }));
         }),
         blocksInUse: Effect.gen(function* () {
           const content = yield* contentOf((yield* liveRelease).snapshot);

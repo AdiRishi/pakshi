@@ -405,16 +405,18 @@ A site's settings are one registry in `@repo/contracts/settings`. Each setting i
 Form definitions live in the draft and ship in the snapshot. Submissions go straight from the public Worker to the site's own `SiteSubmissions` Durable Object, which is that site's submissions database. The first form post for a site creates it, so there's nothing to provision and no redeploy, and one binding covers every site. Nothing queries submissions across sites.
 
 1. A visitor submits a form. `sites` forwards the request to `sites-api` over a service binding.
-2. `sites-api` rejects bodies over 64 KB, then validates the fields against the form definition in the live release.
+2. `sites-api` rejects bodies over 64 KB, then validates the fields against the form definition in the live release, which it reads from KV and R2 as `sites` does.
 3. The submission is written to the site's `SiteSubmissions`, with the field labels it was sent with. The submitter's email address goes in an indexed column, so deleting everything for one person is one query.
 4. Notification emails are sent to the form's configured addresses through the Email Service binding ([Email Service](https://developers.cloudflare.com/email-service/)). Notifications link to the submission in Studio rather than repeating personal data.
+5. `sites` sends the visitor back to the page, which thanks them in place of the form. A post that fails validation gets a short page listing what to fix.
 
 **Other details:**
 
 - **No spam protection.** Forms send no email to submitters, so a form can't be used to send mail to addresses a visitor types in. Each site's submissions are their own database, so a flood on one form fills only that site's 10 GB and every other site's forms keep working.
 - **Reads:** `studio-api` binds the same `SiteSubmissions` namespace and calls it over RPC for authorized views, exports and deletions. Turnstile's limit of 20 widgets per non-Enterprise account ([plans](https://developers.cloudflare.com/turnstile/plans/)) shapes the design when spam protection is added: one widget for the sites domain, which covers its subdomains, and custom domains grouped 10 to a widget.
 - **Retention:** submissions are kept for the life of the site, as part of its data; nothing deletes them automatically. Deleting one submission, or all records for one email address, is available for privacy requests.
-- **Email Service** sends all email (sending is in public beta), from domains that use Cloudflare DNS. No fallback provider is built. Each notification records when it was sent, and a scheduled job retries unsent ones.
+- **Email Service** sends all email (sending is in public beta), from domains that use Cloudflare DNS. No fallback provider is built. Each notification waits in its `SiteSubmissions` until it's sent, and the object's alarm tries a failed one again, waiting twice as long each time, up to six hours.
+- **Settings:** where each form's entries are emailed is a live site setting. `SiteDoc` sends the site's live settings to its `SiteSubmissions` through the outbox whenever they're saved, with the Studio address its emails link to ([site settings](#site-settings)).
 
 ## Domains
 

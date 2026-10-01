@@ -63,6 +63,8 @@ export interface SiteData {
    * don't send, and the blocks in `changed` are marked for review.
    */
   readonly preview: { readonly changed: ReadonlySet<BlockId> } | null;
+  /** The form whose answers the visitor has just sent, which thanks them instead of asking again. */
+  readonly sent: FormId | null;
 }
 
 const SiteDataContext = createContext<SiteData | null>(null);
@@ -327,11 +329,13 @@ export const FormView = (options: {
 }) => {
   const { block } = useField(options.field);
   const definition = useForm(options.value.id);
-  const { pagePath: privacyHref, preview } = useSiteData();
+  const { pagePath: privacyHref, preview, sent } = useSiteData();
   if (definition === undefined) return null;
+  if (sent === definition.id)
+    return <output className="text-lead">Thank you. Your answers were sent.</output>;
   const inputId = (id: string) => `${block}-${id}`;
   return (
-    <form method="post" className={options.className}>
+    <form method="post" action={`?form=${definition.id}`} className={options.className}>
       {definition.fields.map((field) => {
         switch (field.kind) {
           case "hidden":

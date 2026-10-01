@@ -20,6 +20,10 @@
       "types": "./src/document.ts",
       "default": "./src/document.ts"
     },
+    "./forms": {
+      "types": "./src/forms.ts",
+      "default": "./src/forms.ts"
+    },
     "./freeze": {
       "types": "./src/freeze.ts",
       "default": "./src/freeze.ts"

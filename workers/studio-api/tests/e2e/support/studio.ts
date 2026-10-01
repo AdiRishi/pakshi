@@ -65,7 +65,7 @@ export const signIn = (email: string, password: string) =>
 /** The emails sent to an address so far, oldest first. */
 export const emailsTo = (address: string) =>
   Effect.promise(async () =>
-    (await env.MAILBOX.messages()).filter((message) => message.to === address),
+    (await env.MAILBOX.messages()).filter((message) => [message.to].flat().includes(address)),
   );
 
 /**

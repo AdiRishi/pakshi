@@ -17,6 +17,7 @@ const siteAdministration = [
   "members.manage",
   "submissions.read",
   "submissions.export",
+  "submissions.delete",
 ] as const satisfies ReadonlyArray<Permission>;
 
 /** The permissions each default role holds. */

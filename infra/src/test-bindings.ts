@@ -54,6 +54,10 @@ export const studioApiTestBindings = {
 
 export const sitesApiTestBindings = {
   SITE_SUBMISSIONS: { kind: "durableObject", className: "SiteSubmissions" },
+  EMAIL: { kind: "service", worker: testWorkers.mailbox, entrypoint: "Mailbox" },
+  EMAIL_SENDER: { kind: "text", value: "notifications@pakshi.test" },
+  ROUTING: { kind: "kv" },
+  CONTENT: { kind: "r2" },
   ENVIRONMENT: { kind: "text", value: "test" },
 } as const satisfies TestBindings<SitesApiEnv>;
 

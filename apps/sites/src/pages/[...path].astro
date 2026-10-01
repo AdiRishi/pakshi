@@ -1,7 +1,9 @@
 ---
 import "@repo/blocks/site.css";
 import { renderPage, siteData, SitePage } from "@repo/blocks";
+import { FormId } from "@repo/contracts/ids";
 import { themeCss } from "@repo/tokens";
+import { Option, Schema } from "effect";
 
 import { loadManifest, loadPage } from "../lib/snapshot.ts";
 
@@ -14,7 +16,9 @@ if (entry === undefined) {
 }
 const page = entry === undefined ? null : await loadPage(site.id, entry.object);
 const rendered = page === null ? null : await renderPage(page, manifest.parts, manifest.lockfile);
-const data = siteData({
+const sent = Schema.decodeUnknownOption(FormId)(Astro.url.searchParams.get("sent"));
+const data = {
+  ...siteData({
   settings: manifest.settings,
   identity: manifest.brand.identity,
   menus: manifest.parts.menus,
@@ -24,7 +28,9 @@ const data = siteData({
     const file = manifest.media[id];
     return file === undefined ? undefined : { src: `/_media/${id}`, width: file.width, height: file.height };
   },
-});
+  }),
+  sent: Option.getOrNull(sent),
+};
 const { favicon } = manifest.brand.identity;
 // A new site's first release has no pages until its first draft publishes.
 const unpublished = manifest.pages.length === 0;

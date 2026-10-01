@@ -84,5 +84,6 @@ export const siteData = (site: {
     pagePath: (id) => paths.get(id),
     form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),
     preview: null,
+    sent: null,
   };
 };
