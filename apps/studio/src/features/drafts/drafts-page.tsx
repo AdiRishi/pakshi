@@ -130,7 +130,7 @@ function OpenDrafts(props: {
               <Link
                 to="/sites/$siteId/drafts/$draftId"
                 params={{ siteId: props.site, draftId: draft.id }}
-                className="underline-offset-4 hover:underline"
+                className="text-link underline underline-offset-4"
               >
                 {draft.name}
               </Link>
