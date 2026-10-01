@@ -17,6 +17,7 @@ const ascii = (bytes: Uint8Array, at: number, length: number) =>
 const view = (bytes: Uint8Array) => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
 
 const png = (bytes: Uint8Array): ImageInfo | null =>
+  bytes.length >= 24 &&
   startsWith(bytes, [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]) &&
   ascii(bytes, 12, 4) === "IHDR"
     ? {
@@ -50,7 +51,8 @@ const jpeg = (bytes: Uint8Array): ImageInfo | null => {
 };
 
 const webp = (bytes: Uint8Array): ImageInfo | null => {
-  if (ascii(bytes, 0, 4) !== "RIFF" || ascii(bytes, 8, 4) !== "WEBP") return null;
+  if (bytes.length < 30 || ascii(bytes, 0, 4) !== "RIFF" || ascii(bytes, 8, 4) !== "WEBP")
+    return null;
   const data = view(bytes);
   switch (ascii(bytes, 12, 4)) {
     case "VP8 ":
