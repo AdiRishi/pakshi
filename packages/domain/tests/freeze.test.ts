@@ -219,6 +219,97 @@ describe("freezing", () => {
     expect(issuesIn(withConsent(true), new Set([visit]))).toEqual([]);
   });
 
+  test("lists links that show no text, from rich text and menus, and form fields without a label", () => {
+    const visit = FormId.make("frm_visit");
+    const draft = edit(complete, [
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["body"],
+        value: {
+          type: "doc",
+          content: [
+            {
+              type: "paragraph",
+              content: [
+                { type: "text", text: "Read the " },
+                {
+                  type: "text",
+                  text: "guide",
+                  marks: [{ type: "link", attrs: { href: "https://example.org/guide" } }],
+                },
+                {
+                  type: "text",
+                  text: " ",
+                  marks: [{ type: "link", attrs: { href: "https://example.org/map" } }],
+                },
+              ],
+            },
+          ],
+        },
+      },
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: null,
+        block: {
+          id: "b_visit",
+          type: "form-section",
+          variant: "card",
+          surface: "default",
+          props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+        },
+      },
+      {
+        op: "setForm",
+        form: {
+          id: "frm_visit",
+          name: "Plan a visit",
+          submitLabel: "Send",
+          fields: [
+            { kind: "shortText", id: "ff_name", label: "Your name", required: true },
+            { kind: "longText", id: "ff_notes", label: "  ", required: false },
+          ],
+        },
+      },
+    ]);
+    const withMenu: Draft = {
+      ...draft,
+      parts: {
+        ...draft.parts,
+        menus: {
+          main: [
+            {
+              id: MenuItemId.make("mi_about"),
+              label: "",
+              target: { $ref: "page", id: PageId.make("pg_about") },
+            },
+          ],
+          footer: [],
+        },
+      },
+    };
+    expect(issuesIn(withMenu, new Set([visit]))).toEqual([
+      {
+        _tag: "LinkWithoutText",
+        place: { target: "pg_home", title: "Harbour Summer School" },
+        block: { id: "b_hero", title: "Hero" },
+        path: ["body"],
+        field: "Text",
+      },
+      {
+        _tag: "LinkWithoutText",
+        place: { target: "site", title: "Main menu" },
+        block: null,
+        path: [],
+        field: "Main menu",
+      },
+      { _tag: "UnlabelledField", form: visit, name: "Plan a visit", field: "ff_notes" },
+    ]);
+  });
+
   test("lists a redirect to a page that isn't served as a broken link", () => {
     const draft = edit(complete, [
       { op: "setStatus", page: "pg_about", status: "unpublished" },

@@ -1,5 +1,4 @@
 import type { Activity, Part, SitePlan, Turn } from "@repo/contracts/agent";
-import type { CheckIssue } from "@repo/contracts/publishing";
 import { useBlockTitle } from "@repo/editor";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -14,6 +13,8 @@ import {
   SendIcon,
   Undo2Icon,
 } from "lucide-react";
+
+import { describeIssue } from "@/features/approvals/describe";
 
 /** What the chat panel can do from a turn. */
 export interface TurnActions {
@@ -161,23 +162,6 @@ function PlanCard(props: {
   );
 }
 
-const issueLine = (issue: CheckIssue) => {
-  switch (issue._tag) {
-    case "Incomplete":
-      return `${issue.place.title}: ${issue.field} in the ${issue.block.title}. ${issue.message}.`;
-    case "Placeholder":
-      return `${issue.place.title}: ${issue.field} in the ${issue.block.title} still has placeholder content.`;
-    case "MissingMeta":
-      return `${issue.place.title} has no ${issue.field}.`;
-    case "BrokenLink":
-      return `${issue.place.title}: ${issue.field} links to a page that isn't published.`;
-    case "NoFormEmails":
-      return `${issue.name} would email its entries to no one. Add an address in the site's settings.`;
-    case "MissingConsent":
-      return `${issue.name} asks for contact details without a required consent checkbox linking to a privacy policy.`;
-  }
-};
-
 function SubmissionCard(props: {
   readonly part: Extract<Part, { _tag: "Submission" }>;
   readonly onSubmit: () => void;
@@ -197,7 +181,7 @@ function SubmissionCard(props: {
       {issues.length > 0 && (
         <ul className="flex list-disc flex-col gap-1 pl-4 text-xs text-muted-foreground">
           {issues.slice(0, 5).map((issue, index) => (
-            <li key={index}>{issueLine(issue)}</li>
+            <li key={index}>{describeIssue(issue).text}.</li>
           ))}
           {issues.length > 5 && <li>And {issues.length - 5} more.</li>}
         </ul>

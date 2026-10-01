@@ -74,6 +74,34 @@ export const richTextLines = (document: RichTextDocument) => {
   );
 };
 
+/**
+ * The text each link shows, in order: each run of text linked to one address
+ * is one link, however its words are styled.
+ */
+export const linkTexts = (document: RichTextDocument) => {
+  const links = (inline: ReadonlyArray<typeof Inline.Type> | undefined) => {
+    const runs: Array<{ href: string; text: string }> = [];
+    let previous: string | null = null;
+    for (const node of inline ?? []) {
+      const href =
+        node.type === "text"
+          ? (node.marks?.find((mark) => mark.type === "link")?.attrs.href ?? null)
+          : null;
+      const last = runs.at(-1);
+      if (href !== null && node.type === "text")
+        if (href === previous && last !== undefined) last.text += node.text;
+        else runs.push({ href, text: node.text });
+      previous = href;
+    }
+    return runs.map((run) => run.text);
+  };
+  return document.content.flatMap((node) =>
+    node.type === "paragraph" || node.type === "heading"
+      ? links(node.content)
+      : node.content.flatMap((item) => item.content.flatMap((paragraph) => links(paragraph.content))),
+  );
+};
+
 /** Whether a rich text value holds no text at all. */
 export const isEmptyRichText = (document: RichTextDocument) =>
   richTextLines(document).every((line) => line.trim().length === 0);

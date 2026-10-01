@@ -1,6 +1,7 @@
 import type { BlockContract } from "@repo/blocks/contract";
 import { type Field, type Fields, propsSchema } from "@repo/blocks/fields";
 import { placeholderMedia, placeholderPaths } from "@repo/blocks/placeholders";
+import { linkTexts, RichTextDocument } from "@repo/blocks/rich-text";
 import type { SiteContent } from "@repo/contracts/draft";
 import type { FormDefinition } from "@repo/contracts/form";
 import { BlockId, type FormId, type MediaId, type PageId } from "@repo/contracts/ids";
@@ -21,9 +22,10 @@ import { type BlockContracts, formsUsedBy } from "./document.ts";
  * incomplete while people work on them; a frozen draft may not, so the checks
  * run first: every block is checked against its version's complete schema
  * and for placeholder content, every page for its title and description,
- * every link to a page for a page that's served, and every form on a served
- * page for somewhere to send its entries and, when it asks for contact
- * details, a consent checkbox.
+ * every link to a page for a page that's served and every link for text it
+ * shows, and every form on a served page for labels on its fields,
+ * somewhere to send its entries and, when it asks for contact details, a
+ * consent checkbox.
  */
 
 /** A draft ready to be written as a snapshot. */
@@ -56,6 +58,9 @@ const completeSchema = (contract: BlockContract) => {
 const isMediaRef = Schema.is(MediaRef);
 const isPageRef = Schema.is(PageRef);
 const isJsonObject = Schema.is(Schema.JsonObject);
+const isRichText = Schema.is(RichTextDocument);
+
+const blank = (text: string) => text.trim() === "";
 
 /** A path from a schema issue, with list positions turned into the IDs of the items there. */
 const propPath = (
@@ -158,6 +163,60 @@ const brokenLinksIn = (
   );
 };
 
+/** The rich text values a field's value holds, each with its path in the block's props. */
+const richTextIn = (
+  field: Field,
+  path: ReadonlyArray<string>,
+  value: Json | undefined,
+): ReadonlyArray<{ readonly path: ReadonlyArray<string>; readonly document: RichTextDocument }> => {
+  if (field.kind === "richText") return isRichText(value) ? [{ path, document: value }] : [];
+  if (field.kind !== "list" || !Array.isArray(value)) return [];
+  return value.flatMap((item: Json) => {
+    const id = isJsonObject(item) ? item["id"] : undefined;
+    return isJsonObject(item) && Predicate.isString(id)
+      ? Object.entries(field.item).flatMap(([name, itemField]) =>
+          richTextIn(itemField, [...path, id, name], item[name]),
+        )
+      : [];
+  });
+};
+
+const blankLinksIn = (
+  contracts: BlockContracts,
+  place: Place,
+  id: BlockId,
+  block: BlockInstance,
+): ReadonlyArray<CheckIssue> => {
+  const contract = contractOf(contracts, block);
+  return Object.entries(contract.fields).flatMap(([name, field]) =>
+    richTextIn(field, [name], block.props[name])
+      .filter(({ document }) => linkTexts(document).some(blank))
+      .map(({ path }) => ({
+        _tag: "LinkWithoutText" as const,
+        place,
+        block: { id, title: contract.title },
+        path,
+        field: field.title,
+      })),
+  );
+};
+
+const blankMenuLinks = (title: string, items: ReadonlyArray<MenuItem>): ReadonlyArray<CheckIssue> =>
+  items.flatMap((item) => [
+    ...(blank(item.label)
+      ? [
+          {
+            _tag: "LinkWithoutText" as const,
+            place: { target: "site" as const, title },
+            block: null,
+            path: [],
+            field: title,
+          },
+        ]
+      : []),
+    ...blankMenuLinks(title, item.children ?? []),
+  ]);
+
 const brokenMenuLinks = (
   served: ReadonlySet<PageId>,
   title: string,
@@ -214,6 +273,14 @@ const formIssues = (
     const form = content.forms[id];
     if (form === undefined) return [];
     return [
+      ...form.fields
+        .filter((field) => blank(field.label))
+        .map((field) => ({
+          _tag: "UnlabelledField" as const,
+          form: id,
+          name: form.name,
+          field: field.id,
+        })),
       ...(notified.has(id) ? [] : [{ _tag: "NoFormEmails" as const, form: id, name: form.name }]),
       ...(lacksConsent(form)
         ? [{ _tag: "MissingConsent" as const, form: id, name: form.name }]
@@ -304,6 +371,7 @@ export const freeze = (
           })),
           ...placeholdersIn(contracts, place, id, block),
           ...brokenLinksIn(contracts, served, place, id, block),
+          ...blankLinksIn(contracts, place, id, block),
         ];
       }),
     ),
@@ -318,6 +386,8 @@ export const freeze = (
     ),
     ...brokenMenuLinks(served, "Main menu", content.parts.menus.main),
     ...brokenMenuLinks(served, "Footer menu", content.parts.menus.footer),
+    ...blankMenuLinks("Main menu", content.parts.menus.main),
+    ...blankMenuLinks("Footer menu", content.parts.menus.footer),
     ...brokenRedirects(served, content.redirects),
     ...formIssues(content, notified),
   ];
