@@ -13,7 +13,7 @@ workers/processor/
   tests/artifacts/profile-csv.test.ts
 ```
 
-Use `.test.ts` or `.test.tsx` for module and component tests. Infrastructure suites live in `infra/tests/` and use `.integration.test.ts`. Playwright suites for the deployed application also live there, with `.browser.test.ts`.
+Use `.test.ts` or `.test.tsx` for unit tests. A Worker's E2E tests live in `tests/e2e/` and use `.e2e.test.ts`, because they cover the whole Worker rather than one module. Integration tests live in `infra/tests/` and use `.integration.test.ts`. The [kinds of tests](/adr/three-kinds-of-tests) says what each one covers.
 
 Shared test setup, fixtures, and support code live under `tests/` alongside the suites.
 

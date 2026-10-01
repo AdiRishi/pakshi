@@ -3,7 +3,12 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "..",
-    "types": ["@cloudflare/workers-types", "node", "vitest/globals"]
+    "types": [
+      "@cloudflare/workers-types",
+      "node",
+      "vitest/globals",
+      "@cloudflare/vitest-plugin/types"
+    ]
   },
   "include": ["./**/*.ts", "../src/**/*.ts"]
 }

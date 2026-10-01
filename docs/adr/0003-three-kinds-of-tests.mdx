@@ -1,0 +1,24 @@
+---
+title: Three kinds of tests
+description: Unit tests for most behaviour, E2E tests for Workers on emulated Cloudflare, and a few integration tests of whole journeys.
+sidebar:
+  label: Kinds of tests
+---
+
+Pakshi has three kinds of tests. Each kind checks what the cheaper kind can't.
+
+| Kind        | Runs                                                                      | File                                   | Command                          |
+| ----------- | ------------------------------------------------------------------------- | -------------------------------------- | -------------------------------- |
+| Unit        | In Node, or in a real browser for components, with no Cloudflare services | `tests/**/*.test.ts(x)`                | `pnpm test`                      |
+| E2E         | A Worker on the Cloudflare Vitest plugin, with every binding emulated     | `tests/e2e/**/*.e2e.test.ts`           | `pnpm test`                      |
+| Integration | Playwright against a whole local stack that Alchemy deploys               | `infra/tests/**/*.integration.test.ts` | `pnpm --filter @repo/infra test` |
+
+**Unit tests are most tests.** They check a module's behaviour through its public interface, with real collaborators in the same process, such as the document module, `SiteDoc`'s logic over in-memory SQLite, or an editor component in a browser. Only a true external seam is replaced, with a controlled adapter.
+
+**E2E tests run our Workers as Cloudflare would.** The Cloudflare Vitest plugin runs a Worker in `workerd` with real D1, KV, R2, Durable Objects, WebSockets, alarms and scheduled events, and the Worker's own entrypoints. They check what only the whole Worker shows: routes and RPC methods, sign-in and permissions, what reaches storage, live connections, and how Durable Objects, the outbox and scheduled jobs work together. A test sets up its data however it needs, through the Worker or straight into storage. Each test file gets storage of its own.
+
+**Integration tests are few, and follow people through happy paths.** Each one starts from a stack with nothing set up, signs people up, and does what a person would, end to end in browsers: setting Pakshi up, building and publishing a site, an approval, two people editing at once. The block fixture checks are integration tests too, because they compare two real renderers. Those checks render sites seeded straight into the test stage, since nothing in Pakshi moves a site to an older block version.
+
+**Every test earns its place.** It protects behaviour a caller depends on, an invariant, or a failure and how Pakshi recovers from it, and it survives a refactor of the code it covers. A test doesn't assert private helpers, call order or mock call counts, and doesn't compute its expected value with the code under test.
+
+**Stand-ins for services outside Cloudflare's runtime.** E2E tests replace Email Service with a mailbox that keeps each message, and Workers AI with a stand-in that refuses every call. `infra/src/test-bindings.ts` lists every Worker binding's stand-in, checked against the Worker's env, so a new binding can't be missed.
