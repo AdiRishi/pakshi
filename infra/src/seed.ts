@@ -1,6 +1,5 @@
 import { createHash } from "node:crypto";
 
-import type { DefaultRole, Scope } from "@repo/contracts/access";
 import { BrandIdentity } from "@repo/contracts/brand";
 import { LiveRelease, objectKeys, routingKeys, SnapshotManifest } from "@repo/contracts/snapshot";
 import { BrandTheme, ResolvedTheme } from "@repo/tokens";
@@ -10,20 +9,9 @@ import * as Output from "alchemy/Output";
 import { Schema } from "effect";
 import * as Effect from "effect/Effect";
 
-import { testUsers } from "../../workers/test-identity-provider/src/users.ts";
 import { dataPlane } from "./data-plane.ts";
 import { fixtureSites } from "./fixture-sites.ts";
 import { sampleSite } from "./sample-site.ts";
-
-type TestUserId = (typeof testUsers)[number]["id"];
-
-/** What each test user may do on the sample site, so every default role can be tried by signing in. */
-const testGrants = (site: Extract<Scope, { kind: "site" }>["id"]) =>
-  [
-    { user: "user_meera", role: "org-admin", scope: { kind: "organization" } },
-    { user: "user_sam", role: "editor", scope: { kind: "site", id: site } },
-    { user: "user_jonah", role: "approver", scope: { kind: "site", id: site } },
-  ] as const satisfies ReadonlyArray<{ user: TestUserId; role: DefaultRole; scope: Scope }>;
 
 const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value).digest("hex");
 
@@ -35,18 +23,16 @@ const sha256 = (value: string | Uint8Array) => createHash("sha256").update(value
 const seedContents = Effect.gen(function* () {
   const sample = yield* Effect.promise(sampleSite);
   const fixtures = yield* Effect.promise(fixtureSites);
-  const manifests = yield* Effect.forEach([sample, ...fixtures], (published) =>
+  const manifests = yield* Effect.forEach(fixtures, (published) =>
     Schema.encodeEffect(SnapshotManifest)(published.manifest).pipe(Effect.orDie),
   );
   return sha256(
     JSON.stringify({
       brand: sample.brand,
-      sites: [sample.site, ...fixtures.map((fixture) => fixture.site)],
+      sites: fixtures.map((fixture) => fixture.site),
       manifests,
       // Every media field the seed writes, since suggested alt text reaches no manifest.
       media: sample.media.map(({ bytes, ...file }) => ({ ...file, bytes: sha256(bytes) })),
-      users: testUsers,
-      grants: testGrants(sample.site.id),
     }),
   );
 });
@@ -73,11 +59,10 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
       }) {
         const sample = yield* Effect.promise(sampleSite);
         const fixtures = yield* Effect.promise(fixtureSites);
-        const published = [
-          { ...sample, host: input.sitesHost },
-          ...fixtures.map((fixture) => ({ ...fixture, host: fixture.host(input.sitesHost) })),
-        ];
-        const now = new Date().toISOString();
+        const published = fixtures.map((fixture) => ({
+          ...fixture,
+          host: fixture.host(input.sitesHost),
+        }));
         yield* db.batch([
           db
             .prepare(
@@ -115,26 +100,6 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
                  on conflict (id) do update set site_id = null, brand_id = excluded.brand_id, alt = excluded.alt`,
               )
               .bind(file.id, sample.brand.id, file.contentType, file.width, file.height, file.alt),
-          ),
-          ...testUsers.map((user) =>
-            db
-              .prepare(
-                `insert into "user" ("id", "name", "email", "emailVerified", "createdAt", "updatedAt")
-                 values (?, ?, ?, 1, ?, ?) on conflict ("id") do nothing`,
-              )
-              .bind(user.id, user.name, user.email, now, now),
-          ),
-          ...testGrants(sample.site.id).map((grant) =>
-            db
-              .prepare(
-                "insert into grants (user_id, role, scope_kind, scope_id) values (?, ?, ?, ?) on conflict do nothing",
-              )
-              .bind(
-                grant.user,
-                grant.role,
-                grant.scope.kind,
-                grant.scope.kind === "site" ? grant.scope.id : null,
-              ),
           ),
         ]);
         for (const file of sample.media)

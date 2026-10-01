@@ -2,11 +2,14 @@ import { roleTitles } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { Person, Viewer } from "@repo/contracts/studio";
 import { type Access, authorize } from "@repo/domain/access";
-import { Effect, Schema } from "effect";
+import { Effect, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { loadAccess } from "./access.ts";
+import { invitePlaces } from "./invitations.ts";
 import { waitingFor } from "./lists.ts";
+import { organizationName } from "./organization.ts";
+import { brandsForNewSites } from "./sites.ts";
 
 const SiteRow = Schema.Struct({
   id: SiteId,
@@ -52,12 +55,16 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
   user: Person,
 ): Effect.fn.Return<Viewer, Schema.SchemaError | SqlError.SqlError, SqlClient.SqlClient> {
   const { access, grants } = yield* loadAccess(user.id);
-  const sites = yield* reachableSites(access);
+  const [sites, organization, newSiteBrands, places] = yield* Effect.all(
+    [reachableSites(access), organizationName, brandsForNewSites(user), invitePlaces(access)],
+    { concurrency: "unbounded" },
+  );
   return {
     user: { id: user.id, name: user.name, email: user.email },
+    organization: Option.getOrElse(organization, () => ""),
     roles: grants.map((grant) => ({
       role: roleTitles[grant.role],
-      scope: grant.scope_name ?? "Organization",
+      scope: grant.scope_name ?? Option.getOrElse(organization, () => "Organization"),
     })),
     sites: sites
       .filter((site) =>
@@ -68,5 +75,10 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
     brands: [...access.grants, ...access.overrides].some(
       (held) => held.scope.kind === "organization" || held.scope.kind === "brand",
     ),
+    can: {
+      createBrand: authorize(access, "brand.create", { kind: "organization" }),
+      createSite: newSiteBrands.length > 0,
+      invite: places.length > 0,
+    },
   };
 });

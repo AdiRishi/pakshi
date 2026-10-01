@@ -25,6 +25,7 @@ import type { Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
 import type { PagePath } from "@repo/contracts/page";
 import type { DraftSharing } from "@repo/contracts/sharing";
+import type { SiteSettings } from "@repo/contracts/site";
 import {
   BlocksRemoved,
   CannotDecide,
@@ -342,6 +343,11 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     } finally {
       await this.#deliverSoon();
     }
+  }
+
+  /** Starts a new site with its first release, and returns the draft it's built in. */
+  start(by: Collaborator, settings: SiteSettings, brand: BrandRevision) {
+    return this.#changing(() => this.#run((site) => site.start(by, settings, brand)));
   }
 
   live() {

@@ -13,7 +13,7 @@ const siteNames = (id: string) =>
 it.effect("an org admin can edit every site, and holds the role on the organization", () =>
   Effect.gen(function* () {
     const viewer = yield* viewerOf("user_org");
-    expect(viewer.roles).toEqual([{ role: "Org admin", scope: "Organization" }]);
+    expect(viewer.roles).toEqual([{ role: "Org admin", scope: "Riverton Council" }]);
     expect(viewer.sites.map((site) => site.name)).toEqual([
       "Library Events",
       "Northbank Libraries",

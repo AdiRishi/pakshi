@@ -1,13 +1,20 @@
 import type { Permission } from "@repo/contracts/access";
-import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
+import { BrandId, MediaId, randomId, SiteId } from "@repo/contracts/ids";
 import { MediaFile } from "@repo/contracts/snapshot";
-import { type Person, SiteNotFound } from "@repo/contracts/studio";
-import { permissionsOn, rolesOn } from "@repo/domain/access";
+import {
+  AddressTaken,
+  NotPermitted,
+  type Person,
+  ScopeNotFound,
+  type SiteAddress,
+  SiteNotFound,
+} from "@repo/contracts/studio";
+import { authorize, permissionsOn, rolesOn } from "@repo/domain/access";
 import type { Approver } from "@repo/domain/approvals";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
-import { loadAccess } from "./access.ts";
+import { describeScope, loadAccess } from "./access.ts";
 
 const SiteRow = Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId });
 
@@ -124,4 +131,44 @@ export const inSiteLibrary = Effect.fn("StudioApi.inSiteLibrary")(function* (
   const rows = yield* sql`select 1 from media
     where id = ${media} and (site_id = ${site.id} or brand_id = ${site.brand})`;
   return rows.length > 0;
+});
+
+/** The brands a person may make sites in. */
+export const brandsForNewSites = Effect.fn("StudioApi.brandsForNewSites")(function* (
+  person: Person,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const { access } = yield* loadAccess(person.id);
+  const brands = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: Schema.Struct({ id: BrandId, name: Schema.String }),
+    execute: () => sql`select id, name from brands order by name`,
+  })(undefined);
+  return brands.filter((brand) =>
+    authorize(access, "site.create", { kind: "brand", id: brand.id }),
+  );
+});
+
+/**
+ * Records a new site in a brand, for someone who may create sites there,
+ * with the platform subdomain it takes. Its SiteDoc starts it next.
+ */
+export const createSite = Effect.fn("StudioApi.createSite")(function* (
+  person: Person,
+  brand: BrandId,
+  name: string,
+  address: SiteAddress,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const { resource } = yield* describeScope({ kind: "brand", id: brand });
+  const { access } = yield* loadAccess(person.id);
+  if (permissionsOn(access, resource).length === 0) return yield* new ScopeNotFound({});
+  if (!authorize(access, "site.create", resource))
+    return yield* new NotPermitted({ action: "create sites in this brand" });
+  const id = SiteId.make(randomId("site"));
+  const inserted = yield* sql`insert into sites (id, brand_id, name, address)
+    values (${id}, ${brand}, ${name}, ${address})
+    on conflict (address) do nothing returning id`;
+  if (inserted.length === 0) return yield* new AddressTaken({ address });
+  return { id, name, brand };
 });

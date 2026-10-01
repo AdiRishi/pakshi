@@ -26,7 +26,16 @@ const data = siteData({
   },
 });
 const { favicon } = manifest.brand.identity;
-const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed" : "Page not found");
+// A new site's first release has no pages until its first draft publishes.
+const unpublished = manifest.pages.length === 0;
+const title =
+  page?.meta.title ??
+  (unpublished ? manifest.settings.name : Astro.response.status === 410 ? "Page removed" : "Page not found");
+const message = unpublished
+  ? "This site hasn't been published yet."
+  : Astro.response.status === 410
+    ? "This page has been taken down."
+    : "There's no page at this address.";
 ---
 
 <!doctype html>
@@ -46,14 +55,12 @@ const title = page?.meta.title ?? (Astro.response.status === 410 ? "Page removed
       ) : (
         <main class="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
           <h1 class="text-title">{title}</h1>
-          <p class="text-lead text-muted-foreground">
-            {Astro.response.status === 410
-              ? "This page has been taken down."
-              : "There's no page at this address."}
-          </p>
-          <a class="text-primary underline" href="/">
-            Go to the home page
-          </a>
+          <p class="text-lead text-muted-foreground">{message}</p>
+          {!unpublished && (
+            <a class="text-primary underline" href="/">
+              Go to the home page
+            </a>
+          )}
         </main>
       )
     }

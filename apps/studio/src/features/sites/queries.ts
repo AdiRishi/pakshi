@@ -1,7 +1,12 @@
 import type { DraftId, SiteId } from "@repo/contracts/ids";
 import { queryOptions } from "@tanstack/react-query";
 
-import { getDraftPages, getSiteDrafts, getSiteReleases } from "./functions";
+import { getDraftPages, getNewSiteOptions, getSiteDrafts, getSiteReleases } from "./functions";
+
+export const newSiteOptionsQuery = queryOptions({
+  queryKey: ["new-site"],
+  queryFn: () => getNewSiteOptions(),
+});
 
 export const siteDraftsQuery = (site: SiteId) =>
   queryOptions({

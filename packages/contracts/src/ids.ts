@@ -53,6 +53,10 @@ export type ItemId = typeof ItemId.Type;
 export const MenuItemId = prefixed("mi").pipe(Schema.brand("MenuItemId"));
 export type MenuItemId = typeof MenuItemId.Type;
 
+/** An invitation for someone to join the organization. */
+export const InvitationId = prefixed("inv").pipe(Schema.brand("InvitationId"));
+export type InvitationId = typeof InvitationId.Type;
+
 /** A field in a form definition. */
 export const FormFieldId = prefixed("ff").pipe(Schema.brand("FormFieldId"));
 export type FormFieldId = typeof FormFieldId.Type;

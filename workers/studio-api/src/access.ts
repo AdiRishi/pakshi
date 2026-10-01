@@ -1,6 +1,8 @@
 import { Scope } from "@repo/contracts/access";
-import { type Access, Grant, Override } from "@repo/domain/access";
-import { Effect, Schema } from "effect";
+import { BrandId } from "@repo/contracts/ids";
+import { ScopeNotFound } from "@repo/contracts/studio";
+import { type Access, Grant, Override, type Resource } from "@repo/domain/access";
+import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 const ScopeRow = Schema.Struct({
@@ -64,4 +66,37 @@ export const loadAccess = Effect.fn("StudioApi.loadAccess")(function* (userId: s
     ),
   };
   return { access, grants };
+});
+
+const ScopeNameRow = Schema.Struct({ name: Schema.String, brand_id: Schema.NullOr(BrandId) });
+
+/**
+ * A scope's name, its brand for a site, and what it is for permission checks,
+ * or ScopeNotFound when it doesn't exist.
+ */
+export const describeScope = Effect.fn("StudioApi.describeScope")(function* (scope: Scope) {
+  const sql = yield* SqlClient.SqlClient;
+  const row = yield* SqlSchema.findOneOption({
+    Request: Schema.Void,
+    Result: ScopeNameRow,
+    execute: () => {
+      switch (scope.kind) {
+        case "organization":
+          return sql`select name, null as brand_id from organization`;
+        case "brand":
+          return sql`select name, null as brand_id from brands where id = ${scope.id}`;
+        case "site":
+          return sql`select name, brand_id from sites where id = ${scope.id}`;
+      }
+    },
+  })(undefined);
+  if (Option.isNone(row)) return yield* new ScopeNotFound({});
+  const brand = row.value.brand_id;
+  const resource: Resource =
+    scope.kind === "site" && brand !== null
+      ? { kind: "site", id: scope.id, brand }
+      : scope.kind === "brand"
+        ? { kind: "brand", id: scope.id }
+        : { kind: "organization" };
+  return { name: row.value.name, brand, resource };
 });

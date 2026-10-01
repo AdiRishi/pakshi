@@ -8,6 +8,10 @@
       "types": "./src/access.ts",
       "default": "./src/access.ts"
     },
+    "./accounts": {
+      "types": "./src/accounts.ts",
+      "default": "./src/accounts.ts"
+    },
     "./agent": {
       "types": "./src/agent.ts",
       "default": "./src/agent.ts"

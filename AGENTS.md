@@ -24,20 +24,21 @@ paths in its own `transit` inputs in `turbo.json`. Without them, a cached
 result survives a change it should not.
 
 `pnpm dev` and the infra tests need an Alchemy Cloudflare profile, because stack
-state lives in Cloudflare. Non-production stages seed the test users from
-`workers/test-identity-provider/src/users.ts` with their grants, and serve the
-snapshot in `fixtures/sample-site` at the Sites Worker's own host.
+state lives in Cloudflare.
 
-They also seed the "Block fixtures N" sites at `fixtures-N.<sites host>`, such
-as `fixtures-1.localhost:1339`. These are test sites, not part of the sample:
-each shows block fixtures on its home page, so the browser suite can check that
+Build and check everything in the dev stack; production comes only with the
+build plan's last checkpoint. A stage starts empty: open Studio, set up the
+organization, then create brands and sites and invite people through Studio, as
+a real organization would. Tests do the same through Studio or the endpoints it
+calls, and never write to D1, KV or R2 directly. Under `pnpm dev`, emails such as
+invitations and password resets land in `infra/.alchemy/local/email/text/`, and a
+site answers at `{address}.localhost:1339`.
+
+Test stages also seed the "Block fixtures N" sites at `fixtures-N.<sites host>`.
+Each shows block fixtures on its home page, so the browser suite can check that
 the editor canvas renders every fixture exactly as `sites` does
 (`infra/src/fixture-sites.ts`). The first holds every section and item fixture;
 the others exist because a site shows only one header and one footer fixture.
-
-A site's `SiteDoc` takes the release KV serves as its first and owns the live
-release from then on, so on a running dev stack a changed fixture reaches its
-site only after `pnpm dev:destroy`.
 
 The agent calls Workers AI through the stage's AI Gateway even under
 `pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and

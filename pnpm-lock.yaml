@@ -326,9 +326,6 @@ catalogs:
     dotenv-cli:
       specifier: 11.0.0
       version: 11.0.0
-    jose:
-      specifier: 6.2.12
-      version: 6.2.12
     lucide-react:
       specifier: 1.48.0
       version: 1.48.0
@@ -1113,31 +1110,6 @@ importers:
       '@types/react':
         specifier: 'catalog:'
         version: 19.3.0
-      typescript:
-        specifier: 'catalog:'
-        version: 7.0.2
-      vitest:
-        specifier: 'catalog:'
-        version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
-
-  workers/test-identity-provider:
-    dependencies:
-      effect:
-        specifier: 4.0.0-rc.117
-        version: 4.0.0-rc.117
-      jose:
-        specifier: 'catalog:'
-        version: 6.2.12
-    devDependencies:
-      '@cloudflare/workers-types':
-        specifier: 'catalog:'
-        version: 5.20260928.1
-      '@repo/infra':
-        specifier: workspace:*
-        version: link:../../infra
-      '@repo/tsconfig':
-        specifier: workspace:*
-        version: link:../../tooling/tsconfig
       typescript:
         specifier: 'catalog:'
         version: 7.0.2

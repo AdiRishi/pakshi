@@ -15,7 +15,14 @@ import {
   SidebarProvider,
 } from "@repo/ui/components/sidebar";
 import { Link, useMatchRoute } from "@tanstack/react-router";
-import { BlocksIcon, CircleCheckIcon, HouseIcon, LogOutIcon, PaletteIcon } from "lucide-react";
+import {
+  BlocksIcon,
+  CircleCheckIcon,
+  HouseIcon,
+  LogOutIcon,
+  PaletteIcon,
+  UsersIcon,
+} from "lucide-react";
 import type { ReactNode } from "react";
 
 import { Logo } from "@/components/logo";
@@ -71,6 +78,18 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
                     Blocks
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                {props.viewer.can.invite && (
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      size="lg"
+                      isActive={matchRoute({ to: "/people", fuzzy: true }) !== false}
+                      render={<Link to="/people" />}
+                    >
+                      <UsersIcon />
+                      People
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                )}
                 {props.viewer.brands && (
                   <SidebarMenuItem>
                     <SidebarMenuButton

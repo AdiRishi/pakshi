@@ -1,0 +1,299 @@
+import { DefaultRole, Scope } from "@repo/contracts/access";
+import {
+  type EmailAddress,
+  InvitationToken,
+  type InvitationView,
+  NamedScope,
+  PendingInvitation,
+} from "@repo/contracts/accounts";
+import { BrandId, InvitationId, randomId, SiteId } from "@repo/contracts/ids";
+import { Collaborator } from "@repo/contracts/live";
+import { now, Timestamp } from "@repo/contracts/release";
+import {
+  AlreadyMember,
+  InvitationClosed,
+  type InvitePlace,
+  NotPermitted,
+  type Person,
+} from "@repo/contracts/studio";
+import { type Access, authorize, defaultRoles, type Resource } from "@repo/domain/access";
+import { Effect, Option, Schema } from "effect";
+import { SqlClient, SqlSchema } from "effect/unstable/sql";
+
+import { describeScope, loadAccess } from "./access.ts";
+import type { Mailer } from "./notifications.ts";
+import { grantRole, organizationName } from "./organization.ts";
+
+/*
+ * Invitations to join the organization, each with the grant its person gets
+ * on accepting. The link carries a random token; D1 keeps only its hash, so a
+ * copy of the database can't be used to join.
+ */
+
+/** How long an invitation's link works. */
+const invitationDays = 14;
+
+const tokenAlphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+
+/** A new token: 40 base-62 digits, about 238 random bits. */
+const newToken = () =>
+  InvitationToken.make(
+    Array.from(crypto.getRandomValues(new Uint8Array(40)), (byte) => tokenAlphabet[byte % 62]).join(
+      "",
+    ),
+  );
+
+const hashOf = (token: InvitationToken) =>
+  Effect.promise(async () => {
+    const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
+    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
+      "",
+    );
+  });
+
+const InvitationRow = Schema.Struct({
+  id: InvitationId,
+  email: Schema.String,
+  role: DefaultRole,
+  scope_kind: Schema.Literals(["organization", "brand", "site"]),
+  scope_id: Schema.NullOr(Schema.String),
+  invited_by: Schema.fromJsonString(Collaborator),
+  expires_at: Timestamp,
+});
+type InvitationRow = typeof InvitationRow.Type;
+
+const scopeOf = (row: Pick<InvitationRow, "scope_kind" | "scope_id">) =>
+  Schema.decodeUnknownEffect(Scope)(
+    row.scope_kind === "organization"
+      ? { kind: "organization" }
+      : { kind: row.scope_kind, id: row.scope_id },
+  );
+
+const named = Effect.fn("StudioApi.namedScope")(function* (scope: Scope) {
+  const { name } = yield* describeScope(scope);
+  return yield* Schema.decodeEffect(NamedScope)({ ...scope, name });
+});
+
+const pendingOf = Effect.fn("StudioApi.pendingOf")(function* (row: InvitationRow) {
+  return {
+    id: row.id,
+    email: row.email,
+    role: row.role,
+    scope: yield* named(yield* scopeOf(row)),
+    invitedBy: row.invited_by,
+    expiresAt: row.expires_at,
+  } satisfies PendingInvitation;
+});
+
+/** The invitation a token opens, while it's unused and unexpired. */
+const openInvitation = Effect.fn("StudioApi.openInvitation")(function* (token: InvitationToken) {
+  const sql = yield* SqlClient.SqlClient;
+  const hash = yield* hashOf(token);
+  return yield* SqlSchema.findOneOption({
+    Request: Schema.Void,
+    Result: InvitationRow,
+    execute: () => sql`select id, email, role, scope_kind, scope_id, invited_by, expires_at
+      from invitations
+      where token_hash = ${hash} and accepted_at is null and expires_at > ${now()}`,
+  })(undefined);
+});
+
+/**
+ * The roles a person may give on a resource: they manage its members, and
+ * hold every permission the role holds there, so no one can give more than
+ * they have.
+ */
+export const rolesGivable = (access: Access, resource: Resource) =>
+  authorize(access, "members.manage", resource)
+    ? DefaultRole.literals.filter((role) =>
+        defaultRoles[role].every((permission) => authorize(access, permission, resource)),
+      )
+    : [];
+
+/** Every place a person may invite people to, and the roles they may give there. */
+export const invitePlaces = Effect.fn("StudioApi.invitePlaces")(function* (access: Access) {
+  const sql = yield* SqlClient.SqlClient;
+  const [organization, brands, sites] = yield* Effect.all(
+    [
+      organizationName,
+      SqlSchema.findAll({
+        Request: Schema.Void,
+        Result: Schema.Struct({ id: BrandId, name: Schema.String }),
+        execute: () => sql`select id, name from brands order by name`,
+      })(undefined),
+      SqlSchema.findAll({
+        Request: Schema.Void,
+        Result: Schema.Struct({ id: SiteId, name: Schema.String, brand_id: BrandId }),
+        execute: () => sql`select id, name, brand_id from sites order by name`,
+      })(undefined),
+    ],
+    { concurrency: "unbounded" },
+  );
+  const places: Array<InvitePlace> = [];
+  const add = (scope: NamedScope, resource: Resource) => {
+    const roles = rolesGivable(access, resource);
+    if (roles.length > 0) places.push({ scope, roles });
+  };
+  if (Option.isSome(organization))
+    add({ kind: "organization", name: organization.value }, { kind: "organization" });
+  for (const brand of brands)
+    add({ kind: "brand", id: brand.id, name: brand.name }, { kind: "brand", id: brand.id });
+  for (const site of sites)
+    add(
+      { kind: "site", id: site.id, name: site.name },
+      { kind: "site", id: site.id, brand: site.brand_id },
+    );
+  return places;
+});
+
+/**
+ * Invites someone by email to hold a role on a scope, and emails them the
+ * link, which is returned for the inviter to copy too. `studio` is Studio's
+ * address, which the link points at.
+ */
+export const invite = Effect.fn("StudioApi.invite")(function* (
+  mailer: Mailer,
+  person: Person,
+  email: EmailAddress,
+  role: DefaultRole,
+  scope: Scope,
+  studio: string,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const described = yield* describeScope(scope);
+  const { access } = yield* loadAccess(person.id);
+  if (!rolesGivable(access, described.resource).includes(role))
+    return yield* new NotPermitted({ action: "give this role here" });
+  const address = email.toLowerCase();
+  const scopeId = scope.kind === "organization" ? null : scope.id;
+  const held = yield* sql`select 1 from grants g join "user" u on u.id = g.user_id
+    where lower(u.email) = ${address} and g.role = ${role} and g.scope_kind = ${scope.kind}
+      and coalesce(g.scope_id, '') = ${scopeId ?? ""}`;
+  if (held.length > 0) return yield* new AlreadyMember({});
+  const token = newToken();
+  const createdAt = now();
+  const row: InvitationRow = {
+    id: InvitationId.make(randomId("inv")),
+    email: address,
+    role,
+    scope_kind: scope.kind,
+    scope_id: scopeId,
+    invited_by: { id: person.id, name: person.name },
+    expires_at: Timestamp.make(
+      new Date(Date.parse(createdAt) + invitationDays * 24 * 60 * 60 * 1000).toISOString(),
+    ),
+  };
+  yield* sql`insert into invitations
+      (id, token_hash, email, role, scope_kind, scope_id, invited_by, created_at, expires_at)
+    values (${row.id}, ${yield* hashOf(token)}, ${row.email}, ${role}, ${scope.kind}, ${scopeId},
+      ${yield* Schema.encodeEffect(Schema.fromJsonString(Collaborator))(row.invited_by)}, ${createdAt},
+      ${row.expires_at})`;
+  const link = `${studio}/join/${token}`;
+  const organization = Option.getOrElse(yield* organizationName, () => "Pakshi");
+  yield* Effect.promise(() =>
+    mailer.send({
+      from: mailer.from,
+      to: address,
+      subject: `${person.name} invited you to ${organization} on Pakshi`,
+      text: `Hello,\n\n${person.name} invited you to work on ${described.name} in Pakshi, where ${organization} builds and updates its websites.\n\nAccept the invitation:\n\n${link}\n\nThe link works for ${invitationDays} days.\n`,
+    }),
+  );
+  return { invitation: yield* pendingOf(row), link };
+});
+
+/** The invitations waiting on the scopes a person manages, newest first. */
+export const pendingInvitations = Effect.fn("StudioApi.pendingInvitations")(function* (
+  access: Access,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const rows = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: InvitationRow,
+    execute: () => sql`select id, email, role, scope_kind, scope_id, invited_by, expires_at
+      from invitations where accepted_at is null and expires_at > ${now()}
+      order by created_at desc`,
+  })(undefined);
+  const shown = yield* Effect.filter(rows, (row) =>
+    Effect.gen(function* () {
+      const described = yield* Effect.option(describeScope(yield* scopeOf(row)));
+      return (
+        Option.isSome(described) && authorize(access, "members.manage", described.value.resource)
+      );
+    }),
+  );
+  // Each scope was found just now, and scopes are never removed.
+  return yield* Effect.forEach(shown, (row) => Effect.orDie(pendingOf(row)));
+});
+
+/** Withdraws an invitation, for someone who manages the members of its scope. */
+export const revokeInvitation = Effect.fn("StudioApi.revokeInvitation")(function* (
+  person: Person,
+  id: InvitationId,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const row = yield* SqlSchema.findOneOption({
+    Request: Schema.Void,
+    Result: InvitationRow,
+    execute: () => sql`select id, email, role, scope_kind, scope_id, invited_by, expires_at
+      from invitations where id = ${id} and accepted_at is null`,
+  })(undefined);
+  if (Option.isNone(row)) return;
+  // Scopes are never removed, so an invitation's is always there.
+  const described = yield* Effect.orDie(describeScope(yield* scopeOf(row.value)));
+  const { access } = yield* loadAccess(person.id);
+  if (!authorize(access, "members.manage", described.resource))
+    return yield* new NotPermitted({ action: "withdraw this invitation" });
+  yield* sql`delete from invitations where id = ${id}`;
+});
+
+/** What an invitation's link shows: who it's for and what it gives, or that it's closed. */
+export const invitationView = Effect.fn("StudioApi.invitationView")(function* (
+  token: InvitationToken,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const row = yield* openInvitation(token);
+  const organization = yield* organizationName;
+  if (Option.isNone(row) || Option.isNone(organization))
+    return { _tag: "Closed" } satisfies InvitationView;
+  const accounts = yield* sql`select 1 from "user" where lower(email) = ${row.value.email}`;
+  const pending = yield* Effect.orDie(pendingOf(row.value));
+  return {
+    _tag: "Open",
+    organization: organization.value,
+    email: pending.email,
+    role: pending.role,
+    scope: pending.scope,
+    invitedBy: pending.invitedBy,
+    accountExists: accounts.length > 0,
+  } satisfies InvitationView;
+});
+
+/**
+ * The open invitation a token names, for an account about to be made from
+ * it. Fails when it's closed.
+ */
+export const invitationToJoin = Effect.fn("StudioApi.invitationToJoin")(function* (
+  token: InvitationToken,
+) {
+  const row = yield* openInvitation(token);
+  if (Option.isNone(row)) return yield* new InvitationClosed({});
+  return row.value;
+});
+
+/**
+ * Gives a person an invitation's grant and closes it. The invitation must be
+ * open and sent to their own address, so a forwarded link is no use to anyone
+ * else.
+ */
+export const acceptInvitation = Effect.fn("StudioApi.acceptInvitation")(function* (
+  person: Pick<Person, "id" | "email">,
+  token: InvitationToken,
+) {
+  const sql = yield* SqlClient.SqlClient;
+  const row = yield* invitationToJoin(token);
+  if (row.email !== person.email.toLowerCase()) return yield* new InvitationClosed({});
+  const accepted = yield* sql`update invitations set accepted_at = ${now()}
+    where id = ${row.id} and accepted_at is null returning id`;
+  if (accepted.length === 0) return yield* new InvitationClosed({});
+  yield* grantRole(person.id, row.role, yield* scopeOf(row));
+});
