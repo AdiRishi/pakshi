@@ -13,12 +13,14 @@ import {
 import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
 import { EmailAddress } from "./email.ts";
+import { FormEntry, FormSummary } from "./entries.ts";
 import { FormDefinition } from "./form.ts";
 import {
   BlockId,
   BlockType,
   BrandId,
   DraftId,
+  EntryId,
   FormId,
   InvitationId,
   MediaId,
@@ -188,6 +190,26 @@ export class SettingsChanged extends Schema.TaggedError<SettingsChanged>()("Sett
 /** The image isn't in the site's library or its brand's. */
 export class ImageNotFound extends Schema.TaggedError<ImageNotFound>()("ImageNotFound", {}) {}
 
+/** A site's forms with how many entries each has, for someone who may read them. */
+export const SiteEntriesView = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  forms: Schema.Array(FormSummary),
+  can: Schema.Struct({ export: Schema.Boolean, delete: Schema.Boolean }),
+});
+export type SiteEntriesView = typeof SiteEntriesView.Type;
+
+/** Where a page of entries ends, for asking for the next. */
+export const EntryCursor = Schema.Struct({ receivedAt: Timestamp, id: EntryId });
+
+export const EntriesPage = Schema.Struct({
+  entries: Schema.Array(FormEntry),
+  more: Schema.Boolean,
+});
+export type EntriesPage = typeof EntriesPage.Type;
+
+/** The site has no entry with this ID, or it was deleted. */
+export class EntryNotFound extends Schema.TaggedError<EntryNotFound>()("EntryNotFound", {}) {}
+
 /** The person already holds this role there. */
 export class AlreadyMember extends Schema.TaggedError<AlreadyMember>()("AlreadyMember", {}) {}
 
@@ -213,12 +235,23 @@ export const MediaSummary = Schema.Struct({
 });
 export type MediaSummary = typeof MediaSummary.Type;
 
-/** A site's settings, with the images it can choose from and whether the person may change them. */
+/** One of a site's forms, in the live site or an open draft, with the pages it's on. */
+export const SiteForm = Schema.Struct({
+  id: FormId,
+  name: Schema.String,
+  pages: Schema.Array(Schema.String),
+  /** Whether the live site has the form, rather than only a draft. */
+  live: Schema.Boolean,
+});
+export type SiteForm = typeof SiteForm.Type;
+
+/** A site's settings, with the images and forms they refer to and whether the person may change them. */
 export const SiteSettingsView = Schema.Struct({
   site: Schema.Struct({ id: SiteId, name: Schema.String }),
   brand: Schema.Struct({ id: BrandId, name: Schema.String }),
   ...SettingsView.fields,
   media: Schema.Array(MediaSummary),
+  forms: Schema.Array(SiteForm),
   can: Schema.Struct({ edit: Schema.Boolean }),
 });
 export type SiteSettingsView = typeof SiteSettingsView.Type;
@@ -757,6 +790,38 @@ class SignedInRpcs extends RpcGroup.make(
       SettingsChanged,
       ImageNotFound,
     ]),
+  }),
+  Rpc.make("siteEntries", {
+    payload: { site: SiteId },
+    success: SiteEntriesView,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  /** A form's entries, newest first, after `before` when given. */
+  Rpc.make("formEntries", {
+    payload: { site: SiteId, form: FormId, before: Schema.NullOr(EntryCursor) },
+    success: EntriesPage,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  Rpc.make("formEntry", {
+    payload: { site: SiteId, entry: EntryId },
+    success: FormEntry,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, EntryNotFound]),
+  }),
+  /** Every entry of a form as a CSV file, oldest first. */
+  Rpc.make("exportEntries", {
+    payload: { site: SiteId, form: FormId },
+    success: Schema.Struct({ filename: Schema.String, csv: Schema.String }),
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
+  }),
+  Rpc.make("deleteEntry", {
+    payload: { site: SiteId, entry: EntryId },
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, EntryNotFound]),
+  }),
+  /** Deletes every entry that gave an email address, for someone who asks for their data to go. */
+  Rpc.make("deleteEntriesFor", {
+    payload: { site: SiteId, email: EmailAddress },
+    success: Schema.Struct({ deleted: Schema.Int }),
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted]),
   }),
   Rpc.make("siteDrafts", { payload: { site: SiteId }, success: SiteDrafts, error: siteError }),
   Rpc.make("createDraft", {

@@ -15,6 +15,7 @@ import {
   type DecisionOutcome,
   DraftNotFound,
   type DraftSummary,
+  EntryNotFound,
   ImageNotFound,
   NothingToRollBack,
   NotPermitted,
@@ -25,6 +26,7 @@ import {
   type ReviewPage,
   SettingsChanged,
   SignedIn,
+  type SiteForm,
   type SiteAbilities,
   type SiteView,
   StudioAddress,
@@ -43,6 +45,7 @@ import {
 import type { Submission } from "@repo/contracts/submission";
 import { authorize } from "@repo/domain/access";
 import { eligibility } from "@repo/domain/approvals";
+import { entriesCsv } from "@repo/domain/forms";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Cause, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient } from "effect/unstable/sql";
@@ -169,6 +172,9 @@ const abilities = (permissions: ReadonlyArray<Permission>): SiteAbilities => ({
   share: permissions.includes("draft.share"),
 });
 
+/** How many entries Studio lists at a time. */
+const entriesPage = 50;
+
 const collaborator = (person: Person): Collaborator => ({ id: person.id, name: person.name });
 
 const pageSummaries = (draft: Draft) =>
@@ -245,14 +251,21 @@ const handlers = (env: StudioApiEnv) =>
           Effect.catchTag("ScopeNotFound", Effect.die),
         );
         const media = yield* siteMedia(site);
+        const doc = yield* siteDoc(env, site.id);
+        const forms = yield* Effect.tryPromise(async (): Promise<ReadonlyArray<SiteForm>> =>
+          doc.forms(),
+        );
         return {
           site: { id: site.id, name: site.name },
           brand: { id: site.brand, name: brand.name },
           ...view,
           media,
+          forms,
           can: { edit: site.permissions.includes("site.settings.edit") },
         };
       });
+      /** A site's form entries, in its own SiteSubmissions. */
+      const entriesOf = (site: SiteId) => env.SITE_SUBMISSIONS.getByName(site);
       const liveOf = (doc: Effect.Success<ReturnType<typeof siteDoc>>) =>
         Effect.tryPromise(async (): Promise<Release> => doc.live());
 
@@ -303,8 +316,9 @@ const handlers = (env: StudioApiEnv) =>
                 const created = yield* createSite(person, brand, name, address);
                 const revision = pinnedRevision(yield* latestRevision(brand));
                 const doc = yield* siteDoc(env, created.id);
+                const studio = yield* StudioAddress;
                 const draft = yield* Effect.tryPromise(async (): Promise<DraftSummary> =>
-                  doc.start(collaborator(person), name, revision),
+                  doc.start(collaborator(person), name, revision, studio),
                 );
                 // The host is written last, so sites never finds a site with no release.
                 yield* Effect.tryPromise(() =>
@@ -351,12 +365,111 @@ const handlers = (env: StudioApiEnv) =>
                   !(yield* inSiteLibrary(found, image.id))
                 )
                   return yield* new ImageNotFound({});
+                const studio = yield* StudioAddress;
                 const view = yield* outcome(
                   SettingsChanged,
                   async (): Promise<Outcome<SettingsView>> =>
-                    doc.saveSettings(collaborator(person), changes, seen),
+                    doc.saveSettings(collaborator(person), changes, seen, studio),
                 );
                 return yield* settingsView({ ...found, name: view.settings.name }, view);
+              }),
+            ),
+          ),
+        siteEntries: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("site entries")(
+              Effect.gen(function* () {
+                const { found, doc } = yield* permitted(
+                  person,
+                  site,
+                  "submissions.read",
+                  "read this site's form entries",
+                );
+                const [forms, received] = yield* Effect.all(
+                  [
+                    Effect.tryPromise(async (): Promise<ReadonlyArray<SiteForm>> => doc.forms()),
+                    Effect.tryPromise(() => entriesOf(site).forms()),
+                  ],
+                  { concurrency: "unbounded" },
+                );
+                const counted = new Map(received.map((form) => [form.id, form]));
+                return {
+                  site: { id: found.id, name: found.name },
+                  forms: [
+                    ...received,
+                    ...forms
+                      .filter((form) => !counted.has(form.id))
+                      .map((form) => ({ id: form.id, name: form.name, entries: 0, latest: null })),
+                  ],
+                  can: {
+                    export: found.permissions.includes("submissions.export"),
+                    delete: found.permissions.includes("submissions.delete"),
+                  },
+                };
+              }),
+            ),
+          ),
+        formEntries: ({ site, form, before }) =>
+          SignedIn.use((person) =>
+            withCore("form entries")(
+              Effect.gen(function* () {
+                yield* permitted(person, site, "submissions.read", "read this site's form entries");
+                const entries = yield* Effect.tryPromise(() =>
+                  entriesOf(site).entries({ form, before, limit: entriesPage + 1 }),
+                );
+                return {
+                  entries: entries.slice(0, entriesPage),
+                  more: entries.length > entriesPage,
+                };
+              }),
+            ),
+          ),
+        formEntry: ({ site, entry }) =>
+          SignedIn.use((person) =>
+            withCore("form entry")(
+              Effect.gen(function* () {
+                yield* permitted(person, site, "submissions.read", "read this site's form entries");
+                const found = yield* Effect.tryPromise(() => entriesOf(site).entry(entry));
+                return found ?? (yield* new EntryNotFound({}));
+              }),
+            ),
+          ),
+        exportEntries: ({ site, form }) =>
+          SignedIn.use((person) =>
+            withCore("export entries")(
+              Effect.gen(function* () {
+                const { found } = yield* permitted(
+                  person,
+                  site,
+                  "submissions.export",
+                  "export this site's form entries",
+                );
+                const entries = yield* Effect.tryPromise(() => entriesOf(site).everyEntry(form));
+                const name = entries.at(-1)?.formName ?? form;
+                return {
+                  filename: `${found.name} - ${name}.csv`.replaceAll(/[\\/:*?"<>|]/g, ""),
+                  csv: entriesCsv(entries),
+                };
+              }),
+            ),
+          ),
+        deleteEntry: ({ site, entry }) =>
+          SignedIn.use((person) =>
+            withCore("delete entry")(
+              Effect.gen(function* () {
+                yield* permitted(person, site, "submissions.delete", "delete form entries");
+                const removed = yield* Effect.tryPromise(() => entriesOf(site).remove(entry));
+                if (!removed) return yield* new EntryNotFound({});
+              }),
+            ),
+          ),
+        deleteEntriesFor: ({ site, email }) =>
+          SignedIn.use((person) =>
+            withCore("delete entries")(
+              Effect.gen(function* () {
+                yield* permitted(person, site, "submissions.delete", "delete form entries");
+                const deleted = yield* Effect.tryPromise(() => entriesOf(site).removeFor(email));
+                return { deleted };
               }),
             ),
           ),

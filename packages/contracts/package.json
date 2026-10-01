@@ -32,6 +32,10 @@
       "types": "./src/email.ts",
       "default": "./src/email.ts"
     },
+    "./entries": {
+      "types": "./src/entries.ts",
+      "default": "./src/entries.ts"
+    },
     "./form": {
       "types": "./src/form.ts",
       "default": "./src/form.ts"

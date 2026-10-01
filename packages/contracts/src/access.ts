@@ -24,6 +24,7 @@ export const Permission = Schema.Literals([
   "blocks.request",
   "submissions.read",
   "submissions.export",
+  "submissions.delete",
 ]);
 export type Permission = typeof Permission.Type;
 

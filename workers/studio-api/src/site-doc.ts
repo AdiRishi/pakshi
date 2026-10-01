@@ -356,16 +356,16 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
   }
 
   /** Starts a new site with its name and first release, and returns the draft it's built in. */
-  start(by: Collaborator, name: typeof SiteName.Type, brand: BrandRevision) {
-    return this.#changing(() => this.#run((site) => site.start(by, name, brand)));
+  start(by: Collaborator, name: typeof SiteName.Type, brand: BrandRevision, studio: string) {
+    return this.#changing(() => this.#run((site) => site.start(by, name, brand, studio)));
   }
 
   settings() {
     return this.#run((site) => site.settings);
   }
 
-  saveSettings(by: Collaborator, changes: SettingsChanges, seen: number) {
-    return this.#changing(() => this.#call((site) => site.saveSettings(by, changes, seen)));
+  saveSettings(by: Collaborator, changes: SettingsChanges, seen: number, studio: string) {
+    return this.#changing(() => this.#call((site) => site.saveSettings(by, changes, seen, studio)));
   }
 
   live() {
@@ -582,6 +582,10 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
 
   blocksInUse() {
     return this.#run((site) => site.blocksInUse);
+  }
+
+  forms() {
+    return this.#run((site) => site.forms);
   }
 
   /** Copies the block versions the site pins to D1 again. */

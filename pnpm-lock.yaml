@@ -1050,22 +1050,43 @@ importers:
 
   workers/sites-api:
     dependencies:
+      '@effect/sql-sqlite-do':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)
       '@repo/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@repo/domain':
+        specifier: workspace:*
+        version: link:../../packages/domain
+      effect:
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117
     devDependencies:
       '@cloudflare/workers-types':
         specifier: 'catalog:'
         version: 5.20260928.1
+      '@effect/sql-sqlite-node':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)
+      '@effect/vitest':
+        specifier: 4.0.0-rc.117
+        version: 4.0.0-rc.117(effect@4.0.0-rc.117)(vitest@5.0.2)
       '@repo/infra':
         specifier: workspace:*
         version: link:../../infra
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@types/node':
+        specifier: 'catalog:'
+        version: 26.6.3
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      vitest:
+        specifier: 'catalog:'
+        version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
 
   workers/studio-api:
     dependencies:

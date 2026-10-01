@@ -10,15 +10,23 @@
     }
   },
   "scripts": {
-    "typecheck": "tsc --noEmit -p tsconfig.json"
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
   },
   "dependencies": {
-    "@repo/contracts": "workspace:*"
+    "@effect/sql-sqlite-do": "catalog:",
+    "@repo/contracts": "workspace:*",
+    "@repo/domain": "workspace:*",
+    "effect": "catalog:"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "catalog:",
+    "@effect/sql-sqlite-node": "catalog:",
+    "@effect/vitest": "catalog:",
     "@repo/infra": "workspace:*",
     "@repo/tsconfig": "workspace:*",
-    "typescript": "catalog:"
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
   }
 }

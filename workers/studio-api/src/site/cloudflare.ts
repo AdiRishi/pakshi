@@ -86,13 +86,20 @@ export const cloudflarePlatform = (env: StudioApiEnv, site: SiteId) => {
               message.submission,
               message.studio,
             ).pipe(Effect.provide(core), Effect.orDie);
-          case "Settings":
+          case "Settings": {
+            const { studio } = message;
             return Effect.andThen(
-              Effect.promise(() =>
-                env.SITE_SUBMISSIONS.getByName(site).configure(liveOf(message.settings)),
-              ),
+              studio === null
+                ? Effect.void
+                : Effect.promise(() =>
+                    env.SITE_SUBMISSIONS.getByName(site).configure(
+                      liveOf(message.settings),
+                      studio,
+                    ),
+                  ),
               recordCopy(site, message).pipe(Effect.provide(core), Effect.orDie),
             );
+          }
           default:
             return recordCopy(site, message).pipe(Effect.provide(core), Effect.orDie);
         }

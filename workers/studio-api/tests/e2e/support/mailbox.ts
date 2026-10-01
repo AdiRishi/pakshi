@@ -1,9 +1,9 @@
 import { DurableObject, WorkerEntrypoint } from "cloudflare:workers";
 
-/** An email as Studio sends it through Email Service. */
+/** An email as Pakshi sends it through Email Service, to one address or several. */
 export interface Message {
   readonly from: string;
-  readonly to: string;
+  readonly to: string | ReadonlyArray<string>;
   readonly subject: string;
   readonly text: string;
 }
@@ -26,7 +26,7 @@ export class Messages extends DurableObject {
 
 /**
  * Stands in for the Email Service binding. Email Service is outside the
- * Workers runtime, so tests keep what Studio sends and read it back.
+ * Workers runtime, so tests keep what Pakshi sends and read it back.
  */
 export class Mailbox extends WorkerEntrypoint<MailboxEnv> {
   async send(message: Message) {

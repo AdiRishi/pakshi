@@ -11,11 +11,27 @@ import type { DataPlane } from "./data-plane.ts";
 import type { DeploymentConfig } from "./deployment-config.ts";
 import type { SitesApi, StudioApi } from "./workers.ts";
 
-export const sitesApiBindings = (environment: DeploymentConfig["environment"]) => ({
-  SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions"),
-  ENVIRONMENT: environment,
+const emailSender = (environment: DeploymentConfig["environment"]) =>
+  environment === "production" ? Config.String("EMAIL_SENDER") : "notifications@pakshi.test";
+
+export const sitesApiBindings = Effect.fn("Pakshi.SitesApiBindings")(function* (
+  environment: DeploymentConfig["environment"],
+  data: DataPlane,
+) {
+  return {
+    SITE_SUBMISSIONS: Cloudflare.DurableObject<SiteSubmissions>("SiteSubmissions"),
+    /** New entry emails. Under `alchemy dev` they land in Alchemy's local email simulator. */
+    EMAIL: yield* Cloudflare.Email.SendEmail("FormEmail"),
+    EMAIL_SENDER: emailSender(environment),
+    /** The live release of each site, which form posts are checked against. */
+    ROUTING: data.routing,
+    CONTENT: data.content,
+    ENVIRONMENT: environment,
+  };
 });
-export interface SitesApiEnv extends Cloudflare.InferEnv<ReturnType<typeof sitesApiBindings>> {}
+export interface SitesApiEnv extends Cloudflare.InferEnv<
+  Effect.Success<ReturnType<typeof sitesApiBindings>>
+> {}
 
 export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function* (
   environment: DeploymentConfig["environment"],
@@ -29,8 +45,7 @@ export const studioApiBindings = Effect.fn("Pakshi.StudioApiBindings")(function*
   return {
     /** Approval notifications, invitations and password resets. Under `alchemy dev` they land in Alchemy's local email simulator. */
     EMAIL: yield* Cloudflare.Email.SendEmail("Email"),
-    EMAIL_SENDER:
-      environment === "production" ? Config.String("EMAIL_SENDER") : "notifications@pakshi.test",
+    EMAIL_SENDER: emailSender(environment),
     // A Durable Object's data is keyed by its binding name here. Renaming one
     // deletes the class and everything it stored.
     SITE_DOC: Cloudflare.DurableObject<SiteDoc>("SiteDoc"),

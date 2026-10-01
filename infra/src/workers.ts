@@ -26,7 +26,7 @@ export const SitesApi = Effect.gen(function* () {
     name: workerName("sites-api", config.stage),
     workersDev: false,
     main: "../workers/sites-api/src/index.ts",
-    env: sitesApiBindings(config.environment),
+    env: yield* sitesApiBindings(config.environment, yield* dataPlane),
   });
 });
 

@@ -130,7 +130,7 @@ it.effect(
       (site, state) =>
         Effect.gen(function* () {
           const brand = { ...harbourBrand, number: 4 };
-          const launch = yield* site.start(sam, "Harbour Summer School", brand);
+          const launch = yield* site.start(sam, "Harbour Summer School", brand, studio);
           const live = yield* site.live;
           expect(live).toMatchObject({ _tag: "Created", by: sam });
           expect(state.routing).toEqual(Option.some(liveReleaseOf(live)));
@@ -294,7 +294,7 @@ it.effect(
           (live) => state.manifests.get(live.snapshot)?.settings.name,
         );
         const { revision } = yield* site.settings;
-        yield* site.saveSettings(meera, { name: "Harbour Summer Studio" }, revision);
+        yield* site.saveSettings(meera, { name: "Harbour Summer Studio" }, revision, studio);
         expect(yield* liveName).toBe("Harbour Summer School");
 
         const { id } = yield* site.createDraft(sam, name("Heading"));
