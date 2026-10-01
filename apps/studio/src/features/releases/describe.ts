@@ -3,8 +3,10 @@ import type { Release } from "@repo/contracts/release";
 import { formatDay } from "@/lib/dates";
 
 /** What a release changed, in a few words. */
-export const releaseTitle = (release: Release) => {
+export const releaseTitle = (release: Release): string => {
   switch (release._tag) {
+    case "Created":
+      return "The new site, before its first publish";
     case "Published":
       return release.draft.name;
     case "RolledBack":
