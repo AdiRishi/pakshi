@@ -9,6 +9,14 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
+| 085 | Alerts and the security review move out of checkpoint 11                           | 2026-10-01 | Accepted            |
+| 084 | Sites use Astro's content security policy, sent by built sites only                | 2026-10-01 | Accepted            |
+| 083 | Success metrics are worked out from what Pakshi records anyway                     | 2026-10-01 | Accepted            |
+| 082 | The audit log is written by whatever makes each change                             | 2026-10-01 | Accepted            |
+| 081 | Custom roles are rows in D1, held to the delegation rule                           | 2026-10-01 | Accepted            |
+| 080 | SiteDoc keeps each person's permissions, for live and agent batches alike          | 2026-10-01 | Accepted            |
+| 079 | Pre-flight becomes the checks, with no heading rules, and a panel to fix them      | 2026-10-01 | Accepted            |
 | 078 | Site settings leave out a default description and the email sender, for now        | 2026-10-01 | Accepted            |
 | 077 | Deleted sites are kept for 30 days, then purged by the daily job                   | 2026-10-01 | Accepted            |
 | 076 | In the dev stack, only `.localhost` domains are proven                             | 2026-10-01 | Accepted            |
@@ -46,7 +54,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted            |
 | 043 | Live connections catch up from the batch log                                       | 2026-09-30 | Accepted            |
 | 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted            |
-| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Accepted            |
+| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Amended by 080      |
 | 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted            |
 | 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted            |
 | 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted            |
@@ -87,6 +95,76 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 086 — Block requests are kept in Pakshi, not filed in an outside tracker [#decision-086]
+
+**Context.** The plan had block requests filed into the platform team's tracker. The team may later want people to annotate pages to explain what they need, or to hand requests to an agent or to GitHub.
+
+**Decision.** Requests live in D1. People file them from the block catalog, for one site they may ask for blocks on or for any site, and the agent files its person's the same way, both held to `blocks.request`. The platform team, who may upgrade blocks across the organization, reads every request in the catalog and closes each once answered; everyone else sees their own.
+
+**Consequences.** No outside service, token or stand-in. Sending requests elsewhere later reads them from D1.
+
+## 085 — Alerts and the security review move out of checkpoint 11 [#decision-085]
+
+**Context.** Checkpoint 11 listed alerts for the failures operations names, and a security review as a check. Workers Issues and Cloudflare's alerting only work in production, and several failures, such as unsent emails, never throw.
+
+**Decision.** Workers Logs and tracing stay on for every Worker, and AI Gateway reports model cost and errors. Alerts on top of them are set up later, outside the build plan's checkpoints. Security gets scans of its own, apart from building features. A first review of this checkpoint found one gap to close then: an override lets someone who manages a brand or site's members switch permissions off for a person who holds more than they do, an org admin included.
+
+**Consequences.** The operations section names observability and success metrics only.
+
+## 084 — Sites use Astro's content security policy, sent by built sites only [#decision-084]
+
+**Context.** Every site must send a strict content security policy. Pages run no scripts, load the site's own styles, fonts and images, and inline one stylesheet: the theme, which differs per site.
+
+**Decision.** Astro's `security.csp` sends each page's policy as a header, with the directives in `astro.config.ts`, hashes of what Astro inlines, and the theme's hash added at render with `Astro.csp.insertStyleHash`. The middleware gives every other response a policy that loads nothing, and every response `nosniff` and a referrer policy. Astro's dev server injects scripts of its own, so Astro sends no page policy there.
+
+**Rejected.** A policy of our own in the middleware, which would block the dev server's scripts, or need loosening for it.
+
+**Consequences.** The page policy can only be seen in a deployed site, which checkpoint 12 checks.
+
+## 083 — Success metrics are worked out from what Pakshi records anyway [#decision-083]
+
+**Context.** Every success metric must be recorded, and the Pakshi team needs somewhere to read them.
+
+**Decision.** studio-api works each one out on request, over a period, from D1's copies of releases and submissions, the audit log and block requests: time to launch and approval turnaround in business days, time to change in minutes, agent success from the agent's turns and their undos, untracked changes from the times the reconcile job put a site's live release back, and block requests per active site by month. Org admins read them on a Metrics page. The agent's cost per launch stays in AI Gateway, which tags every model call with its site.
+
+**Rejected.** Counting tokens and pricing model calls in Pakshi, which copies what AI Gateway already keeps.
+
+**Consequences.** A new metric is a query, not new recording, wherever its events are audited.
+
+## 082 — The audit log is written by whatever makes each change [#decision-082]
+
+**Context.** Every audited action must be recorded, and actions happen in studio-api, in each site's `SiteDoc`, and in scheduled jobs.
+
+**Decision.** One `audit_log` table in D1. studio-api writes the entries for what it changes. `SiteDoc` sends its own through its outbox, written in the same storage turn as the change; the entries for publishes and rollbacks are made from the release records as they reach D1, so no release goes live without one. An editing session is one entry, for a person's run of edits in a draft until half an hour passes without one, rewritten at most every five minutes as it grows. An entry deleting a person's form entries doesn't keep their email address. Entries outlive the sites they name. Reading the log needs `audit.read`, which org admins hold.
+
+**Consequences.** Every new audited action is one event in `AuditEvent`, with its kind in the log's filters.
+
+## 081 — Custom roles are rows in D1, held to the delegation rule [#decision-081]
+
+**Context.** Admins create custom roles, and people change who holds what, but no one may give more than they hold.
+
+**Decision.** Default roles stay in code and can't be changed; custom roles are rows in D1, and a grant names either by ID. Making or changing a role needs `roles.manage` and every permission it held and holds, across the organization. Giving, changing or taking away a role on a scope, and setting or removing an override, needs `members.manage` there and every permission involved. A role someone holds, or a workflow step names, can't be deleted, and the last org admin can't lose the role. Workflow steps name roles by ID and show their current names.
+
+**Consequences.** Editing a custom role changes what everyone who holds it may do at once.
+
+## 080 — SiteDoc keeps each person's permissions, for live and agent batches alike [#decision-080]
+
+**Context.** [Decision 041](#decision-041) kept a person's permissions on each live connection's socket. The agent's batches carried a flag captured when its conversation opened, so it would keep editing after its person lost `page.edit`.
+
+**Decision.** `SiteDoc` keeps what each person may do on the site in its own storage. studio-api records it when someone opens a live connection or a conversation with the agent, and a grant, override or role change sends every site it covers what the people it changed may do now, before the change returns. Live and agent batches are both checked against it, and `SiteDoc` closes the connections of anyone who can no longer edit their draft.
+
+**Consequences.** A removed permission stops the next batch from a person and their agent alike.
+
+## 079 — Pre-flight becomes the checks, with no heading rules, and a panel to fix them [#decision-079]
+
+**Context.** "Pre-flight" read as jargon. The spec asked it to check heading order, alt text, link text and form labels; blocks fix their own heading levels, so the only heading problem an editor could cause is a page without an h1, which is fine for many pages.
+
+**Decision.** The checks, as Studio and the docs now call them, add two rules: links that show no text, in rich text and menus, and form fields without a label. There is no heading rule. The editor's top bar counts what's left to fix and opens a checks panel beside the canvas, where the chat and outline are, so the settings panel stays in view for fixes made there. It steps through each issue, opening its page and selecting its block or field, and ticks it off once fixed. The issue it's on is part of the editor's address.
+
+**Rejected.** The panel over the settings panel, as the design shows it, which would hide page titles, alt text and form labels while fixing them.
+
+**Consequences.** A new check is an issue kind, its description, and where it's fixed.
 
 ## 078 — Site settings leave out a default description and the email sender, for now [#decision-078]
 
@@ -427,6 +505,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 **Decision.** `studio-api` finds the person's permissions on the site when it opens their live connection. `SiteDoc` keeps them on the connection and checks every batch against them, with no D1 read. Checkpoint 10's grant and override changes tell the `SiteDoc`s they affect to reload them, and its checks include a removed permission stopping the next batch.
 
 **Consequences.** Until checkpoint 10, a permission removed while someone is connected lasts until their connection reopens.
+
+**Amended** by [decision 080](#decision-080): `SiteDoc` keeps each person's permissions in its storage rather than on each connection, so the agent's batches are checked too.
 
 ## 040 — Dragging is for pointers; the keyboard moves blocks with commands [#decision-040]
 

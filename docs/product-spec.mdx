@@ -35,10 +35,11 @@ The [non-goals](#non-goals) list what Pakshi will not become in any version.
 Pakshi has one permission system used everywhere. Studio, the API, the agent and live editing all ask the same question: may this person do this action on this thing?
 
 - **Permissions** are fine-grained actions, such as edit pages, share drafts, publish a site, approve, approve changes you edited, edit a workflow, edit a brand theme, read submissions, export submissions, and manage members. Permissions decide what a person can do.
-- **Roles** are named sets of permissions, for giving access quickly. Pakshi ships the default roles below, and admins can create custom roles.
+- **Roles** are named sets of permissions, for giving access quickly. Pakshi ships the default roles below, which can't be changed, and admins can create custom roles, often by copying a default one. A custom role can't be deleted while someone holds it or a workflow names it.
 - **Grants** give a person a role on the whole organization, on a brand (and all its sites), or on one site. A person can hold several grants.
 - **Overrides** switch one permission on or off for one person on one scope. An override beats any role the person holds.
-- **Delegation:** a person can grant only permissions they hold, on scopes they control.
+- **Delegation:** a person can grant, override or take away only permissions they hold, on scopes where they manage members. The organization always keeps at least one org admin.
+- **Audit log:** org admins read everything people and Pakshi did, filter it by person, site, time and kind, and export it.
 - **Brands** are simply groupings of sites in Pakshi. What a brand represents is up to the organization.
 
 **Default roles:**
@@ -67,14 +68,15 @@ Pakshi has one permission system used everywhere. Studio, the API, the agent and
 
 Studio is one app with a brand and site switcher. Its main areas:
 
-| Area      | What's there                                                                                                                                                                                          |
-| --------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Home      | My sites, my drafts, drafts shared with me, approvals waiting for me, sites with block upgrades available                                                                                             |
-| Brand     | Theme Studio (preset, brand color, fonts, density and other tokens, live preview of every block), identity (logo, favicon), voice guide, brand approval workflow, members                             |
-| Site      | Drafts, pages and posts, editor, submissions, media, blocks in use and available upgrades, release history, settings (domain, SEO defaults, forms notification addresses, approval workflow, members) |
-| Editor    | Draft name and sharing at the top, agent chat on the left, the page canvas in the middle (click to select, edit text in place, swap images, add and move sections), block settings on the right       |
-| Approvals | Everything waiting for my decision, with the preview and what changed                                                                                                                                 |
-| Blocks    | Catalog of every block with its variants and versions, and a form to request a new block                                                                                                              |
+| Area         | What's there                                                                                                                                                                                          |
+| ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Home         | My sites, my drafts, drafts shared with me, approvals waiting for me, sites with block upgrades available                                                                                             |
+| Brand        | Theme Studio (preset, brand color, fonts, density and other tokens, live preview of every block), identity (logo, favicon), voice guide, brand approval workflow, members                             |
+| Site         | Drafts, pages and posts, editor, submissions, media, blocks in use and available upgrades, release history, settings (domain, SEO defaults, forms notification addresses, approval workflow, members) |
+| Editor       | Draft name and sharing at the top, agent chat on the left, the page canvas in the middle (click to select, edit text in place, swap images, add and move sections), block settings on the right       |
+| Approvals    | Everything waiting for my decision, with the preview and what changed                                                                                                                                 |
+| Blocks       | Catalog of every block with its variants and versions, and a form to request a new block                                                                                                              |
+| Organization | People and their roles and overrides, custom roles, the audit log, and the success metrics                                                                                                            |
 
 <Card
   title="Studio designs"
@@ -151,7 +153,7 @@ Release history lists every publish with who submitted, who approved and when. *
 
 **9. Request a new block** (editor)
 
-Started from the agent or the block catalog. It files a request, with the need and an example, in the platform team's existing tracker. When the block ships, it appears in the catalog and the agent can use it.
+Started from the agent or the block catalog. It files a request in Pakshi, with the need, the site it's for and an example, where the platform team reads it and closes it once answered. When the block ships, it appears in the catalog and the agent can use it.
 
 ## Feature requirements
 
