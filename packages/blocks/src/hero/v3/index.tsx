@@ -1,13 +1,12 @@
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Cta, Media, Root, Text } from "../../components.tsx";
-import { cta, list, media, optional, text } from "../../fields.ts";
-import { plainText } from "../../rich-text.ts";
+import { Cta, Media, RichText, Root, Text } from "../../components.tsx";
+import { cta, list, media, optional, richText, text } from "../../fields.ts";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
   kicker: optional(text({ title: "Line above the heading", max: 40 })),
   heading: text({ title: "Heading", min: 3, max: 80 }),
-  summary: optional(text({ title: "Text", max: 280, multiline: true })),
+  body: optional(richText({ title: "Text", marks: ["bold", "italic", "link"] })),
   image: optional(media({ title: "Image" })),
   actions: list({ title: "Buttons", item: { button: cta({ title: "Button" }) }, min: 0, max: 2 }),
 };
@@ -42,12 +41,11 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
           className="text-title md:text-display text-balance"
         />
       </div>
-      {hero.summary && (
-        <Text
-          field="summary"
-          as="p"
-          value={hero.summary}
-          className="text-lead whitespace-pre-line text-muted-foreground"
+      {hero.body && (
+        <RichText
+          field="body"
+          value={hero.body}
+          className="text-lead text-muted-foreground [&_a]:text-primary [&_a]:underline [&_p+p]:mt-4"
         />
       )}
       {hero.actions.length > 0 && (
@@ -140,10 +138,9 @@ export default defineBlock({
     avoid: ["more than one per page", "a second button that competes with the first"],
   },
   changes:
-    "Adds a full-bleed layout with the text over the image, and a short line above the heading. The text under the heading becomes plain text, so it reads well on any image.",
-  // Rich text under the heading becomes its plain text, a paragraph to a line.
-  migrate: ({ body, ...rest }) =>
-    body === undefined ? rest : { ...rest, summary: plainText(body) },
+    "Adds a full-bleed layout with the text over the image, and an optional short line above the heading.",
+  // The line above the heading is optional, so v2's content is already v3's.
+  migrate: (props) => props,
   placeholder,
   component: Hero,
 });

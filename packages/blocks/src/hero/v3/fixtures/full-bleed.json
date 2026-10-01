@@ -17,7 +17,20 @@
         }
       }
     ],
-    "summary": "Mornings are for making. Afternoons are for trying what you made on the water.",
-    "kicker": "Summer 2027"
+    "kicker": "Summer 2027",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Mornings are for making. Afternoons are for trying what you made on the water."
+            }
+          ]
+        }
+      ]
+    }
   }
 }
