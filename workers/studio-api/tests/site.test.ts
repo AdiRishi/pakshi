@@ -742,14 +742,50 @@ describe("brand revisions", () => {
   );
 
   it.effect(
-    "stay in a Brand update draft submitted before them, once that submission publishes",
+    "make whoever saved them an editor, who can't approve the update without approving their own",
+    () =>
+      withSite((site) =>
+        Effect.gen(function* () {
+          const update = yield* site.takeBrandRevision(meera, revision(2, "#7a1f5c"));
+          if (update._tag !== "Draft") return yield* Effect.die("Expected a Brand update draft.");
+          const submission = yield* submitted(site, update.draft.id, [
+            { name: "Brand team", roles: [], people: [meera], required: 1 },
+          ]);
+          expect(submission.editedBy).toEqual([meera]);
+          const error = yield* Effect.flip(approve(site, approver(meera), submission));
+          expect(error._tag).toBe("CannotDecide");
+        }),
+      ),
+  );
+
+  it.effect(
+    "come back as a draft when a rollback undoes the Brand update that published them",
     () =>
       withSite((site, state) =>
         Effect.gen(function* () {
           const update = yield* site.takeBrandRevision(meera, revision(2, "#7a1f5c"));
           if (update._tag !== "Draft") return yield* Effect.die("Expected a Brand update draft.");
+          yield* published(site, update.draft.id, meera);
+          yield* site.rollBack(meera, studio);
+          expect(yield* liveBrand(site, state)).toBe(1);
+          const [again] = (yield* site.drafts).filter(
+            (draft) => draft.status === "open" && draft.kind._tag === "BrandUpdate",
+          );
+          if (again === undefined) return yield* Effect.die("Expected a Brand update draft.");
+          expect((yield* opened(site, again.id)).brand.number).toBe(2);
+        }),
+      ),
+  );
+
+  it.effect(
+    "stay in a Brand update draft submitted before them, once that submission publishes",
+    () =>
+      withSite((site, state) =>
+        Effect.gen(function* () {
+          const update = yield* site.takeBrandRevision(priya, revision(2, "#7a1f5c"));
+          if (update._tag !== "Draft") return yield* Effect.die("Expected a Brand update draft.");
           const submission = yield* submitted(site, update.draft.id);
-          yield* site.takeBrandRevision(meera, revision(3, "#1f5c44"));
+          yield* site.takeBrandRevision(priya, revision(3, "#1f5c44"));
           yield* approve(site, approver(jonah, ["approver"]), submission);
           yield* approve(site, approver(meera), submission);
           expect(yield* liveBrand(site, state)).toBe(2);
@@ -782,6 +818,41 @@ describe("block upgrades", () => {
         expect(Option.map(again, (draft) => draft.id)).toEqual(Option.some(adopted.value.id));
         const live = yield* site.live;
         expect(state.manifests.get(live.snapshot)?.lockfile["hero"]).toBe(1);
+      }),
+    ),
+  );
+
+  it.effect("make one draft when the same upgrade is adopted twice at once", () =>
+    withSite((site) =>
+      Effect.gen(function* () {
+        const [first, second] = yield* Effect.all(
+          [
+            site.adoptUpgrade(meera, BlockType.make("hero"), 3),
+            site.adoptUpgrade(sam, BlockType.make("hero"), 3),
+          ],
+          { concurrency: "unbounded" },
+        );
+        expect(Option.map(first, (draft) => draft.id)).toEqual(
+          Option.map(second, (draft) => draft.id),
+        );
+        expect(
+          (yield* site.drafts).filter((draft) => draft.kind._tag === "BlockUpgrade"),
+        ).toHaveLength(1);
+      }),
+    ),
+  );
+
+  it.effect("report the versions the live release and open drafts pin, when asked again", () =>
+    withSite((site, state) =>
+      Effect.gen(function* () {
+        const { id } = yield* site.createDraft(sam, name("Summer copy"));
+        yield* site.deliverOutbox;
+        state.delivered.length = 0;
+        yield* site.reportBlocks;
+        yield* site.deliverOutbox;
+        expect(
+          state.delivered.flatMap((message) => (message._tag === "Blocks" ? [message.holder] : [])),
+        ).toEqual(["live", id]);
       }),
     ),
   );

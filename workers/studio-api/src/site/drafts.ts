@@ -123,8 +123,9 @@ export const bySite: Origin = { _tag: "Site" };
 export const byBrand: Origin = { _tag: "Brand" };
 
 /**
- * How the batch log records an origin. A brand's batch, like a person's, is
- * a change a submission hasn't frozen yet; a merge isn't.
+ * How the batch log records an origin. A brand's batch is an edit, like a
+ * person's: it makes whoever saved the revision an editor of the draft, and
+ * it's a change a submission hasn't frozen yet. A merge is neither.
  */
 const originColumn = (origin: Origin) => {
   switch (origin._tag) {
@@ -220,7 +221,10 @@ export class SiteDrafts extends Context.Service<
       id: DraftId,
       sharing: DraftSharing,
     ) => Effect.Effect<void, StorageError | DraftNotFound>;
-    /** Everyone whose own batches changed the draft up to a revision. */
+    /**
+     * Everyone who changed the draft up to a revision: with their own batches,
+     * or by saving a brand revision the draft moved to.
+     */
     readonly editors: (
       id: DraftId,
       revision: number,
@@ -298,7 +302,7 @@ export class SiteDrafts extends Context.Service<
         Result: Collaborator,
         execute: ({ draft, revision }) => sql`
           select actor as id, actor_name as name from batches
-          where draft_id = ${draft} and origin = 'person' and revision <= ${revision}
+          where draft_id = ${draft} and origin in ('person', 'brand') and revision <= ${revision}
           group by actor order by min(revision)`,
       });
       const findEditedSince = SqlSchema.findOneOption({
