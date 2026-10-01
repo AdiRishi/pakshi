@@ -125,5 +125,10 @@ patchedDependencies:
   # own bindings held Outputs, so studio-api kept a stale test identity
   # provider address. Backports the planner change from
   # https://github.com/alchemy-run/alchemy/pull/1379 (in its three copies:
-  # src, lib and the bundled bin/exec.js). Remove when upgrading past beta.79.
+  # src, lib and the bundled bin/exec.js).
+  # Destroying a local stage also left its Durable Objects' storage in
+  # .alchemy/local, keyed by worker name and class, so redeploying the same
+  # worker brought the old objects back. The local Worker provider now
+  # removes each namespace's storage when the worker is deleted (src and lib).
+  # Remove when upgrading past beta.79.
   alchemy@2.0.0-beta.79: patches/alchemy@2.0.0-beta.79.patch
