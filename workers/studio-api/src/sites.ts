@@ -77,6 +77,14 @@ const MediaRow = Schema.Struct({
   alt: Schema.String,
 });
 
+const summaryOf = (row: typeof MediaRow.Type) => ({
+  id: row.id,
+  contentType: row.content_type,
+  width: row.width,
+  height: row.height,
+  alt: row.alt,
+});
+
 /** The images a site can place: its own library and its brand's, newest first. */
 export const siteMedia = Effect.fn("StudioApi.siteMedia")(function* (site: {
   readonly id: SiteId;
@@ -91,13 +99,20 @@ export const siteMedia = Effect.fn("StudioApi.siteMedia")(function* (site: {
       where site_id = ${site.id} or brand_id = ${site.brand}
       order by created_at desc, id`,
   })(undefined);
-  return rows.map((row) => ({
-    id: row.id,
-    contentType: row.content_type,
-    width: row.width,
-    height: row.height,
-    alt: row.alt,
-  }));
+  return rows.map(summaryOf);
+});
+
+/** The images in a brand's own library, newest first. */
+export const brandMedia = Effect.fn("StudioApi.brandMedia")(function* (brand: BrandId) {
+  const sql = yield* SqlClient.SqlClient;
+  const rows = yield* SqlSchema.findAll({
+    Request: Schema.Void,
+    Result: MediaRow,
+    execute: () => sql`
+      select id, content_type, width, height, alt from media
+      where brand_id = ${brand} order by created_at desc, id`,
+  })(undefined);
+  return rows.map(summaryOf);
 });
 
 /** Whether an image is in a site's library or its brand's. */

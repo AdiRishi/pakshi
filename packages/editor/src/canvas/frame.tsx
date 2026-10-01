@@ -8,9 +8,12 @@ import { presenceColorCount } from "../presence.ts";
  * content only, so they never change the page's layout, and they scroll with
  * the page because they belong to it. The browser's own scroll anchoring is
  * off, because the editor keeps the view in place itself, in every browser.
+ * Sections show at once rather than fading in as the theme's motion has them
+ * do on the site.
  */
 const editorCss = `
 html { overflow-anchor: none; }
+main > [data-surface] { animation: none; }
 [data-pakshi-block] { cursor: default; }
 [data-pakshi-block]:hover:not(:has([data-pakshi-block]:hover)) {
   outline: 2px dashed var(--pakshi-editor-accent); outline-offset: -2px;

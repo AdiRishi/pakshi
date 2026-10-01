@@ -1,19 +1,32 @@
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
+import { BrandIdentity } from "@repo/contracts/brand";
 import { FormDefinition } from "@repo/contracts/form";
 import { BrandId, MediaId, ReleaseId, SiteId, SnapshotId } from "@repo/contracts/ids";
 import { FormId } from "@repo/contracts/ids";
 import { PageDocument, PagePath } from "@repo/contracts/page";
 import { SiteParts } from "@repo/contracts/site";
 import { contentHash, MediaFile, SnapshotManifest } from "@repo/contracts/snapshot";
-import { harbour } from "@repo/tokens";
+import { BrandTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
+
+const extensions = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/avif": "avif",
+} as const satisfies Record<MediaFile["contentType"], string>;
 
 const fixture = (path: string) => join(import.meta.dirname, "../../fixtures/sample-site", path);
 
 const SampleSite = Schema.Struct({
-  brand: Schema.Struct({ id: BrandId, name: Schema.String }),
+  brand: Schema.Struct({
+    id: BrandId,
+    name: Schema.String,
+    theme: BrandTheme,
+    identity: BrandIdentity,
+  }),
   site: Schema.Struct({ id: SiteId, name: Schema.String }),
   snapshot: SnapshotId,
   release: ReleaseId,
@@ -32,12 +45,18 @@ const readJson = <S extends Schema.Top & { readonly DecodingServices: never }>(
 
 /**
  * The hand-written snapshot that non-production stages serve: two pages built
- * from block fixtures, a header and footer with menus, the Harbour theme and
- * one image. Pages are stored under
- * their content hash, as publishing will store them.
+ * from block fixtures, a header and footer with menus, the Harbour brand's
+ * first revision with its logos and icon, and one photo. Pages are stored under their content hash, as
+ * publishing will store them.
  */
 export const sampleSite = async () => {
   const site = await readJson("site.json", SampleSite);
+  const revision = {
+    brand: site.brand.id,
+    number: 1,
+    theme: resolveTheme(site.brand.theme).theme,
+    identity: site.brand.identity,
+  };
   const pages = await Promise.all(
     ["home.json", "programme.json"].map(async (file) => {
       const page = await readJson(`pages/${file}`, PageDocument);
@@ -53,7 +72,7 @@ export const sampleSite = async () => {
     parts: site.parts,
     forms: site.forms,
     lockfile: site.lockfile,
-    theme: harbour,
+    brand: revision,
     media: Object.fromEntries(
       Object.entries(site.media).map(([id, file]) => [
         id,
@@ -73,8 +92,8 @@ export const sampleSite = async () => {
     Object.entries(site.media).map(async ([id, file]) => ({
       id: MediaId.make(id),
       ...file,
-      bytes: await readFile(fixture(`media/${id}.jpg`)),
+      bytes: await readFile(fixture(`media/${id}.${extensions[file.contentType]}`)),
     })),
   );
-  return { ...site, manifest, pages, media };
+  return { ...site, revision, manifest, pages, media };
 };

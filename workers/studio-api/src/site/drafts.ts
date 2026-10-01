@@ -1,4 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
+import { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, DraftName, type SiteContent } from "@repo/contracts/draft";
 import { FormDefinition } from "@repo/contracts/form";
 import {
@@ -18,10 +19,14 @@ import { now, Timestamp } from "@repo/contracts/release";
 import { DraftSharing, unshared } from "@repo/contracts/sharing";
 import { SiteParts, SiteSettings } from "@repo/contracts/site";
 import { type LiveRelease, Lockfile } from "@repo/contracts/snapshot";
-import { DraftNotFound, type DraftStatus, type DraftSummary } from "@repo/contracts/studio";
+import {
+  DraftKind,
+  DraftNotFound,
+  type DraftStatus,
+  type DraftSummary,
+} from "@repo/contracts/studio";
 import { type CommitResult, commitBatch, type Writes } from "@repo/domain/commit";
 import type { BlockContracts } from "@repo/domain/document";
-import { ResolvedTheme } from "@repo/tokens";
 import { Context, Effect, Equal, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
 
@@ -43,6 +48,7 @@ const DraftStatusColumn = Schema.Literals(["open", "published", "closed"]);
 const DraftRow = Schema.Struct({
   id: DraftId,
   name: DraftName,
+  kind: json(DraftKind),
   status: DraftStatusColumn,
   created_by: json(Collaborator),
   created_at: Timestamp,
@@ -54,7 +60,7 @@ const DraftRow = Schema.Struct({
   parts: json(SiteParts),
   forms: json(Forms),
   lockfile: json(Lockfile),
-  theme: json(ResolvedTheme),
+  brand: json(BrandRevision),
   sharing: json(DraftSharing),
 });
 type DraftRow = typeof DraftRow.Type;
@@ -103,15 +109,34 @@ export type BatchResult =
 /**
  * Who a batch comes from: a person, whose batches are held to what people
  * may change; the agent, working for a person in one turn of their
- * conversation; or the site itself, merging a release in or publishing.
+ * conversation; the site itself, merging a release in or publishing; or a
+ * brand, moving a Brand update draft to its newer revision.
  */
 export type Origin =
   | { readonly _tag: "Person" }
   | { readonly _tag: "Agent"; readonly turn: TurnId }
-  | { readonly _tag: "Site" };
+  | { readonly _tag: "Site" }
+  | { readonly _tag: "Brand" };
 
 export const byPerson: Origin = { _tag: "Person" };
 export const bySite: Origin = { _tag: "Site" };
+export const byBrand: Origin = { _tag: "Brand" };
+
+/**
+ * How the batch log records an origin. A brand's batch, like a person's, is
+ * a change a submission hasn't frozen yet; a merge isn't.
+ */
+const originColumn = (origin: Origin) => {
+  switch (origin._tag) {
+    case "Site":
+      return "site";
+    case "Brand":
+      return "brand";
+    case "Person":
+    case "Agent":
+      return "person";
+  }
+};
 
 /**
  * Who the draft's writes record for a batch. The agent's writes belong to
@@ -155,8 +180,13 @@ export class SiteDrafts extends Context.Service<
     readonly contracts: (
       id: DraftId,
     ) => Effect.Effect<BlockContracts, StorageError | DraftNotFound>;
+    /** The open draft of a kind Pakshi makes, if the site has one. */
+    readonly openOfKind: (
+      kind: Exclude<DraftKind, { readonly _tag: "Edit" }>,
+    ) => Effect.Effect<Option.Option<DraftInfo>, StorageError>;
     readonly create: (draft: {
       readonly name: DraftName;
+      readonly kind: DraftKind;
       readonly by: Collaborator;
       readonly base: LiveRelease;
       readonly content: SiteContent;
@@ -195,7 +225,7 @@ export class SiteDrafts extends Context.Service<
       id: DraftId,
       revision: number,
     ) => Effect.Effect<ReadonlyArray<Collaborator>, StorageError>;
-    /** Whether a person changed the draft after a revision. */
+    /** Whether a person, or a brand's new revision, changed the draft after a revision. */
     readonly editedSince: (id: DraftId, revision: number) => Effect.Effect<boolean, StorageError>;
     /** The ops that undo what an agent's turn committed to a draft, in the order to apply them. */
     readonly turnInverse: (
@@ -276,7 +306,8 @@ export class SiteDrafts extends Context.Service<
         Result: Schema.Struct({ revision: Schema.Int }),
         execute: ({ draft, revision }) => sql`
           select revision from batches
-          where draft_id = ${draft} and origin = 'person' and revision > ${revision} limit 1`,
+          where draft_id = ${draft} and origin in ('person', 'brand') and revision > ${revision}
+          limit 1`,
       });
 
       /** The people a draft is shared with, for D1's list; none once it's closed. */
@@ -288,6 +319,10 @@ export class SiteDrafts extends Context.Service<
           people: (sharing?.people ?? []).map(({ person, access }) => ({ id: person.id, access })),
         });
 
+      /** The block versions an open draft pins, or with null, that it's closed, for D1's copy. */
+      const sendBlocks = (id: DraftId, lockfile: Lockfile | null) =>
+        outbox.send({ _tag: "Blocks", holder: id, lockfile });
+
       const summaryOf = (
         row: DraftRow,
         editors: ReadonlyArray<typeof EditorRow.Type>,
@@ -297,6 +332,7 @@ export class SiteDrafts extends Context.Service<
         return {
           id: row.id,
           name: row.name,
+          kind: row.kind,
           status: row.status,
           base: { release: row.base_release, snapshot: row.base_snapshot },
           createdBy: row.created_by,
@@ -337,7 +373,7 @@ export class SiteDrafts extends Context.Service<
           parts: row.parts,
           forms: row.forms,
           lockfile: row.lockfile,
-          theme: row.theme,
+          brand: row.brand,
           pages: Object.fromEntries(pages.map(({ document }) => [document.id, document])),
         };
         const writes = new Map(
@@ -370,8 +406,10 @@ export class SiteDrafts extends Context.Service<
               parts = ${encode(SiteParts, next.parts)},
               forms = ${encode(Forms, next.forms)},
               lockfile = ${encode(Lockfile, next.lockfile)},
-              theme = ${encode(ResolvedTheme, next.theme)}
+              brand = ${encode(BrandRevision, next.brand)}
               where id = ${next.id}`;
+            if (!Equal.equals(previous.lockfile, next.lockfile))
+              yield* sendBlocks(next.id, next.lockfile);
             for (const page of Object.values(next.pages))
               if (previous.pages[page.id] !== page) yield* writePage(next.id, page);
             for (const id of Object.keys(previous.pages))
@@ -390,7 +428,7 @@ export class SiteDrafts extends Context.Service<
               values (${batch.id}, ${next.id}, ${actor.id}, ${actor.name},
                 ${now()}, ${next.revision},
                 ${encode(Ops, committed.ops)}, ${encode(Ops, committed.inverse)},
-                ${origin._tag === "Site" ? "site" : "person"},
+                ${originColumn(origin)},
                 ${origin._tag === "Agent" ? origin.turn : null})`;
           }),
         );
@@ -409,25 +447,38 @@ export class SiteDrafts extends Context.Service<
         }),
         draft: (id) => Effect.map(load(id), ({ draft }) => draft),
         contracts: (id) => Effect.map(load(id), ({ contracts }) => contracts),
-        create: Effect.fn("SiteDrafts.create")(function* ({ name, by, base, content }) {
+        openOfKind: Effect.fn("SiteDrafts.openOfKind")(function* (kind) {
+          const [rows, editors] = yield* Effect.all([
+            findDrafts(undefined),
+            findEditors(undefined),
+          ]);
+          const row = rows.find(
+            (candidate) => candidate.status === "open" && Equal.equals(candidate.kind, kind),
+          );
+          return Option.map(Option.fromNullishOr(row), (found) => summaryOf(found, editors));
+        }),
+        create: Effect.fn("SiteDrafts.create")(function* ({ name, kind, by, base, content }) {
           const id = DraftId.make(randomId("dr"));
           const createdAt = now();
           yield* sql.withTransaction(
             Effect.gen(function* () {
               yield* sql`insert into drafts
-                (id, name, status, created_by, created_at, base_release, base_snapshot, revision,
-                  settings, parts, forms, lockfile, theme)
-                values (${id}, ${name}, 'open', ${encode(Collaborator, by)}, ${createdAt},
+                (id, name, kind, status, created_by, created_at, base_release, base_snapshot,
+                  revision, settings, parts, forms, lockfile, brand)
+                values (${id}, ${name}, ${encode(DraftKind, kind)}, 'open',
+                  ${encode(Collaborator, by)}, ${createdAt},
                   ${base.release}, ${base.snapshot}, 0,
                   ${encode(SiteSettings, content.settings)}, ${encode(SiteParts, content.parts)},
                   ${encode(Forms, content.forms)}, ${encode(Lockfile, content.lockfile)},
-                  ${encode(ResolvedTheme, content.theme)})`;
+                  ${encode(BrandRevision, content.brand)})`;
               for (const page of Object.values(content.pages)) yield* writePage(id, page);
+              yield* sendBlocks(id, content.lockfile);
             }),
           );
           return {
             id,
             name,
+            kind,
             status: "open",
             base,
             createdBy: by,
@@ -469,7 +520,11 @@ export class SiteDrafts extends Context.Service<
                 "closed",
                 "This draft was published or closed, so it takes no more changes.",
               );
-            if (origin._tag !== "Site" && batch.ops.some((op) => op.op === "rebase"))
+            if (
+              origin._tag !== "Site" &&
+              origin._tag !== "Brand" &&
+              batch.ops.some((op) => op.op === "rebase")
+            )
               return rejected("system", "Only Pakshi moves a draft onto another release.");
             const { draft, writes, contracts: pinned } = yield* load(id);
             // A merge can move the draft to other block versions, which its ops are checked against.
@@ -511,6 +566,7 @@ export class SiteDrafts extends Context.Service<
             Effect.gen(function* () {
               yield* sql`update drafts set status = ${status}, closed_at = ${now()} where id = ${id}`;
               yield* sendShares(id, row.name, null);
+              yield* sendBlocks(id, null);
             }),
           );
         }),

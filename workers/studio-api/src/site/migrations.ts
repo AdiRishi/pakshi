@@ -97,4 +97,17 @@ export const migrations = Migrator.fromRecord({
     yield* sql`alter table batches add column turn text`;
     yield* sql`create index batches_by_turn on batches (draft_id, turn)`;
   }),
+  "0006_brands": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // A draft pins a brand revision, with its theme and identity, instead of a theme alone.
+    yield* sql`alter table drafts rename column theme to brand`;
+    yield* sql`alter table drafts add column kind text not null default '{"_tag":"Edit"}'`;
+    // Each brand revision the site has taken in, whether a Brand update draft
+    // brought it or the site already had it. The newest is the one D1's copy
+    // records, so the scheduled job knows which sites still need a revision.
+    yield* sql`create table brand_revisions (
+      number integer primary key,
+      taken_at text not null
+    )`;
+  }),
 });

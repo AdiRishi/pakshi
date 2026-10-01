@@ -8,18 +8,31 @@
       "types": "./src/index.ts",
       "default": "./src/index.ts"
     },
-    "./tailwind.css": "./src/tailwind.css"
+    "./tailwind.css": "./src/tailwind.css",
+    "./vite": {
+      "types": "./src/vite.ts",
+      "default": "./src/vite.ts"
+    }
   },
   "scripts": {
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@fontsource-variable/bricolage-grotesque": "catalog:",
+    "@fontsource-variable/fraunces": "catalog:",
+    "@fontsource-variable/literata": "catalog:",
+    "@fontsource-variable/onest": "catalog:",
+    "@fontsource-variable/source-sans-3": "catalog:",
+    "@fontsource-variable/source-serif-4": "catalog:",
+    "@fontsource-variable/work-sans": "catalog:",
     "effect": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

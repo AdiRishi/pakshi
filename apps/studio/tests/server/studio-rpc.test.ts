@@ -54,6 +54,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
         },
       ],
       approvalsWaiting: 0,
+      brands: false,
     }),
   );
   const unused = () => Effect.die(new Error(onlyViewer));
@@ -90,6 +91,14 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     siteReleases: unused,
     rollBack: unused,
     restoreRelease: unused,
+    brands: unused,
+    brand: unused,
+    saveBrandLook: unused,
+    saveVoiceGuide: unused,
+    blockCatalog: unused,
+    siteBlocks: unused,
+    adoptUpgrade: unused,
+    upgradeEverywhere: unused,
     workflow: unused,
     saveWorkflow: unused,
     approvals: unused,

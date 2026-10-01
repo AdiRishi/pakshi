@@ -1,12 +1,15 @@
-import { ResolvedTheme } from "@repo/tokens";
+import { ContrastIssue, HexColor, PresetId } from "@repo/tokens";
 import { Context, Schema } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
 import { Scope } from "./access.ts";
+import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
 import { FormDefinition } from "./form.ts";
 import {
   BlockId,
+  BlockType,
+  BrandId,
   DraftId,
   FormId,
   MediaId,
@@ -34,6 +37,8 @@ import { Workflow } from "./workflow.ts";
  * Each serves its images under its own `/${mediaSegment}/{media}`, which no page path can take.
  */
 export const previewBasePath = "/preview";
+/** Where Studio serves a brand's library images, at `${brandMediaBasePath}/{brand}/{media}`, for its admins. */
+export const brandMediaBasePath = "/brand-media";
 export const reviewBasePath = "/review";
 export const mediaSegment = "_media";
 
@@ -92,6 +97,8 @@ export const Viewer = Schema.Struct({
   sites: Schema.Array(Schema.Struct({ id: SiteId, name: Schema.String, brand: Schema.String })),
   /** How many submissions are waiting for this person's decision. */
   approvalsWaiting: Schema.Int,
+  /** Whether the person works on any brand, so Studio shows them the brands. */
+  brands: Schema.Boolean,
 });
 export type Viewer = typeof Viewer.Type;
 
@@ -123,10 +130,23 @@ export type PageSummary = typeof PageSummary.Type;
 export const DraftStatus = Schema.Literals(["open", "published", "closed"]);
 export type DraftStatus = typeof DraftStatus.Type;
 
+/**
+ * Why a draft exists: someone started it, or Pakshi made it to bring a brand
+ * revision or a block version to the site. A site has at most one open draft
+ * of each kind Pakshi makes, which later revisions and adoptions reuse.
+ */
+export const DraftKind = Schema.TaggedUnion({
+  Edit: {},
+  BrandUpdate: {},
+  BlockUpgrade: { type: BlockType, version: Schema.Int },
+});
+export type DraftKind = typeof DraftKind.Type;
+
 /** A draft as the drafts list shows it. */
 export const DraftSummary = Schema.Struct({
   id: DraftId,
   name: DraftName,
+  kind: DraftKind,
   status: DraftStatus,
   /** The release the draft started from, or was last updated to. */
   base: LiveRelease,
@@ -343,7 +363,7 @@ export const SiteView = Schema.Struct({
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
   lockfile: Lockfile,
-  theme: ResolvedTheme,
+  brand: BrandRevision,
   pages: Schema.Array(PageListing),
   media: Schema.Record(MediaId, MediaFile),
   /** The page at the address asked for, or null when no page is served there. */
@@ -377,6 +397,130 @@ export const ReviewPage = Schema.TaggedUnion({
   Changed: {},
 });
 export type ReviewPage = typeof ReviewPage.Type;
+
+/** A brand as the brands list shows it. */
+export const BrandSummary = Schema.Struct({
+  id: BrandId,
+  name: Schema.String,
+  preset: PresetId,
+  brandColor: HexColor,
+  sites: Schema.Array(SiteName),
+});
+export type BrandSummary = typeof BrandSummary.Type;
+
+/** A brand's newest revision, and who saved it. */
+export const RevisionInfo = Schema.Struct({
+  number: Schema.Int,
+  by: Collaborator,
+  at: Timestamp,
+});
+export type RevisionInfo = typeof RevisionInfo.Type;
+
+/** Everything Theme Studio and the identity and voice screen show for a brand. */
+export const BrandView = Schema.Struct({
+  brand: Schema.Struct({ id: BrandId, name: Schema.String }),
+  revision: RevisionInfo,
+  look: BrandLook,
+  voice: VoiceGuide,
+  sites: Schema.Array(SiteName),
+  /** The brand's library, where its logos and icon come from. */
+  media: Schema.Array(MediaSummary),
+  can: Schema.Struct({ edit: Schema.Boolean }),
+});
+export type BrandView = typeof BrandView.Type;
+
+/** What bringing a brand revision to one site did. */
+export const BrandUpdateResult = Schema.Struct({
+  site: SiteName,
+  /** The Brand update draft, or null when the site needed none or couldn't be reached yet. */
+  draft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
+  /** The site couldn't be reached. Pakshi tries again on its own. */
+  pending: Schema.Boolean,
+});
+export type BrandUpdateResult = typeof BrandUpdateResult.Type;
+
+export const SavedLook = Schema.Struct({
+  revision: RevisionInfo,
+  sites: Schema.Array(BrandUpdateResult),
+});
+export type SavedLook = typeof SavedLook.Type;
+
+/** One version of a block, as the catalog and upgrade banners describe it. */
+export const BlockVersionInfo = Schema.Struct({
+  version: Schema.Int,
+  /** What changed from the version before; null for a block's first version. */
+  changes: Schema.NullOr(Schema.String),
+  /** How many sites have it live. */
+  sites: Schema.Int,
+});
+export type BlockVersionInfo = typeof BlockVersionInfo.Type;
+
+/** A block in the library, with every version the registry holds, newest first. */
+export const CatalogBlock = Schema.Struct({
+  type: BlockType,
+  title: Schema.String,
+  purpose: Schema.String,
+  placement: Schema.Literals(["section", "item", "header", "footer"]),
+  latest: Schema.Int,
+  versions: Schema.Array(BlockVersionInfo),
+});
+export type CatalogBlock = typeof CatalogBlock.Type;
+
+/** A block version no live release or open draft pins any more, and when it last did. */
+export const RemovableVersion = Schema.Struct({
+  type: BlockType,
+  version: Schema.Int,
+  /** Null when nothing ever pinned it. */
+  lastUsedAt: Schema.NullOr(Timestamp),
+});
+export type RemovableVersion = typeof RemovableVersion.Type;
+
+export const BlockCatalog = Schema.Struct({
+  blocks: Schema.Array(CatalogBlock),
+  /** For the platform team: versions past the 3 months they're kept unused. */
+  removable: Schema.NullOr(Schema.Array(RemovableVersion)),
+  can: Schema.Struct({ upgradeEverywhere: Schema.Boolean }),
+});
+export type BlockCatalog = typeof BlockCatalog.Type;
+
+/** A block the live site pins, how it's used, and the newer versions it could adopt. */
+export const SiteBlock = Schema.Struct({
+  type: BlockType,
+  title: Schema.String,
+  version: Schema.Int,
+  latest: Schema.Int,
+  /** The versions after the one in use, oldest first. */
+  newer: Schema.Array(BlockVersionInfo),
+  pages: Schema.Int,
+  sitewide: Schema.Boolean,
+  /** The open draft that upgrades this block to its newest version, if there is one. */
+  upgradeDraft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
+  /**
+   * Accepted changes to how the version in use looks, made by shared code
+   * rather than a new version, oldest first.
+   */
+  renderingChanges: Schema.Array(Schema.Struct({ date: Schema.String, change: Schema.String })),
+});
+export type SiteBlock = typeof SiteBlock.Type;
+
+export const SiteBlocks = Schema.Struct({
+  site: SiteName,
+  blocks: Schema.Array(SiteBlock),
+  can: Schema.Struct({ upgrade: Schema.Boolean }),
+});
+export type SiteBlocks = typeof SiteBlocks.Type;
+
+/** What creating an upgrade draft on one site did. */
+export const UpgradeResult = Schema.Struct({
+  site: SiteName,
+  draft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
+  /** The site couldn't be reached. Trying again creates only the drafts still missing. */
+  failed: Schema.Boolean,
+});
+export type UpgradeResult = typeof UpgradeResult.Type;
+
+/** The site already uses the newest version of this block. */
+export class UpToDate extends Schema.TaggedError<UpToDate>()("UpToDate", { type: BlockType }) {}
 
 /** A site's releases, newest first. */
 export const SiteReleases = Schema.Struct({
@@ -416,12 +560,37 @@ export class NothingToRollBack extends Schema.TaggedError<NothingToRollBack>()(
   {},
 ) {}
 
+/**
+ * The registry no longer holds block versions a release pins, such as
+ * `hero@1`, so it can't be brought back.
+ */
+export class BlocksRemoved extends Schema.TaggedError<BlocksRemoved>()("BlocksRemoved", {
+  removed: Schema.Array(Schema.String),
+}) {}
+
+/** The theme has pairs of colors too hard to read, so it can't be saved. */
+export class ThemeUnreadable extends Schema.TaggedError<ThemeUnreadable>()("ThemeUnreadable", {
+  issues: Schema.Array(ContrastIssue),
+}) {}
+
+/** Someone saved the brand's look since it was loaded, so saving would undo their change. */
+export class BrandChanged extends Schema.TaggedError<BrandChanged>()("BrandChanged", {
+  revision: Schema.Int,
+}) {}
+
+/** A logo or icon isn't an image in the brand's library. */
+export class NotInBrandLibrary extends Schema.TaggedError<NotInBrandLibrary>()(
+  "NotInBrandLibrary",
+  { media: MediaId },
+) {}
+
 /** The site has no release with this ID. */
 export class ReleaseNotFound extends Schema.TaggedError<ReleaseNotFound>()("ReleaseNotFound", {
   release: ReleaseId,
 }) {}
 
 const siteError = Schema.Union([StudioUnavailable, SiteNotFound]);
+const brandError = Schema.Union([StudioUnavailable, ScopeNotFound]);
 const draftError = Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound]);
 const forDraft = { site: SiteId, draft: DraftId };
 const forSubmission = { site: SiteId, submission: SubmissionId };
@@ -497,12 +666,56 @@ class SignedInRpcs extends RpcGroup.make(
   Rpc.make("rollBack", {
     payload: { site: SiteId },
     success: Release,
-    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, NothingToRollBack]),
+    error: Schema.Union([
+      StudioUnavailable,
+      SiteNotFound,
+      NotPermitted,
+      NothingToRollBack,
+      BlocksRemoved,
+    ]),
   }),
   Rpc.make("restoreRelease", {
     payload: { site: SiteId, release: ReleaseId, name: DraftName },
     success: DraftSummary,
-    error: Schema.Union([StudioUnavailable, SiteNotFound, ReleaseNotFound]),
+    error: Schema.Union([StudioUnavailable, SiteNotFound, ReleaseNotFound, BlocksRemoved]),
+  }),
+  Rpc.make("brands", { success: Schema.Array(BrandSummary), error: StudioUnavailable }),
+  Rpc.make("brand", { payload: { brand: BrandId }, success: BrandView, error: brandError }),
+  /**
+   * Saves a brand's theme and identity as a new revision, which reaches each
+   * of its sites as a Brand update draft. `seen` is the revision the person
+   * started from.
+   */
+  Rpc.make("saveBrandLook", {
+    payload: { brand: BrandId, look: BrandLook, seen: Schema.Int },
+    success: SavedLook,
+    error: Schema.Union([
+      StudioUnavailable,
+      ScopeNotFound,
+      NotPermitted,
+      ThemeUnreadable,
+      BrandChanged,
+      NotInBrandLibrary,
+    ]),
+  }),
+  Rpc.make("saveVoiceGuide", {
+    payload: { brand: BrandId, voice: VoiceGuide },
+    success: VoiceGuide,
+    error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
+  }),
+  Rpc.make("blockCatalog", { success: BlockCatalog, error: StudioUnavailable }),
+  Rpc.make("siteBlocks", { payload: { site: SiteId }, success: SiteBlocks, error: siteError }),
+  /** A draft that moves the site to the newest version of a block. */
+  Rpc.make("adoptUpgrade", {
+    payload: { site: SiteId, type: BlockType },
+    success: DraftSummary,
+    error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, UpToDate]),
+  }),
+  /** Upgrade drafts on every site an older version of a block is live on. */
+  Rpc.make("upgradeEverywhere", {
+    payload: { type: BlockType },
+    success: Schema.Array(UpgradeResult),
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
   }),
   Rpc.make("workflow", {
     payload: { scope: Scope },

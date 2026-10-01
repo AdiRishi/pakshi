@@ -1,8 +1,11 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { type ClientFor, clientOverBinding, type ServiceBinding } from "@repo/contracts/rpc/client";
 import {
+  BlocksRemoved,
+  BrandChanged,
   CannotDecide,
   DraftNotFound,
+  NotInBrandLibrary,
   NothingToRollBack,
   NotPermitted,
   ReleaseNotFound,
@@ -10,9 +13,11 @@ import {
   SiteNotFound,
   SubmissionNotFound,
   StudioRpcs,
+  ThemeUnreadable,
   studioSessionHeaders,
   StudioUnavailable,
   Unauthenticated,
+  UpToDate,
 } from "@repo/contracts/studio";
 import { Cause, type Duration, Effect, Schema } from "effect";
 import { RpcClientError } from "effect/unstable/rpc";
@@ -44,6 +49,31 @@ const toAppError = (cause: Cause.Cause<unknown>) => {
     return new AppRequestError(
       "conflict",
       "Only the latest publish can be rolled back, and it already has been.",
+    );
+  if (Schema.is(BlocksRemoved)(failure))
+    return new AppRequestError(
+      "conflict",
+      `This release uses block versions Pakshi no longer keeps (${failure.removed.join(", ")}), so it can't come back.`,
+    );
+  if (Schema.is(ThemeUnreadable)(failure))
+    return new AppRequestError(
+      "invalid_request",
+      `Some text in this theme is too hard to read: ${failure.issues.length} color pairs don't reach WCAG AA contrast.`,
+    );
+  if (Schema.is(BrandChanged)(failure))
+    return new AppRequestError(
+      "conflict",
+      "Someone saved this brand since you opened it. Reload to see their changes, then make yours again.",
+    );
+  if (Schema.is(NotInBrandLibrary)(failure))
+    return new AppRequestError(
+      "invalid_request",
+      "Logos and icons must come from the brand's library.",
+    );
+  if (Schema.is(UpToDate)(failure))
+    return new AppRequestError(
+      "conflict",
+      "This site already uses the newest version of that block.",
     );
   if (Schema.is(StudioUnavailable)(failure) || failure instanceof RpcClientError.RpcClientError)
     return new AppRequestError(

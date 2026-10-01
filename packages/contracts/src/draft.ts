@@ -1,6 +1,6 @@
-import { ResolvedTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
+import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { DraftId, FormId, PageId, SiteId } from "./ids.ts";
 import { PageDocument } from "./page.ts";
@@ -9,18 +9,15 @@ import { LiveRelease, Lockfile } from "./snapshot.ts";
 
 /**
  * What a draft or a release holds of a site: every page, and the parts,
- * forms and settings every page shares, with the block versions and theme
- * they render with.
- *
- * The theme is the one resolved in the base release until brand revisions
- * exist, when drafts pin a revision instead.
+ * forms and settings every page shares, with the block versions and brand
+ * revision they render with.
  */
 export const SiteContent = Schema.Struct({
   settings: SiteSettings,
   parts: SiteParts,
   forms: Schema.Record(FormId, FormDefinition),
   lockfile: Lockfile,
-  theme: ResolvedTheme,
+  brand: BrandRevision,
   pages: Schema.Record(PageId, PageDocument),
 });
 export type SiteContent = typeof SiteContent.Type;

@@ -57,6 +57,7 @@ export const siteDocument = async (
   const data = {
     ...siteData({
       settings: view.settings,
+      identity: view.brand.identity,
       menus: view.parts.menus,
       pages: view.pages,
       forms: view.forms,
@@ -83,7 +84,10 @@ export const siteDocument = async (
       <meta name="robots" content="noindex, nofollow" />
       <title>{title === view.settings.name ? title : `${title} · ${view.settings.name}`}</title>
       {page !== null && <meta name="description" content={page.meta.description} />}
-      <style>{themeCss(view.theme)}</style>
+      {view.brand.identity.favicon !== null && (
+        <link rel="icon" href={`${options.base}/${mediaSegment}/${view.brand.identity.favicon}`} />
+      )}
+      <style>{themeCss(view.brand.theme)}</style>
       <link rel="stylesheet" href={siteCss} />
       {options.changed.length > 0 && (
         <style>{"[data-pakshi-changed]{outline:3px solid var(--ring);outline-offset:-3px}"}</style>

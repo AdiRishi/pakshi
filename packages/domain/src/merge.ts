@@ -1,5 +1,6 @@
 import { type BlockContract, blockKey, type StoredProps } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
+import type { BrandRevision } from "@repo/contracts/brand";
 import type { SiteContent } from "@repo/contracts/draft";
 import type { FormDefinition } from "@repo/contracts/form";
 import { BlockId, type BlockType, type FormId, type PageId } from "@repo/contracts/ids";
@@ -729,6 +730,21 @@ const siteSpot = (name: string, title: string, field: string, kind: ValueKind): 
   kind,
 });
 
+/**
+ * The newer of the two sides' brand revisions. A site only moves forward
+ * through its brand's revisions, so brand changes never conflict.
+ */
+const newerBrand = (merge: Merge, sides: Sides<BrandRevision>) => {
+  if (sides.live.number <= sides.draft.number) return sides.draft;
+  merge.changes.push({
+    _tag: "ValueChanged",
+    place: { target: "site", title: "Brand" },
+    block: null,
+    field: "Theme and identity",
+  });
+  return sides.live;
+};
+
 const decodeMenu = Schema.decodeUnknownSync(Schema.Array(MenuItem));
 
 const mergeMenu = (
@@ -822,11 +838,7 @@ export const mergeSites = (
     parts: mergeParts(merge, { base: base.parts, draft: draft.parts, live: live.parts }),
     forms,
     lockfile,
-    theme: merge.value(siteSpot("theme", "Theme", "Theme", "choice"), {
-      base: base.theme,
-      draft: draft.theme,
-      live: live.theme,
-    }),
+    brand: newerBrand(merge, { base: base.brand, draft: draft.brand, live: live.brand }),
     pages: mergePages(merge, { base: base.pages, draft: draft.pages, live: live.pages }),
   };
   return { content, conflicts: merge.conflicts, changes: merge.changes };

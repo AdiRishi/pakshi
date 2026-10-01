@@ -71,4 +71,9 @@ export type BlockContract = Placement & {
    * move up any number of versions. A block's first version has none.
    */
   readonly migrate: ((previous: StoredProps) => StoredProps) | null;
+  /**
+   * What this version changes from the one before, in a sentence or two for
+   * the editors deciding whether to adopt it. A block's first version has none.
+   */
+  readonly changes: string | null;
 };

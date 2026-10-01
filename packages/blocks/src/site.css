@@ -24,3 +24,25 @@
     font-weight: var(--theme-heading-weight);
   }
 }
+
+/*
+ * With the theme's motion on, sections fade in as they scroll into view. The
+ * theme names the animation, or none; visitors who ask for less motion never
+ * see it.
+ */
+@keyframes pakshi-section-entrance {
+  from {
+    opacity: 0;
+    translate: 0 1.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    main > [data-surface] {
+      animation: var(--theme-section-entrance) linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
+  }
+}

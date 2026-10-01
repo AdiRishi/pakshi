@@ -1,37 +1,45 @@
-import { Schema } from "effect";
+import { Schema, Struct } from "effect";
+
+import { FontId } from "./fonts.ts";
 
 export const Surface = Schema.Literals(["default", "muted", "brand", "inverse"]);
 export type Surface = typeof Surface.Type;
+
+export const ColorScheme = Schema.Literals(["light", "dark"]);
+export type ColorScheme = typeof ColorScheme.Type;
 
 const OklchColor = Schema.String.check(
   Schema.isPattern(/^oklch\(\d+(\.\d+)?%? \d+(\.\d+)? \d+(\.\d+)?( \/ \d+(\.\d+)?%)?\)$/),
 );
 
-const colorFields = {
-  background: OklchColor,
-  foreground: OklchColor,
-  card: OklchColor,
-  "card-foreground": OklchColor,
-  popover: OklchColor,
-  "popover-foreground": OklchColor,
-  primary: OklchColor,
-  "primary-foreground": OklchColor,
-  secondary: OklchColor,
-  "secondary-foreground": OklchColor,
-  muted: OklchColor,
-  "muted-foreground": OklchColor,
-  accent: OklchColor,
-  "accent-foreground": OklchColor,
-  destructive: OklchColor,
-  border: OklchColor,
-  input: OklchColor,
-  ring: OklchColor,
-};
+/** The semantic colors a surface sets, named as shadcn/ui names them. */
+export const ColorName = Schema.Literals([
+  "background",
+  "foreground",
+  "card",
+  "card-foreground",
+  "popover",
+  "popover-foreground",
+  "primary",
+  "primary-foreground",
+  "secondary",
+  "secondary-foreground",
+  "muted",
+  "muted-foreground",
+  "accent",
+  "accent-foreground",
+  "destructive",
+  "border",
+  "input",
+  "ring",
+]);
+export type ColorName = typeof ColorName.Type;
 
-export const SurfaceColors = Schema.Struct(colorFields);
+/** The colors one surface re-scopes. */
+export const SurfaceColors = Schema.Record(ColorName, OklchColor);
 export type SurfaceColors = typeof SurfaceColors.Type;
 
-const SchemeColors = Schema.Struct({
+export const SchemeColors = Schema.Struct({
   default: SurfaceColors,
   muted: SurfaceColors,
   brand: SurfaceColors,
@@ -39,18 +47,70 @@ const SchemeColors = Schema.Struct({
 });
 export type SchemeColors = typeof SchemeColors.Type;
 
-const FontStack = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9 ,'"-]+$/));
+/** A pair of a theme's colors that doesn't reach the contrast WCAG 2.2 AA asks for. */
+export const ContrastIssue = Schema.Struct({
+  scheme: ColorScheme,
+  surface: Surface,
+  color: ColorName,
+  on: ColorName,
+  /** What the pair is, for someone choosing a theme. */
+  what: Schema.String,
+  /** The contrast the pair has, rounded down to two decimals. */
+  ratio: Schema.Finite,
+  required: Schema.Finite,
+});
+export type ContrastIssue = typeof ContrastIssue.Type;
 
-export const ResolvedTheme = Schema.Struct({
-  schema: Schema.Literal("pakshi.theme/1"),
-  colors: Schema.Struct({ light: SchemeColors, dark: SchemeColors }),
-  fonts: Schema.Struct({ heading: FontStack, body: FontStack }),
-  typeScale: Schema.Literals(["minor-third", "major-third", "perfect-fourth"]),
+/** A color as a person picks it, such as `#1f5c44`. */
+export const HexColor = Schema.String.check(
+  Schema.isPattern(/^#[0-9a-f]{6}$/, { message: "Use a color such as #1f5c44" }),
+);
+export type HexColor = typeof HexColor.Type;
+
+/** The hue the theme's grays lean towards. */
+export const NeutralTone = Schema.Literals(["cool", "neutral", "warm"]);
+export type NeutralTone = typeof NeutralTone.Type;
+
+/** The tokens a theme shares between both color schemes, as they're chosen and as pages read them. */
+const styleFields = {
+  fonts: Schema.Struct({ heading: FontId, body: FontId }),
+  typeScale: Schema.Literals(["small", "medium", "large"]),
   headingWeight: Schema.Literals([500, 600, 700, 800]),
   radius: Schema.Literals(["none", "small", "medium", "large"]),
   shadow: Schema.Literals(["flat", "soft", "raised"]),
   density: Schema.Literals(["compact", "comfortable", "spacious"]),
-  imageCorners: Schema.Literals(["square", "rounded"]),
+  imageCorners: Schema.Literals(["square", "rounded", "extra-rounded"]),
   motion: Schema.Boolean,
+};
+
+/** Every value a theme is made from: one brand color, the tone of its grays, and the rest of its tokens. */
+export const ThemeValues = Schema.Struct({
+  brandColor: HexColor,
+  neutral: NeutralTone,
+  ...styleFields,
+});
+export type ThemeValues = typeof ThemeValues.Type;
+
+export const PresetId = Schema.Literals(["civic", "editorial", "bold"]);
+export type PresetId = typeof PresetId.Type;
+
+/**
+ * A brand's theme as its admins set it: a preset, and the values they
+ * changed on top of it. Choosing another preset keeps their changes.
+ */
+export const BrandTheme = Schema.Struct({
+  preset: PresetId,
+  changes: ThemeValues.mapFields(Struct.map(Schema.optionalKey)),
+});
+export type BrandTheme = typeof BrandTheme.Type;
+
+/**
+ * A theme with its palette generated: what snapshots carry and pages render
+ * with. Every value is one `themeCss` can write into a declaration.
+ */
+export const ResolvedTheme = Schema.Struct({
+  schema: Schema.Literal("pakshi.theme/1"),
+  colors: Schema.Struct({ light: SchemeColors, dark: SchemeColors }),
+  ...styleFields,
 });
 export type ResolvedTheme = typeof ResolvedTheme.Type;

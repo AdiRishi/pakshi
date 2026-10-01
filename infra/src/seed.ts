@@ -1,7 +1,9 @@
 import { createHash } from "node:crypto";
 
 import type { DefaultRole, Scope } from "@repo/contracts/access";
+import { BrandIdentity } from "@repo/contracts/brand";
 import { LiveRelease, objectKeys, routingKeys, SnapshotManifest } from "@repo/contracts/snapshot";
+import { BrandTheme, ResolvedTheme } from "@repo/tokens";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
@@ -82,10 +84,26 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
               "insert into brands (id, name) values (?, ?) on conflict (id) do update set name = excluded.name",
             )
             .bind(sample.brand.id, sample.brand.name),
+          // The brand's first revision, which every seeded snapshot pins.
+          db
+            .prepare(
+              `insert into brand_revisions (brand_id, number, theme, resolved, identity, created_by)
+               values (?, 1, ?, ?, ?, ?)
+               on conflict (brand_id, number) do update set theme = excluded.theme,
+                 resolved = excluded.resolved, identity = excluded.identity`,
+            )
+            .bind(
+              sample.brand.id,
+              JSON.stringify(yield* Schema.encodeEffect(BrandTheme)(sample.brand.theme)),
+              JSON.stringify(yield* Schema.encodeEffect(ResolvedTheme)(sample.revision.theme)),
+              JSON.stringify(yield* Schema.encodeEffect(BrandIdentity)(sample.revision.identity)),
+              JSON.stringify({ id: "user_meera", name: "Meera Kapoor" }),
+            ),
           ...published.map(({ site }) =>
             db
               .prepare(
-                "insert into sites (id, brand_id, name) values (?, ?, ?) on conflict (id) do update set name = excluded.name",
+                `insert into sites (id, brand_id, name, brand_revision) values (?, ?, ?, 1)
+                 on conflict (id) do update set name = excluded.name`,
               )
               .bind(site.id, sample.brand.id, site.name),
           ),

@@ -51,3 +51,15 @@
 
   --default-transition-duration: var(--theme-motion-duration);
 }
+
+/*
+ * Shows an element only on light backgrounds, or only on dark ones, such as
+ * a brand's two logos. Each surface says which it is, in either color scheme.
+ */
+@utility on-light-only {
+  display: var(--theme-on-light);
+}
+
+@utility on-dark-only {
+  display: var(--theme-on-dark);
+}

@@ -23,6 +23,7 @@ const withDraft = Effect.gen(function* () {
   if (manifest === undefined) throw new Error("The platform is seeded.");
   const summary = yield* (yield* drafts).create({
     name: summerLaunch,
+    kind: { _tag: "Edit" },
     by: sam,
     base: harbourLive,
     content: { ...manifest, pages: { [home.id]: home } },

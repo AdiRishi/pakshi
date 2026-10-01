@@ -6,7 +6,7 @@ import { BlockId, PageId } from "@repo/contracts/ids";
 import type { Conflict, ConflictKey, Resolutions, Side } from "@repo/contracts/merge";
 import { Op } from "@repo/contracts/ops";
 import { LiveRelease } from "@repo/contracts/snapshot";
-import type { Surface } from "@repo/tokens";
+import { resolveTheme, type Surface } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
@@ -480,6 +480,35 @@ describe("site-level parts", () => {
       "Dates",
       "News",
     ]);
+  });
+});
+
+describe("brand revisions", () => {
+  const revision = (number: number, brandColor: `#${string}`): Draft => ({
+    ...harbourDraft,
+    brand: {
+      ...harbourDraft.brand,
+      number,
+      theme: resolveTheme({ preset: "editorial", changes: { brandColor } }).theme,
+    },
+  });
+
+  test("reach a draft from the live site, as a change", () => {
+    const live = revision(2, "#7a1f5c");
+    const { content, conflicts, changes } = merge({ draft: harbourDraft, live });
+    expect(conflicts).toEqual([]);
+    expect(content.brand).toEqual(live.brand);
+    expect(changes).toContainEqual(
+      expect.objectContaining({ _tag: "ValueChanged", place: { target: "site", title: "Brand" } }),
+    );
+  });
+
+  test("never conflict: the newer revision is kept on whichever side has it", () => {
+    const draft = revision(3, "#1f5c44");
+    const live = revision(2, "#7a1f5c");
+    const { content, conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(content.brand).toEqual(draft.brand);
   });
 });
 

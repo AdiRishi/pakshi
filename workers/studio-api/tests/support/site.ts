@@ -1,5 +1,6 @@
 import { SqliteClient } from "@effect/sql-sqlite-node";
-import { MediaId, SiteId } from "@repo/contracts/ids";
+import { noIdentity } from "@repo/contracts/brand";
+import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { DraftId, SnapshotId } from "@repo/contracts/ids";
 import type { ServerMessage } from "@repo/contracts/live";
 import { PageDocument } from "@repo/contracts/page";
@@ -10,7 +11,7 @@ import {
   type SnapshotManifest,
   SnapshotManifest as Manifest,
 } from "@repo/contracts/snapshot";
-import { harbour } from "@repo/tokens";
+import { resolveTheme } from "@repo/tokens";
 import { Deferred, Effect, Layer, Option, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
 
@@ -88,7 +89,15 @@ export interface PlatformState {
 
 const encodeHome = Schema.encodeSync(PageDocument);
 const decodeManifest = Schema.decodeSync(Manifest);
-const encodeTheme = Schema.encodeSync(Manifest.fields.theme);
+export const encodeBrand = Schema.encodeSync(Manifest.fields.brand);
+
+/** The Harbour brand's first revision, on the Editorial preset. */
+export const harbourBrand = {
+  brand: BrandId.make("brand_harbour"),
+  number: 1,
+  theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+  identity: noIdentity,
+};
 
 /**
  * R2, KV and D1 as a site's SiteDoc sees them, in memory, seeded with the
@@ -117,7 +126,7 @@ export const platform = Effect.fn("platform")(function* () {
       },
       forms: {},
       lockfile: { hero: 1, "rich-text": 1, header: 1, footer: 1 },
-      theme: encodeTheme(harbour),
+      brand: encodeBrand(harbourBrand),
       media: { med_harbour: { contentType: "image/jpeg", width: 1600, height: 1067 } },
       pages: [{ id: "pg_home", path: "/", type: "page", meta: home.meta, object: homeHash }],
       gone: [],

@@ -41,6 +41,14 @@ export interface PostSummary {
  */
 export interface SiteData {
   readonly name: string;
+  /**
+   * The brand's logo, if it has one, and the version for dark backgrounds,
+   * if that differs.
+   */
+  readonly logo: {
+    readonly light: ResolvedMedia;
+    readonly onDark: ResolvedMedia | null;
+  } | null;
   readonly menus: {
     readonly main: ReadonlyArray<ResolvedMenuItem>;
     readonly footer: ReadonlyArray<ResolvedMenuItem>;
@@ -69,6 +77,9 @@ const useSiteData = () => {
 
 /** The site's name. */
 export const useSiteName = () => useSiteData().name;
+
+/** The brand's logo, or null when it has none. */
+export const useLogo = () => useSiteData().logo;
 
 /** A menu's items, with links resolved to addresses. */
 export const useMenu = (name: "main" | "footer") => useSiteData().menus[name];

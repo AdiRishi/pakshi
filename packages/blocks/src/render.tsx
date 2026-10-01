@@ -8,6 +8,38 @@ import type { BlockDefinition } from "./block.tsx";
 import { blockKey } from "./contract.ts";
 import { registry } from "./registry.gen.ts";
 
+/** Every block version in the registry, oldest first within each type. */
+export const registeredVersions: ReadonlyArray<{
+  readonly type: BlockType;
+  readonly version: number;
+}> = Object.keys(registry)
+  .map((key) => {
+    const at = key.lastIndexOf("@");
+    return { type: key.slice(0, at), version: Number(key.slice(at + 1)) };
+  })
+  .toSorted((a, b) => (a.type === b.type ? a.version - b.version : a.type < b.type ? -1 : 1));
+
+/** The newest version of every block type in the registry. */
+export const latestLockfile: Lockfile = Object.fromEntries(
+  registeredVersions.map(({ type, version }) => [type, version]),
+);
+
+/**
+ * A lockfile with every block type the registry has that it doesn't pin, at
+ * that type's newest version. A type no page uses yet changes nothing a site
+ * shows, so a new draft can always offer every block in the library.
+ */
+export const withNewBlockTypes = (lockfile: Lockfile): Lockfile => ({
+  ...latestLockfile,
+  ...lockfile,
+});
+
+/** The block versions a lockfile pins that the registry no longer holds, as `hero@1`. */
+export const removedBlockVersions = (lockfile: Lockfile) =>
+  Object.entries(lockfile)
+    .map(([type, version]) => blockKey(type, version))
+    .filter((key) => !(key in registry));
+
 /** Loads the version of a block type that a lockfile pins. */
 export const loadBlock = async (type: BlockType, lockfile: Lockfile) => {
   const version = lockfile[type];

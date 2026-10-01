@@ -21,6 +21,7 @@ export {
   Text,
   useForm,
   useHref,
+  useLogo,
   useMenu,
   usePosts,
   useSiteName,
@@ -62,7 +63,17 @@ export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 export type { RichTextMark, RichTextNode } from "./rich-text.ts";
 export { RichTextDocument, richTextLines } from "./rich-text.ts";
-export { loadBlock, loadBlocks, loadBlockVersions, renderBlock, renderPage } from "./render.tsx";
+export {
+  latestLockfile,
+  loadBlock,
+  loadBlocks,
+  loadBlockVersions,
+  registeredVersions,
+  removedBlockVersions,
+  renderBlock,
+  renderPage,
+  withNewBlockTypes,
+} from "./render.tsx";
 export type { PageEntry } from "./site-data.ts";
 export { siteData } from "./site-data.ts";
 export { PreviewBar, SitePage } from "./site-page.tsx";

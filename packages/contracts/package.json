@@ -16,6 +16,10 @@
       "types": "./src/app.ts",
       "default": "./src/app.ts"
     },
+    "./brand": {
+      "types": "./src/brand.ts",
+      "default": "./src/brand.ts"
+    },
     "./draft": {
       "types": "./src/draft.ts",
       "default": "./src/draft.ts"

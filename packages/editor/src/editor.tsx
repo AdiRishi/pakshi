@@ -311,7 +311,7 @@ export function EditorCanvas(props: {
 }) {
   const { siteCss, scheme } = useServices();
   const controls = useCanvasControls();
-  const theme = useEditorState((state) => state.view.theme);
+  const theme = useEditorState((state) => state.view.brand.theme);
   const title = useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
   const selection = useEditorState((state) => state.selection);
   const [container, setContainer] = useState<HTMLDivElement | null>(null);

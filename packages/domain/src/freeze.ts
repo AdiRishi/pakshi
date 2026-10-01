@@ -207,7 +207,10 @@ const placedBlocks = (
   })),
 ];
 
-/** The library images a site's served pages, header and footer show. Built-in placeholder images need no file. */
+/**
+ * The library images a site's served pages, header and footer show, with its
+ * brand's logos and icon. Built-in placeholder images need no file.
+ */
 export const shownMedia = (
   content: SiteContent,
   contracts: BlockContracts,
@@ -221,6 +224,7 @@ export const shownMedia = (
     }
   for (const page of servedPages(content))
     if (page.type === "post" && page.meta.cover) media.add(page.meta.cover.id);
+  for (const id of Object.values(content.brand.identity)) if (id !== null) media.add(id);
   for (const id of placeholderMedia.keys()) media.delete(id);
   return Array.from(media);
 };

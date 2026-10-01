@@ -2,7 +2,9 @@ import { readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 
 import { SqliteClient } from "@effect/sql-sqlite-node";
-import { Effect, Layer } from "effect";
+import { noIdentity } from "@repo/contracts/brand";
+import { ResolvedTheme, resolveTheme } from "@repo/tokens";
+import { Effect, Layer, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 
 /** A fresh core database with the real migrations applied, two brands of sites and people with grants. */
@@ -24,6 +26,13 @@ export const core = Layer.effectDiscard(
       .filter((statement) => statement !== "");
     for (const statement of statements) yield* sql.unsafe(statement);
     yield* sql`insert into brands (id, name) values ('brand_a', 'City Libraries'), ('brand_b', 'City Parks')`;
+    for (const brand of ["brand_a", "brand_b"]) {
+      const theme = { preset: "editorial", changes: {} } as const;
+      yield* sql`insert into brand_revisions (brand_id, number, theme, resolved, identity, created_by)
+        values (${brand}, 1, ${JSON.stringify(theme)},
+          ${JSON.stringify(yield* Schema.encodeEffect(ResolvedTheme)(resolveTheme(theme).theme))},
+          ${JSON.stringify(noIdentity)}, '{"id":"user_org","name":"user_org"}')`;
+    }
     yield* sql`insert into sites (id, brand_id, name) values
       ('site_a1', 'brand_a', 'Northbank Libraries'),
       ('site_a2', 'brand_a', 'Library Events'),

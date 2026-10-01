@@ -66,11 +66,13 @@ export const useDraftSiteData = () => {
   const menus = useEditorState((state) => state.view.parts.menus);
   const settings = useEditorState((state) => state.view.settings);
   const forms = useEditorState((state) => state.view.forms);
+  const identity = useEditorState((state) => state.view.brand.identity);
   const pages = usePageEntries();
   return useMemo(() => {
     const files = new Map(media.map((file) => [file.id, file]));
     return siteData({
       settings,
+      identity,
       menus,
       pages,
       forms,
@@ -81,7 +83,7 @@ export const useDraftSiteData = () => {
           : { src: mediaSrc(id), width: file.width, height: file.height };
       },
     });
-  }, [settings, menus, pages, forms, media, mediaSrc]);
+  }, [settings, identity, menus, pages, forms, media, mediaSrc]);
 };
 
 /** The page being edited, with the site's header and footer, as `sites` lays it out. */
