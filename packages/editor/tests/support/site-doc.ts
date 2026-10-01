@@ -321,8 +321,6 @@ export const fakeSiteDoc = (options: { readonly draft?: Draft; readonly auto?: b
       schedule();
       return result;
     },
-    /** Every message sent to SiteDoc so far that's still waiting, for tests that inspect them. */
-    waiting: () => sockets.flatMap((socket) => socket.toServer),
   };
 };
 

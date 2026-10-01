@@ -73,7 +73,6 @@ describe("document integrity", () => {
         ...page.blocks,
         b_feat1: { ...page.blocks.b_feat1, slots: { items: ["b_fi1", "b_fi1"] } },
       },
-      root: ["b_hero1", "b_feat1"],
     };
     expect(issues(inSlot)).toContain("b_fi1 is placed more than once");
   });

@@ -43,6 +43,21 @@ const item = (id: string, title: string) => ({
   props: { title, body: "Every day." },
 });
 
+const insertMore: WireOp = {
+  op: "insertBlock",
+  page: "pg_home",
+  list: "root",
+  after: "b_hero",
+  block: {
+    id: "b_more",
+    type: "feature-grid",
+    variant: "two-columns",
+    surface: "muted",
+    props: { heading: "More" },
+    slots: { items: [item("lunch", "Lunch")] },
+  },
+};
+
 // Every kind of op, each accepted on the Harbour draft.
 const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
   [
@@ -108,25 +123,7 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
     "change a surface",
     [{ op: "setSurface", target: "site", block: "b_footer", surface: "inverse" }],
   ],
-  [
-    "insert a section with items",
-    [
-      {
-        op: "insertBlock",
-        page: "pg_home",
-        list: "root",
-        after: "b_hero",
-        block: {
-          id: "b_more",
-          type: "feature-grid",
-          variant: "two-columns",
-          surface: "muted",
-          props: { heading: "More" },
-          slots: { items: [item("lunch", "Lunch")] },
-        },
-      },
-    ],
-  ],
+  ["insert a section with items", [insertMore]],
   [
     "insert an item first in a slot",
     [
@@ -144,7 +141,7 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
     [{ op: "moveBlock", page: "pg_home", block: "b_gallery", list: "root", after: null }],
   ],
   [
-    "move an item to another page's section",
+    "move an item to the front of its section",
     [
       {
         op: "moveBlock",
@@ -246,7 +243,7 @@ describe("applying ops", () => {
   });
 
   test("an inserted section lands after the named block, with its items in its slot", () => {
-    const { draft } = applied(batches[8]?.[1][0] ?? { op: "deletePage", page: "pg_about" });
+    const { draft } = applied(insertMore);
     expect(home(draft).root).toEqual(["b_hero", "b_more", "b_features", "b_gallery"]);
     expect(block(draft, "b_more")?.slots).toEqual({ items: ["b_lunch"] });
     expect(block(draft, "b_lunch")?.props["title"]).toBe("Lunch");
@@ -284,12 +281,21 @@ describe("applying ops", () => {
     expect(Object.keys(home(draft).blocks).toSorted()).toEqual(["b_gallery", "b_hero"]);
   });
 
-  test("a batch applies all or nothing", () => {
+  test("a batch with one op that breaks a rule is refused, naming that op", () => {
     const errors = rejection(
       { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "Build" },
       { op: "setProp", target: "pg_home", block: "b_nope", path: ["heading"], value: "Build" },
     );
     expect(errors).toEqual([expect.objectContaining({ op: 1, rule: "unknown-block" })]);
+  });
+
+  test("a batch can swap two pages' addresses", () => {
+    const { draft } = applied(
+      { op: "setPath", page: "pg_about", path: "/news/dates" },
+      { op: "setPath", page: "pg_dates", path: "/about" },
+    );
+    expect(draft.pages[PageId.make("pg_about")]?.path).toBe("/news/dates");
+    expect(draft.pages[PageId.make("pg_dates")]?.path).toBe("/about");
   });
 
   test("errors are structured, with the op, where in it, the rule and a message", () => {
@@ -451,17 +457,6 @@ describe("each rule rejects the ops that break it", () => {
       "unknown-item",
     ],
     [
-      "text over its maximum length",
-      {
-        op: "setProp",
-        target: "pg_home",
-        block: "b_hero",
-        path: ["heading"],
-        value: "x".repeat(81),
-      },
-      "value",
-    ],
-    [
       "a line break in single-line text",
       { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "Two\nlines" },
       "value",
@@ -526,7 +521,7 @@ describe("each rule rejects the ops that break it", () => {
   });
 });
 
-test("a new page made in code, which skips decoding, is still held to the page rules", () => {
+test("a new page with blocks in no list is refused, even when it was never decoded", () => {
   const result = applyOps(
     harbourDraft,
     [

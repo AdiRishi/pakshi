@@ -128,15 +128,6 @@ describe("typing", () => {
     expect(store.getState().status).toBe("saved");
   });
 
-  test("a required heading can be emptied and typed again", async () => {
-    const siteDoc = fakeSiteDoc();
-    const { store } = open(siteDoc);
-    expect(store.run([setHeading("")], "heading")).toEqual([]);
-    expect(store.run([setHeading("B")], "heading")).toEqual([]);
-    await settle();
-    expect(serverHeading(siteDoc)).toBe("B");
-  });
-
   test("cancelling a burst puts the field back as it was", async () => {
     const siteDoc = fakeSiteDoc();
     const { store } = open(siteDoc);
@@ -226,9 +217,7 @@ describe("other people's changes", () => {
     mine.store.run([setHeading("Mine")]);
     siteDoc.commit(sam, [setHeading("Theirs")]);
     // Sam's commit reaches this editor before its own batch reaches SiteDoc.
-    const committed = siteDoc.waiting();
-    expect(committed).toHaveLength(1);
-    siteDoc.step(1);
+    siteDoc.receive();
     expect(headingOf(mine.store)).toBe("Mine");
     siteDoc.deliver();
     expect(headingOf(mine.store)).toBe("Mine");

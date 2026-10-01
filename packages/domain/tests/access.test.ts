@@ -2,7 +2,7 @@ import type { DefaultRole, Permission, Scope } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { describe, expect, test } from "vitest";
 
-import { type Access, authorize, type Resource } from "../src/access.ts";
+import { type Access, authorize, type Resource, rolesOn } from "../src/access.ts";
 
 const brandA = BrandId.make("brand_a");
 const brandB = BrandId.make("brand_b");
@@ -121,6 +121,15 @@ describe("overrides", () => {
   });
 });
 
-test("a person with no grants can do nothing", () => {
-  expect(authorize({ grants: [], overrides: [] }, "page.edit", siteA1Resource)).toBe(false);
+test("a person holds on a site the roles granted on it, its brand or the organization", () => {
+  const access: Access = {
+    grants: [
+      { role: "approver", scope: { kind: "brand", id: brandA } },
+      { role: "editor", scope: { kind: "site", id: siteB1 } },
+      { role: "submissions-viewer", scope: { kind: "organization" } },
+      { role: "site-admin", scope: { kind: "site", id: siteA2 } },
+    ],
+    overrides: [],
+  };
+  expect(rolesOn(access, siteA1Resource)).toEqual(["approver", "submissions-viewer"]);
 });

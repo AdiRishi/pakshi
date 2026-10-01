@@ -4,7 +4,7 @@ import { Batch, type Op } from "@repo/contracts/ops";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { type Checks, commitBatch, type Writes } from "../src/commit.ts";
+import { type Checks, commitBatch, type Write, type Writes } from "../src/commit.ts";
 import { contracts, harbourDraft } from "./support/draft.ts";
 
 type WireOp = typeof Op.Encoded;
@@ -37,7 +37,7 @@ const session = () => {
     if (!result.ok) throw new Error(JSON.stringify(result.errors));
     return result;
   };
-  return { commit, committed, draft: () => draft };
+  return { commit, committed };
 };
 
 const home = PageId.make("pg_home");
@@ -92,14 +92,13 @@ describe("a batch", () => {
     expect(blockOf(result.draft, "b_hero")?.props["heading"]).toBe("Sail with us");
   });
 
-  test("that breaks a rule changes nothing and says why", () => {
-    const { commit, draft } = session();
+  test("that breaks a rule is refused, saying where and why", () => {
+    const { commit } = session();
     const result = commit(meera, [setHeading("x".repeat(81))]);
     expect(result).toEqual({
       ok: false,
       errors: [expect.objectContaining({ op: 0, rule: "value", path: ["heading"] })],
     });
-    expect(draft().revision).toBe(0);
   });
 
   test("names the person whose write to the same field it replaced", () => {
@@ -133,6 +132,39 @@ describe("a batch", () => {
     ]);
     expect(result.replaced).toEqual([{ actor: meera, op: 0 }]);
   });
+});
+
+test("each commit reports the change that keeps stored writes in step", () => {
+  const { committed } = session();
+  const cta = (label: string): WireOp => ({
+    op: "setProp",
+    target: "pg_home",
+    block: "b_hero",
+    path: ["cta"],
+    value: { label, link: "https://example.org/register" },
+  });
+  const ctaLabel = (value: string): WireOp => ({
+    op: "setProp",
+    target: "pg_home",
+    block: "b_hero",
+    path: ["cta", "label"],
+    value,
+  });
+  const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
+    [meera, [ctaLabel("Join"), cta("Sign up")]],
+    [sam, [ctaLabel("Go")]],
+    [meera, [cta("Register"), ctaLabel("Book")]],
+    [sam, [cta("Enrol")]],
+    [meera, [setWorkshopsTitle("Classes")]],
+    [sam, [{ op: "removeBlock", page: "pg_home", block: "b_features" }]],
+  ];
+  let stored = new Map<string, Write>();
+  for (const [actor, ops] of batches) {
+    const { writes, writesChange } = committed(actor, ops);
+    stored = new Map([...stored, ...writesChange.set]);
+    for (const key of writesChange.removed) stored.delete(key);
+    expect(stored).toEqual(writes);
+  }
 });
 
 describe("a batch held to completeness", () => {

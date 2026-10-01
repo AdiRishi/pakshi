@@ -2,7 +2,14 @@ import { expect, it } from "@effect/vitest";
 import { BrandId, MediaId } from "@repo/contracts/ids";
 import { Effect } from "effect";
 
-import { brandsFor, brandView, saveLook, saveVoice, sitesBehindTheirBrand } from "../src/brands.ts";
+import {
+  brandsFor,
+  brandView,
+  createBrand,
+  saveLook,
+  saveVoice,
+  sitesBehindTheirBrand,
+} from "../src/brands.ts";
 import { core } from "./support/core.ts";
 
 const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
@@ -67,14 +74,33 @@ it.effect("a logo must come from the brand's own library", () =>
   }).pipe(Effect.provide(core)),
 );
 
-it.effect("only people who may edit the brand's theme change its look or voice", () =>
+it.effect("someone who holds nothing on a brand doesn't see it, or change its look or voice", () =>
   Effect.gen(function* () {
-    expect((yield* Effect.flip(saveLook(person("user_editor"), libraries, plum, 1)))._tag).toBe(
-      "ScopeNotFound",
-    );
     const voice = { tone: "Plain and warm.", examples: [], wordsToAvoid: ["patrons"] };
-    expect(yield* saveVoice(person("user_brand"), libraries, voice)).toEqual(voice);
+    const look = yield* Effect.flip(saveLook(person("user_editor"), libraries, plum, 1));
+    const guide = yield* Effect.flip(saveVoice(person("user_editor"), libraries, voice));
+    expect([look._tag, guide._tag]).toEqual(["ScopeNotFound", "ScopeNotFound"]);
+    expect(yield* brandsFor(person("user_editor"))).toEqual([]);
+  }).pipe(Effect.provide(core)),
+);
+
+it.effect("a brand's voice guide is what its admin last saved", () =>
+  Effect.gen(function* () {
+    const voice = { tone: "Plain and warm.", examples: [], wordsToAvoid: ["patrons"] };
+    yield* saveVoice(person("user_brand"), libraries, voice);
     expect((yield* brandView(person("user_org"), libraries)).voice).toEqual(voice);
-    expect((yield* brandsFor(person("user_brand"))).map((brand) => brand.id)).toEqual(["brand_a"]);
+  }).pipe(Effect.provide(core)),
+);
+
+it.effect("only org admins make brands, each starting at its first revision", () =>
+  Effect.gen(function* () {
+    const refused = yield* Effect.flip(
+      createBrand(person("user_brand"), "City Museums", "editorial", "#1f5c44"),
+    );
+    expect(refused._tag).toBe("NotPermitted");
+    const { id } = yield* createBrand(person("user_org"), "City Museums", "editorial", "#1f5c44");
+    const view = yield* brandView(person("user_org"), id);
+    expect(view).toMatchObject({ brand: { name: "City Museums" }, revision: { number: 1 } });
+    expect(view.look.theme).toEqual({ preset: "editorial", changes: { brandColor: "#1f5c44" } });
   }).pipe(Effect.provide(core)),
 );

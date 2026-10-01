@@ -23,7 +23,7 @@ import {
 export interface Desk {
   draft: Draft;
   writes: Writes;
-  typing: ReadonlyArray<TypingIn>;
+  readonly typing: ReadonlyArray<TypingIn>;
   /** Every batch the agent committed, in order. */
   readonly commits: Array<ReadonlyArray<Op>>;
   /** The chat's parts as the person sees them. */
@@ -41,6 +41,7 @@ export const desk = async (
   options: {
     readonly links?: ReadonlyArray<string>;
     readonly selected?: Selected;
+    readonly typing?: ReadonlyArray<TypingIn>;
     readonly sources?: ReadonlyArray<{ readonly name: string; readonly markdown: string }>;
     /** Web pages by address, as Markdown. */
     readonly pages?: Readonly<Record<string, string>>;
@@ -50,7 +51,7 @@ export const desk = async (
   const state: Desk = {
     draft,
     writes: new Map(),
-    typing: [],
+    typing: options.typing ?? [],
     commits: [],
     parts: [],
     sources: new Map(

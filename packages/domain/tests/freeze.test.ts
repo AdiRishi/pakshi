@@ -60,7 +60,7 @@ describe("freezing", () => {
     ]);
   });
 
-  test("leaves unpublished pages out, and their addresses answer gone", () => {
+  test("leaves unpublished pages out, and answers gone at addresses no page serves now", () => {
     const unpublished: Draft = {
       ...complete,
       pages: Object.fromEntries(
@@ -82,7 +82,7 @@ describe("freezing", () => {
           object: "a".repeat(64),
         },
       ],
-      gone: ["/old-programme"],
+      gone: ["/old-programme", "/news/dates"],
     });
     const result = freeze(unpublished, contracts, previous);
     if (!result.ok) throw new Error(JSON.stringify(result.issues));

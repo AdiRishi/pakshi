@@ -139,9 +139,9 @@ it.effect("someone who already holds the role there isn't invited again", () =>
   }).pipe(Effect.provide(core)),
 );
 
-it.effect("an organization is set up once, by its first admin", () =>
+it.effect("a second organization setup is refused, and changes nothing", () =>
   Effect.gen(function* () {
-    // The shared fixture's organization exists, so a second setup is refused and changes nothing.
+    // The fixture has set the organization up already.
     expect(yield* startOrganization("Another council", "user_editor")).toBe(false);
     expect(yield* organizationName).toEqual(Option.some("Riverton Council"));
     const { access } = yield* loadAccess("user_editor");

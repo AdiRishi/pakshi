@@ -7,7 +7,13 @@ import { expect } from "vitest";
 import { render } from "vitest-browser-react";
 import { page } from "vitest/browser";
 
-import { EditorCanvas, EditorOutline, EditorProvider, EditorSettings } from "../../src/index.ts";
+import {
+  EditorCanvas,
+  EditorOutline,
+  EditorProvider,
+  EditorSettings,
+  useToolbarCommands,
+} from "../../src/index.ts";
 import type { Notice } from "../../src/notices.ts";
 import { definitions, type FakeSiteDoc, fakeSiteDoc, fixtureDraft, meera } from "./site-doc.ts";
 
@@ -38,6 +44,19 @@ const media: ReadonlyArray<MediaSummary> = [
 /** A 1x1 image, so the canvas needs no media server. */
 const pixel =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=";
+
+/** Undo and redo, as Studio's toolbar shows them. */
+function Toolbar() {
+  return (
+    <div role="toolbar" aria-label="Editor">
+      {useToolbarCommands().map((command) => (
+        <button key={command.title} type="button" disabled={command.disabled} onClick={command.run}>
+          {command.title}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 /**
  * The editor as Studio lays it out, for Meera, on a SiteDoc the test can
@@ -71,6 +90,7 @@ export const openEditor = async (
       connection={siteDoc.connection(meera)}
       onNotice={(notice) => notices.push(notice)}
     >
+      <Toolbar />
       <div style={{ display: "flex", height: 700 }}>
         <aside aria-label="Structure" style={{ width: 320, flexShrink: 0, overflowY: "auto" }}>
           <EditorOutline />

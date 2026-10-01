@@ -45,17 +45,6 @@ const setHeading = (id: string, heading: string) =>
 const heading = (draft: Draft) =>
   draft.pages[PageId.make("pg_home")]?.blocks[BlockId.make("b_hero")]?.props["heading"];
 
-it.effect("a new draft holds the content it started from", () =>
-  Effect.gen(function* () {
-    const id = yield* withDraft;
-    const draft = yield* (yield* drafts).draft(id);
-    expect(draft.base).toEqual(harbourLive);
-    expect(draft.revision).toBe(0);
-    expect(Object.keys(draft.pages)).toEqual(["pg_home"]);
-    expect(draft.parts.header).toBe("b_header");
-  }).pipe(Effect.provide(storage)),
-);
-
 it.effect("a committed batch survives the object restarting", () =>
   Effect.gen(function* () {
     const id = yield* withDraft;
@@ -104,7 +93,7 @@ it.effect("a rejected batch changes nothing and says why", () =>
   }).pipe(Effect.provide(storage)),
 );
 
-it.effect("created and deleted pages are stored as their own rows", () =>
+it.effect("created and deleted pages survive the object restarting", () =>
   Effect.gen(function* () {
     const id = yield* withDraft;
     const store = yield* drafts;

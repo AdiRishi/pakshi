@@ -9,6 +9,8 @@ test("equal pages hash the same whatever their key order", async () => {
   expect(a).toMatch(/^[a-f0-9]{64}$/);
 });
 
-test("different pages hash differently", async () => {
-  expect(await contentHash({ title: "Home" })).not.toBe(await contentHash({ title: "About" }));
+test("pages whose sections are in another order hash differently", async () => {
+  expect(await contentHash({ root: ["b_hero", "b_faq"] })).not.toBe(
+    await contentHash({ root: ["b_faq", "b_hero"] }),
+  );
 });

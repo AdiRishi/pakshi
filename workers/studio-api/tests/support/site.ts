@@ -101,9 +101,12 @@ export const harbourBrand = {
 
 /**
  * R2, KV and D1 as a site's SiteDoc sees them, in memory, seeded with the
- * Harbour site published once, as the seed publishes the sample site.
+ * Harbour site published once, as the seed publishes the sample site. KV
+ * serves `served`: the Harbour release, or nothing for a site not started yet.
  */
-export const platform = Effect.fn("platform")(function* () {
+export const platform = Effect.fn("platform")(function* (
+  served: Option.Option<LiveRelease> = Option.some(harbourLive),
+) {
   const pages = new Map<ContentHash, PageDocument>();
   const manifests = new Map<SnapshotId, SnapshotManifest>();
   const homeHash = yield* Effect.promise(() => contentHash(encodeHome(home)));
@@ -135,7 +138,7 @@ export const platform = Effect.fn("platform")(function* () {
   const state: PlatformState = {
     pages,
     manifests,
-    routing: Option.some(harbourLive),
+    routing: served,
     routingDown: false,
     index: new Map(),
     delivered: [],

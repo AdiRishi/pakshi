@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
+import { latestLockfile } from "@repo/blocks";
 import type { BrandRevision } from "@repo/contracts/brand";
 import { type Draft, DraftName } from "@repo/contracts/draft";
 import { BlockId, BlockType, type DraftId, PageId, TurnId } from "@repo/contracts/ids";
@@ -7,6 +8,7 @@ import type { ConflictKey, Side } from "@repo/contracts/merge";
 import { Batch } from "@repo/contracts/ops";
 import type { PageDocument } from "@repo/contracts/page";
 import { liveReleaseOf } from "@repo/contracts/release";
+import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import type { Approver } from "@repo/domain/approvals";
@@ -63,13 +65,11 @@ const setIntro = (value: string) => {
 
 /** A test with a site whose SiteDoc starts over the seeded platform, with a handle on the platform. */
 const withSite = <A, E>(
-  test: (
-    site: Site["Service"],
-    state: Effect.Success<ReturnType<typeof platform>>["state"],
-  ) => Effect.Effect<A, E>,
+  test: (site: Site["Service"], state: PlatformState) => Effect.Effect<A, E>,
+  served?: Option.Option<LiveRelease>,
 ) =>
   Effect.gen(function* () {
-    const { state, layer } = yield* platform();
+    const { state, layer } = yield* platform(served);
     return yield* Site.use((site) => test(site, state)).pipe(
       Effect.provide(siteService(layer).pipe(Layer.provide(storage))),
     );
@@ -121,6 +121,41 @@ it.effect("a site SiteDoc hasn't recorded takes the release KV serves as its fir
       expect(Array.from(state.index.keys())).toEqual([harbourLive.release]);
     }),
   ),
+);
+
+it.effect(
+  "a new site goes live with its brand, a header, a footer and no pages, and opens in a first draft with a home page",
+  () =>
+    withSite(
+      (site, state) =>
+        Effect.gen(function* () {
+          const brand = { ...harbourBrand, number: 4 };
+          const launch = yield* site.start(sam, { name: "Harbour Summer School" }, brand);
+          const live = yield* site.live;
+          expect(live).toMatchObject({ _tag: "Created", by: sam });
+          expect(state.routing).toEqual(Option.some(liveReleaseOf(live)));
+          const manifest = state.manifests.get(live.snapshot);
+          expect(manifest?.pages).toEqual([]);
+          expect(manifest?.brand.number).toBe(4);
+          expect(manifest?.lockfile).toEqual(latestLockfile);
+          expect(
+            Object.values(manifest?.parts.blocks ?? {})
+              .map((block) => block.type)
+              .toSorted(),
+          ).toEqual(["footer", "header"]);
+          expect(launch).toMatchObject({
+            name: "Launch",
+            status: "open",
+            base: liveReleaseOf(live),
+          });
+          const draft = yield* opened(site, launch.id);
+          expect(Object.values(draft.pages)).toMatchObject([
+            { path: "/", meta: { title: "Harbour Summer School" }, root: [] },
+          ]);
+          expect(yield* site.takeBrandRevision(sam, brand)).toEqual({ _tag: "Taken" });
+        }),
+      Option.none(),
+    ),
 );
 
 it.effect("a new draft starts from the live release, and joins the drafts list", () =>
@@ -303,7 +338,7 @@ it.effect("a conflicting draft needs an update, which finishes once each conflic
   ),
 );
 
-it.effect("people can't move a draft onto a release, or change a closed draft", () =>
+it.effect("people can't move a draft onto a release", () =>
   withSite((site) =>
     Effect.gen(function* () {
       const { id } = yield* site.createDraft(sam, name("Heading"));
@@ -326,11 +361,22 @@ it.effect("people can't move a draft onto a release, or change a closed draft", 
         status: "rejected",
         errors: [{ rule: "system" }],
       });
+      expect((yield* opened(site, id)).base).toEqual(harbourLive);
+    }),
+  ),
+);
+
+it.effect("a closed draft takes no more edits, and keeps its name", () =>
+  withSite((site) =>
+    Effect.gen(function* () {
+      const { id } = yield* site.createDraft(sam, name("Heading"));
       yield* site.closeDraft(sam, id);
       expect(yield* site.applyBatch(sam, id, setHeading("Too late"))).toMatchObject({
         status: "rejected",
         errors: [{ rule: "closed" }],
       });
+      expect((yield* Effect.flip(site.renameDraft(id, name("Other"))))._tag).toBe("DraftNotFound");
+      expect((yield* site.summary(id)).name).toBe("Heading");
     }),
   ),
 );
@@ -364,17 +410,6 @@ it.effect("closing a draft while it's being published waits for the publish", ()
       expect((yield* Fiber.join(closing))._tag).toBe("DraftNotFound");
       expect((yield* site.summary(id)).status).toBe("published");
       expect(state.routing).toEqual(Option.some(liveReleaseOf(release)));
-    }),
-  ),
-);
-
-it.effect("a closed draft can't be renamed", () =>
-  withSite((site) =>
-    Effect.gen(function* () {
-      const { id } = yield* site.createDraft(sam, name("Heading"));
-      yield* site.closeDraft(sam, id);
-      expect((yield* Effect.flip(site.renameDraft(id, name("Other"))))._tag).toBe("DraftNotFound");
-      expect((yield* site.summary(id)).name).toBe("Heading");
     }),
   ),
 );

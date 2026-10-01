@@ -3,7 +3,6 @@ import { readFile } from "node:fs/promises";
 import { noIdentity } from "@repo/contracts/brand";
 import { BlockId, BlockType, ItemId, MediaId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
-import type { BlockInstance } from "@repo/contracts/page";
 import { Schema } from "effect";
 import type { Json } from "effect/Schema";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -14,17 +13,19 @@ import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
 import { blockKey } from "../src/contract.ts";
 import { propsSchema } from "../src/fields.ts";
-import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
+import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "../src/fixtures.ts";
 import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
-import { latestLockfile, loadBlocks, renderBlock } from "../src/render.tsx";
+import {
+  latestLockfile,
+  loadBlock,
+  loadBlocks,
+  registeredVersions,
+  renderBlock,
+} from "../src/render.tsx";
 import { siteData } from "../src/site-data.ts";
 
-const load = async (type: string, version: number) => {
-  const entry = registry[blockKey(type, version)];
-  if (entry === undefined) throw new Error(`${type}@${version} is not registered`);
-  return (await entry()).default;
-};
+const load = (type: string, version: number) => loadBlock(type, { [type]: version });
 
 const site = siteData({
   ...fixtureSite,
@@ -38,27 +39,10 @@ const site = siteData({
 const markup = (element: React.ReactElement) =>
   renderToStaticMarkup(<SiteDataProvider value={site}>{element}</SiteDataProvider>);
 
-/** A block tree as the flat blocks a page stores. */
-const flatten = (tree: BlockTree): Record<BlockId, BlockInstance> => {
-  const { id, slots, ...block } = tree;
-  const items = Object.values(slots ?? {}).flat();
-  return {
-    [id]: {
-      ...block,
-      ...(slots && {
-        slots: Object.fromEntries(
-          Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
-        ),
-      }),
-    },
-    ...Object.fromEntries(items.map(({ id: itemId, ...item }) => [itemId, item])),
-  };
-};
-
 /** Renders a block at a version, with the items in its slots at their newest. */
 const renderTree = async (tree: BlockTree, version: number) => {
   const definitions = await loadBlocks({ ...latestLockfile, [tree.type]: version });
-  return markup(renderBlock(definitions, flatten(tree), tree.id));
+  return markup(renderBlock(definitions, Object.fromEntries(flattenTree(tree)), tree.id));
 };
 
 const renderProps = (
@@ -80,6 +64,30 @@ test("every block version has fixtures", () => {
   const covered = new Set(blockFixtures.map((entry) => blockKey(entry.type, entry.version)));
   expect(covered).toEqual(new Set(Object.keys(registry)));
 });
+
+test.each(
+  registeredVersions
+    .filter(({ version }) => version > 1)
+    .map(({ type, version }) => [blockKey(type, version), type, version] as const),
+)(
+  "%s says what it changes and takes the content of the version before it",
+  async (_key, type, version) => {
+    const block = await load(type, version);
+    expect(block.changes).not.toBeNull();
+    if (block.migrate === null) throw new Error(`${type}@${version} has no migration.`);
+    const migrate = block.migrate;
+    const complete = Schema.is(propsSchema(block.fields, "complete"));
+    const previous = blockFixtures.filter(
+      (entry) => entry.type === type && entry.version === version - 1,
+    );
+    expect(previous.length).toBeGreaterThan(0);
+    expect(
+      previous
+        .filter((entry) => !complete(migrate(entry.fixture.props)))
+        .map((entry) => entry.name),
+    ).toEqual([]);
+  },
+);
 
 describe.each(
   blockFixtures.map((entry) => [entry.type, entry.version, entry.name, entry] as const),
@@ -298,11 +306,13 @@ describe("placeholders", () => {
         .flat()
         .map((item) => item.id),
     ];
-    expect(new Set([...ids(placed("feature-grid")), ...ids(placed("feature-grid"))]).size).toBe(8);
+    const blocks = [...ids(placed("feature-grid")), ...ids(placed("feature-grid"))];
+    expect(new Set(blocks).size).toBe(blocks.length);
     const images = [placed("gallery"), placed("gallery")].flatMap((tree) =>
       itemIds(tree.props["images"]),
     );
-    expect(new Set(images).size).toBe(6);
+    expect(images.length).toBeGreaterThan(0);
+    expect(new Set(images).size).toBe(images.length);
   });
 
   test("every field of a new block holds placeholder content", () => {
