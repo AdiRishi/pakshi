@@ -174,7 +174,7 @@ const issueLine = (issue: PreflightIssue) => {
     case "NoFormEmails":
       return `${issue.name} would email its entries to no one. Add an address in the site's settings.`;
     case "MissingConsent":
-      return `${issue.name} asks for contact details without a consent checkbox linking to a privacy policy.`;
+      return `${issue.name} asks for contact details without a required consent checkbox linking to a privacy policy.`;
   }
 };
 

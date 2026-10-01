@@ -35,7 +35,7 @@ export const PreflightIssue = Schema.TaggedUnion({
   },
   /** A form on a served page whose entries would be emailed to no one. */
   NoFormEmails: { form: FormId, name: Schema.String },
-  /** A form that asks for an email address or phone number without a consent checkbox linking to a privacy policy. */
+  /** A form that asks for an email address or phone number without a required consent checkbox linking to a privacy policy. */
   MissingConsent: { form: FormId, name: Schema.String },
 });
 export type PreflightIssue = typeof PreflightIssue.Type;
