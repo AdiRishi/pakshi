@@ -2,6 +2,7 @@ import { SqliteClient } from "@effect/sql-sqlite-do";
 import type { NewEntry } from "@repo/contracts/entries";
 import { intakePath } from "@repo/contracts/entries";
 import type { EntryId, FormId, SiteId } from "@repo/contracts/ids";
+import type { Timestamp } from "@repo/contracts/release";
 import type { LiveSettings } from "@repo/contracts/settings";
 import type { SitesApiEnv } from "@repo/infra/worker-bindings";
 import { DurableObject } from "cloudflare:workers";
@@ -49,6 +50,10 @@ export class SiteSubmissions extends DurableObject<SitesApiEnv> {
 
   entries(page: EntriesBefore) {
     return this.#run((entries) => entries.entries(page));
+  }
+
+  receivedSince(since: Timestamp) {
+    return this.#run((entries) => entries.receivedSince(since));
   }
 
   everyEntry(form: FormId) {

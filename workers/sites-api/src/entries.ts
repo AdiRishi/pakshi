@@ -131,6 +131,8 @@ export class SiteEntries extends Context.Service<
     readonly entries: (
       page: EntriesBefore,
     ) => Effect.Effect<ReadonlyArray<FormEntry>, StorageError>;
+    /** How many entries came at or after a moment, on every form. */
+    readonly receivedSince: (since: Timestamp) => Effect.Effect<number, StorageError>;
     /** All of a form's entries, oldest first, for an export. */
     readonly everyEntry: (form: FormId) => Effect.Effect<ReadonlyArray<FormEntry>, StorageError>;
     readonly entry: (id: EntryId) => Effect.Effect<Option.Option<FormEntry>, StorageError>;
@@ -237,6 +239,12 @@ export class SiteEntries extends Context.Service<
                     where json_each.value ->> 'value' like ${`%${search}%`})`
             }
             order by received_at desc, id desc limit ${limit}`),
+        receivedSince: (since) =>
+          Effect.map(
+            sql<{ readonly entries: number }>`select count(*) as entries from entries
+              where received_at >= ${since}`,
+            ([row]) => row?.entries ?? 0,
+          ),
         countFor: (email) =>
           SqlSchema.findAll({
             Request: Schema.Void,

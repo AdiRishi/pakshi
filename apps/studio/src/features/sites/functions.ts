@@ -188,6 +188,11 @@ export const searchPeople = createServerFn({ method: "GET" })
   .validator(Schema.toStandardSchemaV1(Schema.Struct({ search: Schema.String })))
   .handler(({ data }) => studio((client) => client.people(data)));
 
+/** Where a site is, what's live, and what waits in the tabs the person may open. */
+export const getSiteOverview = createServerFn({ method: "GET" })
+  .validator(forSite)
+  .handler(({ data }) => studio((client) => client.siteOverview(data)));
+
 /** Every release of a site, newest first. */
 export const getSiteReleases = createServerFn({ method: "GET" })
   .validator(forSite)

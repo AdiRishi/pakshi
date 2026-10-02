@@ -227,6 +227,11 @@ export class Site extends Context.Service<
     ) => Effect.Effect<SettingsView, StorageError | SettingsChanged>;
     /** The release the site serves. */
     readonly live: Effect.Effect<Release, StorageError>;
+    /** The release the site serves, with its home page as visitors see it. */
+    readonly liveHome: Effect.Effect<
+      { readonly release: Release; readonly view: SiteView },
+      StorageError
+    >;
     /** Every release, newest first. */
     readonly releases: Effect.Effect<ReadonlyArray<Release>, StorageError>;
     readonly drafts: Effect.Effect<ReadonlyArray<DraftSummary>, StorageError>;
@@ -1180,6 +1185,10 @@ export class Site extends Context.Service<
             ),
           ),
         live: liveRelease,
+        liveHome: Effect.gen(function* () {
+          const release = yield* liveRelease;
+          return { release, view: yield* snapshotView(release.snapshot, "/") };
+        }),
         releases: Effect.map(releases.history, (history) => history.map(releaseOf).toReversed()),
         drafts: Effect.gen(function* () {
           const [infos, latest] = yield* Effect.all([drafts.list, approvals.latest]);

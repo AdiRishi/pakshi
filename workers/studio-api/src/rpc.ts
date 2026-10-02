@@ -5,7 +5,7 @@ import type { Permission } from "@repo/contracts/access";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockType, DraftId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
-import { liveReleaseOf, type Release } from "@repo/contracts/release";
+import { liveReleaseOf, type Release, Timestamp } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import { publishedOf, type SettingsView } from "@repo/contracts/settings";
 import { objectKeys, routingKeys } from "@repo/contracts/snapshot";
@@ -17,6 +17,7 @@ import {
   type DraftSummary,
   EntryNotFound,
   ImageNotFound,
+  newEntriesDays,
   NothingToRollBack,
   NotPermitted,
   OpenedDraft,
@@ -68,7 +69,14 @@ import {
   saveVoice,
 } from "./brands.ts";
 import { deleteBrand, deletedSites, deleteSite, restoreSite } from "./deletion.ts";
-import { addDomain, checkDomains, removeDomain, routedHost, siteDomains } from "./domains.ts";
+import {
+  addDomain,
+  checkDomains,
+  removeDomain,
+  routedHost,
+  siteAddress,
+  siteDomains,
+} from "./domains.ts";
 import { acceptInvitation, invitationView, invite, revokeInvitation } from "./invitations.ts";
 import { findPeople, finishedFor, sentBy, sharedWith, waitingFor } from "./lists.ts";
 import { LiveAccess } from "./live-access.ts";
@@ -164,9 +172,12 @@ const siteDoc = (env: StudioApiEnv, site: SiteId) =>
   Effect.tryPromise(() => getServerByName(env.SITE_DOC, site));
 
 /**
- * The blocks each site's live release shows. Its lockfile pins every block
- * type, so the ones no live page, header or footer uses are left out.
+ * Whether a live page, header or footer shows a block. A release's lockfile
+ * pins every block type, used or not.
  */
+const isShown = (block: BlockInUse) => block.pages > 0 || block.sitewide;
+
+/** The blocks each site's live release shows. */
 const shownBlocks = <Site extends { readonly id: SiteId }>(
   env: StudioApiEnv,
   sites: ReadonlyArray<Site>,
@@ -180,7 +191,7 @@ const shownBlocks = <Site extends { readonly id: SiteId }>(
         ),
         Effect.map((inUse) => ({
           site,
-          blocks: inUse.filter((block) => block.pages > 0 || block.sitewide),
+          blocks: inUse.filter(isShown),
         })),
       ),
     { concurrency: 10 },
@@ -345,6 +356,27 @@ const handlers = (env: StudioApiEnv) =>
       const entriesOf = (site: SiteId) => env.SITE_SUBMISSIONS.getByName(site);
       const liveOf = (doc: Effect.Success<ReturnType<typeof siteDoc>>) =>
         Effect.tryPromise(async (): Promise<Release> => doc.live());
+      /** What waits in a site's Drafts and Blocks tabs. */
+      const editingOf = Effect.fn("StudioRpc.editingOf")(function* (
+        doc: Effect.Success<ReturnType<typeof siteDoc>>,
+      ) {
+        const [drafts, inUse] = yield* Effect.all(
+          [
+            Effect.tryPromise(async (): Promise<ReadonlyArray<DraftSummary>> => doc.drafts()),
+            Effect.tryPromise(async (): Promise<ReadonlyArray<BlockInUse>> => doc.blocksInUse()),
+          ],
+          { concurrency: "unbounded" },
+        );
+        const open = drafts.filter((draft) => draft.status === "open");
+        const brandUpdate = open.find((draft) => draft.kind._tag === "BrandUpdate");
+        return {
+          openDrafts: open.length,
+          waitingDrafts: open.filter((draft) => draft.review?.status._tag === "InReview").length,
+          blockUpdates: inUse.filter((block) => isShown(block) && isBehind(block)).length,
+          brandUpdate:
+            brandUpdate === undefined ? null : { id: brandUpdate.id, name: brandUpdate.name },
+        };
+      });
 
       return StudioRpcs.of({
         viewer: () => SignedIn.use((person) => withCore("viewer")(describeViewer(person))),
@@ -1053,6 +1085,50 @@ const handlers = (env: StudioApiEnv) =>
                 return yield* outcome(DraftNotFound, async (): Promise<Outcome<SubmitOutcome>> =>
                   doc.submit(collaborator(person), draft, note, workflow.steps, studio),
                 );
+              }),
+            ),
+          ),
+        siteOverview: ({ site }) =>
+          SignedIn.use((person) =>
+            withCore("site overview")(
+              Effect.gen(function* () {
+                const found = yield* siteOf(person, site);
+                const doc = yield* siteDoc(env, site);
+                const since = Timestamp.make(
+                  new Date(Date.now() - newEntriesDays * 24 * 60 * 60 * 1000).toISOString(),
+                );
+                const [live, domains, editing, newEntries] = yield* Effect.all(
+                  [
+                    Effect.tryPromise(
+                      async (): Promise<{ readonly release: Release; readonly view: SiteView }> =>
+                        doc.liveHome(),
+                    ),
+                    siteDomains(site, env.SITES_HOST),
+                    found.permissions.includes("page.edit") ? editingOf(doc) : Effect.succeed(null),
+                    found.permissions.includes("submissions.read")
+                      ? Effect.tryPromise(() => entriesOf(site).receivedSince(since))
+                      : Effect.succeed(null),
+                  ],
+                  { concurrency: "unbounded" },
+                );
+                const own = domains.find((domain) => domain.status === "active");
+                return {
+                  site: { id: found.id, name: found.name },
+                  addresses: {
+                    own:
+                      own === undefined
+                        ? null
+                        : siteAddress(routedHost(own.hostname, env.SITES_HOST), env.ENVIRONMENT),
+                    pakshi:
+                      found.address === null
+                        ? null
+                        : siteAddress(`${found.address}.${env.SITES_HOST}`, env.ENVIRONMENT),
+                  },
+                  live: live.release,
+                  home: live.view.page === null ? null : { ...live.view, page: live.view.page },
+                  editing,
+                  newEntries,
+                };
               }),
             ),
           ),

@@ -5,6 +5,7 @@ import {
   getDraftPages,
   getNewSiteOptions,
   getSiteDrafts,
+  getSiteOverview,
   getSiteReleases,
   getSiteSettings,
 } from "./functions";
@@ -36,4 +37,10 @@ export const siteSettingsQuery = (site: SiteId) =>
   queryOptions({
     queryKey: ["sites", site, "settings"],
     queryFn: () => getSiteSettings({ data: { site } }),
+  });
+
+export const siteOverviewQuery = (site: SiteId) =>
+  queryOptions({
+    queryKey: ["sites", site, "overview"],
+    queryFn: () => getSiteOverview({ data: { site } }),
   });

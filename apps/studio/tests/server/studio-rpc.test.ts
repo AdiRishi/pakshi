@@ -126,6 +126,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     shareDraft: unused,
     submissionCheck: unused,
     submitDraft: unused,
+    siteOverview: unused,
     siteReleases: unused,
     rollBack: unused,
     restoreRelease: unused,
