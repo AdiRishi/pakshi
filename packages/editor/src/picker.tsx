@@ -71,16 +71,18 @@ export function BlockPicker(props: {
       <PopoverContent
         anchor={props.anchor}
         side="bottom"
+        // Beside its spot, the wide picker would cover the page it adds to.
+        collisionAvoidance={{ fallbackAxisSide: "none" }}
         className="w-[42rem] gap-0 p-0"
         finalFocus={() => !chosen.current}
       >
-        <Command value={active} onValueChange={setActive} label={title}>
+        <Command value={active} onValueChange={setActive} label={title} className="min-h-0">
           <PopoverHeader className="px-3 pt-3 pb-2">
             <PopoverTitle>{title}</PopoverTitle>
             <PopoverDescription>Only blocks that fit here are shown.</PopoverDescription>
           </PopoverHeader>
           <CommandInput placeholder="Search blocks" />
-          <div className="flex gap-3 p-2">
+          <div className="flex min-h-0 gap-3 p-2">
             <CommandList className="max-h-80 w-56 shrink-0">
               <CommandEmpty>No block fits that search.</CommandEmpty>
               {types.map((type) => (
@@ -95,7 +97,7 @@ export function BlockPicker(props: {
               ))}
             </CommandList>
             {activeContract !== undefined && activePreview !== undefined && (
-              <figure className="flex min-w-0 flex-1 flex-col gap-2">
+              <figure className="flex min-w-0 flex-1 flex-col gap-2 overflow-y-auto">
                 <BlockPreview
                   key={activeContract.type}
                   tree={activePreview}

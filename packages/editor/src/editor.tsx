@@ -72,9 +72,14 @@ const reaches = (where: Where, origin: Origin) =>
 const hostAnchor = (element: Element) => {
   const frame = element.ownerDocument.defaultView?.frameElement;
   if (frame === null || frame === undefined) return element;
+  // An insert point goes when the pointer leaves its block, so the popover stays where it last was.
+  let drawn = screenRect(element) ?? element.getBoundingClientRect();
   return {
     contextElement: frame,
-    getBoundingClientRect: () => screenRect(element) ?? element.getBoundingClientRect(),
+    getBoundingClientRect: () => {
+      if (element.isConnected) drawn = screenRect(element) ?? drawn;
+      return drawn;
+    },
   };
 };
 
@@ -185,26 +190,20 @@ export function EditorRoot(
         setAnnouncement("");
         requestAnimationFrame(() => setAnnouncement(message));
       },
-      openPicker: (spot, anchor) => {
-        // The picker sits beside the block the spot follows, or the section whose empty slot it's in.
+      openPicker: (spot, origin, element) => {
+        // Without an element to open beside, the picker sits beside the block
+        // the spot follows, or the section whose empty slot it's in.
         const beside = spot.after ?? (spot.list === "root" ? null : spot.list.block);
-        const element =
-          anchor instanceof Element
-            ? anchor
-            : beside === null
-              ? null
-              : anchor === "outline"
-                ? outlineBlock(beside)
-                : canvasBlock(beside);
-        const shown = element ?? canvasDocument?.defaultView?.frameElement ?? null;
+        const shown =
+          element ??
+          (beside === null
+            ? null
+            : origin === "outline"
+              ? outlineBlock(beside)
+              : canvasBlock(beside)) ??
+          canvasDocument?.defaultView?.frameElement ??
+          null;
         if (shown === null) return;
-        const origin: Origin = !(anchor instanceof Element)
-          ? anchor
-          : shown.ownerDocument === canvasDocument
-            ? "canvas"
-            : shown.closest("[data-pakshi-outline]") !== null
-              ? "outline"
-              : "elsewhere";
         setPicker({ spot, anchor: hostAnchor(shown), origin });
       },
       focusSelection: (origin) => {
