@@ -38,6 +38,15 @@ import { siteData } from "../src/site-data.ts";
 
 const load = (type: string, version: number) => loadBlock(type, { [type]: version });
 
+/** A block type's newest version, for behaviour every version has. */
+const newest = (type: string) => loadBlock(type, latestLockfile);
+
+/** Whether props are complete for a block: they decode, a left-out choice reading as its default. */
+const completes = (block: BlockDefinition) => {
+  const decode = Schema.decodeUnknownExit(propsSchema(block.fields, "complete"));
+  return (props: StoredProps) => decode(props)._tag === "Success";
+};
+
 const site = siteData({
   ...fixtureSite,
   pages: listingsOf(fixtureSite.pages),
@@ -135,19 +144,25 @@ describe.each(
 
 describe("field components", () => {
   test("render plain markup, with alt text from the placement and page links following the page", async () => {
-    const hero = await load("hero", 1);
+    const hero = await newest("hero");
     const result = renderProps(
       hero,
       {
         heading: "Learn by building",
         image: { $ref: "media", id: "med_harbour", alt: "Boats moored in a calm harbour" },
-        cta: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
+        actions: [
+          {
+            id: "it_programme",
+            button: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
+          },
+        ],
+        points: [],
       },
-      "split-image",
+      "split",
     );
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
-    expect(html).toContain(">Learn by building</h1>");
+    expect(html).toMatch(/<h1[^>]*>.*Learn by building.*<\/h1>/);
     expect(html).toContain('alt="Boats moored in a calm harbour"');
     expect(html).toContain('href="/programme"');
     expect(html).not.toContain("field");
@@ -185,11 +200,11 @@ describe("field components", () => {
 
 describe("blocks that read the site", () => {
   test("the header shows the site's name and main menu, with links following their pages", async () => {
-    const block = await load("header", 1);
+    const block = await newest("header");
     const result = block.render({
       id: BlockId.make("b_header"),
       props: {},
-      variant: "simple",
+      variant: "standard",
       surface: "default",
       slots: {},
     });
@@ -307,21 +322,27 @@ describe("drafts are checked against the block version's limits", () => {
   });
 
   test("maximum lengths and single lines apply, minimum lengths don't", async () => {
-    const hero = await load("hero", 1);
-    expect(renderProps(hero, { heading: "x".repeat(81) }, "centered").ok).toBe(false);
-    expect(renderProps(hero, { heading: "Two\nlines" }, "centered").ok).toBe(false);
-    expect(renderProps(hero, { heading: "" }, "centered").ok).toBe(true);
+    const hero = await newest("hero");
+    const lists = { actions: [], points: [] };
+    expect(renderProps(hero, { ...lists, heading: "x".repeat(91) }, "stacked").ok).toBe(false);
+    expect(renderProps(hero, { ...lists, heading: "Two\nlines" }, "stacked").ok).toBe(false);
+    expect(renderProps(hero, { ...lists, heading: "" }, "stacked").ok).toBe(true);
   });
 
   test("rich text allows only the field's marks and nodes, and safe links", async () => {
-    const hero = await load("hero", 1);
+    const hero = await newest("hero");
+    const lists = { actions: [], points: [] };
     const body = (content: ReadonlyArray<Json>) => ({ type: "doc", content });
     const heading = {
       type: "heading",
       attrs: { level: 2 },
       content: [{ type: "text", text: "Hi" }],
     };
-    const result = renderProps(hero, { heading: "Welcome", body: body([heading]) }, "centered");
+    const result = renderProps(
+      hero,
+      { ...lists, heading: "Welcome", body: body([heading]) },
+      "stacked",
+    );
     expect(result.ok ? "" : result.problem).toContain("heading isn't allowed here");
     const script = {
       type: "paragraph",
@@ -333,15 +354,17 @@ describe("drafts are checked against the block version's limits", () => {
         },
       ],
     };
-    expect(renderProps(hero, { heading: "Welcome", body: body([script]) }, "centered").ok).toBe(
-      false,
-    );
+    expect(
+      renderProps(hero, { ...lists, heading: "Welcome", body: body([script]) }, "stacked").ok,
+    ).toBe(false);
   });
 
   test("variants and surfaces must be the block's own", async () => {
-    const hero = await load("hero", 1);
-    expect(renderProps(hero, { heading: "Welcome" }, "sideways").ok).toBe(false);
-    const item = await load("feature-item", 1);
+    const hero = await newest("hero");
+    expect(renderProps(hero, { heading: "Welcome", actions: [], points: [] }, "sideways").ok).toBe(
+      false,
+    );
+    const item = await newest("feature-item");
     const surfaced = item.render({
       id: BlockId.make("b_item"),
       props: { title: "Workshops", body: "Every day" },
@@ -366,11 +389,21 @@ describe("drafts are checked against the block version's limits", () => {
 
 describe("completeness is checked apart from drafts", () => {
   test("required text must be filled in and reach its minimum length", async () => {
-    const hero = await load("hero", 1);
-    const complete = Schema.is(propsSchema(hero.fields, "complete"));
-    expect(complete({ heading: "Learn by building" })).toBe(true);
-    expect(complete({ heading: "" })).toBe(false);
-    expect(complete({ heading: "Hi" })).toBe(false);
+    const complete = completes(await newest("hero"));
+    const lists = { actions: [], points: [] };
+    expect(complete({ ...lists, heading: "Learn by building" })).toBe(true);
+    expect(complete({ ...lists, heading: "" })).toBe(false);
+    expect(complete({ ...lists, heading: "Hi" })).toBe(false);
+  });
+
+  test("a choice left out reads as its first option", async () => {
+    const hero = await newest("hero");
+    const decoded = Schema.decodeUnknownSync(propsSchema(hero.fields, "complete"))({
+      heading: "Learn by building",
+      actions: [],
+      points: [],
+    });
+    expect(decoded).toMatchObject({ align: "center", frame: "plain", backdrop: "none" });
   });
 
   test("images need alt text, which may be empty for a decorative image", async () => {
@@ -400,8 +433,7 @@ describe("completeness is checked apart from drafts", () => {
   });
 });
 
-// Placeholders work the same at any version; hero's first holds its button in a plain field.
-const contracts = await loadBlocks({ ...latestLockfile, hero: 1 });
+const contracts = await loadBlocks(latestLockfile);
 
 /** The IDs of a list field's items. */
 const itemIds = (list: Json | undefined) =>
@@ -428,12 +460,16 @@ describe("placeholders", () => {
     expect(new Set(images).size).toBe(images.length);
   });
 
-  test("every field of a new block holds placeholder content", () => {
-    expect(placeholderPaths(contracts, placed("hero"))).toEqual([
+  test("every field of a new block holds placeholder content, settings aside", () => {
+    const hero = placed("hero");
+    const [first, second] = itemIds(hero.props["actions"]);
+    expect(placeholderPaths(contracts, hero)).toEqual([
+      ["kicker"],
       ["heading"],
       ["body"],
+      ["actions", first, "button"],
+      ["actions", second, "button"],
       ["image"],
-      ["cta"],
     ]);
   });
 
@@ -443,18 +479,26 @@ describe("placeholders", () => {
       ...hero,
       props: { ...hero.props, heading: "Summer school at the harbour" },
     };
-    expect(placeholderPaths(contracts, edited)).toEqual([["body"], ["image"], ["cta"]]);
+    expect(placeholderPaths(contracts, edited)).not.toContainEqual(["heading"]);
+    expect(placeholderPaths(contracts, edited)).toContainEqual(["body"]);
   });
 
   test("a button is a placeholder while its link is, even after its label changes", () => {
     const hero = placed("hero");
-    const withCta = (cta: Json) => ({ ...hero, props: { ...hero.props, cta } });
+    const [first] = itemIds(hero.props["actions"]);
+    const withButton = (button: Json) => ({
+      ...hero,
+      props: { ...hero.props, actions: [{ id: first ?? "", button }] },
+    });
     expect(
-      placeholderPaths(contracts, withCta({ label: "Register", link: "https://example.com" })),
-    ).toContainEqual(["cta"]);
+      placeholderPaths(contracts, withButton({ label: "Register", link: "https://example.com" })),
+    ).toContainEqual(["actions", first, "button"]);
     expect(
-      placeholderPaths(contracts, withCta({ label: "Find out more", link: "https://example.org" })),
-    ).not.toContainEqual(["cta"]);
+      placeholderPaths(
+        contracts,
+        withButton({ label: "Find out more", link: "https://example.org" }),
+      ),
+    ).not.toContainEqual(["actions", first, "button"]);
   });
 
   test("a placeholder image stays one until another image replaces it, whatever its alt text", () => {

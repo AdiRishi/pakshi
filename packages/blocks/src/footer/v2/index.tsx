@@ -287,8 +287,5 @@ export default defineBlock({
       "The bottom of every page: the site's menu as columns, a short note, social links, an optional sign-up form and small print",
     avoid: ["a note longer than a sentence or two"],
   },
-  changes:
-    "Lays the main menu out as columns, and adds social links, a sign-up form, small print, and centered and big-name layouts.",
-  migrate: (previous) => previous,
   component: FooterBlock,
 });

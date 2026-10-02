@@ -13,20 +13,13 @@ import eventCards1placeholder from "./event-cards/v1/fixtures/placeholder.json" 
 import faq1list from "./faq/v1/fixtures/list.json" with { type: "json" };
 import faq1placeholder from "./faq/v1/fixtures/placeholder.json" with { type: "json" };
 import faq1twoColumns from "./faq/v1/fixtures/two-columns.json" with { type: "json" };
-import featureGrid1placeholder from "./feature-grid/v1/fixtures/placeholder.json" with { type: "json" };
-import featureGrid1threeColumns from "./feature-grid/v1/fixtures/three-columns.json" with { type: "json" };
-import featureGrid1twoColumns from "./feature-grid/v1/fixtures/two-columns.json" with { type: "json" };
 import featureGrid2grid from "./feature-grid/v2/fixtures/grid.json" with { type: "json" };
 import featureGrid2list from "./feature-grid/v2/fixtures/list.json" with { type: "json" };
 import featureGrid2placeholder from "./feature-grid/v2/fixtures/placeholder.json" with { type: "json" };
 import featureGrid2split from "./feature-grid/v2/fixtures/split.json" with { type: "json" };
-import featureItem1default from "./feature-item/v1/fixtures/default.json" with { type: "json" };
-import featureItem1placeholder from "./feature-item/v1/fixtures/placeholder.json" with { type: "json" };
 import featureItem2default from "./feature-item/v2/fixtures/default.json" with { type: "json" };
 import featureItem2image from "./feature-item/v2/fixtures/image.json" with { type: "json" };
 import featureItem2placeholder from "./feature-item/v2/fixtures/placeholder.json" with { type: "json" };
-import footer1columns from "./footer/v1/fixtures/columns.json" with { type: "json" };
-import footer1simple from "./footer/v1/fixtures/simple.json" with { type: "json" };
 import footer2centered from "./footer/v2/fixtures/centered.json" with { type: "json" };
 import footer2columns from "./footer/v2/fixtures/columns.json" with { type: "json" };
 import footer2simple from "./footer/v2/fixtures/simple.json" with { type: "json" };
@@ -37,27 +30,14 @@ import formSection1plain from "./form-section/v1/fixtures/plain.json" with { typ
 import gallery1grid from "./gallery/v1/fixtures/grid.json" with { type: "json" };
 import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { type: "json" };
 import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
-import header1centered from "./header/v1/fixtures/centered.json" with { type: "json" };
-import header1simple from "./header/v1/fixtures/simple.json" with { type: "json" };
-import header2centered from "./header/v2/fixtures/centered.json" with { type: "json" };
-import header2simple from "./header/v2/fixtures/simple.json" with { type: "json" };
 import header3centeredLogo from "./header/v3/fixtures/centered-logo.json" with { type: "json" };
 import header3centeredMenu from "./header/v3/fixtures/centered-menu.json" with { type: "json" };
 import header3floating from "./header/v3/fixtures/floating.json" with { type: "json" };
 import header3standard from "./header/v3/fixtures/standard.json" with { type: "json" };
-import hero1centered from "./hero/v1/fixtures/centered.json" with { type: "json" };
-import hero1placeholder from "./hero/v1/fixtures/placeholder.json" with { type: "json" };
-import hero1splitImage from "./hero/v1/fixtures/split-image.json" with { type: "json" };
-import hero2centered from "./hero/v2/fixtures/centered.json" with { type: "json" };
-import hero2placeholder from "./hero/v2/fixtures/placeholder.json" with { type: "json" };
-import hero2splitImage from "./hero/v2/fixtures/split-image.json" with { type: "json" };
-import hero3centered from "./hero/v3/fixtures/centered.json" with { type: "json" };
-import hero3fullBleed from "./hero/v3/fixtures/full-bleed.json" with { type: "json" };
-import hero3placeholder from "./hero/v3/fixtures/placeholder.json" with { type: "json" };
-import hero3splitImage from "./hero/v3/fixtures/split-image.json" with { type: "json" };
 import hero4cover from "./hero/v4/fixtures/cover.json" with { type: "json" };
 import hero4editorial from "./hero/v4/fixtures/editorial.json" with { type: "json" };
 import hero4panel from "./hero/v4/fixtures/panel.json" with { type: "json" };
+import hero4phone from "./hero/v4/fixtures/phone.json" with { type: "json" };
 import hero4placeholder from "./hero/v4/fixtures/placeholder.json" with { type: "json" };
 import hero4split from "./hero/v4/fixtures/split.json" with { type: "json" };
 import hero4stacked from "./hero/v4/fixtures/stacked.json" with { type: "json" };
@@ -111,20 +91,13 @@ export const fixtureFiles = [
   { type: "faq", version: 1, name: "list", fixture: faq1list },
   { type: "faq", version: 1, name: "placeholder", fixture: faq1placeholder },
   { type: "faq", version: 1, name: "two-columns", fixture: faq1twoColumns },
-  { type: "feature-grid", version: 1, name: "placeholder", fixture: featureGrid1placeholder },
-  { type: "feature-grid", version: 1, name: "three-columns", fixture: featureGrid1threeColumns },
-  { type: "feature-grid", version: 1, name: "two-columns", fixture: featureGrid1twoColumns },
   { type: "feature-grid", version: 2, name: "grid", fixture: featureGrid2grid },
   { type: "feature-grid", version: 2, name: "list", fixture: featureGrid2list },
   { type: "feature-grid", version: 2, name: "placeholder", fixture: featureGrid2placeholder },
   { type: "feature-grid", version: 2, name: "split", fixture: featureGrid2split },
-  { type: "feature-item", version: 1, name: "default", fixture: featureItem1default },
-  { type: "feature-item", version: 1, name: "placeholder", fixture: featureItem1placeholder },
   { type: "feature-item", version: 2, name: "default", fixture: featureItem2default },
   { type: "feature-item", version: 2, name: "image", fixture: featureItem2image },
   { type: "feature-item", version: 2, name: "placeholder", fixture: featureItem2placeholder },
-  { type: "footer", version: 1, name: "columns", fixture: footer1columns },
-  { type: "footer", version: 1, name: "simple", fixture: footer1simple },
   { type: "footer", version: 2, name: "centered", fixture: footer2centered },
   { type: "footer", version: 2, name: "columns", fixture: footer2columns },
   { type: "footer", version: 2, name: "simple", fixture: footer2simple },
@@ -135,27 +108,14 @@ export const fixtureFiles = [
   { type: "gallery", version: 1, name: "grid", fixture: gallery1grid },
   { type: "gallery", version: 1, name: "placeholder", fixture: gallery1placeholder },
   { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
-  { type: "header", version: 1, name: "centered", fixture: header1centered },
-  { type: "header", version: 1, name: "simple", fixture: header1simple },
-  { type: "header", version: 2, name: "centered", fixture: header2centered },
-  { type: "header", version: 2, name: "simple", fixture: header2simple },
   { type: "header", version: 3, name: "centered-logo", fixture: header3centeredLogo },
   { type: "header", version: 3, name: "centered-menu", fixture: header3centeredMenu },
   { type: "header", version: 3, name: "floating", fixture: header3floating },
   { type: "header", version: 3, name: "standard", fixture: header3standard },
-  { type: "hero", version: 1, name: "centered", fixture: hero1centered },
-  { type: "hero", version: 1, name: "placeholder", fixture: hero1placeholder },
-  { type: "hero", version: 1, name: "split-image", fixture: hero1splitImage },
-  { type: "hero", version: 2, name: "centered", fixture: hero2centered },
-  { type: "hero", version: 2, name: "placeholder", fixture: hero2placeholder },
-  { type: "hero", version: 2, name: "split-image", fixture: hero2splitImage },
-  { type: "hero", version: 3, name: "centered", fixture: hero3centered },
-  { type: "hero", version: 3, name: "full-bleed", fixture: hero3fullBleed },
-  { type: "hero", version: 3, name: "placeholder", fixture: hero3placeholder },
-  { type: "hero", version: 3, name: "split-image", fixture: hero3splitImage },
   { type: "hero", version: 4, name: "cover", fixture: hero4cover },
   { type: "hero", version: 4, name: "editorial", fixture: hero4editorial },
   { type: "hero", version: 4, name: "panel", fixture: hero4panel },
+  { type: "hero", version: 4, name: "phone", fixture: hero4phone },
   { type: "hero", version: 4, name: "placeholder", fixture: hero4placeholder },
   { type: "hero", version: 4, name: "split", fixture: hero4split },
   { type: "hero", version: 4, name: "stacked", fixture: hero4stacked },

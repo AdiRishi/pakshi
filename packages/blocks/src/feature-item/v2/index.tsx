@@ -59,8 +59,6 @@ export default defineBlock({
       "One point in a feature grid: a short title and a sentence or two, with an icon or a picture if it helps",
     avoid: ["both an icon and a picture on one feature"],
   },
-  changes: "Adds an optional icon, picture and link.",
-  migrate: (previous) => previous,
   placeholder,
   component: FeatureItem,
 });

@@ -24,16 +24,6 @@ export default {
       description: "Logo, menu and buttons in a rounded bar that floats a little below the top.",
     },
   },
-  retiredVariants: {
-    simple: {
-      label: "Logo on the left",
-      description: "Logo on the left, with the menu and button on the right.",
-    },
-    centered: {
-      label: "Everything centered",
-      description: "Logo in the middle, with the menu underneath.",
-    },
-  },
   choices: {
     position: {
       options: {

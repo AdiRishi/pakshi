@@ -17,13 +17,6 @@ export default {
       description: "Each feature's icon sits to the left of its words.",
     },
   },
-  retiredVariants: {
-    "three-columns": { label: "Three across", description: "Three features to a row." },
-    "two-columns": {
-      label: "Two across",
-      description: "Two features to a row, with more room for each.",
-    },
-  },
   lists: {
     actions: { singular: "button", plural: "buttons", titleField: "button" },
   },

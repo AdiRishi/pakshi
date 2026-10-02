@@ -268,9 +268,5 @@ export default defineBlock({
       "The brand's logo or the site's name, the main menu, at most one button and one quieter link, and an optional line of news above, at the top of every page",
     avoid: ["an announcement that isn't news", "a button that repeats a menu item"],
   },
-  changes:
-    "Adds layouts with the menu centered, the logo centered or the header floating as a bar, a menu on phones, a quieter second link, an announcement line above, and a choice to keep the header in view or lay it over the first section.",
-  migrate: (previous) => previous,
-  renamedVariants: { simple: "standard", centered: "centered-logo" },
   component: HeaderBlock,
 });

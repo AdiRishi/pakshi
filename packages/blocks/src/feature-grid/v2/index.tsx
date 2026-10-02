@@ -112,17 +112,6 @@ export default defineBlock({
       "numbering items that aren't steps",
     ],
   },
-  changes:
-    "Adds a layout with the heading beside the features and one with each feature's icon beside its words, a softer second half to the heading, buttons, and choices for columns, alignment, how features are set apart and an inset background.",
-  migrate: (previous, variant) => ({
-    ...previous,
-    actions: [],
-    columns: variant === "two-columns" ? "2" : "3",
-    align: "start",
-    style: "cards",
-    background: "full",
-  }),
-  renamedVariants: { "three-columns": "grid", "two-columns": "grid" },
   placeholder,
   component: FeatureGrid,
 });
