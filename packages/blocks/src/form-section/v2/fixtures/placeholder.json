@@ -1,0 +1,24 @@
+{
+  "variant": "split",
+  "surface": "default",
+  "props": {
+    "heading": "Get in touch",
+    "intro": "Send us a message and we'll reply within two working days.",
+    "points": [
+      {
+        "id": "it_reply",
+        "point": "Say what happens after someone sends it"
+      },
+      {
+        "id": "it_who",
+        "point": "Say who reads the messages"
+      }
+    ],
+    "note": "Prefer to call? Give your phone number here.",
+    "form": {
+      "$ref": "form",
+      "id": "frm_pakshiContact"
+    },
+    "background": "full"
+  }
+}

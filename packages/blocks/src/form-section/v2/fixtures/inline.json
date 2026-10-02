@@ -1,0 +1,15 @@
+{
+  "variant": "inline",
+  "surface": "brand",
+  "props": {
+    "heading": "News from the harbour",
+    "intro": "Dates for next summer, new courses and the odd photo of a launch. One email a month.",
+    "points": [],
+    "note": "We never share your address, and you can leave the list at any time.",
+    "form": {
+      "$ref": "form",
+      "id": "frm_newsletter"
+    },
+    "background": "full"
+  }
+}

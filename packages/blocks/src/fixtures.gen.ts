@@ -45,6 +45,11 @@ import footer2wordmark from "./footer/v2/fixtures/wordmark.json" with { type: "j
 import formSection1card from "./form-section/v1/fixtures/card.json" with { type: "json" };
 import formSection1placeholder from "./form-section/v1/fixtures/placeholder.json" with { type: "json" };
 import formSection1plain from "./form-section/v1/fixtures/plain.json" with { type: "json" };
+import formSection2card from "./form-section/v2/fixtures/card.json" with { type: "json" };
+import formSection2inlineInset from "./form-section/v2/fixtures/inline-inset.json" with { type: "json" };
+import formSection2inline from "./form-section/v2/fixtures/inline.json" with { type: "json" };
+import formSection2placeholder from "./form-section/v2/fixtures/placeholder.json" with { type: "json" };
+import formSection2split from "./form-section/v2/fixtures/split.json" with { type: "json" };
 import gallery1grid from "./gallery/v1/fixtures/grid.json" with { type: "json" };
 import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { type: "json" };
 import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
@@ -169,6 +174,11 @@ export const fixtureFiles = [
   { type: "form-section", version: 1, name: "card", fixture: formSection1card },
   { type: "form-section", version: 1, name: "placeholder", fixture: formSection1placeholder },
   { type: "form-section", version: 1, name: "plain", fixture: formSection1plain },
+  { type: "form-section", version: 2, name: "card", fixture: formSection2card },
+  { type: "form-section", version: 2, name: "inline-inset", fixture: formSection2inlineInset },
+  { type: "form-section", version: 2, name: "inline", fixture: formSection2inline },
+  { type: "form-section", version: 2, name: "placeholder", fixture: formSection2placeholder },
+  { type: "form-section", version: 2, name: "split", fixture: formSection2split },
   { type: "gallery", version: 1, name: "grid", fixture: gallery1grid },
   { type: "gallery", version: 1, name: "placeholder", fixture: gallery1placeholder },
   { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
