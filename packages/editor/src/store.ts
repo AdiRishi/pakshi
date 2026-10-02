@@ -54,6 +54,20 @@ export type Selection =
  */
 export type SaveStatus = "saved" | "saving" | "offline";
 
+/** A list item, as its list field's name and its own ID. */
+export interface ItemKey {
+  readonly list: string;
+  readonly id: string;
+}
+
+/** What the pointer is over in the canvas: a block, and the field or list item of it under the pointer. */
+export interface Pointed {
+  readonly target: Target;
+  readonly block: BlockId;
+  readonly path: PropPath | null;
+  readonly item: ItemKey | null;
+}
+
 export interface EditorState {
   /** The draft as SiteDoc last confirmed it. */
   readonly confirmed: Draft;
@@ -61,6 +75,7 @@ export interface EditorState {
   readonly view: Draft;
   readonly page: PageId;
   readonly selection: Selection | null;
+  readonly pointed: Pointed | null;
   readonly status: SaveStatus;
   readonly canUndo: boolean;
   readonly canRedo: boolean;
@@ -229,6 +244,7 @@ export class EditorStore {
       view: options.draft,
       page: options.page,
       selection: null,
+      pointed: null,
       status: "saved",
       canUndo: false,
       canRedo: false,
@@ -322,6 +338,11 @@ export class EditorStore {
 
   select(selection: Selection | null) {
     this.#set({ selection });
+  }
+
+  /** Notes what the pointer is over, so the canvas can show what can be done there. */
+  point(pointed: Pointed | null) {
+    if (!Equal.equals(pointed, this.#state.pointed)) this.#set({ pointed });
   }
 
   /**

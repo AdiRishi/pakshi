@@ -1,4 +1,5 @@
 import type { BlockDefinition, Field } from "@repo/blocks";
+import type { ExampleSource } from "@repo/blocks/fixtures";
 import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
 import type { BlockList, PropPath, Target } from "@repo/contracts/ops";
 import type { PublishedSettings } from "@repo/contracts/settings";
@@ -28,8 +29,13 @@ export interface EditorServices {
   readonly settings: PublishedSettings;
   /** The color scheme the canvas and block previews show the theme in. */
   readonly scheme: "light" | "dark";
-  /** Alt text Pakshi suggests for an image where a block places it, or null. */
-  readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
+  /**
+   * Asks for alt text for an image where a block places it, which answers
+   * null when there's none to suggest. Null where nothing can be asked.
+   */
+  readonly suggestAltText: ((media: MediaId, block: BlockId) => Promise<string | null>) | null;
+  /** Where the content of a newly added part or item comes from. */
+  readonly examples: ExampleSource;
   /** Adds an image to the site's library, or null for someone who can't. */
   readonly uploadImage: ((file: File) => Promise<MediaSummary>) | null;
 }
@@ -108,7 +114,11 @@ export interface EditorUi {
   readonly openPicker: (spot: InsertSpot, anchor: Element | Origin) => void;
   /** Moves focus to the selected block or field, where a command started. */
   readonly focusSelection: (origin: Origin) => void;
-  readonly openMedia: (field: FieldTarget, anchor: HTMLElement) => void;
+  readonly openMedia: (field: FieldTarget, anchor: Element) => void;
+  /** Opens where a link with no element of its own goes, from its mark on the page or a row naming it. */
+  readonly openLink: (field: FieldTarget, anchor: Element) => void;
+  /** Opens the choice of a form, from the form on the page. */
+  readonly openForm: (field: FieldTarget, anchor: Element) => void;
   readonly setActiveRichText: (active: ActiveRichText | null) => void;
   /** Moves focus to a field on the page. */
   readonly focusInCanvas: (field: FieldTarget) => void;

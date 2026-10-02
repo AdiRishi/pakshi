@@ -4,7 +4,14 @@ import type { FormRef, Link, MediaRef } from "@repo/contracts/references";
 import type { Surface } from "@repo/tokens";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { Predicate } from "effect";
-import { type ComponentType, createContext, type ReactNode, useContext } from "react";
+import {
+  type ComponentType,
+  createContext,
+  type HTMLAttributes,
+  type ReactElement,
+  type ReactNode,
+  useContext,
+} from "react";
 
 import { useBlockFrame } from "./block.tsx";
 import { type Field, fieldAt } from "./fields.ts";
@@ -155,6 +162,14 @@ export interface FieldAddress {
   readonly definition: Field;
 }
 
+/**
+ * What the editor adds to an element that a field renders through markup of
+ * its own, such as a form: attributes and handlers, never a wrapper.
+ */
+export type EditableAttributes = HTMLAttributes<HTMLElement> & {
+  readonly [attribute: `data-${string}`]: string | true | undefined;
+};
+
 /** The editing versions of the field components, which the editor supplies. */
 export interface FieldEditing {
   readonly Root: ComponentType<
@@ -172,6 +187,13 @@ export interface FieldEditing {
   readonly Cta: ComponentType<Omit<CtaProps, "field"> & FieldAddress & { readonly href: string }>;
   readonly Slot: ComponentType<
     SlotProps & { readonly block: BlockId; readonly children: ReadonlyArray<ReactNode> }
+  >;
+  /** A form, which `render` draws with the attributes that make it editable. */
+  readonly Form: ComponentType<
+    FieldAddress & {
+      readonly value: FormRef;
+      readonly render: (editable: EditableAttributes) => ReactElement;
+    }
   >;
 }
 
@@ -330,15 +352,21 @@ export const FormView = (options: {
   readonly value: FormRef;
   readonly className?: string | undefined;
 }) => {
-  const { block } = useField(options.field);
+  const address = useField(options.field);
+  const editing = useContext(FieldEditingContext);
   const definition = useForm(options.value.id);
   const { pagePath: privacyHref, preview, sent } = useSiteData();
   if (definition === undefined) return null;
   if (sent === definition.id)
     return <output className="text-lead">Thank you. Your answers were sent.</output>;
-  const inputId = (id: string) => `${block}-${id}`;
-  return (
-    <form method="post" action={`?form=${definition.id}`} className={options.className}>
+  const inputId = (id: string) => `${address.block}-${id}`;
+  const render = (editable: EditableAttributes) => (
+    <form
+      {...editable}
+      method="post"
+      action={`?form=${definition.id}`}
+      className={options.className}
+    >
       {definition.fields.map((field) => {
         switch (field.kind) {
           case "hidden":
@@ -424,5 +452,10 @@ export const FormView = (options: {
         {definition.submitLabel}
       </button>
     </form>
+  );
+  return editing === null ? (
+    render({})
+  ) : (
+    <editing.Form {...address} value={options.value} render={render} />
   );
 };

@@ -39,6 +39,8 @@ const open = () => {
     openPicker: (spot) => picked.push(spot),
     focusSelection: () => undefined,
     openMedia: () => undefined,
+    openLink: () => undefined,
+    openForm: () => undefined,
     setActiveRichText: () => undefined,
     focusInCanvas: () => undefined,
     revealControl: () => undefined,

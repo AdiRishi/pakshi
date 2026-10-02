@@ -2,7 +2,6 @@ import { type BlockDefinition, layoutOf } from "@repo/blocks";
 import type { BlockId } from "@repo/contracts/ids";
 import type { BlockTree, Op, Target } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
-import type { Surface } from "@repo/tokens";
 import {
   Field,
   FieldDescription,
@@ -15,17 +14,12 @@ import { RadioGroup, RadioGroupItem } from "@repo/ui/components/radio-group";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useEditorState, useServices, useStore } from "../context.tsx";
+import { chooseLayout } from "../layouts.ts";
+import { surfaceNames } from "../naming.ts";
 import { BlockPreview } from "../preview.tsx";
 
-const surfaceNames: Readonly<Record<Surface, string>> = {
-  default: "Page background",
-  muted: "Muted",
-  brand: "Brand color",
-  inverse: "Inverse",
-};
-
 /** A placed block and its items as one tree, which a preview renders on its own. */
-const useTree = (target: Target, block: BlockId, instance: BlockInstance): BlockTree => {
+export const useTree = (target: Target, block: BlockId, instance: BlockInstance): BlockTree => {
   const holder = useEditorState((state) =>
     target === "site" ? state.view.parts : state.view.pages[target],
   );
@@ -53,7 +47,7 @@ const useTree = (target: Target, block: BlockId, instance: BlockInstance): Block
 const previewDelay = 400;
 
 /** A value that follows `value` once it has stopped changing for a moment. */
-const useSettled = <T,>(value: T) => {
+export const useSettled = <T,>(value: T) => {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
     const timer = setTimeout(() => setSettled(value), previewDelay);
@@ -74,7 +68,7 @@ export function Appearance(props: {
   readonly contract: BlockDefinition;
 }) {
   const store = useStore();
-  const { scheme } = useServices();
+  const { scheme, examples } = useServices();
   const colors = useEditorState((state) => state.view.brand.theme.colors[scheme]);
   const tree = useSettled(useTree(props.target, props.block, props.instance));
   const { variants } = props.contract;
@@ -96,7 +90,17 @@ export function Appearance(props: {
             value={props.instance.variant}
             onValueChange={(value) => {
               const variant = props.contract.variants.find((candidate) => candidate === value);
-              if (variant !== undefined) run({ op: "setVariant", target, block, variant });
+              if (variant !== undefined)
+                store.run(
+                  chooseLayout({
+                    contract: props.contract,
+                    target,
+                    block,
+                    instance: props.instance,
+                    variant,
+                    source: examples,
+                  }),
+                );
             }}
           >
             {props.contract.variants.map((variant) => {

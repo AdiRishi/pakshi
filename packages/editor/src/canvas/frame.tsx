@@ -14,23 +14,50 @@ import { presenceColorCount } from "../presence.ts";
  */
 const editorCss = `
 html { overflow-anchor: none; }
+:root { --pakshi-line: calc(2px / var(--pakshi-scale, 1)); }
 main > [data-surface] { animation: none; }
 [data-pakshi-block] { cursor: default; }
 [data-pakshi-block]:hover:not(:has([data-pakshi-block]:hover)) {
-  outline: 2px dashed var(--pakshi-editor-accent); outline-offset: -2px;
+  outline: var(--pakshi-line) dashed var(--pakshi-editor-accent); outline-offset: calc(var(--pakshi-line) * -1);
 }
 [data-pakshi-block][data-pakshi-selected] {
-  outline: 2px solid var(--pakshi-editor-accent); outline-offset: -2px;
+  outline: var(--pakshi-line) solid var(--pakshi-editor-accent); outline-offset: calc(var(--pakshi-line) * -1);
 }
-[data-pakshi-block]:focus { outline: 2px solid var(--pakshi-editor-accent); outline-offset: -2px; }
+[data-pakshi-block]:focus {
+  outline: var(--pakshi-line) solid var(--pakshi-editor-accent); outline-offset: calc(var(--pakshi-line) * -1);
+}
 [data-pakshi-field] { cursor: text; }
-[data-pakshi-field]:focus-visible, [data-pakshi-field][data-pakshi-selected] {
-  outline: 2px solid var(--pakshi-editor-accent); outline-offset: 4px; border-radius: 2px;
+[data-pakshi-field]:hover {
+  outline: calc(var(--pakshi-line) / 2) dashed var(--pakshi-editor-accent); outline-offset: 4px;
+  border-radius: 2px;
 }
-img[data-pakshi-field], a[data-pakshi-field] { cursor: pointer; }
+[data-pakshi-field]:focus-visible, [data-pakshi-field][data-pakshi-selected] {
+  outline: var(--pakshi-line) solid var(--pakshi-editor-accent); outline-offset: 4px; border-radius: 2px;
+}
+[data-pakshi-field][data-pakshi-short]:focus-visible, [data-pakshi-field][data-pakshi-short][data-pakshi-selected] {
+  outline: var(--pakshi-line) dashed var(--pakshi-editor-warning);
+}
+img[data-pakshi-field], a[data-pakshi-field]:not([contenteditable]), form[data-pakshi-field] { cursor: pointer; }
+form[data-pakshi-field] * { pointer-events: none; }
 [data-pakshi-empty]::before {
   content: attr(data-pakshi-placeholder); opacity: 0.5; pointer-events: none;
 }
+.pakshi-add {
+  box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center;
+  gap: 0.4em; align-self: flex-start; margin: 0; padding: 0.5em 0.85em;
+  border: 1px dashed color-mix(in oklab, var(--pakshi-editor-accent) 50%, currentColor 20%);
+  border-radius: 8px; background: color-mix(in oklab, var(--pakshi-editor-accent) 5%, transparent);
+  color: color-mix(in oklab, var(--pakshi-editor-accent) 70%, currentColor); font: 500 calc(14px / var(--pakshi-scale, 1)) / 1.2 system-ui, sans-serif;
+  letter-spacing: normal; text-transform: none; text-align: center; cursor: pointer; opacity: 0.6;
+  transition: opacity 120ms, background-color 120ms;
+}
+[data-pakshi-block]:hover .pakshi-add, .pakshi-add:focus-visible { opacity: 1; }
+.pakshi-add:hover { background: color-mix(in oklab, var(--pakshi-editor-accent) 10%, transparent); }
+.pakshi-add:focus-visible { outline: var(--pakshi-line) solid var(--pakshi-editor-accent); outline-offset: 2px; }
+.pakshi-add-area { flex-direction: column; min-height: 3em; padding: 1em; }
+.pakshi-add-plus { font-weight: 600; }
+.pakshi-add-label { text-decoration: underline dotted; text-underline-offset: 0.2em; }
+@media (prefers-reduced-motion: reduce) { .pakshi-add { transition: none; } }
 .pakshi-overlay {
   position: absolute; top: 0; left: 0; width: 0; height: 0; z-index: 2147483000;
   pointer-events: none; font: 600 12px/1 system-ui, sans-serif;
@@ -77,6 +104,26 @@ ${Array.from(
     `.pakshi-presence[data-color="${index + 1}"] { --pakshi-presence: var(--pakshi-presence-${index + 1}); }`,
 ).join("\n")}
 `;
+
+/** The colors the canvas draws its marks in, read from Studio's theme. */
+export interface CanvasColors {
+  /** The editor's own accent color. */
+  readonly accent: string;
+  /** What marks an unfinished part. */
+  readonly warning: string;
+  /** The colors that tell other people apart, in order. */
+  readonly presence: ReadonlyArray<string>;
+}
+
+/**
+ * The editor's styles inside a canvas frame, in Studio's colors. A frame
+ * shown smaller than the page's own width draws its lines and labels at
+ * `scale`, so they look the same size on screen as they would at full size.
+ */
+export const canvasCss = (colors: CanvasColors, scale = 1) =>
+  `:root { --pakshi-editor-accent: ${colors.accent}; --pakshi-editor-warning: ${colors.warning}; --pakshi-scale: ${scale}; ${colors.presence
+    .map((color, index) => `--pakshi-presence-${index + 1}: ${color};`)
+    .join(" ")} }${editorCss}`;
 
 const shell = (siteCss: string, fonts: string, variables: string) =>
   `<!doctype html><html lang="en"><head><meta charset="utf-8">` +
@@ -185,6 +232,8 @@ export function CanvasFrame(props: {
   readonly scheme: ColorScheme;
   /** The editor's own accent color, read from Studio's theme. */
   readonly accent: string;
+  /** The color unfinished parts are marked with, read from Studio's theme. */
+  readonly warning: string;
   /** The colors that tell other people apart, from Studio's theme, in order. */
   readonly presence: ReadonlyArray<string>;
   readonly width: number | null;
@@ -197,9 +246,7 @@ export function CanvasFrame(props: {
       siteCss={props.siteCss}
       theme={props.theme}
       scheme={props.scheme}
-      extraCss={`:root { --pakshi-editor-accent: ${props.accent}; ${props.presence
-        .map((color, index) => `--pakshi-presence-${index + 1}: ${color};`)
-        .join(" ")} }${editorCss}`}
+      extraCss={canvasCss(props)}
       className="mx-auto block h-full border-0 bg-background shadow-sm transition-[width]"
       style={{ width: props.width === null ? "100%" : props.width }}
       onDocument={props.onDocument}

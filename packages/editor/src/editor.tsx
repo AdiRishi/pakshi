@@ -8,20 +8,28 @@ import type { PublishedSettings } from "@repo/contracts/settings";
 import type { LiveRelease } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { Equal } from "effect";
-import { createContext, type ReactNode, useContext, useEffect, useMemo, useState } from "react";
+import { type ReactNode, useEffect, useMemo, useState } from "react";
 
-import { fieldEditing, isSelectedField } from "./canvas/fields.tsx";
-import { FormattingToolbar } from "./canvas/formatting.tsx";
+import { screenRect } from "./canvas/anchor.tsx";
+import {
+  CanvasChrome,
+  type CanvasControls,
+  CanvasControlsProvider,
+  type CanvasPopover,
+  useCanvasControls,
+} from "./canvas/controls.tsx";
+import { fieldEditing } from "./canvas/fields.tsx";
 import { CanvasFrame } from "./canvas/frame.tsx";
-import { MediaPopover } from "./canvas/media-popover.tsx";
+import { GhostPolicyProvider, selectionPolicy } from "./canvas/ghost.tsx";
 import { CanvasOverlay } from "./canvas/overlay.tsx";
 import { PageView } from "./canvas/page-view.tsx";
 import { StableView } from "./canvas/stable-view.tsx";
-import { keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
+import { type Command, keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
 import {
   type ActiveRichText,
   controlId,
   type EditorImage,
+  type EditorServices,
   type EditorUi,
   type FieldTarget,
   type InsertSpot,
@@ -39,23 +47,6 @@ import { type Origin, runCommand } from "./run-command.ts";
 import { SettingsPanel } from "./settings/panel.tsx";
 import { ariaShortcuts, formatShortcut, matches } from "./shortcuts.ts";
 import { type Connection, EditorStore } from "./store.ts";
-
-/** What the canvas shows in Studio beside the page: the media popover and the formatting toolbar. */
-interface CanvasControls {
-  readonly media: { readonly field: FieldTarget; readonly anchor: HTMLElement } | null;
-  readonly richText: ActiveRichText | null;
-  readonly document: Document | null;
-  readonly closeMedia: () => void;
-  readonly setCanvasDocument: (document: Document) => void;
-}
-
-const CanvasControlsContext = createContext<CanvasControls | null>(null);
-
-const useCanvasControls = () => {
-  const controls = useContext(CanvasControlsContext);
-  if (controls === null) throw new Error("The canvas renders only inside <EditorProvider>.");
-  return controls;
-};
 
 const textEntry = "input, textarea, select, [contenteditable]:not([contenteditable='false'])";
 
@@ -83,55 +74,27 @@ const hostAnchor = (element: Element) => {
   if (frame === null || frame === undefined) return element;
   return {
     contextElement: frame,
-    getBoundingClientRect: () => {
-      const inner = element.getBoundingClientRect();
-      const outer = frame.getBoundingClientRect();
-      return new DOMRect(outer.left + inner.left, outer.top + inner.top, inner.width, inner.height);
-    },
+    getBoundingClientRect: () => screenRect(element) ?? element.getBoundingClientRect(),
   };
 };
 
 /**
- * Holds the local copy of the draft and the editor's shared state. Studio
- * lays out the panels inside it: `EditorCanvas`, `EditorOutline`,
- * `EditorSettings`, and its own toolbar with `useEditorStatus` and
- * `useToolbarCommands`.
+ * The editor's shared state around a store: its services, the controls
+ * Studio shows for the canvas, the keyboard shortcuts `keys` lists, and
+ * announcements for screen readers. A form opened from the page goes to its
+ * control in the settings panel, or to a popover beside it where there's no
+ * panel.
  */
-export function EditorProvider(props: {
-  readonly draft: Draft;
-  /** The release the site serves as the editor opens. */
-  readonly live: LiveRelease;
-  readonly page: PageId;
-  readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
-  readonly media: ReadonlyArray<EditorImage>;
-  readonly mediaSrc: (id: MediaId) => string;
-  readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
-  /** Adds an image to the site's library, or null for someone who can't. */
-  readonly uploadImage: ((file: File) => Promise<MediaSummary>) | null;
-  readonly siteCss: string;
-  /** The site's published settings, which pages show with, such as its name. */
-  readonly settings: PublishedSettings;
-  readonly scheme: "light" | "dark";
-  /** The person editing, as the others see them. */
-  readonly person: Collaborator;
-  readonly connection: Connection;
-  readonly onNotice: (notice: Notice) => void;
-  readonly children: ReactNode;
-}) {
-  const [store] = useState(
-    () =>
-      new EditorStore({
-        draft: props.draft,
-        live: props.live,
-        page: props.page,
-        contracts: props.definitions,
-        person: props.person,
-        connection: props.connection,
-        onNotice: props.onNotice,
-      }),
-  );
-  useEffect(() => store.connect(), [store]);
-  const [media, setMedia] = useState<CanvasControls["media"]>(null);
+export function EditorRoot(
+  props: Omit<EditorServices, "store"> & {
+    readonly store: EditorStore;
+    readonly keys: ReadonlyArray<Command>;
+    readonly forms: "settings" | "popover";
+    readonly children: ReactNode;
+  },
+) {
+  const { store } = props;
+  const [popover, setPopover] = useState<CanvasPopover | null>(null);
   const [richText, setRichText] = useState<ActiveRichText | null>(null);
   const [canvasDocument, setCanvasDocument] = useState<Document | null>(null);
   const [picker, setPicker] = useState<{
@@ -144,13 +107,14 @@ export function EditorProvider(props: {
   const [uploaded, setUploaded] = useState<ReadonlyArray<EditorImage>>([]);
   const upload = props.uploadImage;
 
-  const services = useMemo(
+  const services = useMemo<EditorServices>(
     () => ({
       store,
       definitions: props.definitions,
       media: [...uploaded, ...props.media],
       mediaSrc: props.mediaSrc,
       suggestAltText: props.suggestAltText,
+      examples: props.examples,
       uploadImage:
         upload === null
           ? null
@@ -171,12 +135,14 @@ export function EditorProvider(props: {
       upload,
       props.mediaSrc,
       props.suggestAltText,
+      props.examples,
       props.siteCss,
       props.settings,
       props.scheme,
     ],
   );
 
+  const forms = props.forms;
   const ui = useMemo<EditorUi>(() => {
     const canvasBlock = (block: BlockId) =>
       canvasDocument?.querySelector<HTMLElement>(`[data-pakshi-block="${block}"]`) ?? null;
@@ -194,22 +160,26 @@ export function EditorProvider(props: {
       );
       element?.focus();
     };
+    const revealControl = (field: FieldTarget) => {
+      // The settings panel shows the field's control once the selection has rendered.
+      setTimeout(() => {
+        // A field made of parts, such as a button, focuses its first part.
+        const control = document.getElementById(controlId(field));
+        const focusable = control?.matches("input, textarea, select, button")
+          ? control
+          : (control?.querySelector<HTMLElement>("input, textarea, select") ??
+            control?.querySelector<HTMLElement>("button"));
+        focusable?.focus();
+      });
+    };
     return {
-      openMedia: (field, anchor) => setMedia({ field, anchor }),
+      openMedia: (field, anchor) => setPopover({ kind: "media", field, anchor }),
+      openLink: (field, anchor) => setPopover({ kind: "link", field, anchor }),
+      openForm: (field, anchor) =>
+        forms === "popover" ? setPopover({ kind: "form", field, anchor }) : revealControl(field),
       setActiveRichText: setRichText,
       focusInCanvas,
-      revealControl: (field) => {
-        // The settings panel shows the field's control once the selection has rendered.
-        setTimeout(() => {
-          // A field made of parts, such as a button, focuses its first part.
-          const control = document.getElementById(controlId(field));
-          const focusable = control?.matches("input, textarea, select, button")
-            ? control
-            : (control?.querySelector<HTMLElement>("input, textarea, select") ??
-              control?.querySelector<HTMLElement>("button"));
-          focusable?.focus();
-        });
-      },
+      revealControl,
       announce: (message) => {
         // Clearing first makes a screen reader repeat a message that's the same as the last.
         setAnnouncement("");
@@ -251,20 +221,21 @@ export function EditorProvider(props: {
         });
       },
     };
-  }, [canvasDocument, store]);
+  }, [canvasDocument, store, forms]);
 
   const controls = useMemo<CanvasControls>(
     () => ({
-      media,
+      popover,
       richText,
       document: canvasDocument,
-      closeMedia: () => setMedia(null),
+      closePopover: () => setPopover(null),
       setCanvasDocument,
     }),
-    [media, richText, canvasDocument],
+    [popover, richText, canvasDocument],
   );
 
   // Shortcuts work from Studio and from the canvas. A key typed in a text field is the field's own.
+  const keys = props.keys;
   useEffect(() => {
     const listeners = (canvasDocument === null ? [document] : [document, canvasDocument]).map(
       (target) => {
@@ -278,7 +249,7 @@ export function EditorProvider(props: {
               : elementOf(event.target, view)?.closest("[data-pakshi-outline]") != null
                 ? "outline"
                 : "elsewhere";
-          const command = keyboardCommands.find(
+          const command = keys.find(
             (candidate) =>
               candidate.keys !== undefined &&
               reaches(candidate.keys.where, origin) &&
@@ -294,12 +265,12 @@ export function EditorProvider(props: {
     return () => {
       for (const remove of listeners) remove();
     };
-  }, [store, ui, canvasDocument]);
+  }, [store, ui, canvasDocument, keys]);
 
   return (
     <ServicesProvider value={services}>
       <UiProvider value={ui}>
-        <CanvasControlsContext.Provider value={controls}>
+        <CanvasControlsProvider value={controls}>
           <BlockDragDrop>{props.children}</BlockDragDrop>
           {picker !== null && (
             <BlockPicker
@@ -312,32 +283,68 @@ export function EditorProvider(props: {
           <div aria-live="polite" className="sr-only">
             {announcement}
           </div>
-        </CanvasControlsContext.Provider>
+        </CanvasControlsProvider>
       </UiProvider>
     </ServicesProvider>
   );
 }
 
 /**
- * The page rendered in a frame with the site's stylesheet and theme, edited
- * in place.
+ * Holds the local copy of the draft and the editor's shared state. Studio
+ * lays out the panels inside it: `EditorCanvas`, `EditorOutline`,
+ * `EditorSettings`, and its own toolbar with `useEditorStatus` and
+ * `useToolbarCommands`.
  */
-export function EditorCanvas(props: {
-  readonly width: number | null;
-  /** The editor's accent color, from Studio's theme. */
-  readonly accent: string;
-  /** The colors that tell other people apart, from Studio's theme, in order. */
-  readonly presence: ReadonlyArray<string>;
+export function EditorProvider(props: {
+  readonly draft: Draft;
+  /** The release the site serves as the editor opens. */
+  readonly live: LiveRelease;
+  readonly page: PageId;
+  readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
+  readonly media: ReadonlyArray<EditorImage>;
+  readonly mediaSrc: (id: MediaId) => string;
+  readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
+  /** Adds an image to the site's library, or null for someone who can't. */
+  readonly uploadImage: ((file: File) => Promise<MediaSummary>) | null;
+  readonly siteCss: string;
+  /** The site's published settings, which pages show with, such as its name. */
+  readonly settings: PublishedSettings;
+  readonly scheme: "light" | "dark";
+  /** The person editing, as the others see them. */
+  readonly person: Collaborator;
+  readonly connection: Connection;
+  readonly onNotice: (notice: Notice) => void;
+  readonly children: ReactNode;
 }) {
-  const { siteCss, scheme } = useServices();
-  const controls = useCanvasControls();
-  const theme = useEditorState((state) => state.view.brand.theme);
-  const title = useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
-  const selection = useEditorState((state) => state.selection);
-  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const { draft, live, page, person, connection, onNotice, children, ...services } = props;
+  const [store] = useState(
+    () =>
+      new EditorStore({
+        draft,
+        live,
+        page,
+        contracts: props.definitions,
+        person,
+        connection,
+        onNotice,
+      }),
+  );
+  useEffect(() => store.connect(), [store]);
+  return (
+    <EditorRoot
+      {...services}
+      store={store}
+      examples="placeholder"
+      keys={keyboardCommands}
+      forms="settings"
+    >
+      {children}
+    </EditorRoot>
+  );
+}
 
-  // The canvas shows the page as sites renders it, but its links don't navigate and its forms don't submit.
-  const canvasDocument = controls.document;
+/** The page in a canvas shows as sites renders it, but its links don't navigate and its forms don't submit. */
+export const useStillPage = (canvasDocument: Document | null) => {
   useEffect(() => {
     if (canvasDocument === null) return;
     const view = canvasDocument.defaultView;
@@ -352,6 +359,28 @@ export function EditorCanvas(props: {
       canvasDocument.removeEventListener("submit", onSubmit, { capture: true });
     };
   }, [canvasDocument]);
+};
+
+/**
+ * The page rendered in a frame with the site's stylesheet and theme, edited
+ * in place.
+ */
+export function EditorCanvas(props: {
+  readonly width: number | null;
+  /** The editor's accent color, from Studio's theme. */
+  readonly accent: string;
+  /** The color the canvas marks unfinished parts with, from Studio's theme. */
+  readonly warning: string;
+  /** The colors that tell other people apart, from Studio's theme, in order. */
+  readonly presence: ReadonlyArray<string>;
+}) {
+  const { siteCss, scheme } = useServices();
+  const controls = useCanvasControls();
+  const theme = useEditorState((state) => state.view.brand.theme);
+  const title = useEditorState((state) => state.view.pages[state.page]?.meta.title ?? "");
+  const [container, setContainer] = useState<HTMLDivElement | null>(null);
+  const canvasDocument = controls.document;
+  useStillPage(canvasDocument);
 
   return (
     <div ref={setContainer} className="relative size-full" data-pakshi-canvas-area>
@@ -361,29 +390,22 @@ export function EditorCanvas(props: {
         theme={theme}
         scheme={scheme}
         accent={props.accent}
+        warning={props.warning}
         presence={props.presence}
         width={props.width}
         onDocument={controls.setCanvasDocument}
       >
         <FieldEditingProvider value={fieldEditing}>
-          <PageView />
+          <GhostPolicyProvider value={selectionPolicy}>
+            <PageView />
+          </GhostPolicyProvider>
         </FieldEditingProvider>
       </CanvasFrame>
       {canvasDocument !== null && <CanvasOverlay document={canvasDocument} />}
       {canvasDocument !== null && <StableView document={canvasDocument} />}
-      {container !== null && controls.media !== null && (
-        <MediaPopover
-          field={controls.media.field}
-          anchor={controls.media.anchor}
-          container={container}
-          onClose={controls.closeMedia}
-        />
+      {container !== null && canvasDocument !== null && (
+        <CanvasChrome container={container} document={canvasDocument} clip />
       )}
-      {container !== null &&
-        controls.richText !== null &&
-        isSelectedField(selection, controls.richText.target) && (
-          <FormattingToolbar active={controls.richText} container={container} />
-        )}
     </div>
   );
 }
