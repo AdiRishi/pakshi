@@ -44,8 +44,10 @@ test(
   Effect.gen(function* () {
     const { studioUrl, sitesUrl } = yield* stack;
     const spawner = yield* ChildProcessSpawner.ChildProcessSpawner;
+    // JOURNEYS="blocks forms" runs only the journeys whose file names match.
+    const journeys = process.env.JOURNEYS?.split(/\s+/).filter(Boolean) ?? [];
     const exitCode = yield* spawner.exitCode(
-      ChildProcess.make("pnpm", ["exec", "playwright", "test"], {
+      ChildProcess.make("pnpm", ["exec", "playwright", "test", ...journeys], {
         env: { STUDIO_URL: studioUrl, SITES_URL: sitesUrl },
         extendEnv: true,
         stdout: "inherit",
