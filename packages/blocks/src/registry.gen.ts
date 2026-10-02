@@ -16,6 +16,7 @@ export const registry: Readonly<
   "footer@2": () => import("./footer/v2/index.tsx"),
   "form-section@1": () => import("./form-section/v1/index.tsx"),
   "gallery@1": () => import("./gallery/v1/index.tsx"),
+  "gallery@2": () => import("./gallery/v2/index.tsx"),
   "header@3": () => import("./header/v3/index.tsx"),
   "hero@4": () => import("./hero/v4/index.tsx"),
   "image-caption@1": () => import("./image-caption/v1/index.tsx"),

@@ -1,0 +1,42 @@
+{
+  "variant": "grid",
+  "surface": "brand",
+  "props": {
+    "images": [
+      {
+        "id": "it_mei",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMei",
+          "alt": "Mei Chen"
+        }
+      },
+      {
+        "id": "it_tom",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleTom",
+          "alt": "Tom Penrose"
+        }
+      },
+      {
+        "id": "it_dan",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleDan",
+          "alt": "Dan Okafor"
+        }
+      },
+      {
+        "id": "it_asha",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleAsha",
+          "alt": "Asha Patel"
+        }
+      }
+    ],
+    "columns": "4",
+    "crop": "square"
+  }
+}

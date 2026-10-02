@@ -40,6 +40,12 @@ import formSection1plain from "./form-section/v1/fixtures/plain.json" with { typ
 import gallery1grid from "./gallery/v1/fixtures/grid.json" with { type: "json" };
 import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { type: "json" };
 import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
+import gallery2gridFour from "./gallery/v2/fixtures/grid-four.json" with { type: "json" };
+import gallery2grid from "./gallery/v2/fixtures/grid.json" with { type: "json" };
+import gallery2masonry from "./gallery/v2/fixtures/masonry.json" with { type: "json" };
+import gallery2mosaic from "./gallery/v2/fixtures/mosaic.json" with { type: "json" };
+import gallery2placeholder from "./gallery/v2/fixtures/placeholder.json" with { type: "json" };
+import gallery2scroller from "./gallery/v2/fixtures/scroller.json" with { type: "json" };
 import header3centeredLogo from "./header/v3/fixtures/centered-logo.json" with { type: "json" };
 import header3centeredMenu from "./header/v3/fixtures/centered-menu.json" with { type: "json" };
 import header3floating from "./header/v3/fixtures/floating.json" with { type: "json" };
@@ -174,6 +180,12 @@ export const fixtureFiles = [
   { type: "gallery", version: 1, name: "grid", fixture: gallery1grid },
   { type: "gallery", version: 1, name: "placeholder", fixture: gallery1placeholder },
   { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
+  { type: "gallery", version: 2, name: "grid-four", fixture: gallery2gridFour },
+  { type: "gallery", version: 2, name: "grid", fixture: gallery2grid },
+  { type: "gallery", version: 2, name: "masonry", fixture: gallery2masonry },
+  { type: "gallery", version: 2, name: "mosaic", fixture: gallery2mosaic },
+  { type: "gallery", version: 2, name: "placeholder", fixture: gallery2placeholder },
+  { type: "gallery", version: 2, name: "scroller", fixture: gallery2scroller },
   { type: "header", version: 3, name: "centered-logo", fixture: header3centeredLogo },
   { type: "header", version: 3, name: "centered-menu", fixture: header3centeredMenu },
   { type: "header", version: 3, name: "floating", fixture: header3floating },

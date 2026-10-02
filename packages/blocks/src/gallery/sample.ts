@@ -1,39 +1,70 @@
 import type { BlockSample } from "../presentation.ts";
-import type gallery from "./v1/index.tsx";
+import type gallery from "./v2/index.tsx";
 
 export default {
   variant: "grid",
   surface: "default",
   props: {
-    heading: "Last summer",
+    kicker: "Last summer",
+    heading: "A week on the harbour.",
+    headingRest: "Sixty students, six boats and a lot of sawdust.",
     images: [
       {
         id: "it_evening",
         image: {
           $ref: "media",
-          id: "med_pakshiHills",
-          alt: "Hills above the harbour at sunset",
+          id: "med_sampleHarbour",
+          alt: "Two sailing boats on a calm harbour at sunset",
         },
         caption: "The harbour on the last evening",
       },
       {
-        id: "it_launch",
+        id: "it_mei",
         image: {
           $ref: "media",
-          id: "med_sampleHarbour",
-          alt: "Two sailing boats on the harbour at sunset",
+          id: "med_sampleMei",
+          alt: "Mei Chen in the boatshed",
         },
-        caption: "Launch day",
+        caption: "Mei leads the planking workshop",
       },
       {
-        id: "it_morning",
+        id: "it_priya",
         image: {
           $ref: "media",
-          id: "med_pakshiArch",
-          alt: "An open doorway with the sea beyond",
+          id: "med_samplePriya",
+          alt: "Priya Shah on the pontoon",
         },
-        caption: "Before the workshops open",
+        caption: "Priya, ready for her first sail",
+      },
+      {
+        id: "it_tom",
+        image: {
+          $ref: "media",
+          id: "med_sampleTom",
+          alt: "Tom Penrose on the slipway",
+        },
+        caption: "Tom, one of this year's mentors",
+      },
+      {
+        id: "it_map",
+        image: {
+          $ref: "media",
+          id: "med_sampleMap",
+          alt: "A map of North Quay, with the boatshed marked",
+        },
+        caption: "Where to find us on North Quay",
+      },
+      {
+        id: "it_asha",
+        image: {
+          $ref: "media",
+          id: "med_sampleAsha",
+          alt: "Asha Patel at the workbench",
+        },
+        caption: "Asha fitting a frame",
       },
     ],
+    columns: "3",
+    crop: "landscape",
   },
 } satisfies BlockSample<typeof gallery>;
