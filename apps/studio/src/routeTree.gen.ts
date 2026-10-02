@@ -17,7 +17,6 @@ import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SignOutRouteImport } from './routes/sign-out'
 import { Route as AuthedIndexRouteImport } from './routes/_authed/index'
 import { Route as AuthedAuditRouteImport } from './routes/_authed/audit'
-import { Route as AuthedBlocksRouteImport } from './routes/_authed/blocks'
 import { Route as AuthedMetricsRouteImport } from './routes/_authed/metrics'
 import { Route as AuthedPeopleRouteImport } from './routes/_authed/people'
 import { Route as AuthedRolesRouteImport } from './routes/_authed/roles'
@@ -25,6 +24,8 @@ import { Route as ApiMediaRouteImport } from './routes/api/media'
 import { Route as ExportsAuditRouteImport } from './routes/exports/audit'
 import { Route as JoinTokenRouteImport } from './routes/join.$token'
 import { Route as AuthedApprovalsIndexRouteImport } from './routes/_authed/approvals/index'
+import { Route as AuthedBlocksIndexRouteImport } from './routes/_authed/blocks/index'
+import { Route as AuthedBlocksBlockTypeRouteImport } from './routes/_authed/blocks/$blockType'
 import { Route as AuthedBrandsIndexRouteImport } from './routes/_authed/brands/index'
 import { Route as AuthedOrganizationWorkflowRouteImport } from './routes/_authed/organization/workflow'
 import { Route as AuthedSitesNewRouteImport } from './routes/_authed/sites/new'
@@ -94,11 +95,6 @@ const AuthedAuditRoute = AuthedAuditRouteImport.update({
   path: '/audit',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedBlocksRoute = AuthedBlocksRouteImport.update({
-  id: '/blocks',
-  path: '/blocks',
-  getParentRoute: () => AuthedRoute,
-} as any)
 const AuthedMetricsRoute = AuthedMetricsRouteImport.update({
   id: '/metrics',
   path: '/metrics',
@@ -132,6 +128,16 @@ const JoinTokenRoute = JoinTokenRouteImport.update({
 const AuthedApprovalsIndexRoute = AuthedApprovalsIndexRouteImport.update({
   id: '/approvals/',
   path: '/approvals/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedBlocksIndexRoute = AuthedBlocksIndexRouteImport.update({
+  id: '/blocks/',
+  path: '/blocks/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedBlocksBlockTypeRoute = AuthedBlocksBlockTypeRouteImport.update({
+  id: '/blocks/$blockType',
+  path: '/blocks/$blockType',
   getParentRoute: () => AuthedRoute,
 } as any)
 const AuthedBrandsIndexRoute = AuthedBrandsIndexRouteImport.update({
@@ -309,13 +315,13 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/audit': typeof AuthedAuditRoute
-  '/blocks': typeof AuthedBlocksRoute
   '/metrics': typeof AuthedMetricsRoute
   '/people': typeof AuthedPeopleRoute
   '/roles': typeof AuthedRolesRoute
   '/api/media': typeof ApiMediaRoute
   '/exports/audit': typeof ExportsAuditRoute
   '/join/$token': typeof JoinTokenRoute
+  '/blocks/$blockType': typeof AuthedBlocksBlockTypeRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
   '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -323,6 +329,7 @@ export interface FileRoutesByFullPath {
   '/exports/$siteId/$formId': typeof ExportsSiteIdFormIdRoute
   '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/approvals/': typeof AuthedApprovalsIndexRoute
+  '/blocks/': typeof AuthedBlocksIndexRoute
   '/brands/': typeof AuthedBrandsIndexRoute
   '/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
   '/brands/$brandId/identity': typeof AuthedBrandsBrandIdIdentityRoute
@@ -354,7 +361,6 @@ export interface FileRoutesByTo {
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/audit': typeof AuthedAuditRoute
-  '/blocks': typeof AuthedBlocksRoute
   '/metrics': typeof AuthedMetricsRoute
   '/people': typeof AuthedPeopleRoute
   '/roles': typeof AuthedRolesRoute
@@ -362,6 +368,7 @@ export interface FileRoutesByTo {
   '/exports/audit': typeof ExportsAuditRoute
   '/join/$token': typeof JoinTokenRoute
   '/': typeof AuthedIndexRoute
+  '/blocks/$blockType': typeof AuthedBlocksBlockTypeRoute
   '/organization/workflow': typeof AuthedOrganizationWorkflowRoute
   '/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -369,6 +376,7 @@ export interface FileRoutesByTo {
   '/exports/$siteId/$formId': typeof ExportsSiteIdFormIdRoute
   '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/approvals': typeof AuthedApprovalsIndexRoute
+  '/blocks': typeof AuthedBlocksIndexRoute
   '/brands': typeof AuthedBrandsIndexRoute
   '/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
   '/brands/$brandId/identity': typeof AuthedBrandsBrandIdIdentityRoute
@@ -402,7 +410,6 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/sign-out': typeof SignOutRoute
   '/_authed/audit': typeof AuthedAuditRoute
-  '/_authed/blocks': typeof AuthedBlocksRoute
   '/_authed/metrics': typeof AuthedMetricsRoute
   '/_authed/people': typeof AuthedPeopleRoute
   '/_authed/roles': typeof AuthedRolesRoute
@@ -410,6 +417,7 @@ export interface FileRoutesById {
   '/exports/audit': typeof ExportsAuditRoute
   '/join/$token': typeof JoinTokenRoute
   '/_authed/': typeof AuthedIndexRoute
+  '/_authed/blocks/$blockType': typeof AuthedBlocksBlockTypeRoute
   '/_authed/organization/workflow': typeof AuthedOrganizationWorkflowRoute
   '/_authed/sites/new': typeof AuthedSitesNewRoute
   '/api/auth/$': typeof ApiAuthSplatRoute
@@ -417,6 +425,7 @@ export interface FileRoutesById {
   '/exports/$siteId/$formId': typeof ExportsSiteIdFormIdRoute
   '/site-media/$siteId/$mediaId': typeof SiteMediaSiteIdMediaIdRoute
   '/_authed/approvals/': typeof AuthedApprovalsIndexRoute
+  '/_authed/blocks/': typeof AuthedBlocksIndexRoute
   '/_authed/brands/': typeof AuthedBrandsIndexRoute
   '/_authed/approvals/$siteId/$submissionId': typeof AuthedApprovalsSiteIdSubmissionIdRoute
   '/_authed/brands/$brandId/identity': typeof AuthedBrandsBrandIdIdentityRoute
@@ -451,13 +460,13 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-out'
     | '/audit'
-    | '/blocks'
     | '/metrics'
     | '/people'
     | '/roles'
     | '/api/media'
     | '/exports/audit'
     | '/join/$token'
+    | '/blocks/$blockType'
     | '/organization/workflow'
     | '/sites/new'
     | '/api/auth/$'
@@ -465,6 +474,7 @@ export interface FileRouteTypes {
     | '/exports/$siteId/$formId'
     | '/site-media/$siteId/$mediaId'
     | '/approvals/'
+    | '/blocks/'
     | '/brands/'
     | '/approvals/$siteId/$submissionId'
     | '/brands/$brandId/identity'
@@ -496,7 +506,6 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-out'
     | '/audit'
-    | '/blocks'
     | '/metrics'
     | '/people'
     | '/roles'
@@ -504,6 +513,7 @@ export interface FileRouteTypes {
     | '/exports/audit'
     | '/join/$token'
     | '/'
+    | '/blocks/$blockType'
     | '/organization/workflow'
     | '/sites/new'
     | '/api/auth/$'
@@ -511,6 +521,7 @@ export interface FileRouteTypes {
     | '/exports/$siteId/$formId'
     | '/site-media/$siteId/$mediaId'
     | '/approvals'
+    | '/blocks'
     | '/brands'
     | '/approvals/$siteId/$submissionId'
     | '/brands/$brandId/identity'
@@ -543,7 +554,6 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/sign-out'
     | '/_authed/audit'
-    | '/_authed/blocks'
     | '/_authed/metrics'
     | '/_authed/people'
     | '/_authed/roles'
@@ -551,6 +561,7 @@ export interface FileRouteTypes {
     | '/exports/audit'
     | '/join/$token'
     | '/_authed/'
+    | '/_authed/blocks/$blockType'
     | '/_authed/organization/workflow'
     | '/_authed/sites/new'
     | '/api/auth/$'
@@ -558,6 +569,7 @@ export interface FileRouteTypes {
     | '/exports/$siteId/$formId'
     | '/site-media/$siteId/$mediaId'
     | '/_authed/approvals/'
+    | '/_authed/blocks/'
     | '/_authed/brands/'
     | '/_authed/approvals/$siteId/$submissionId'
     | '/_authed/brands/$brandId/identity'
@@ -659,13 +671,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedAuditRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/blocks': {
-      id: '/_authed/blocks'
-      path: '/blocks'
-      fullPath: '/blocks'
-      preLoaderRoute: typeof AuthedBlocksRouteImport
-      parentRoute: typeof AuthedRoute
-    }
     '/_authed/metrics': {
       id: '/_authed/metrics'
       path: '/metrics'
@@ -713,6 +718,20 @@ declare module '@tanstack/react-router' {
       path: '/approvals'
       fullPath: '/approvals/'
       preLoaderRoute: typeof AuthedApprovalsIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/blocks/': {
+      id: '/_authed/blocks/'
+      path: '/blocks'
+      fullPath: '/blocks/'
+      preLoaderRoute: typeof AuthedBlocksIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/blocks/$blockType': {
+      id: '/_authed/blocks/$blockType'
+      path: '/blocks/$blockType'
+      fullPath: '/blocks/$blockType'
+      preLoaderRoute: typeof AuthedBlocksBlockTypeRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/brands/': {
@@ -923,14 +942,15 @@ declare module '@tanstack/react-router' {
 
 interface AuthedRouteChildren {
   AuthedAuditRoute: typeof AuthedAuditRoute
-  AuthedBlocksRoute: typeof AuthedBlocksRoute
   AuthedMetricsRoute: typeof AuthedMetricsRoute
   AuthedPeopleRoute: typeof AuthedPeopleRoute
   AuthedRolesRoute: typeof AuthedRolesRoute
   AuthedIndexRoute: typeof AuthedIndexRoute
+  AuthedBlocksBlockTypeRoute: typeof AuthedBlocksBlockTypeRoute
   AuthedOrganizationWorkflowRoute: typeof AuthedOrganizationWorkflowRoute
   AuthedSitesNewRoute: typeof AuthedSitesNewRoute
   AuthedApprovalsIndexRoute: typeof AuthedApprovalsIndexRoute
+  AuthedBlocksIndexRoute: typeof AuthedBlocksIndexRoute
   AuthedBrandsIndexRoute: typeof AuthedBrandsIndexRoute
   AuthedApprovalsSiteIdSubmissionIdRoute: typeof AuthedApprovalsSiteIdSubmissionIdRoute
   AuthedBrandsBrandIdIdentityRoute: typeof AuthedBrandsBrandIdIdentityRoute
@@ -956,14 +976,15 @@ interface AuthedRouteChildren {
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAuditRoute: AuthedAuditRoute,
-  AuthedBlocksRoute: AuthedBlocksRoute,
   AuthedMetricsRoute: AuthedMetricsRoute,
   AuthedPeopleRoute: AuthedPeopleRoute,
   AuthedRolesRoute: AuthedRolesRoute,
   AuthedIndexRoute: AuthedIndexRoute,
+  AuthedBlocksBlockTypeRoute: AuthedBlocksBlockTypeRoute,
   AuthedOrganizationWorkflowRoute: AuthedOrganizationWorkflowRoute,
   AuthedSitesNewRoute: AuthedSitesNewRoute,
   AuthedApprovalsIndexRoute: AuthedApprovalsIndexRoute,
+  AuthedBlocksIndexRoute: AuthedBlocksIndexRoute,
   AuthedBrandsIndexRoute: AuthedBrandsIndexRoute,
   AuthedApprovalsSiteIdSubmissionIdRoute:
     AuthedApprovalsSiteIdSubmissionIdRoute,
