@@ -17,7 +17,7 @@ import {
 import { type PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids";
 import { now } from "@repo/contracts/release";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
-import { Cause, Effect, Exit, Layer, ManagedRuntime, Option, Schema } from "effect";
+import { Cause, type DateTime, Effect, Exit, Layer, ManagedRuntime, Option, Schema } from "effect";
 import { Chat } from "effect/unstable/ai";
 import type { SqlError } from "effect/unstable/sql";
 import * as Migrator from "effect/unstable/sql/Migrator";
@@ -190,9 +190,9 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
             sources,
           });
         },
-        Send: ({ text, sources, page, selected }) =>
-          this.#startTurn(connection, who, { text, sources, page, selected }),
-        Answer: async ({ turn: id, part, answer, page }) => {
+        Send: ({ text, sources, page, selected, timeZone }) =>
+          this.#startTurn(connection, who, { text, sources, page, selected, timeZone }),
+        Answer: async ({ turn: id, part, answer, page, timeZone }) => {
           const turn = (await this.#run((conversation) => conversation.turns)).find(
             (found) => found.id === id,
           );
@@ -206,9 +206,10 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
             sources: [],
             page,
             selected: null,
+            timeZone,
           });
         },
-        Build: async ({ turn: id, part, page }) => {
+        Build: async ({ turn: id, part, page, timeZone }) => {
           const turns = await this.#run((conversation) => conversation.turns);
           const plan = turns
             .find((found) => found.id === id)
@@ -239,6 +240,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
             sources: [],
             page,
             selected: null,
+            timeZone,
           });
         },
         Stop: async () => {
@@ -294,6 +296,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       readonly sources: ReadonlyArray<SourceId>;
       readonly page: PageId;
       readonly selected: Selected | null;
+      readonly timeZone: DateTime.TimeZone;
     },
   ) {
     if (this.#busy(connection)) return;
@@ -335,6 +338,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     const env = this.env;
     const services = turnServices(env, who, {
       id: turn.id,
+      timeZone: message.timeZone,
       page: message.page,
       selected: message.selected,
       links,

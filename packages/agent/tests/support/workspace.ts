@@ -5,7 +5,7 @@ import { BatchId, PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids
 import type { Op } from "@repo/contracts/ops";
 import { commitBatch, type Writes } from "@repo/domain/commit";
 import { freeze } from "@repo/domain/freeze";
-import { Effect, Layer, Option } from "effect";
+import { DateTime, Effect, Layer, Option } from "effect";
 
 import {
   BlockRequests,
@@ -34,6 +34,8 @@ export interface Desk {
 }
 
 const person = { id: "user_sam", name: "Sam Okafor" };
+// East of UTC, so the person's date is often a day ahead of UTC's.
+const timeZone = DateTime.zoneMakeNamedUnsafe("Australia/Sydney");
 
 /** The services a turn runs with, over a draft in memory. */
 export const desk = async (
@@ -114,6 +116,7 @@ export const desk = async (
     Layer.succeed(Turn)({
       id: turn,
       person,
+      timeZone,
       page: PageId.make("pg_home"),
       selected: options.selected ?? null,
       links: new Set(options.links ?? []),

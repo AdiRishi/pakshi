@@ -24,6 +24,7 @@ import { ScrollArea } from "@repo/ui/components/scroll-area";
 import { Spinner } from "@repo/ui/components/spinner";
 import { Textarea } from "@repo/ui/components/textarea";
 import { useNavigate } from "@tanstack/react-router";
+import { DateTime } from "effect";
 import {
   ArrowUpIcon,
   FileTextIcon,
@@ -83,6 +84,7 @@ export function ChatPanel(props: {
       sources: attached.map((source) => source.id),
       page,
       selected,
+      timeZone: DateTime.zoneMakeLocal(),
     });
     setText("");
     setAttached([]);
@@ -172,8 +174,22 @@ export function ChatPanel(props: {
                 turn={turn}
                 actions={{
                   answer: (part, answer) =>
-                    conversation.send({ _tag: "Answer", turn: turn.id, part, answer, page }),
-                  build: (part) => conversation.send({ _tag: "Build", turn: turn.id, part, page }),
+                    conversation.send({
+                      _tag: "Answer",
+                      turn: turn.id,
+                      part,
+                      answer,
+                      page,
+                      timeZone: DateTime.zoneMakeLocal(),
+                    }),
+                  build: (part) =>
+                    conversation.send({
+                      _tag: "Build",
+                      turn: turn.id,
+                      part,
+                      page,
+                      timeZone: DateTime.zoneMakeLocal(),
+                    }),
                   undo: () => conversation.send({ _tag: "Undo", turn: turn.id }),
                   show,
                   submit: props.onSubmit,

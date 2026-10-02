@@ -1,7 +1,7 @@
-import { Schema } from "effect";
+import { DateTime, Schema } from "effect";
 import { expect, test } from "vitest";
 
-import { entriesOf } from "../src/collections.ts";
+import { collectionKinds, entriesOf } from "../src/collections.ts";
 import { PageListing } from "../src/snapshot.ts";
 
 const post = (id: string, collection: string, title: string, date: string) => ({
@@ -43,4 +43,26 @@ test("a blog lists only its own posts, newest first, a day's posts by title", ()
     "pg_venue",
     "pg_mentors",
   ]);
+});
+
+test("a new post is dated the day it is where its author is, with nothing else filled in", () => {
+  // Late on 2 March in New York, and already the afternoon of 3 March in Sydney.
+  const now = DateTime.makeUnsafe("2027-03-03T03:30:00Z");
+  const newPost = (timeZone: string) =>
+    collectionKinds.blog.newMeta({
+      title: "Regatta day",
+      description: "Racing starts at ten.",
+      author: "Meera Kapoor",
+      now,
+      timeZone: DateTime.zoneMakeNamedUnsafe(timeZone),
+    });
+  expect(newPost("America/New_York").date).toBe("2027-03-02");
+  expect(newPost("Australia/Sydney")).toEqual({
+    title: "Regatta day",
+    description: "Racing starts at ten.",
+    date: "2027-03-03",
+    author: "Meera Kapoor",
+    tags: [],
+    excerpt: "",
+  });
 });

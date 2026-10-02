@@ -43,7 +43,7 @@ import {
 import { type ReactNode, useId, useState } from "react";
 
 import { blocksQuery } from "@/features/blocks/blocks-query";
-import { formatDay, today } from "@/lib/dates";
+import { formatDay } from "@/lib/dates";
 
 import { newBlog, newPage, newPost } from "./new-pages";
 import { PageDialog, type PageValues } from "./page-dialog";
@@ -487,11 +487,10 @@ export function PagesTree(props: {
               newPost({
                 contracts: await contracts(),
                 listings: props.pages,
-                blog: open.blog.id,
+                blog: open.blog,
                 title: values.title,
                 slug: values.address,
                 author: props.author,
-                today: today(),
               }),
             )
           }

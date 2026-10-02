@@ -316,7 +316,6 @@ export const agentHandlers = AgentTools.toLayer({
         return yield* fail(
           "Give the post a slug, the last part of its address, in lowercase words joined by hyphens.",
         );
-      const today = DateTime.formatIsoDateUtc(yield* DateTime.now);
       const page = PageId.make(randomId("pg"));
       const created = yield* createFromRecipe(
         toolCallId,
@@ -325,14 +324,13 @@ export const agentHandlers = AgentTools.toLayer({
           id: page,
           collection,
           slug: chosen,
-          meta: {
+          meta: collectionKinds[blog.kind].newMeta({
             title,
             description,
-            date: today,
             author: turn.person.name,
-            tags: [],
-            excerpt: "",
-          },
+            now: yield* DateTime.now,
+            timeZone: turn.timeZone,
+          }),
         },
         sections,
       );

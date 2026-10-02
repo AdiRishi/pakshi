@@ -6,7 +6,7 @@ import type { BatchError, Op } from "@repo/contracts/ops";
 import type { PagePath } from "@repo/contracts/page";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
-import { Context, type Effect, type Option } from "effect";
+import { Context, type DateTime, type Effect, type Option } from "effect";
 
 /*
  * What a turn's tools reach. Each is a service, so the same tools run in
@@ -93,6 +93,8 @@ export class Turn extends Context.Service<
   {
     readonly id: TurnId;
     readonly person: Collaborator;
+    /** The person's time zone, which dates the posts the turn writes. */
+    readonly timeZone: DateTime.TimeZone;
     /** The page the person has open. */
     readonly page: PageId;
     readonly selected: Selected | null;
