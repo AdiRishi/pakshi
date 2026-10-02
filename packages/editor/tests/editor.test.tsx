@@ -42,6 +42,21 @@ describe("editing text in place", () => {
     await expect.poll(() => heroHeading(siteDoc)).toBe(shown);
   });
 
+  test("a press on a heading keeps it selected when the heading moves before the button comes up", async () => {
+    const { canvas } = await open();
+    const frame = canvas().defaultView;
+    const heading = heroField(canvas(), "heading");
+    const block = canvas().querySelector(`[data-pakshi-block='${hero}']`);
+    if (frame === null || heading === null || block === null) throw new Error("No hero heading.");
+    heading.dispatchEvent(new frame.PointerEvent("pointerdown", { bubbles: true }));
+    heading.focus();
+    // Selecting it shows the hero's controls above it, so the button comes up over the
+    // block instead, and the click goes to what both are in.
+    block.dispatchEvent(new frame.MouseEvent("click", { bubbles: true }));
+    await expect.poll(() => heroField(canvas(), "heading")?.dataset["pakshiSelected"]).toBe("true");
+    expect(block.getAttribute("data-pakshi-selected")).toBeNull();
+  });
+
   test("a required heading can be cleared and typed again", async () => {
     const { siteDoc, canvas } = await open();
     heroField(canvas(), "heading")?.focus();
