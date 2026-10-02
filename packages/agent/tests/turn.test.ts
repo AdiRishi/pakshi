@@ -1,4 +1,5 @@
 import { describe, expect, it } from "@effect/vitest";
+import type { Draft } from "@repo/contracts/draft";
 import { BlockId, PageId } from "@repo/contracts/ids";
 import { freeze } from "@repo/domain/freeze";
 import { Deferred, Effect, Fiber, Layer } from "effect";
@@ -7,20 +8,22 @@ import { AiError, Chat } from "effect/unstable/ai";
 import { AgentTools, type NewBlock } from "../src/tools.ts";
 import { runTurn } from "../src/turn.ts";
 import { Workspace } from "../src/workspace.ts";
-import { harbourDraft } from "./support/draft.ts";
+import { harbourDraft, newsDraft } from "./support/draft.ts";
 import { type Reply, scriptedModel } from "./support/model.ts";
 import { desk } from "./support/workspace.ts";
 
 const home = PageId.make("pg_home");
 
-/** Runs a turn against the Harbour draft, with the model replying from a script. */
+/** Runs a turn against the Harbour draft, or another, with the model replying from a script. */
 const turnWith = (
   script: ReadonlyArray<Reply>,
   message = "Make the page better.",
-  options: Parameters<typeof desk>[1] = {},
+  options: Parameters<typeof desk>[1] & { readonly draft?: Draft } = {},
 ) =>
   Effect.gen(function* () {
-    const { state, layer, contracts } = yield* Effect.promise(() => desk(harbourDraft, options));
+    const { state, layer, contracts } = yield* Effect.promise(() =>
+      desk(options.draft ?? harbourDraft, options),
+    );
     const model = scriptedModel(script);
     const chat = yield* Chat.empty;
     const status = yield* runTurn({
@@ -278,7 +281,7 @@ describe("a turn", () => {
       }),
   );
 
-  it.effect("creates a blog from the blog recipe, but no post outside a blog", () =>
+  it.effect("creates a blog that lists its own posts, but no post outside a blog", () =>
     Effect.gen(function* () {
       const create = (recipe: string, title: string, path: string) => ({
         name: "create_page",
@@ -288,15 +291,80 @@ describe("a turn", () => {
         [{ calls: [create("blog", "News", "/news"), create("post", "Dates", "/news/dates")] }],
         "Start a news blog with a first post",
       );
-      expect(Object.values(state.draft.pages)).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ type: "collection", kind: "blog", path: "/news" }),
-        ]),
-      );
+      const blog = Object.values(state.draft.pages).find((page) => page.type === "collection");
+      expect(blog).toMatchObject({ kind: "blog", path: "/news" });
+      expect(
+        Object.values(blog?.blocks ?? {}).find((block) => block.type === "post-list")?.props[
+          "collection"
+        ],
+      ).toEqual({ $ref: "page", id: blog?.id });
       expect(Object.values(state.draft.pages).some((page) => page.type === "entry")).toBe(false);
-      expect(JSON.stringify(calls[1]?.prompt)).toContain("Create it in a blog");
+      expect(JSON.stringify(calls[1]?.prompt)).toContain("Create it with create_entry");
     }),
   );
+
+  it.effect("adds a list of posts that shows the site's only blog", () =>
+    Effect.gen(function* () {
+      const { state } = yield* turnWith(
+        [insertAfterHero({ type: "post-list", props: { heading: "Latest news", count: 3 } })],
+        "Show the latest 3 news posts on the home page",
+        { draft: newsDraft },
+      );
+      const list = Object.values(state.draft.pages[home]?.blocks ?? {}).find(
+        (block) => block.type === "post-list",
+      );
+      expect(list?.props).toMatchObject({ collection: { $ref: "page", id: "pg_news" }, count: 3 });
+    }),
+  );
+
+  describe("a plan with posts", () => {
+    const plan = (...pages: ReadonlyArray<{ title: string; path: string; recipe: string }>) => ({
+      calls: [
+        {
+          name: "propose_plan",
+          params: {
+            plan: {
+              summary: "News for the summer school.",
+              pages: pages.map((page) => ({
+                ...page,
+                sections: [{ type: "rich-text", purpose: "What it says" }],
+              })),
+            },
+          },
+        },
+      ],
+    });
+
+    it.effect("is refused when a post isn't directly under a blog", () =>
+      Effect.gen(function* () {
+        const { state, calls } = yield* turnWith(
+          [plan({ title: "First post", path: "/stories/first-post", recipe: "post" })],
+          "Plan a first post",
+        );
+        expect(state.parts.some((part) => part._tag === "Plan")).toBe(false);
+        expect(JSON.stringify(calls[1]?.prompt)).toContain(
+          "/stories/first-post isn't directly under a blog in the draft or this plan",
+        );
+      }),
+    );
+
+    it.effect("is shown when each post is under a blog the plan or the draft has", () =>
+      Effect.gen(function* () {
+        const { state } = yield* turnWith(
+          [
+            plan(
+              { title: "Stories", path: "/stories", recipe: "blog" },
+              { title: "First story", path: "/stories/first-story", recipe: "post" },
+              { title: "Launch day", path: "/news/launch-day", recipe: "post" },
+            ),
+          ],
+          "Plan a stories blog, and a post for News",
+          { draft: newsDraft },
+        );
+        expect(state.parts).toMatchObject([{ _tag: "Plan", status: "proposed" }]);
+      }),
+    );
+  });
 
   it.effect("fetches only addresses the person gave", () =>
     Effect.gen(function* () {
@@ -339,6 +407,7 @@ it("the agent has only the tools the design gives it, none of which submits or p
     "apply_ops",
     "ask_user",
     "check_draft",
+    "create_entry",
     "create_page",
     "fetch_url",
     "get_block_contract",

@@ -2,7 +2,7 @@ import { SitePlan } from "@repo/contracts/agent";
 import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, PageId, SourceId } from "@repo/contracts/ids";
 import { MetaField, SetRedirect } from "@repo/contracts/ops";
-import { PagePath } from "@repo/contracts/page";
+import { PagePath, Slug } from "@repo/contracts/page";
 import { MenuItem, Menus } from "@repo/contracts/site";
 import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
@@ -122,7 +122,19 @@ export const AgentOp = Schema.Union([
   }),
   Schema.Struct({ op: Schema.Literal("removeBlock"), block: BlockId }),
   Schema.Struct({ op: Schema.Literal("setMeta"), field: MetaField, value: Json }),
-  Schema.Struct({ op: Schema.Literal("setPath"), path: PagePath }),
+  Schema.Struct({
+    op: Schema.Literal("setPath"),
+    path: PagePath.annotate({
+      description: "A page's or blog's new address. A blog's posts follow it",
+    }),
+  }),
+  Schema.Struct({
+    op: Schema.Literal("setSlug"),
+    slug: Slug.annotate({
+      description:
+        "A post's new slug, the last part of its address after its blog's, such as dates-announced",
+    }),
+  }),
   Schema.Struct({
     op: Schema.Literal("setStatus"),
     status: Schema.Literal("published").annotate({
@@ -158,14 +170,15 @@ export const AgentOp = Schema.Union([
 export type AgentOp = typeof AgentOp.Type;
 
 export const GetSiteOutline = Tool.make("get_site_outline", {
-  description: "Every page of the draft, and each section on it, one line per section",
+  description:
+    "Every page and blog of the draft, and each section on it, one line per section, with each blog's newest posts",
   success: Schema.String,
   dependencies: [Workspace, Turn],
 });
 
 export const GetPage = Tool.make("get_page", {
   description:
-    'A page\'s address, meta and the full content of its sections, or of the ones chosen. Rich text is Markdown. "site" gives the header and footer, the menus, the redirects and the forms',
+    'A page\'s address, meta and the full content of its sections, or of the ones chosen. Rich text is Markdown. A blog lists all its posts; a post gives its blog and slug. "site" gives the header and footer, the menus, the redirects and the forms',
   parameters: Schema.Struct({
     page: Target,
     blocks: Schema.optionalKey(
@@ -234,26 +247,50 @@ export const InsertSection = Tool.make("insert_section", {
   dependencies: [Workspace, Turn],
 });
 
+const SearchDescription = Schema.String.annotate({
+  description: "For search results, at most 160 characters",
+});
+
+const StartingSections = Schema.optionalKey(
+  Schema.Array(BlockType).annotate({
+    description: "The section types to start with, in order. Leave out for the recipe's own",
+  }),
+);
+
+const CreatedSections = Schema.Array(Schema.Struct({ block: BlockId, type: BlockType }));
+
 export const CreatePage = Tool.make("create_page", {
   description:
-    "Creates a page or blog from a recipe, with its sections holding placeholder content to fill in",
+    "Creates a page or blog from a recipe, with its sections holding placeholder content to fill in. A blog's list of posts shows the blog itself",
   parameters: Schema.Struct({
     recipe: Schema.String,
     title: Schema.String,
-    description: Schema.String.annotate({
-      description: "For search results, at most 160 characters",
-    }),
+    description: SearchDescription,
     path: PagePath,
-    sections: Schema.optionalKey(
-      Schema.Array(BlockType).annotate({
-        description: "The section types to start with, in order. Leave out for the recipe's own",
+    sections: StartingSections,
+  }),
+  success: Schema.Struct({ page: PageId, sections: CreatedSections }),
+  failure: Problems,
+  failureMode: "return",
+  dependencies: [Workspace, Turn],
+});
+
+export const CreateEntry = Tool.make("create_entry", {
+  description:
+    "Creates a post in a blog from the post recipe, dated today, with the person you work for as its author, and its sections holding placeholder content to fill in. Its address is the blog's address and its slug. Change its date, author, excerpt, tags or cover with setMeta",
+  parameters: Schema.Struct({
+    collection: PageId.annotate({ description: "The ID of the blog it goes in" }),
+    title: Schema.String,
+    slug: Schema.optionalKey(
+      Slug.annotate({
+        description:
+          "The last part of its address, such as dates-announced. Leave out to make one from the title",
       }),
     ),
+    description: SearchDescription,
+    sections: StartingSections,
   }),
-  success: Schema.Struct({
-    page: PageId,
-    sections: Schema.Array(Schema.Struct({ block: BlockId, type: BlockType })),
-  }),
+  success: Schema.Struct({ page: PageId, path: PagePath, sections: CreatedSections }),
   failure: Problems,
   failureMode: "return",
   dependencies: [Workspace, Turn],
@@ -338,6 +375,7 @@ export const AgentTools = Toolkit.make(
   ApplyOps,
   InsertSection,
   CreatePage,
+  CreateEntry,
   GetPreviewLink,
   FetchUrl,
   AskUser,

@@ -6,7 +6,7 @@ import { Effect, Layer } from "effect";
 import { Chat } from "effect/unstable/ai";
 
 import { runTurn } from "../src/turn.ts";
-import { draftToFix, harbourDraft } from "./support/draft.ts";
+import { draftToFix, harbourDraft, sampleListDraft } from "./support/draft.ts";
 import { type Reply, scriptedModel } from "./support/model.ts";
 import { desk } from "./support/workspace.ts";
 
@@ -189,6 +189,39 @@ describe("fixing what the checks found", () => {
       );
       expect(left).toEqual(["NoFormEmails"]);
       expect(state.draft.forms[FormId.make("frm_signup")]?.name).toBe("Sign up");
+    }),
+  );
+
+  it.effect("points a list still on the sample posts at the site's blog", () =>
+    Effect.gen(function* () {
+      const { calls, left } = yield* fixing(
+        [
+          { calls: [{ name: "check_draft", params: {} }] },
+          {
+            calls: [
+              {
+                name: "apply_ops",
+                params: {
+                  page: "pg_home",
+                  ops: [
+                    {
+                      op: "setProp",
+                      block: "b_latest",
+                      path: ["collection"],
+                      value: { $ref: "page", id: "pg_news" },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        sampleListDraft,
+      );
+      expect(JSON.stringify(calls[1]?.prompt)).toContain(
+        "field collection: still shows sample posts",
+      );
+      expect(left).toEqual([]);
     }),
   );
 

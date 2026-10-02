@@ -1,10 +1,17 @@
 import { type Field, fieldAt } from "@repo/blocks/fields";
-import { placeholderMedia, placeholderTree } from "@repo/blocks/placeholders";
+import {
+  collectionFor,
+  placeholderMedia,
+  placeholderTree,
+  withCollections,
+} from "@repo/blocks/placeholders";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
-import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
+import type { BlockId, BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { BatchError, BlockTree, ItemTree, Op, Target } from "@repo/contracts/ops";
 import { pageName } from "@repo/contracts/page";
 import { MediaRef } from "@repo/contracts/references";
+import { addressOf, listingsOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
 import { Result, Schema } from "effect";
 
@@ -28,7 +35,7 @@ const describe = ({ path, message }: ContentProblem) =>
   path.length === 0 ? message : `${path.join(".")}: ${message}`;
 
 /** A new block from the agent's description, with placeholder content for whatever it left out. */
-export const buildBlock = (
+const buildBlock = (
   contracts: BlockContracts,
   spec: NewBlock,
 ): Result.Result<BlockTree, string> => {
@@ -80,6 +87,22 @@ export const buildBlock = (
       },
     };
   return Result.succeed(block);
+};
+
+/**
+ * A new section for a page, as `buildBlock` makes it, with a listing left on
+ * the sample posts pointed at the blog `collectionFor` picks for the page.
+ */
+export const newSection = (
+  draft: Draft,
+  contracts: BlockContracts,
+  page: PageId,
+  spec: NewBlock,
+): Result.Result<BlockTree, string> => {
+  const listings = listingsOf(draft.pages);
+  return Result.map(buildBlock(contracts, spec), (tree) =>
+    withCollections(tree, contracts, (kind) => collectionFor(listings, page, kind)),
+  );
 };
 
 const blockType = (draft: Draft, target: Target, block: BlockId): BlockType | undefined =>
@@ -135,7 +158,7 @@ export const toOps = (
         return;
       case "insertBlock": {
         if (target === "site") return structural(index);
-        const block = buildBlock(contracts, edit.block);
+        const block = newSection(draft, contracts, target, edit.block);
         if (Result.isFailure(block)) problems.push(`op ${index + 1}: ${block.failure}`);
         else
           ops.push({
@@ -165,9 +188,22 @@ export const toOps = (
         if (target === "site") return structural(index);
         ops.push({ op: "setMeta", page: target, field: edit.field, value: edit.value });
         return;
-      case "setPath":
+      case "setPath": {
         if (target === "site") return structural(index);
+        const page = draft.pages[target];
+        if (page?.type === "entry") {
+          const { names } = collectionKinds[page.kind];
+          problems.push(
+            `op ${index + 1}: ${pageName(page)} is a ${names.one}, so its address is its ${names.kind.toLowerCase()}'s and its slug. Change the slug with setSlug instead.`,
+          );
+          return;
+        }
         ops.push({ op: "setPath", page: target, path: edit.path });
+        return;
+      }
+      case "setSlug":
+        if (target === "site") return structural(index);
+        ops.push({ op: "setSlug", page: target, slug: edit.slug });
         return;
       case "setStatus":
         if (target === "site") return structural(index);
@@ -320,8 +356,22 @@ export const describeOps = (
         return `Changed the ${first.field}`;
       case "setPath":
         return `Changed the address to ${first.path}`;
-      case "createPage":
-        return `Created the ${pageName(first.page)} page`;
+      case "setSlug": {
+        const page = before.pages[first.page];
+        return page?.type === "entry"
+          ? `Changed the address to ${addressOf(before.pages, { ...page, slug: first.slug })}`
+          : `Changed the slug to ${first.slug}`;
+      }
+      case "createPage": {
+        const { page } = first;
+        const kind =
+          page.type === "page"
+            ? "page"
+            : page.type === "collection"
+              ? collectionKinds[page.kind].names.kind.toLowerCase()
+              : collectionKinds[page.kind].names.one;
+        return `Created the ${pageName(page)} ${kind}`;
+      }
       case "setStatus":
         return `Published ${where} again in the draft`;
       case "setMenu":

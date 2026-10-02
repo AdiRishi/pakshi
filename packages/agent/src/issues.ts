@@ -1,8 +1,9 @@
-import { fieldAt } from "@repo/blocks/fields";
+import { type Field, fieldAt } from "@repo/blocks/fields";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { NamedBlock, Place } from "@repo/contracts/merge";
 import type { PropPath } from "@repo/contracts/ops";
-import { pageName } from "@repo/contracts/page";
+import { type CollectionKind, pageName } from "@repo/contracts/page";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
 
@@ -20,12 +21,15 @@ import type { BlockContracts } from "@repo/domain/document";
  */
 export type PersonOnly = "image" | "alt-text" | "settings";
 
-/** The kind of field a block issue is about, at the version the draft pins. */
-const fieldKind = (
+/**
+ * The field a block issue is about, at the version the draft pins, or "alt"
+ * for an image's alt text.
+ */
+const fieldOf = (
   draft: Draft,
   contracts: BlockContracts,
   issue: { readonly place: Place; readonly block: NamedBlock; readonly path: PropPath },
-) => {
+): Field | "alt" | null => {
   const holder = issue.place.target === "site" ? draft.parts : draft.pages[issue.place.target];
   const type = holder?.blocks[issue.block.id]?.type;
   const fields = type === undefined ? undefined : contracts.get(type)?.fields;
@@ -33,7 +37,7 @@ const fieldKind = (
   // An image's alt text is a part of its media field, after the field's own path.
   if (issue.path.at(-1) === "alt" && fieldAt(fields, issue.path.slice(0, -1))?.kind === "media")
     return "alt";
-  return fieldAt(fields, issue.path)?.kind ?? null;
+  return fieldAt(fields, issue.path) ?? null;
 };
 
 /** Why only a person can fix an issue, or null when the agent can. */
@@ -45,8 +49,8 @@ export const personOnly = (
   switch (issue._tag) {
     case "Incomplete":
     case "Placeholder": {
-      const kind = fieldKind(draft, contracts, issue);
-      return kind === "alt" ? "alt-text" : kind === "media" ? "image" : null;
+      const field = fieldOf(draft, contracts, issue);
+      return field === "alt" ? "alt-text" : field?.kind === "media" ? "image" : null;
     }
     case "NoFormEmails":
       return "settings";
@@ -71,22 +75,54 @@ const forPerson: Readonly<Record<PersonOnly, string>> = {
 const blockAt = (place: Place, block: NamedBlock) =>
   `${place.title} (${place.target}), ${block.title} block ${block.id}`;
 
-/** Where a link to a page that isn't served goes, and how to mend it. */
+/**
+ * Where a link to a page that isn't served goes, and how to mend it. An entry
+ * isn't served while it or its collection is unpublished.
+ */
 const brokenTo = (draft: Draft, issue: Extract<CheckIssue, { readonly _tag: "BrokenLink" }>) => {
   const linked = draft.pages[issue.page];
-  return linked === undefined
-    ? `links to ${issue.page}, a page that no longer exists. Point it at a page that does, or remove the link.`
-    : `links to ${issue.page} "${pageName(linked)}", which is unpublished in this draft. Point it at a published page, or ask the person whether to publish ${issue.page} again with setStatus.`;
+  if (linked === undefined)
+    return `links to ${issue.page}, a page that no longer exists. Point it at a page that does, or remove the link.`;
+  const collection = linked.type === "entry" ? draft.pages[linked.collection] : undefined;
+  const unpublished = [linked, ...(collection === undefined ? [] : [collection])]
+    .filter((page) => page.status === "unpublished")
+    .map((page) => `${page.id} "${pageName(page)}"`);
+  const where =
+    linked.type === "entry" && collection?.status === "unpublished"
+      ? `a ${collectionKinds[linked.kind].names.one} in ${collection.id} "${pageName(collection)}", which is unpublished`
+      : "which is unpublished";
+  return `links to ${issue.page} "${pageName(linked)}", ${where} in this draft. Point it at a published page, or ask the person whether to publish ${unpublished.join(" and ")} again with setStatus.`;
+};
+
+/** What a collection field still on the sample entries needs, given the draft's collections of its kind. */
+const placeholderCollection = (draft: Draft, kind: CollectionKind) => {
+  const { names } = collectionKinds[kind];
+  const collections = Object.values(draft.pages).flatMap((page) =>
+    page.type === "collection" && page.kind === kind ? [`${page.id} "${pageName(page)}"`] : [],
+  );
+  const one = names.kind.toLowerCase();
+  return collections.length === 0
+    ? `still shows sample ${names.many}, and the draft has no ${one}. Ask the person whether to create one, then point the field at it with setProp.`
+    : `still shows sample ${names.many}. Point it at the ${one} it should show with setProp, as {"$ref": "page", "id": "pg_…"}: ${collections.join(", ")}.${collections.length > 1 ? ` Ask the person which ${one} when it isn't clear.` : ""}`;
 };
 
 const describe = (issue: CheckIssue, draft: Draft, contracts: BlockContracts) => {
   switch (issue._tag) {
     case "Incomplete":
       return `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: ${issue.message}.`;
-    case "Placeholder":
-      return fieldKind(draft, contracts, issue) === "form"
-        ? `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: still the placeholder form. Point it at one of the draft's forms, or add one with setForm and point it there.`
-        : `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: still the block's placeholder content.`;
+    case "Placeholder": {
+      const at = `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}`;
+      const field = fieldOf(draft, contracts, issue);
+      if (field === "alt" || field === null) return `${at}: still the block's placeholder content.`;
+      switch (field.kind) {
+        case "form":
+          return `${at}: still the placeholder form. Point it at one of the draft's forms, or add one with setForm and point it there.`;
+        case "collection":
+          return `${at}: ${placeholderCollection(draft, field.collectionKind)}`;
+        default:
+          return `${at}: still the block's placeholder content.`;
+      }
+    }
     case "MissingMeta":
       return `${issue.place.title} (${issue.place.target}): no ${issue.field}. Set it with setMeta.`;
     case "BrokenLink":
