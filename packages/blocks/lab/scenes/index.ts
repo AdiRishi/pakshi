@@ -2,7 +2,12 @@ import type { Menus } from "@repo/contracts/site";
 import type { Surface } from "@repo/tokens";
 import type { Json } from "effect/Schema";
 
+import { conference } from "./conference.ts";
 import { landing } from "./landing.ts";
+import { luxury } from "./luxury.ts";
+import { museum } from "./museum.ts";
+import { nonprofit } from "./nonprofit.ts";
+import { product } from "./product.ts";
 
 export interface SceneBlock {
   readonly type: string;
@@ -31,4 +36,11 @@ export interface Scene {
   readonly sections: ReadonlyArray<SceneBlock>;
 }
 
-export const scenes: ReadonlyArray<Scene> = [landing];
+export const scenes: ReadonlyArray<Scene> = [
+  landing,
+  product,
+  luxury,
+  museum,
+  nonprofit,
+  conference,
+];

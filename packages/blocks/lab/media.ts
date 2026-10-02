@@ -24,3 +24,16 @@ export const labMedia = new Map<string, ResolvedMedia>([
   ["med_square3", photo("square-three", 1200, 1200)],
   ["med_square4", photo("square-four", 1200, 1200)],
 ]);
+
+/** A portrait of a real-looking person, from randomuser.me, for people blocks. */
+const face = (gender: "men" | "women", n: number): ResolvedMedia => ({
+  src: `https://randomuser.me/api/portraits/${gender}/${n}.jpg`,
+  width: 512,
+  height: 512,
+});
+
+for (const [index, seed] of ["a", "b", "c", "d", "e", "f", "g", "h"].entries()) {
+  labMedia.set(`med_photo${seed}`, photo(`pakshi-${seed}`, 1800, 1200));
+  labMedia.set(`med_tall${seed}`, photo(`pakshi-tall-${seed}`, 1200, 1500));
+  labMedia.set(`med_face${seed}`, face(index % 2 === 0 ? "women" : "men", 20 + index * 7));
+}
