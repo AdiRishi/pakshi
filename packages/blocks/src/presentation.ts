@@ -137,17 +137,10 @@ interface PresentationFile {
   readonly order?: number;
   readonly item?: ItemNaming;
   readonly variants: Readonly<Record<string, LayoutLabel>>;
-  readonly fields?: Readonly<Record<string, FieldLabel | undefined>>;
+  readonly fields?: Readonly<Record<string, FieldLabel>>;
   readonly lists?: Readonly<Record<string, ItemNaming>>;
-  readonly needs?: Readonly<Record<string, ReadonlyArray<string> | undefined>>;
+  readonly needs?: Readonly<Record<string, ReadonlyArray<string>>>;
 }
-
-const defined = <T>(record: Readonly<Record<string, T | undefined>> | undefined) =>
-  Object.fromEntries(
-    Object.entries(record ?? {}).flatMap(([key, value]) =>
-      value === undefined ? [] : [[key, value] as const],
-    ),
-  );
 
 const presentationOfFile = (type: BlockType, file: PresentationFile): BlockPresentation => ({
   type,
@@ -157,9 +150,9 @@ const presentationOfFile = (type: BlockType, file: PresentationFile): BlockPrese
   order: file.order ?? null,
   item: file.item ?? null,
   variants: file.variants,
-  fields: defined(file.fields),
+  fields: file.fields ?? {},
   lists: file.lists ?? {},
-  needs: defined(file.needs),
+  needs: file.needs ?? {},
 });
 
 /** Every block type's presentation, by type. */
