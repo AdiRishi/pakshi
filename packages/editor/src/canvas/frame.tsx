@@ -137,6 +137,28 @@ const setStyle = (document: Document | undefined, name: string, css: string) => 
   if (style !== null && style !== undefined) style.textContent = css;
 };
 
+/** A press in a frame as Studio's document would see it, at its place on Studio's screen. */
+const pressIn = (frame: HTMLIFrameElement, event: MouseEvent): MouseEventInit => {
+  const box = frame.getBoundingClientRect();
+  const scale = frame.offsetWidth === 0 ? 1 : box.width / frame.offsetWidth;
+  return {
+    bubbles: true,
+    cancelable: true,
+    composed: true,
+    detail: event.detail,
+    button: event.button,
+    buttons: event.buttons,
+    clientX: box.left + event.clientX * scale,
+    clientY: box.top + event.clientY * scale,
+    screenX: event.screenX,
+    screenY: event.screenY,
+    altKey: event.altKey,
+    ctrlKey: event.ctrlKey,
+    metaKey: event.metaKey,
+    shiftKey: event.shiftKey,
+  };
+};
+
 /**
  * A same-origin frame that Studio's React tree renders into through a portal.
  * It loads only the site stylesheet, a theme in one color scheme and
@@ -198,6 +220,37 @@ export function Frame(props: {
   useEffect(() => {
     if (root === null && frame.current?.contentDocument?.readyState === "complete") attach();
   });
+
+  // Studio's popovers and menus close on a press outside them, which they
+  // listen for on Studio's document. A press in the frame never reaches it, so
+  // it's repeated on Studio's <html>. Not on the frame element, whose React
+  // handlers already saw the press through the portal.
+  useEffect(() => {
+    const inside = root?.ownerDocument;
+    const element = frame.current;
+    const host = element?.ownerDocument.defaultView;
+    if (inside === undefined || element === null || host === null || host === undefined) return;
+    const target = host.document.documentElement;
+    const passPointer = (event: PointerEvent) =>
+      target.dispatchEvent(
+        new host.PointerEvent(event.type, {
+          ...pressIn(element, event),
+          pointerId: event.pointerId,
+          pointerType: event.pointerType,
+          isPrimary: event.isPrimary,
+        }),
+      );
+    const passMouse = (event: MouseEvent) =>
+      target.dispatchEvent(new host.MouseEvent(event.type, pressIn(element, event)));
+    inside.addEventListener("pointerdown", passPointer, true);
+    inside.addEventListener("mousedown", passMouse, true);
+    inside.addEventListener("click", passMouse, true);
+    return () => {
+      inside.removeEventListener("pointerdown", passPointer, true);
+      inside.removeEventListener("mousedown", passMouse, true);
+      inside.removeEventListener("click", passMouse, true);
+    };
+  }, [root]);
 
   useEffect(() => setStyle(root?.ownerDocument, "fonts", fonts), [root, fonts]);
   useEffect(() => setStyle(root?.ownerDocument, "theme", variables), [root, variables]);

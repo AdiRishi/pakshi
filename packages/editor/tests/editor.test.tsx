@@ -747,4 +747,12 @@ describe("editing structure", () => {
     await expect.element(page.getByRole("option")).toHaveLength(1);
     await expect.poll(placement).toEqual({ onScreen: true, besidePoint: true });
   });
+
+  test("a press on the page closes the picker, as a press anywhere else in Studio does", async () => {
+    await open();
+    await userEvent.click(page.getByRole("button", { name: "Add a section" }));
+    await expect.element(page.getByPlaceholder("Search blocks")).toBeVisible();
+    await userEvent.click(page.getByTitle(/^Canvas:/), { position: { x: 900, y: 600 } });
+    await expect.element(page.getByPlaceholder("Search blocks")).not.toBeInTheDocument();
+  });
 });
