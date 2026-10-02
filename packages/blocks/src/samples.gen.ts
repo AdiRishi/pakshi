@@ -21,6 +21,7 @@ import postList from "./post-list/sample.ts";
 import quote from "./quote/sample.ts";
 import richText from "./rich-text/sample.ts";
 import split from "./split/sample.ts";
+import statement from "./statement/sample.ts";
 import stats from "./stats/sample.ts";
 import teamGrid from "./team-grid/sample.ts";
 import teamMember from "./team-member/sample.ts";
@@ -49,6 +50,7 @@ export const samples = {
   "quote": quote,
   "rich-text": richText,
   "split": split,
+  "statement": statement,
   "stats": stats,
   "team-grid": teamGrid,
   "team-member": teamMember,

@@ -105,6 +105,10 @@ import split2bleed from "./split/v2/fixtures/bleed.json" with { type: "json" };
 import split2placeholder from "./split/v2/fixtures/placeholder.json" with { type: "json" };
 import split2standardFramed from "./split/v2/fixtures/standard-framed.json" with { type: "json" };
 import split2standard from "./split/v2/fixtures/standard.json" with { type: "json" };
+import statement1brand from "./statement/v1/fixtures/brand.json" with { type: "json" };
+import statement1center from "./statement/v1/fixtures/center.json" with { type: "json" };
+import statement1placeholder from "./statement/v1/fixtures/placeholder.json" with { type: "json" };
+import statement1start from "./statement/v1/fixtures/start.json" with { type: "json" };
 import stats1cards from "./stats/v1/fixtures/cards.json" with { type: "json" };
 import stats1placeholder from "./stats/v1/fixtures/placeholder.json" with { type: "json" };
 import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
@@ -229,6 +233,10 @@ export const fixtureFiles = [
   { type: "split", version: 2, name: "placeholder", fixture: split2placeholder },
   { type: "split", version: 2, name: "standard-framed", fixture: split2standardFramed },
   { type: "split", version: 2, name: "standard", fixture: split2standard },
+  { type: "statement", version: 1, name: "brand", fixture: statement1brand },
+  { type: "statement", version: 1, name: "center", fixture: statement1center },
+  { type: "statement", version: 1, name: "placeholder", fixture: statement1placeholder },
+  { type: "statement", version: 1, name: "start", fixture: statement1start },
   { type: "stats", version: 1, name: "cards", fixture: stats1cards },
   { type: "stats", version: 1, name: "placeholder", fixture: stats1placeholder },
   { type: "stats", version: 1, name: "row", fixture: stats1row },

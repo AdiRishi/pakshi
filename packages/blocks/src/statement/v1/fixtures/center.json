@@ -1,0 +1,11 @@
+{
+  "variant": "center",
+  "surface": "inverse",
+  "props": {
+    "size": "huge",
+    "heading": "The harbour taught us everything we know.",
+    "headingRest": "Now we hand it on, one boat at a time.",
+    "name": "Mei Chen",
+    "role": "Founder, Harbour Summer School"
+  }
+}

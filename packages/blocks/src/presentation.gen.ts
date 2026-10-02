@@ -21,6 +21,7 @@ import postList from "./post-list/presentation.ts";
 import quote from "./quote/presentation.ts";
 import richText from "./rich-text/presentation.ts";
 import split from "./split/presentation.ts";
+import statement from "./statement/presentation.ts";
 import stats from "./stats/presentation.ts";
 import teamGrid from "./team-grid/presentation.ts";
 import teamMember from "./team-member/presentation.ts";
@@ -49,6 +50,7 @@ export const presentations = {
   "quote": quote,
   "rich-text": richText,
   "split": split,
+  "statement": statement,
   "stats": stats,
   "team-grid": teamGrid,
   "team-member": teamMember,
