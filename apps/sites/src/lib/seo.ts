@@ -1,13 +1,22 @@
-import type { PageDocument, PagePath } from "@repo/contracts/page";
+import { collectionKinds } from "@repo/contracts/collections";
+import { pageName, type PageDocument, type PagePath } from "@repo/contracts/page";
 import { MediaRef, type Link } from "@repo/contracts/references";
-import type { PageListing, SnapshotManifest } from "@repo/contracts/snapshot";
-import { Predicate, Schema } from "effect";
+import {
+  entryAddress,
+  type PageListing,
+  type SnapshotManifest,
+  type SnapshotPage,
+} from "@repo/contracts/snapshot";
+import { Order, Predicate, Schema } from "effect";
 
 /*
- * What `sites` tells search engines and link previews about a site: each
- * page's sharing card, where a redirect goes, the sitemap and robots.txt.
- * Everything comes from the live snapshot.
+ * What `sites` tells search engines, feed readers and link previews about a
+ * site: each page's sharing card, where a redirect goes, the sitemap,
+ * robots.txt and each blog's feed. Everything comes from the live snapshot.
  */
+
+type Collection = Extract<PageListing, { readonly type: "collection" }>;
+type Entry = Extract<SnapshotPage, { readonly type: "entry" }>;
 
 const isMediaRef = Schema.is(MediaRef);
 const isJsonObject = Schema.is(Schema.JsonObject);
@@ -74,12 +83,29 @@ export const pageMeta = (
   };
 };
 
-/** Where an address that no page has sends visitors, or null when it doesn't. */
+/**
+ * Where an address that no page has sends visitors, or null when it doesn't.
+ * A redirect from a blog's old address also covers its posts there: when
+ * `/news` redirects to a blog, `/news/{slug}` goes to that blog's post with
+ * the slug, wherever the blog is now.
+ */
 export const redirectFor = (manifest: SnapshotManifest, path: PagePath) => {
   const to: Link | undefined = manifest.redirects[path];
-  if (to === undefined) return null;
-  if (Predicate.isString(to)) return to;
-  return manifest.pages.find((page) => page.id === to.id)?.path ?? null;
+  if (to !== undefined)
+    return Predicate.isString(to)
+      ? to
+      : (manifest.pages.find((page) => page.id === to.id)?.path ?? null);
+  const slash = path.lastIndexOf("/");
+  const slug = path.slice(slash + 1);
+  const parent = manifest.redirects[slash === 0 ? "/" : path.slice(0, slash)];
+  if (slug === "" || parent === undefined || Predicate.isString(parent)) return null;
+  const blog = manifest.pages.find((page) => page.id === parent.id);
+  if (blog?.type !== "collection") return null;
+  const address = entryAddress(blog.path, slug);
+  const post = manifest.pages.find(
+    (page) => page.type === "entry" && page.collection === blog.id && page.path === address,
+  );
+  return post?.path ?? null;
 };
 
 /** The pages search engines may list. */
@@ -95,6 +121,47 @@ export const sitemap = (manifest: SnapshotManifest, origin: string) =>
     ),
     "</urlset>",
   ].join("\n");
+
+/** The address of a blog's feed, just below the blog's own. */
+export const feedAddress = (blog: PagePath) => (blog === "/" ? "/rss.xml" : `${blog}/rss.xml`);
+
+/** A feed holds a blog's newest posts, as many as feed readers usually fetch. */
+const feedLength = 50;
+
+const rfc822 = (date: string) => new Date(`${date}T00:00:00Z`).toUTCString();
+
+/**
+ * A blog's RSS feed: its newest served posts in the blog's order. Each post's
+ * guid is its page ID, so moving the blog doesn't show its posts again as new.
+ */
+export const collectionFeed = (
+  manifest: SnapshotManifest,
+  collection: Collection,
+  origin: string,
+) => {
+  const order = Order.mapInput(
+    collectionKinds[collection.kind].order,
+    (entry: Entry) => entry.meta,
+  );
+  const entries = manifest.pages
+    .filter((page): page is Entry => page.type === "entry" && page.collection === collection.id)
+    .toSorted(order)
+    .slice(0, feedLength);
+  const name = pageName(collection);
+  const site = manifest.settings.name;
+  const title = name === site ? name : `${name} · ${site}`;
+  return [
+    '<?xml version="1.0" encoding="UTF-8"?>',
+    '<rss version="2.0">',
+    `<channel><title>${escapeXml(title)}</title><link>${escapeXml(`${origin}${collection.path}`)}</link><description>${escapeXml(collection.meta.description)}</description>`,
+    ...entries.map(
+      (entry) =>
+        `<item><title>${escapeXml(entry.meta.title)}</title><link>${escapeXml(`${origin}${entry.path}`)}</link><guid isPermaLink="false">${entry.id}</guid><pubDate>${rfc822(entry.meta.date)}</pubDate><description>${escapeXml(entry.meta.excerpt)}</description></item>`,
+    ),
+    "</channel>",
+    "</rss>",
+  ].join("\n");
+};
 
 export const robots = (origin: string) =>
   ["User-agent: *", "Allow: /", `Sitemap: ${origin}/sitemap.xml`, ""].join("\n");
