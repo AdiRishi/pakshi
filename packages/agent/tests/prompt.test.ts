@@ -56,7 +56,10 @@ describe("what the agent is told with each message", () => {
     expect(context({ selected, typing: [] })).toContain(
       [
         "Selected: b_about, a Text block (rich-text). Its fields by path, with the names people see:",
+        '  kicker "Small line above the heading": empty',
         '  heading "Heading": "About"',
+        '  headingRest "Rest of the heading": empty',
+        '  intro "Introduction": empty',
         '  body "Text": "We build boats."',
         "Their cursor is in body.",
       ].join("\n"),
@@ -65,7 +68,7 @@ describe("what the agent is told with each message", () => {
 
   test("names the field each section's text in the outline comes from", () => {
     expect(context({ selected: null, typing: [] })).toContain(
-      '  b_about rich-text (narrow, default): heading "About"',
+      '  b_about rich-text (article, default): heading "About"',
     );
   });
 

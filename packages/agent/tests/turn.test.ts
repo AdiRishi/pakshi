@@ -170,7 +170,7 @@ describe("a turn", () => {
     "returns refused changes to the model, and after two repairs has it explain instead",
     () =>
       Effect.gen(function* () {
-        const tooLong = "x".repeat(81);
+        const tooLong = "x".repeat(91);
         const { state, calls } = yield* turnWith([
           { calls: [{ name: "apply_ops", params: heading(tooLong) }] },
           { calls: [{ name: "apply_ops", params: heading(tooLong) }] },
@@ -181,7 +181,7 @@ describe("a turn", () => {
         expect(calls).toHaveLength(4);
         expect(calls.slice(0, 3).map((call) => call.toolChoice)).toEqual(["auto", "auto", "auto"]);
         expect(calls[3]?.toolChoice).toBe("none");
-        expect(JSON.stringify(calls[1]?.prompt)).toContain("Use at most 80 characters");
+        expect(JSON.stringify(calls[1]?.prompt)).toContain("Use at most 90 characters");
         expect(
           state.parts.filter((part) => part._tag === "Activity").map((part) => part.status),
         ).toEqual(["failed", "failed", "failed"]);

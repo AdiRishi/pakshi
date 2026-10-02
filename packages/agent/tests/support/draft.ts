@@ -1,3 +1,4 @@
+import { latestLockfile } from "@repo/blocks";
 import { placeholderCollection } from "@repo/blocks/placeholders";
 import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
@@ -20,31 +21,14 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     header: "b_header",
     footer: "b_footer",
     blocks: {
-      b_header: { type: "header", variant: "simple", surface: "default", props: {} },
+      b_header: { type: "header", variant: "standard", surface: "default", props: {} },
       b_footer: { type: "footer", variant: "simple", surface: "muted", props: {} },
     },
     menus: { main: [], footer: [] },
   },
   forms: {},
   redirects: {},
-  lockfile: {
-    ...Object.fromEntries(
-      [
-        "call-to-action",
-        "feature-grid",
-        "feature-item",
-        "footer",
-        "form-section",
-        "gallery",
-        "header",
-        "hero",
-        "post-header",
-        "rich-text",
-        "split",
-      ].map((type) => [type, 1]),
-    ),
-    "post-list": 2,
-  },
+  lockfile: latestLockfile,
   brand: {
     brand: "brand_harbour",
     number: 1,
@@ -62,18 +46,24 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
       blocks: {
         b_hero: {
           type: "hero",
-          variant: "centered",
+          variant: "stacked",
           surface: "brand",
           props: {
             heading: "Learn by building",
             body: paragraph("Five days of workshops."),
             image: { $ref: "media", id: "med_harbour", alt: "Boats in the harbour" },
-            cta: { label: "Register", link: "https://harbour.example/register" },
+            actions: [
+              {
+                id: "it_register",
+                button: { label: "Register", link: "https://harbour.example/register" },
+              },
+            ],
+            points: [],
           },
         },
         b_about: {
           type: "rich-text",
-          variant: "narrow",
+          variant: "article",
           surface: "default",
           props: { heading: "About", body: paragraph("We build boats.") },
         },
@@ -116,22 +106,30 @@ export const draftToFix: Draft = Schema.decodeSync(Draft)({
       blocks: {
         b_hero: {
           type: "hero",
-          variant: "centered",
+          variant: "stacked",
           surface: "brand",
           props: {
             heading: "Learn by building",
             body: paragraph("Five days of workshops."),
             image: { $ref: "media", id: "med_harbour" },
-            cta: { label: "Register", link: "https://harbour.example/register" },
+            actions: [
+              {
+                id: "it_register",
+                button: { label: "Register", link: "https://harbour.example/register" },
+              },
+            ],
+            points: [],
           },
         },
         b_visit: {
           type: "split",
-          variant: "image-right",
+          variant: "standard",
           surface: "default",
           props: {
             heading: "Visit the yard",
             body: paragraph("Open daily."),
+            points: [],
+            actions: [],
             image: { $ref: "media", id: "med_pakshiArch", alt: "" },
           },
         },
@@ -142,6 +140,7 @@ export const draftToFix: Draft = Schema.decodeSync(Draft)({
           props: {
             heading: "Ask us anything",
             intro: "We reply within a day.",
+            points: [],
             form: { $ref: "form", id: "frm_contact" },
           },
         },

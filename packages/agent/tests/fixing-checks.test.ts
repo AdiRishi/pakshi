@@ -57,6 +57,7 @@ const withPlaceholderForm = (draft: Draft): Draft => {
             props: {
               heading: "Sign up for the summer school",
               intro: "We'll email you the timetable.",
+              points: [],
               form: { $ref: "form", id: "frm_pakshiContact" },
             },
           },

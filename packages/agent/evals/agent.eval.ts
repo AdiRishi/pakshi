@@ -142,11 +142,11 @@ const edits: ReadonlyArray<Task> = [
     Effect.map(
       converse({
         draft: harbourDraft,
-        messages: ["Use the split-image layout for the hero."],
+        messages: ["Use the split layout for the hero."],
       }),
       ({ state }) =>
         outcome(
-          blockOf(state.draft, "b_hero")?.variant === "split-image",
+          blockOf(state.draft, "b_hero")?.variant === "split",
           () => `variant is ${blockOf(state.draft, "b_hero")?.variant}`,
         ),
     ),
@@ -211,10 +211,10 @@ const edits: ReadonlyArray<Task> = [
         messages: ["Change the hero's button to say 'Book a place'."],
       }),
       ({ state }) => {
-        const cta = prop(state.draft, "b_hero", "cta");
+        const buttons = prop(state.draft, "b_hero", "actions");
         return outcome(
-          JSON.stringify(cta).includes("Book a place"),
-          () => `button is ${JSON.stringify(cta)}`,
+          JSON.stringify(buttons).includes("Book a place"),
+          () => `buttons are ${JSON.stringify(buttons)}`,
         );
       },
     ),
