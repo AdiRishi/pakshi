@@ -5,6 +5,7 @@ import { FormId } from "@repo/contracts/ids";
 import { themeCss } from "@repo/tokens";
 import { Option, Schema } from "effect";
 
+import { pageNumberOf } from "../lib/page-cache.ts";
 import { responsiveImage } from "../lib/responsive.ts";
 import { styleHash } from "../lib/security.ts";
 import { pageMeta, redirectFor } from "../lib/seo.ts";
@@ -24,17 +25,18 @@ const rendered = page === null ? null : await renderPage(page, manifest.parts, m
 const sent = Schema.decodeUnknownOption(FormId)(Astro.url.searchParams.get("sent"));
 const data = {
   ...siteData({
-  settings: manifest.settings,
-  identity: manifest.brand.identity,
-  menus: manifest.parts.menus,
-  pages: manifest.pages,
-  forms: manifest.forms,
-  media: (id) => {
-    const file = manifest.media[id];
-    return file === undefined ? undefined : responsiveImage(id, file);
-  },
+    settings: manifest.settings,
+    identity: manifest.brand.identity,
+    menus: manifest.parts.menus,
+    pages: manifest.pages,
+    forms: manifest.forms,
+    media: (id) => {
+      const file = manifest.media[id];
+      return file === undefined ? undefined : responsiveImage(id, file);
+    },
   }),
   sent: Option.getOrNull(sent),
+  current: entry === undefined ? null : { page: entry.id, number: pageNumberOf(Astro.url) },
 };
 const { favicon } = manifest.brand.identity;
 const theme = themeCss(manifest.brand.theme);
