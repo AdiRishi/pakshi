@@ -223,6 +223,8 @@ const valueKinds = {
   link: "link",
   form: "form",
   list: "list",
+  collection: "link",
+  number: "number",
 } as const satisfies Record<Field["kind"], ValueKind>;
 
 // Ordered lists -------------------------------------------------------------------

@@ -157,6 +157,59 @@ describe("freezing", () => {
     ]);
   });
 
+  test("lists a blog list still showing the sample posts as a placeholder, not a broken link", () => {
+    const draft = edit(complete, [
+      {
+        op: "setProp",
+        target: "pg_news",
+        block: "b_posts",
+        path: ["collection"],
+        value: { $ref: "page", id: "pg_pakshiBlog" },
+      },
+    ]);
+    expect(issuesIn(draft)).toEqual([
+      {
+        _tag: "Placeholder",
+        place: { target: "pg_news", title: "News" },
+        block: { id: "b_posts", title: "Blog posts" },
+        path: ["collection"],
+        field: "Blog",
+      },
+    ]);
+  });
+
+  test("lists a blog list of a blog that isn't served as a broken link", () => {
+    const draft = edit(complete, [
+      {
+        op: "insertBlock",
+        page: "pg_home",
+        list: "root",
+        after: "b_gallery",
+        block: {
+          id: "b_latest",
+          type: "post-list",
+          variant: "cards",
+          surface: "default",
+          props: {
+            heading: "From the harbour",
+            collection: { $ref: "page", id: "pg_news" },
+            count: 3,
+          },
+        },
+      },
+      { op: "setStatus", page: "pg_news", status: "unpublished" },
+    ]);
+    expect(issuesIn(draft)).toEqual([
+      {
+        _tag: "BrokenLink",
+        place: { target: "pg_home", title: "Harbour Summer School" },
+        block: { id: "b_latest", title: "Blog posts" },
+        field: "Blog",
+        page: "pg_news",
+      },
+    ]);
+  });
+
   test("lists pages without a title or description", () => {
     const draft = edit(complete, [
       { op: "setMeta", page: "pg_about", field: "description", value: " " },

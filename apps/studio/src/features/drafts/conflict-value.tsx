@@ -79,6 +79,10 @@ const shown = (
         onNone: () => null,
         onSome: (items) => <span>{items.length === 1 ? "1 item" : `${items.length} items`}</span>,
       });
+    case "number":
+      return Predicate.isNumber(value) ? (
+        <span className="text-lg font-medium">{value}</span>
+      ) : null;
     case "text":
     case "address":
     case "choice":

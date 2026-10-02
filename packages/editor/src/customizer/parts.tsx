@@ -1,14 +1,23 @@
-import { type BlockContract, type Field, richTextLines, type SlotSpec } from "@repo/blocks";
+import {
+  type BlockContract,
+  type Field,
+  placeholderCollection,
+  richTextLines,
+  type SlotSpec,
+} from "@repo/blocks";
 import { exampleValue } from "@repo/blocks/fixtures";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
+import { pageName } from "@repo/contracts/page";
 import type { Link } from "@repo/contracts/references";
 import { addressOf } from "@repo/contracts/snapshot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "cn";
 import { Option, Predicate, Schema } from "effect";
 import {
+  HashIcon,
   ImageIcon,
   LayersIcon,
   LayoutGridIcon,
@@ -16,6 +25,7 @@ import {
   ListIcon,
   LockIcon,
   type LucideIcon,
+  NewspaperIcon,
   PilcrowIcon,
   PlusIcon,
   RectangleHorizontalIcon,
@@ -67,6 +77,8 @@ const icons: Readonly<Record<Field["kind"], LucideIcon>> = {
   link: LinkIcon,
   form: LayersIcon,
   list: ListIcon,
+  collection: NewspaperIcon,
+  number: HashIcon,
 };
 
 /** The kinds of part drawn on the block, which a row picks there. */
@@ -115,6 +127,15 @@ const summaryOf = (field: Field, value: Schema.Json | undefined, draft: Draft): 
       return read(field.draft, value, (form) => plain(draft.forms[form.id]?.name ?? "A form"));
     case "list":
       return plain("");
+    case "collection":
+      return read(field.draft, value, (shown) => {
+        if (shown.id === placeholderCollection)
+          return unfinished(`Sample ${collectionKinds[field.collectionKind].names.many}`);
+        const page = draft.pages[shown.id];
+        return page === undefined ? unfinished("Deleted") : plain(pageName(page));
+      });
+    case "number":
+      return read(field.draft, value, (number) => plain(String(number)));
   }
 };
 

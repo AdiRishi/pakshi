@@ -1,7 +1,7 @@
 import { readFile } from "node:fs/promises";
 
 import { noIdentity } from "@repo/contracts/brand";
-import { BlockId, BlockType, ItemId, MediaId } from "@repo/contracts/ids";
+import { BlockId, BlockType, ItemId, MediaId, PageId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import { listingsOf } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
@@ -16,11 +16,16 @@ import {
   samplesSource,
 } from "../scripts/generate-registry.ts";
 import type { BlockDefinition } from "../src/block.tsx";
-import { SiteDataProvider } from "../src/components.tsx";
+import { type SiteData, SiteDataProvider } from "../src/components.tsx";
 import { blockKey } from "../src/contract.ts";
 import { propsSchema } from "../src/fields.ts";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
-import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
+import {
+  placeholderCollection,
+  placeholderForm,
+  placeholderPaths,
+  placeholderTree,
+} from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
 import {
   latestLockfile,
@@ -78,9 +83,10 @@ test("every block version has fixtures", () => {
   expect(covered).toEqual(new Set(Object.keys(registry)));
 });
 
+// A version whose previous one has been removed has no fixtures of it to take.
 test.each(
   registeredVersions
-    .filter(({ version }) => version > 1)
+    .filter(({ type, version }) => version > 1 && blockKey(type, version - 1) in registry)
     .map(({ type, version }) => [blockKey(type, version), type, version] as const),
 )(
   "%s says what it changes and takes the content of the version before it",
@@ -185,16 +191,102 @@ describe("blocks that read the site", () => {
     expect(html).toContain('<a href="/programme"');
     expect(html).toContain(">Workshops</a>");
   });
+});
 
-  test("the blog list shows posts newest first", async () => {
-    const block = await load("post-list", 1);
-    const result = renderProps(block, { heading: "News" }, "list");
+describe("blog lists and post headers", () => {
+  const news = { $ref: "page", id: "pg_news" };
+  const listOn = async (
+    props: Readonly<Record<string, Json>>,
+    current: SiteData["current"] = null,
+    variant = "list",
+  ) => {
+    const block = await load("post-list", 2);
+    const result = renderProps(block, { heading: "News", ...props }, variant);
     if (!result.ok) throw new Error(result.problem);
-    const html = markup(result.element);
+    return renderToStaticMarkup(
+      <SiteDataProvider value={{ ...site, current }}>{result.element}</SiteDataProvider>,
+    );
+  };
+
+  test("a blog list shows its blog's posts newest first", async () => {
+    const html = await listOn({ collection: news, count: 12 });
     expect(html.indexOf("Meet this year&#x27;s mentors")).toBeLessThan(
       html.indexOf("Dates for this summer are out"),
     );
+    expect(html).toContain('href="/news/meet-the-mentors"');
     expect(html).toContain('<time dateTime="2027-04-15">15 April 2027</time>');
+  });
+
+  test("elsewhere, a blog list shows the newest posts and links to the blog for the rest", async () => {
+    const html = await listOn(
+      { collection: news, count: 1 },
+      { page: PageId.make("pg_home"), number: 1 },
+    );
+    expect(html).toContain("Meet this year&#x27;s mentors");
+    expect(html).not.toContain("Dates for this summer are out");
+    expect(html).toMatch(/href="\/news"[^>]*>See all posts<\/a>/);
+    expect(await listOn({ collection: news, count: 2 })).not.toContain("See all posts");
+  });
+
+  test("on its blog's own page, a blog list pages through every post", async () => {
+    const blog = PageId.make("pg_news");
+    const first = await listOn({ collection: news, count: 1 }, { page: blog, number: 1 });
+    expect(first).toContain("Meet this year&#x27;s mentors");
+    expect(first).toMatch(/href="\/news\?page=2" rel="next">Older posts/);
+    expect(first).not.toContain("Newer posts");
+    expect(first).not.toContain("See all posts");
+    const second = await listOn({ collection: news, count: 1 }, { page: blog, number: 2 });
+    expect(second).toContain("Dates for this summer are out");
+    expect(second).not.toContain("Meet this year&#x27;s mentors");
+    expect(second).toMatch(/href="\/news" rel="prev">Newer posts/);
+    expect(second).not.toContain("Older posts");
+  });
+
+  test("a new blog list shows the sample posts until it's pointed at a blog", async () => {
+    const html = await listOn(
+      { collection: { $ref: "page", id: placeholderCollection }, count: 6 },
+      null,
+      "cards",
+    );
+    expect(html).toContain("Our plans for the year ahead");
+    expect(html).toContain("data:image/svg+xml,");
+  });
+
+  test("a blog list of the first version keeps its heading and lists twelve posts until a blog is chosen", async () => {
+    const block = await load("post-list", 2);
+    if (block.migrate === null) throw new Error("post-list@2 has no migration.");
+    const migrated = block.migrate({ heading: "News", intro: "What's happening." });
+    expect(migrated).toEqual({
+      heading: "News",
+      intro: "What's happening.",
+      collection: { $ref: "page", id: "pg_pakshiBlog" },
+      count: 12,
+    });
+    expect(Schema.is(propsSchema(block.fields, "complete"))(migrated)).toBe(true);
+  });
+
+  test("a post header shows the post's title, date, author and cover from its settings", async () => {
+    const block = await load("post-header", 1);
+    const result = renderProps(block, {}, "cover");
+    if (!result.ok) throw new Error(result.problem);
+    const html = renderToStaticMarkup(
+      <SiteDataProvider
+        value={{ ...site, current: { page: PageId.make("pg_mentors"), number: 1 } }}
+      >
+        {result.element}
+      </SiteDataProvider>,
+    );
+    expect(html).toContain(">Meet this year&#x27;s mentors</h1>");
+    expect(html).toContain('<time dateTime="2027-04-15">15 April 2027</time>, Sam Okafor');
+    expect(html).toContain('src="/_media/med_harbour"');
+    expect(html).toContain('alt="Boats moored in a calm harbour"');
+  });
+
+  test("off a post, a post header shows a sample post", async () => {
+    const block = await load("post-header", 1);
+    const result = renderProps(block, {}, "simple");
+    if (!result.ok) throw new Error(result.problem);
+    expect(markup(result.element)).toContain(">Our plans for the year ahead</h1>");
   });
 });
 

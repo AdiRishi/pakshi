@@ -14,6 +14,7 @@ import hero from "./hero/presentation.ts";
 import imageCaption from "./image-caption/presentation.ts";
 import location from "./location/presentation.ts";
 import logoStrip from "./logo-strip/presentation.ts";
+import postHeader from "./post-header/presentation.ts";
 import postList from "./post-list/presentation.ts";
 import quote from "./quote/presentation.ts";
 import richText from "./rich-text/presentation.ts";
@@ -39,6 +40,7 @@ export const presentations = {
   "image-caption": imageCaption,
   "location": location,
   "logo-strip": logoStrip,
+  "post-header": postHeader,
   "post-list": postList,
   "quote": quote,
   "rich-text": richText,

@@ -121,7 +121,12 @@
         "date": "2027-04-15",
         "author": "Sam Okafor",
         "tags": ["mentors"],
-        "excerpt": "Twelve boat builders from around the region are joining us as mentors."
+        "excerpt": "Twelve boat builders from around the region are joining us as mentors.",
+        "cover": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Boats moored in a calm harbour"
+        }
       },
       "root": [],
       "blocks": {}

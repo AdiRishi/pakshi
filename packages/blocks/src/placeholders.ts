@@ -6,19 +6,22 @@ import {
   FormId,
   ItemId,
   MediaId,
+  PageId,
   randomId,
 } from "@repo/contracts/ids";
 import type { BlockTree, PropPath } from "@repo/contracts/ops";
-import { FormRef, MediaRef } from "@repo/contracts/references";
+import type { CollectionKind } from "@repo/contracts/page";
+import { FormRef, MediaRef, PageRef } from "@repo/contracts/references";
+import type { PageListing } from "@repo/contracts/snapshot";
 import { Equal, Schema } from "effect";
 import type { Json } from "effect/Schema";
 
-import type { ResolvedMedia } from "./components.tsx";
+import type { ResolvedMedia, SiteEntry } from "./components.tsx";
 import type { BlockContract } from "./contract.ts";
 import type { Field, Fields } from "./fields.ts";
 
 /*
- * Images and a form that every site can show, so a new block looks finished
+ * Images, a form and a blog that every site can show, so a new block looks finished
  * before anyone has chosen its content. Block placeholders point at them by
  * these IDs. They're drafts' content only: a field still holding one is a
  * placeholder, which the checks block from publishing.
@@ -115,6 +118,54 @@ export const placeholderForm: FormDefinition = {
   ],
 };
 
+/**
+ * The blog a new listing shows until it's pointed at one of the site's own.
+ * It isn't a page: it holds the sample posts, which link nowhere.
+ */
+export const placeholderCollection = PageId.make("pg_pakshiBlog");
+
+const samplePost = (
+  id: string,
+  meta: Pick<SiteEntry["meta"], "title" | "excerpt" | "date" | "author"> & {
+    readonly cover: MediaId;
+  },
+): SiteEntry => ({
+  id: PageId.make(id),
+  href: "#",
+  meta: {
+    ...meta,
+    description: meta.excerpt,
+    tags: [],
+    cover: { $ref: "media", id: meta.cover, alt: "" },
+  },
+});
+
+/** The placeholder blog's posts, newest first. */
+export const samplePosts: readonly [SiteEntry, ...Array<SiteEntry>] = [
+  samplePost("pg_pakshiPostPlans", {
+    title: "Our plans for the year ahead",
+    excerpt: "A short summary of the post goes here, so readers can decide whether to read on.",
+    date: "2027-05-20",
+    author: "Alex Morgan",
+    cover: MediaId.make("med_pakshiHills"),
+  }),
+  samplePost("pg_pakshiPostSpring", {
+    title: "What we learned this spring",
+    excerpt: "Each post has a page of its own, with its title, date and author at the top.",
+    date: "2027-04-08",
+    author: "Sam Taylor",
+    cover: MediaId.make("med_pakshiSea"),
+  }),
+  samplePost("pg_pakshiPostWelcome", {
+    title: "A warm welcome to our new members",
+    excerpt:
+      "Choose one of your blogs for this list, and its posts show here as they're published.",
+    date: "2027-02-14",
+    author: "Alex Morgan",
+    cover: MediaId.make("med_pakshiArch"),
+  }),
+];
+
 const placeholderMediaIds: ReadonlySet<string> = new Set(placeholderMedia.keys());
 
 type Props = Readonly<Record<string, Json>>;
@@ -123,6 +174,7 @@ const isJsonObject = Schema.is(Schema.JsonObject);
 const isJsonArray = Schema.is(Schema.Array(Schema.Json));
 const isMediaRef = Schema.is(MediaRef);
 const isFormRef = Schema.is(FormRef);
+const isPageRef = Schema.is(PageRef);
 const isItemId = Schema.is(ItemId);
 
 const valueAt = (value: Json | undefined, key: string): Json | undefined =>
@@ -203,6 +255,11 @@ const placeholdersIn = (
       return isMediaRef(value) && placeholderMediaIds.has(value.id) ? [[]] : [];
     case "form":
       return isFormRef(value) && value.id === placeholderForm.id ? [[]] : [];
+    case "collection":
+      return isPageRef(value) && value.id === placeholderCollection ? [[]] : [];
+    case "number":
+      // A number is a setting, such as how many posts to show, which any value of fits.
+      return [];
     case "cta": {
       // A short label such as "Get started" can be real, so a button is a placeholder while its link is.
       const link = valueAt(value, "link");
@@ -249,7 +306,7 @@ const fieldsHoldingPlaceholders = (
 
 /**
  * The fields of a placed block that still hold placeholder content, as prop
- * paths: a placeholder image or form, a button still linking where its
+ * paths: a placeholder image, form or blog, a button still linking where its
  * placeholder does, or text, rich text or a link unchanged from a placeholder
  * of the block's type. A draft can't be published while
  * any remain.
@@ -265,4 +322,47 @@ export const placeholderPaths = (
     block.props,
     placeholderProps(contracts, block.type),
   );
+};
+
+/**
+ * The collection of `kind` a new listing on a page shows: the page itself
+ * when it's a collection of that kind, or else the site's only collection of
+ * that kind. With several to choose from, or none, it's null, and the
+ * listing keeps the placeholder until someone chooses.
+ */
+export const collectionFor = (
+  listings: ReadonlyArray<PageListing>,
+  page: PageId,
+  kind: CollectionKind,
+): PageId | null => {
+  const collections = listings.filter(
+    (listing) => listing.type === "collection" && listing.kind === kind,
+  );
+  const [only, ...others] = collections;
+  if (collections.some((collection) => collection.id === page)) return page;
+  return only !== undefined && others.length === 0 ? only.id : null;
+};
+
+/**
+ * A block with each of its collection fields that still shows the
+ * placeholder pointed at the collection `pick` gives for the field's kind, if
+ * it gives one.
+ */
+export const withCollections = (
+  tree: BlockTree,
+  contracts: ReadonlyMap<BlockType, BlockContract>,
+  pick: (kind: CollectionKind) => PageId | null,
+): BlockTree => {
+  const fields = contracts.get(tree.type)?.fields ?? {};
+  const props = Object.fromEntries(
+    Object.entries(tree.props).map(([name, value]) => {
+      const field = fields[name];
+      const chosen =
+        field?.kind === "collection" && isPageRef(value) && value.id === placeholderCollection
+          ? pick(field.collectionKind)
+          : null;
+      return [name, chosen === null ? value : { $ref: "page", id: chosen }];
+    }),
+  );
+  return { ...tree, props };
 };

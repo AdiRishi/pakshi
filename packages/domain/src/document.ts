@@ -1,6 +1,7 @@
 import type { BlockContract } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import { fieldParts, propsSchema } from "@repo/blocks/fields";
+import { placeholderCollection } from "@repo/blocks/placeholders";
 import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
@@ -148,6 +149,42 @@ const withBlock = (draft: Draft, target: Target, id: BlockId, block: BlockInstan
 
 // Props --------------------------------------------------------------------
 
+/**
+ * Rejects a collection field's value unless it's the placeholder collection
+ * or one of the draft's collections of the field's kind.
+ */
+const checkCollection = (
+  pages: Draft["pages"],
+  field: Extract<Field, { readonly kind: "collection" }>,
+  value: Json,
+  path: BatchError["path"],
+) => {
+  const { id } = check(field.draft, value, "value", path);
+  if (id === placeholderCollection) return;
+  const page = pages[id];
+  if (page?.type === "collection" && page.kind === field.collectionKind) return;
+  const names = collectionKinds[field.collectionKind].names;
+  throw reject(
+    "value",
+    `${field.title} shows a ${names.kind.toLowerCase()}, and ${page === undefined ? id : pageName(page)} isn't one.`,
+    path,
+  );
+};
+
+/** Checks every collection field of a block's props. */
+const checkCollections = (
+  pages: Draft["pages"],
+  contract: BlockContract,
+  props: Props,
+  path: BatchError["path"],
+) => {
+  for (const [name, field] of Object.entries(contract.fields)) {
+    const value = props[name];
+    if (field.kind === "collection" && value !== undefined)
+      checkCollection(pages, field, value, [...path, name]);
+  }
+};
+
 const isItemList = (value: Json | undefined): value is ReadonlyArray<Json> => Array.isArray(value);
 
 const isRecord = (value: Json | undefined): value is Props =>
@@ -241,6 +278,8 @@ const setProp = (draft: Draft, op: SetProp, contracts: BlockContracts) => {
   const current = block.props[name];
   const next = writeAt(field, current, rest, op.value, op.path);
   if (next !== undefined) check<unknown>(field.draft, next, "value", [name]);
+  if (next !== undefined && field.kind === "collection")
+    checkCollection(draft.pages, field, next, [name]);
   const previous = readAt(field, current, rest);
   const undo: SetProp = { op: "setProp", target: op.target, block: op.block, path: op.path };
   return {
@@ -269,6 +308,22 @@ const locate = (page: Draft["pages"][PageId], id: BlockId) => {
   throw reject("unknown-block", `There's no block ${id} on this page.`);
 };
 
+/** Rejects a section that belongs on entries of one kind anywhere but on such an entry. */
+const checkEntryOf = (
+  page: Draft["pages"][PageId],
+  contract: BlockContract,
+  path: BatchError["path"] = [],
+) => {
+  if (contract.placement !== "section" || contract.entryOf === null) return;
+  if (page.type === "entry" && page.kind === contract.entryOf) return;
+  const names = collectionKinds[contract.entryOf].names;
+  throw reject(
+    "placement",
+    `${contract.title} goes only on a ${names.kind.toLowerCase()}'s ${names.many}.`,
+    path,
+  );
+};
+
 /** The IDs in a list, after checking the list exists and can hold a block of this contract. */
 const listFor = (
   page: Draft["pages"][PageId],
@@ -279,6 +334,7 @@ const listFor = (
   if (list === "root") {
     if (contract.placement !== "section")
       throw reject("placement", `${contract.title} can't be a section of a page.`);
+    checkEntryOf(page, contract);
     return page.root;
   }
   const parent = page.blocks[list.block];
@@ -402,7 +458,9 @@ export const blockTree = (page: Draft["pages"][PageId], id: BlockId): BlockTree 
 const insertBlock = (draft: Draft, op: InsertBlock, contracts: BlockContracts) => {
   const page = pageOf(draft, op.page);
   const entries = flattenTree(page, op.block, contracts);
-  const ids = listFor(page, op.list, contractFor(contracts, op.block.type), contracts);
+  const contract = contractFor(contracts, op.block.type);
+  const ids = listFor(page, op.list, contract, contracts);
+  checkCollections(draft.pages, contract, op.block.props, ["block", "props"]);
   const placed = withList(page, op.list, insertAfter(ids, op.block.id, op.after));
   return {
     draft: {
@@ -574,15 +632,20 @@ const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: Block
         ["collection"],
       );
   }
+  // A new collection's listing may show the collection itself.
+  const pages = { ...draft.pages, [page.id]: page };
   const inPlace = (id: BlockId, path: BatchError["path"]) => {
     const block = blockOf(page, id);
-    checkBlock({ ...block, id }, contractFor(contracts, block.type), path);
+    const contract = contractFor(contracts, block.type);
+    checkBlock({ ...block, id }, contract, path);
+    checkCollections(pages, contract, block.props, [...path, "props"]);
   };
   page.root.forEach((id) => {
     const block = blockOf(page, id);
     const contract = contractFor(contracts, block.type);
     if (contract.placement !== "section")
       throw reject("placement", `${contract.title} can't be a section of a page.`, ["blocks", id]);
+    checkEntryOf(page, contract, ["blocks", id]);
     inPlace(id, ["blocks", id]);
     for (const [slot, items] of Object.entries(block.slots ?? {})) {
       const spec = contract.slots[slot];
@@ -605,7 +668,7 @@ const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: Block
     }
   });
   return {
-    draft: { ...draft, pages: { ...draft.pages, [page.id]: page } },
+    draft: { ...draft, pages },
     inverse: { op: "deletePage", page: page.id } satisfies Op,
   };
 };

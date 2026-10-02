@@ -1,5 +1,17 @@
-import type { BlockType } from "@repo/contracts/ids";
-import type { CollectionKind } from "@repo/contracts/page";
+import type { BlockType, PageId } from "@repo/contracts/ids";
+import type {
+  CollectionKind,
+  PageDocument,
+  PageMeta,
+  PagePath,
+  PostMeta,
+  Slug,
+} from "@repo/contracts/page";
+import { listingsOf } from "@repo/contracts/snapshot";
+
+import type { BlockContract } from "./contract.ts";
+import { collectionFor, placeholderTree, withCollections } from "./placeholders.ts";
+import { flattenTree } from "./render.tsx";
 
 /*
  * A recipe is how the agent composes one kind of page from the library's
@@ -98,7 +110,7 @@ export const recipes: ReadonlyArray<Recipe> = [
     purpose: "A page that holds posts, such as news or stories, and lists them",
     sections: [
       section("hero", "What the blog is about"),
-      section("post-list", "The newest posts"),
+      section("post-list", "This blog's posts, newest first, a page at a time"),
       section("call-to-action", "A next step for readers, such as signing up", false),
     ],
     rules: [
@@ -113,6 +125,7 @@ export const recipes: ReadonlyArray<Recipe> = [
     makes: { type: "entry", kind: "blog" },
     purpose: "One blog post: news, a story or an announcement",
     sections: [
+      section("post-header", "The post's title, date, author and excerpt, from its settings"),
       section("rich-text", "The post itself"),
       section("gallery", "Photos the post talks about", false),
       section("call-to-action", "What readers can do next", false),
@@ -126,3 +139,62 @@ export const recipes: ReadonlyArray<Recipe> = [
 
 /** A recipe by its ID. */
 export const recipeById = (id: string) => recipes.find((recipe) => recipe.id === id);
+
+/** Where a new page goes and what it's called: an address for a page or a collection, a slug in a collection for an entry. */
+export type NewPage =
+  | { readonly id: PageId; readonly path: PagePath; readonly meta: PageMeta }
+  | {
+      readonly id: PageId;
+      readonly collection: PageId;
+      readonly slug: Slug;
+      readonly meta: PostMeta;
+    };
+
+/** An empty page of the type a recipe makes. */
+const emptyPage = (recipe: Recipe, page: NewPage): PageDocument => {
+  const common = { schema: "pakshi.page/1", recipe: recipe.id, root: [], blocks: {} } as const;
+  const { makes } = recipe;
+  if (makes.type === "entry") {
+    if (!("collection" in page))
+      throw new Error(
+        `The ${recipe.id} recipe makes an entry, which needs a collection and a slug.`,
+      );
+    return { ...common, ...page, type: "entry", kind: makes.kind };
+  }
+  if (!("path" in page))
+    throw new Error(`The ${recipe.id} recipe makes a page, which needs an address.`);
+  return makes.type === "collection"
+    ? { ...common, ...page, type: "collection", kind: makes.kind }
+    : { ...common, ...page, type: "page" };
+};
+
+/**
+ * A new page that a recipe makes, with `sections` or else the recipe's
+ * required ones, each with its placeholder content. A listing among them
+ * shows the collection `collectionFor` picks once the page is among
+ * `pages`, so a new collection lists itself.
+ */
+export const pageFromRecipe = (input: {
+  readonly recipe: Recipe;
+  readonly contracts: ReadonlyMap<BlockType, BlockContract>;
+  readonly pages: Readonly<Record<PageId, PageDocument>>;
+  readonly page: NewPage;
+  readonly sections?: ReadonlyArray<BlockType>;
+}): PageDocument => {
+  const { recipe, page } = input;
+  const types =
+    input.sections ??
+    recipe.sections.filter((section) => section.required).map((section) => section.type);
+  const empty = emptyPage(recipe, page);
+  const listings = listingsOf({ ...input.pages, [page.id]: empty });
+  const sections = types.map((type) =>
+    withCollections(placeholderTree(input.contracts, type), input.contracts, (kind) =>
+      collectionFor(listings, page.id, kind),
+    ),
+  );
+  return {
+    ...empty,
+    root: sections.map((section) => section.id),
+    blocks: Object.fromEntries(sections.flatMap(flattenTree)),
+  };
+};

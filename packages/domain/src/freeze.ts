@@ -1,6 +1,10 @@
 import type { BlockContract } from "@repo/blocks/contract";
 import { type Field, fieldAt, type Fields, propsSchema } from "@repo/blocks/fields";
-import { placeholderMedia, placeholderPaths } from "@repo/blocks/placeholders";
+import {
+  placeholderCollection,
+  placeholderMedia,
+  placeholderPaths,
+} from "@repo/blocks/placeholders";
 import { linkTexts, RichTextDocument } from "@repo/blocks/rich-text";
 import type { SiteContent } from "@repo/contracts/draft";
 import type { FormDefinition } from "@repo/contracts/form";
@@ -174,7 +178,12 @@ const brokenLinksIn = (
   const contract = contractOf(contracts, block);
   return Object.entries(block.props).flatMap(([name, value]) =>
     pageLinks(value)
-      .filter((page) => !served.has(page))
+      // A listing still on the placeholder collection is a placeholder, not a broken link.
+      .filter(
+        (page) =>
+          !served.has(page) &&
+          !(contract.fields[name]?.kind === "collection" && page === placeholderCollection),
+      )
       .map((page) => ({
         _tag: "BrokenLink" as const,
         place,

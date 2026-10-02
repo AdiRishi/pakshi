@@ -1,4 +1,5 @@
 import type { BlockId, BlockType } from "@repo/contracts/ids";
+import type { CollectionKind } from "@repo/contracts/page";
 import type { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 import type { Json } from "effect/Schema";
@@ -15,13 +16,19 @@ export interface BlockComponentProps<F extends Fields, Variant extends string> {
 
 /**
  * A placement as a block definition gives it. Its placeholder is the JSON of
- * its `fixtures/placeholder.json`, which `defineBlock` decodes.
+ * its `fixtures/placeholder.json`, which `defineBlock` decodes. A section
+ * names `entryOf` only when it belongs on entries of one kind.
  */
 type PlacementSpec<P extends Placement = Placement> = P extends {
-  readonly placeholder: BlockFixture;
+  readonly placement: "section";
 }
-  ? Omit<P, "placeholder"> & { readonly placeholder: unknown }
-  : P;
+  ? Omit<P, "placeholder" | "entryOf"> & {
+      readonly placeholder: unknown;
+      readonly entryOf?: CollectionKind;
+    }
+  : P extends { readonly placeholder: BlockFixture }
+    ? Omit<P, "placeholder"> & { readonly placeholder: unknown }
+    : P;
 
 type BlockSpec<
   F extends Fields,
@@ -127,6 +134,7 @@ const contractOf = <F extends Fields, Variant extends string, P extends Placemen
         surfaces: placed.surfaces,
         slots: placed.slots,
         interactive: placed.interactive,
+        entryOf: placed.entryOf ?? null,
         placeholder: decodeFixture(placed.placeholder),
       };
     case "item":

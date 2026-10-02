@@ -11,8 +11,8 @@ const paragraph = (text: string) => ({
 
 /**
  * A draft of the Harbour site: a home page with a hero, a feature grid with
- * two items and a gallery, an about page, a News blog with one post, and a
- * form no page uses yet.
+ * two items and a gallery, an about page, a News blog that lists its one
+ * post, and a form no page uses yet.
  */
 export const harbourDraft: Draft = Schema.decodeSync(Draft)({
   id: "dr_harbour",
@@ -40,21 +40,24 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     },
   },
   redirects: {},
-  lockfile: Object.fromEntries(
-    [
-      "call-to-action",
-      "feature-grid",
-      "feature-item",
-      "footer",
-      "form-section",
-      "gallery",
-      "header",
-      "hero",
-      "post-list",
-      "rich-text",
-      "split",
-    ].map((type) => [type, 1]),
-  ),
+  lockfile: {
+    ...Object.fromEntries(
+      [
+        "call-to-action",
+        "feature-grid",
+        "feature-item",
+        "footer",
+        "form-section",
+        "gallery",
+        "header",
+        "hero",
+        "post-header",
+        "rich-text",
+        "split",
+      ].map((type) => [type, 1]),
+    ),
+    "post-list": 2,
+  },
   brand: {
     brand: "brand_harbour",
     number: 1,
@@ -134,8 +137,19 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
       kind: "blog",
       path: "/news",
       meta: { title: "News", description: "What's happening at the harbour." },
-      root: [],
-      blocks: {},
+      root: ["b_posts"],
+      blocks: {
+        b_posts: {
+          type: "post-list",
+          variant: "list",
+          surface: "default",
+          props: {
+            heading: "All the news",
+            collection: { $ref: "page", id: "pg_news" },
+            count: 12,
+          },
+        },
+      },
     },
     pg_dates: {
       schema: "pakshi.page/1",

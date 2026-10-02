@@ -6,28 +6,34 @@ export type {
   EditableAttributes,
   FieldAddress,
   FieldEditing,
-  PostSummary,
   ResolvedMedia,
   ResolvedMenuItem,
+  SiteCollection,
   SiteData,
+  SiteEntry,
 } from "./components.tsx";
 export {
   Cta,
+  entryShown,
   FieldEditingProvider,
   Media,
   RichText,
   Root,
   SiteDataProvider,
+  SiteImage,
   Slot,
   Text,
+  useCollection,
+  useCurrentPage,
+  useEntry,
   useForm,
   useHref,
   useLogo,
   useMenu,
-  usePosts,
   useSiteName,
 } from "./components.tsx";
 export type {
+  CollectionField,
   CtaField,
   Field,
   FieldKind,
@@ -37,11 +43,13 @@ export type {
   ListField,
   ListItem,
   MediaField,
+  NumberField,
   PropsOf,
   RichTextField,
   TextField,
 } from "./fields.ts";
 export {
+  collection,
   cta,
   fieldAt,
   fieldParts,
@@ -49,6 +57,7 @@ export {
   link,
   list,
   media,
+  number,
   optional,
   propsSchema,
   richText,
@@ -64,10 +73,13 @@ export type {
 } from "./presentation.ts";
 export { galleryBlocks, layoutOf, presentationOf, presentations } from "./presentation.ts";
 export {
+  collectionFor,
+  placeholderCollection,
   placeholderForm,
   placeholderMedia,
   placeholderPaths,
   placeholderTree,
+  withCollections,
 } from "./placeholders.ts";
 export { registry } from "./registry.gen.ts";
 export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";

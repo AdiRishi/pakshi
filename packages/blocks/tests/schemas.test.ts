@@ -23,6 +23,7 @@ test.each(registeredVersions.map(({ type, version }) => [`${type}@${version}`, t
         surfaces: block.surfaces,
         slots: block.slots,
         interactive: block.interactive,
+        ...(block.entryOf !== null && { entryOf: block.entryOf }),
       }),
       ...((block.placement === "header" || block.placement === "footer") && {
         surfaces: block.surfaces,

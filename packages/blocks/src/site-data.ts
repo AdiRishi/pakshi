@@ -1,25 +1,52 @@
 import type { BrandIdentity } from "@repo/contracts/brand";
 import { collectionKinds } from "@repo/contracts/collections";
 import type { FormDefinition } from "@repo/contracts/form";
-import type { FormId, MediaId } from "@repo/contracts/ids";
+import type { FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { Link } from "@repo/contracts/references";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { Menus } from "@repo/contracts/site";
 import type { PageListing } from "@repo/contracts/snapshot";
 import { Order, Predicate } from "effect";
 
-import type { ResolvedMedia, SiteData } from "./components.tsx";
-import { placeholderForm, placeholderMedia } from "./placeholders.ts";
+import type { ResolvedMedia, SiteCollection, SiteData } from "./components.tsx";
+import {
+  placeholderCollection,
+  placeholderForm,
+  placeholderMedia,
+  samplePosts,
+} from "./placeholders.ts";
 
-const newestFirst = Order.mapInput(
-  collectionKinds.blog.order,
-  (post: Extract<PageListing, { type: "entry" }>) => post.meta,
-);
+type Entry = Extract<PageListing, { readonly type: "entry" }>;
+
+/** The site's collections with their entries, and the placeholder collection with its samples. */
+const collectionsOf = (pages: ReadonlyArray<PageListing>) => {
+  const entries = Map.groupBy(
+    pages.filter((page): page is Entry => page.type === "entry"),
+    (entry) => entry.collection,
+  );
+  const collections = new Map<PageId, SiteCollection>(
+    pages.flatMap((page) => {
+      if (page.type !== "collection") return [];
+      const order = Order.mapInput(collectionKinds[page.kind].order, (entry: Entry) => entry.meta);
+      const held = (entries.get(page.id) ?? [])
+        .toSorted(order)
+        .map((entry) => ({ id: entry.id, href: entry.path, meta: entry.meta }));
+      return [[page.id, { id: page.id, href: page.path, title: page.meta.title, entries: held }]];
+    }),
+  );
+  return collections.set(placeholderCollection, {
+    id: placeholderCollection,
+    href: "#",
+    title: "Sample posts",
+    entries: samplePosts,
+  });
+};
 
 /**
  * Builds what blocks read beyond their props from a site's settings, menus,
- * pages, forms and media. Placeholder images and the placeholder form resolve
- * on every site.
+ * pages, forms and media. Placeholder images, the placeholder form and the
+ * placeholder blog resolve on every site. It shows no page in particular;
+ * a caller showing one sets `current`.
  */
 export const siteData = (site: {
   readonly settings: PublishedSettings;
@@ -49,22 +76,12 @@ export const siteData = (site: {
       })),
       footer: site.menus.footer.map((item) => ({ ...resolve(item), children: [] })),
     },
-    posts: site.pages
-      .flatMap((page) => (page.type === "entry" ? [page] : []))
-      .toSorted(newestFirst)
-      .map((post) => ({
-        id: post.id,
-        href: post.path,
-        title: post.meta.title,
-        excerpt: post.meta.excerpt,
-        date: post.meta.date,
-        author: post.meta.author,
-        cover: post.meta.cover,
-      })),
+    collections: collectionsOf(site.pages),
     media: (id) => placeholderMedia.get(id) ?? site.media(id),
     pagePath: (id) => paths.get(id),
     form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),
     preview: null,
     sent: null,
+    current: null,
   };
 };

@@ -139,16 +139,20 @@ const sameListings = (a: ReadonlyArray<PageListing>, b: ReadonlyArray<PageListin
 /** The draft's pages as site data needs them. Only address and meta changes produce a new list. */
 const usePageListings = () => useEditorState((state) => listingsOf(state.view.pages), sameListings);
 
-/** What blocks read beyond their props, from the draft as the person sees it. */
+/**
+ * What blocks read beyond their props, from the draft as the person sees it,
+ * on the first page of the page being edited.
+ */
 export const useDraftSiteData = () => {
   const { media, mediaSrc, settings } = useServices();
   const menus = useEditorState((state) => state.view.parts.menus);
   const forms = useEditorState((state) => state.view.forms);
   const identity = useEditorState((state) => state.view.brand.identity);
+  const page = useEditorState((state) => state.page);
   const pages = usePageListings();
   return useMemo(() => {
     const files = new Map(media.map((file) => [file.id, file]));
-    return siteData({
+    const data = siteData({
       settings,
       identity,
       menus,
@@ -161,7 +165,8 @@ export const useDraftSiteData = () => {
           : { src: mediaSrc(id), width: file.width, height: file.height };
       },
     });
-  }, [settings, identity, menus, pages, forms, media, mediaSrc]);
+    return { ...data, current: { page, number: 1 } };
+  }, [settings, identity, menus, pages, forms, media, mediaSrc, page]);
 };
 
 /** Part of the draft rendered on its own, such as a single block, with what blocks read from the site. */
