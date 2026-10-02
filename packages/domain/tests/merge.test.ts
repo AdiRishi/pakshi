@@ -6,7 +6,7 @@ import { BlockId, PageId } from "@repo/contracts/ids";
 import type { Conflict, ConflictKey, Resolutions, Side } from "@repo/contracts/merge";
 import { Op } from "@repo/contracts/ops";
 import { LiveRelease } from "@repo/contracts/snapshot";
-import { resolveTheme, type Surface } from "@repo/tokens";
+import { defaultTheme, resolveTheme, type Surface } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
@@ -531,7 +531,7 @@ describe("brand revisions", () => {
     brand: {
       ...harbourDraft.brand,
       number,
-      theme: resolveTheme({ preset: "editorial", changes: { brandColor } }).theme,
+      theme: resolveTheme({ ...defaultTheme, brandColor }).theme,
     },
   });
 

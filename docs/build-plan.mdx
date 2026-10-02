@@ -44,7 +44,7 @@ Turn the starter into Pakshi's four Workers and prove that everything deploys to
 - D1 `core` with users and sessions, and [staff sign-in](/technical-design#security-and-access) through Better Auth's `genericOAuth` against a test OIDC provider.
 - `authorize` with the permission catalogue and the [default roles](/product-spec#roles-and-permissions), seeded for test users. There's no permissions UI yet.
 - The [page document](/technical-design#the-page-document) schema and the snapshot manifest format in `packages/contracts`.
-- `packages/blocks` with the field builders, the [field components](/editor#with-blocks) blocks render their fields through, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme preset in light and dark.
+- `packages/blocks` with the field builders, the [field components](/editor#with-blocks) blocks render their fields through, the generated registry, and three blocks (hero, rich text, call to action) with fixtures. `packages/tokens` with one theme in light and dark.
 - `sites` [serving](/technical-design#publishing-serving-and-previews) a hand-written snapshot from R2 through the KV `host → site → release` lookup, with the release and Worker version in the cache key.
 
 **Demo:** sign in to Studio in the dev stack, then open the Sites address, which serves a page from the hand-written snapshot, in light and dark.
@@ -211,7 +211,7 @@ Brands own their look, and blocks improve without surprising live sites.
 
 **Build:**
 
-- [Theme Studio](/product-spec#brands-and-themes): presets, palette generation, contrast checks in light and dark, fonts served by each app, identity and the voice guide.
+- [Theme Studio](/product-spec#brands-and-themes): every theme value set directly ([decision 087](/decision-log#decision-087)), palette generation, contrast checks in light and dark, fonts served by each app, identity and the voice guide.
 - [Brand revisions](/technical-design#themes) pinned per draft, and Brand update drafts.
 - [Block versioning](/technical-design#blocks-and-versioning): the lockfile of version numbers, `migrate` chains, adopting an upgrade, upgrade drafts on every affected site, retention, the frozen-folder CI check, golden JSON Schema tests, and the reviewed screenshot-update path.
 - The library grows to about 20 blocks and 4 recipes, chosen from the sites the Pakshi team plans to build.
@@ -239,7 +239,7 @@ Pakshi starts empty, and people set it up the way a real organization would: no 
 - [Staff sign-in](/technical-design#security-and-access) with email and password through Better Auth, with password reset by email. The test identity provider, its users and the OIDC wiring go; signing in through the organization's identity provider returns in [checkpoint 12](#12-production).
 - [Setting up the organization](/product-spec#roles-and-permissions): on an empty stack, the first person to open Studio names the organization and creates their account, and becomes its org admin. After that, nobody signs up without an invitation.
 - Invitations: someone who may manage members invites a person by email with a default role on the organization, a brand or a site. The invitation is emailed, its link can be copied, and opening it creates the person's account with that grant, or adds the grant to their account. A person can't invite with a role holding permissions they don't hold there.
-- [Creating brands and sites](/product-spec#sites-and-brands): org admins create brands, from a name, a preset and a brand color, and org and brand admins create sites in them. A new site gets its platform subdomain at once, starts from a release with its brand's newest revision, a header, a footer and no pages, and opens in its first draft.
+- [Creating brands and sites](/product-spec#sites-and-brands): org admins create brands from a name and a brand color, on the default theme, and org and brand admins create sites in them. A new site gets its platform subdomain at once, starts from a release with its brand's newest revision, a header, a footer and no pages, and opens in its first draft.
 - Platform subdomains in the dev stack, at `{site}.localhost` on the Sites Worker's port.
 - The seeded sample site and the seeded test users go. Tests follow the [three kinds](/adr/three-kinds-of-tests): unit tests for most behaviour, E2E tests that run each Worker on the Cloudflare Vitest plugin, and a few integration journeys in Playwright that set up their own organization, brands, sites and people through Studio.
 

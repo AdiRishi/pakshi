@@ -18,12 +18,11 @@ import {
 } from "@repo/contracts/studio";
 import { authorize, permissionsOn } from "@repo/domain/access";
 import {
-  BrandTheme,
+  defaultTheme,
   type HexColor,
-  type PresetId,
   ResolvedTheme,
   resolveTheme,
-  themeValues,
+  ThemeValues,
 } from "@repo/tokens";
 import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
@@ -45,7 +44,7 @@ const BrandRow = Schema.Struct({ id: BrandId, name: Schema.String, voice: json(V
 const RevisionRow = Schema.Struct({
   brand_id: BrandId,
   number: Schema.Int,
-  theme: json(BrandTheme),
+  theme: json(ThemeValues),
   resolved: json(ResolvedTheme),
   identity: json(BrandIdentity),
   created_by: json(Collaborator),
@@ -126,8 +125,8 @@ export const brandsFor = Effect.fn("StudioApi.brandsFor")(function* (person: Per
         {
           id: brand.id,
           name: brand.name,
-          preset: revision.theme.preset,
-          brandColor: themeValues(revision.theme).brandColor,
+          brandColor: revision.theme.brandColor,
+          fonts: revision.theme.fonts,
           sites: sites
             .filter((site) => site.brand_id === brand.id)
             .map(({ id, name }) => ({ id, name })),
@@ -218,7 +217,7 @@ const recordRevision = Effect.fn("StudioApi.recordRevision")(function* (row: Rev
   const sql = yield* SqlClient.SqlClient;
   const inserted = yield* sql`insert into brand_revisions
       (brand_id, number, theme, resolved, identity, created_by, created_at)
-    values (${row.brand_id}, ${row.number}, ${encode(BrandTheme, row.theme)},
+    values (${row.brand_id}, ${row.number}, ${encode(ThemeValues, row.theme)},
       ${encode(ResolvedTheme, row.resolved)}, ${encode(BrandIdentity, row.identity)},
       ${encode(Collaborator, row.created_by)}, ${row.created_at})
     on conflict (brand_id, number) do nothing returning number`;
@@ -226,29 +225,28 @@ const recordRevision = Effect.fn("StudioApi.recordRevision")(function* (row: Rev
 });
 
 /**
- * Makes a brand from a preset and a brand color, as its first revision. Only
- * the organization's admins make brands, and a color too light to read is
- * refused as it is in Theme Studio.
+ * Makes a brand from the default theme in the brand's color, as its first
+ * revision. Only the organization's admins make brands, and a color too light
+ * to read is refused as it is in Theme Studio.
  */
 export const createBrand = Effect.fn("StudioApi.createBrand")(function* (
   person: Person,
   name: string,
-  preset: PresetId,
   brandColor: HexColor,
 ) {
   const sql = yield* SqlClient.SqlClient;
   const { access } = yield* loadAccess(person.id);
   if (!authorize(access, "brand.create", { kind: "organization" }))
     return yield* new NotPermitted({ action: "create brands" });
-  const look: BrandTheme = { preset, changes: { brandColor } };
-  const { theme, issues } = resolveTheme(look);
+  const values: ThemeValues = { ...defaultTheme, brandColor };
+  const { theme, issues } = resolveTheme(values);
   if (issues.length > 0) return yield* new ThemeUnreadable({ issues });
   const id = BrandId.make(randomId("brand"));
   yield* sql`insert into brands (id, name) values (${id}, ${name})`;
   yield* recordRevision({
     brand_id: id,
     number: 1,
-    theme: look,
+    theme: values,
     resolved: theme,
     identity: noIdentity,
     created_by: { id: person.id, name: person.name },

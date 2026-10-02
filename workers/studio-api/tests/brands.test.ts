@@ -1,5 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import { BrandId, MediaId } from "@repo/contracts/ids";
+import { defaultTheme } from "@repo/tokens";
 import { Effect } from "effect";
 
 import {
@@ -16,10 +17,7 @@ const person = (id: string) => ({ id, name: id, email: `${id}@pakshi.test` });
 
 const libraries = BrandId.make("brand_a");
 const noIdentity = { logo: null, logoOnDark: null, favicon: null };
-const plum = {
-  theme: { preset: "editorial", changes: { brandColor: "#7a1f5c" } },
-  identity: noIdentity,
-} as const;
+const plum = { theme: { ...defaultTheme, brandColor: "#7a1f5c" }, identity: noIdentity };
 
 it.effect("saving a brand's look makes its next revision, which the brand's sites are behind", () =>
   Effect.gen(function* () {
@@ -40,10 +38,7 @@ it.effect("saving a brand's look makes its next revision, which the brand's site
 
 it.effect("a theme with a pair of colors too hard to read can't be saved", () =>
   Effect.gen(function* () {
-    const pale = {
-      ...plum,
-      theme: { preset: "editorial", changes: { brandColor: "#ffe14d" } },
-    } as const;
+    const pale = { ...plum, theme: { ...defaultTheme, brandColor: "#ffe14d" } };
     const error = yield* Effect.flip(saveLook(person("user_brand"), libraries, pale, 1));
     expect(error._tag).toBe("ThemeUnreadable");
     expect((yield* brandView(person("user_brand"), libraries)).revision.number).toBe(1);
@@ -95,12 +90,15 @@ it.effect("a brand's voice guide is what its admin last saved", () =>
 it.effect("only org admins make brands, each starting at its first revision", () =>
   Effect.gen(function* () {
     const refused = yield* Effect.flip(
-      createBrand(person("user_brand"), "City Museums", "editorial", "#1f5c44"),
+      createBrand(person("user_brand"), "City Museums", "#1f5c44"),
     );
     expect(refused._tag).toBe("NotPermitted");
-    const { id } = yield* createBrand(person("user_org"), "City Museums", "editorial", "#1f5c44");
+    const { id } = yield* createBrand(person("user_org"), "City Museums", "#1f5c44");
     const view = yield* brandView(person("user_org"), id);
     expect(view).toMatchObject({ brand: { name: "City Museums" }, revision: { number: 1 } });
-    expect(view.look.theme).toEqual({ preset: "editorial", changes: { brandColor: "#1f5c44" } });
+    expect(view.look.theme).toEqual({ ...defaultTheme, brandColor: "#1f5c44" });
+    expect(yield* brandsFor(person("user_org"))).toContainEqual(
+      expect.objectContaining({ id, brandColor: "#1f5c44", fonts: defaultTheme.fonts }),
+    );
   }).pipe(Effect.provide(core)),
 );

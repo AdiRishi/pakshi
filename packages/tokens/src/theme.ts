@@ -1,4 +1,4 @@
-import { Schema, Struct } from "effect";
+import { Schema } from "effect";
 
 import { FontId } from "./fonts.ts";
 
@@ -83,26 +83,16 @@ const styleFields = {
   motion: Schema.Boolean,
 };
 
-/** Every value a theme is made from: one brand color, the tone of its grays, and the rest of its tokens. */
+/**
+ * A brand's theme as its admins set it: one brand color, the tone of its
+ * grays, and the rest of its tokens.
+ */
 export const ThemeValues = Schema.Struct({
   brandColor: HexColor,
   neutral: NeutralTone,
   ...styleFields,
 });
 export type ThemeValues = typeof ThemeValues.Type;
-
-export const PresetId = Schema.Literals(["civic", "editorial", "bold"]);
-export type PresetId = typeof PresetId.Type;
-
-/**
- * A brand's theme as its admins set it: a preset, and the values they
- * changed on top of it. Choosing another preset keeps their changes.
- */
-export const BrandTheme = Schema.Struct({
-  preset: PresetId,
-  changes: ThemeValues.mapFields(Struct.map(Schema.optionalKey)),
-});
-export type BrandTheme = typeof BrandTheme.Type;
 
 /**
  * A theme with its palette generated: what snapshots carry and pages render

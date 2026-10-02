@@ -13,7 +13,7 @@ import { ReviewPage } from "@repo/contracts/studio";
 import type { Submission } from "@repo/contracts/submission";
 import type { Workflow } from "@repo/contracts/workflow";
 import type { Approver } from "@repo/domain/approvals";
-import { resolveTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Deferred, Effect, Fiber, Layer, Option, Schema } from "effect";
 
 import { Site } from "../src/site/site.ts";
@@ -806,7 +806,7 @@ describe("brand revisions", () => {
   const revision = (number: number, brandColor: `#${string}`): BrandRevision => ({
     ...harbourBrand,
     number,
-    theme: resolveTheme({ preset: "editorial", changes: { brandColor } }).theme,
+    theme: resolveTheme({ ...defaultTheme, brandColor }).theme,
   });
   const liveBrand = (site: Site["Service"], state: PlatformState) =>
     Effect.map(site.live, (live) => state.manifests.get(live.snapshot)?.brand.number);

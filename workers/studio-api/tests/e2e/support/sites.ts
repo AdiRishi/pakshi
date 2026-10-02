@@ -15,7 +15,6 @@ export const newSite = (client: Studio, name: string, address: SiteAddress) =>
   Effect.gen(function* () {
     const brand = yield* client.createBrand({
       name: `${name} brand`,
-      preset: "civic",
       brandColor: "#1f5c44",
     });
     const created = yield* client.createSite({ brand: brand.id, name, address });

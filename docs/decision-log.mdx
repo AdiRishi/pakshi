@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
 | 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
 | 085 | Alerts and the security review move out of checkpoint 11                           | 2026-10-01 | Accepted            |
 | 084 | Sites use Astro's content security policy, sent by built sites only                | 2026-10-01 | Accepted            |
@@ -95,6 +96,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 087 — Brands store every theme value, with no presets [#decision-087]
+
+**Context.** A brand's theme was one of three presets, Civic, Editorial or Bold, with the values its admins changed on top, which it kept if it picked another preset. Nobody picks a preset and leaves it: brands change the values, so the preset decides little and adds a choice to explain.
+
+**Decision.** A brand's theme is every value the styling system has: brand color, neutral tone, fonts, type scale, heading weight, corner radius, shadow, density, image corners and motion. Each revision stores them whole, and Theme Studio edits each one directly. A new brand starts from the default theme in `@repo/tokens`, which has the Editorial preset's values, in the brand color its admin picks. A migration rewrote each stored revision as its preset's values with its changes applied, so every brand resolves as it did.
+
+**Rejected.** Storing only the values a brand changed from the default, which would restyle every brand whenever the default changes.
+
+**Consequences.** A code change to the default theme reaches only brands made after it. What keeps sites from looking generic is the strong default and the bounded token choices ([vision](/vision#brands-and-theming)).
 
 ## 086 — Block requests are kept in Pakshi, not filed in an outside tracker [#decision-086]
 

@@ -11,7 +11,7 @@ import {
   type SnapshotManifest,
   SnapshotManifest as Manifest,
 } from "@repo/contracts/snapshot";
-import { resolveTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Deferred, Effect, Layer, Option, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
 
@@ -93,11 +93,11 @@ const encodeHome = Schema.encodeSync(PageDocument);
 const decodeManifest = Schema.decodeSync(Manifest);
 export const encodeBrand = Schema.encodeSync(Manifest.fields.brand);
 
-/** The Harbour brand's first revision, on the Editorial preset. */
+/** The Harbour brand's first revision, on the default theme. */
 export const harbourBrand = {
   brand: BrandId.make("brand_harbour"),
   number: 1,
-  theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+  theme: resolveTheme(defaultTheme).theme,
   identity: noIdentity,
 };
 

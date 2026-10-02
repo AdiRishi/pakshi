@@ -2,18 +2,16 @@ import { Schema } from "effect";
 import { expect, test } from "vitest";
 
 import {
-  type BrandTheme,
   contrast,
+  defaultTheme,
   hexToOklch,
   oklchToHex,
-  PresetId,
   ResolvedTheme,
   resolveTheme,
   themeCss,
-  themeValues,
 } from "../src/index.ts";
 
-const editorial = resolveTheme({ preset: "editorial", changes: {} }).theme;
+const resolved = resolveTheme(defaultTheme).theme;
 
 /** The declarations of the first CSS rule for `selector`. */
 const rule = (css: string, selector: string) => {
@@ -28,12 +26,10 @@ test("contrast follows WCAG 2's formula", () => {
   expect(contrast(hexToOklch("#777777"), hexToOklch("#ffffff"))).toBeLessThan(4.5);
 });
 
-test("every preset reads clearly in light and dark", () => {
-  for (const preset of PresetId.literals) {
-    const { theme, issues } = resolveTheme({ preset, changes: {} });
-    expect(issues).toEqual([]);
-    expect(Schema.decodeSync(ResolvedTheme)(theme)).toEqual(theme);
-  }
+test("the default theme reads clearly in light and dark", () => {
+  const { theme, issues } = resolveTheme(defaultTheme);
+  expect(issues).toEqual([]);
+  expect(Schema.decodeSync(ResolvedTheme)(theme)).toEqual(theme);
 });
 
 test("text stays readable whatever the brand color, except the brand color itself on light pages", () => {
@@ -41,10 +37,7 @@ test("text stays readable whatever the brand color, except the brand color itsel
     for (const lightness of [0.2, 0.45, 0.7, 0.9]) {
       const brandColor = oklchToHex({ l: lightness, c: 0.15, h: hue });
       for (const neutral of ["cool", "neutral", "warm"] as const) {
-        const { issues } = resolveTheme({
-          preset: "editorial",
-          changes: { brandColor, neutral },
-        });
+        const { issues } = resolveTheme({ ...defaultTheme, brandColor, neutral });
         for (const issue of issues) {
           expect(issue.scheme).toBe("light");
           expect(["default", "muted"]).toContain(issue.surface);
@@ -55,7 +48,7 @@ test("text stays readable whatever the brand color, except the brand color itsel
 });
 
 test("a brand color too light to read on a light page is reported, with its contrast", () => {
-  const { issues } = resolveTheme({ preset: "civic", changes: { brandColor: "#ffe14d" } });
+  const { issues } = resolveTheme({ ...defaultTheme, brandColor: "#ffe14d" });
   expect(issues).toContainEqual(
     expect.objectContaining({
       scheme: "light",
@@ -69,27 +62,16 @@ test("a brand color too light to read on a light page is reported, with its cont
   for (const issue of issues) expect(issue.ratio).toBeLessThan(issue.required);
 });
 
-test("a brand's changes stay when it picks another preset", () => {
-  const theme: BrandTheme = {
-    preset: "civic",
-    changes: { brandColor: "#7a1f5c", fonts: { heading: "fraunces", body: "onest" } },
-  };
-  const moved = themeValues({ ...theme, preset: "bold" });
-  expect(moved.brandColor).toBe("#7a1f5c");
-  expect(moved.fonts).toEqual({ heading: "fraunces", body: "onest" });
-  expect(moved.density).toBe("spacious");
-});
-
 test("theme values that could escape their CSS declaration are rejected", () => {
   for (const theme of [
-    { ...editorial, fonts: { ...editorial.fonts, heading: "serif; } body { display: none" } },
+    { ...resolved, fonts: { ...resolved.fonts, heading: "serif; } body { display: none" } },
     {
-      ...editorial,
+      ...resolved,
       colors: {
-        ...editorial.colors,
+        ...resolved.colors,
         light: {
-          ...editorial.colors.light,
-          brand: { ...editorial.colors.light.brand, primary: "red; background: url(x)" },
+          ...resolved.colors.light,
+          brand: { ...resolved.colors.light.brand, primary: "red; background: url(x)" },
         },
       },
     },
@@ -99,9 +81,9 @@ test("theme values that could escape their CSS declaration are rejected", () => 
 });
 
 test("dark colors apply only when the visitor prefers a dark scheme", () => {
-  const light = editorial.colors.light.default.background;
-  const dark = editorial.colors.dark.default.background;
-  const [beforeQuery, insideQuery] = themeCss(editorial).split(
+  const light = resolved.colors.light.default.background;
+  const dark = resolved.colors.dark.default.background;
+  const [beforeQuery, insideQuery] = themeCss(resolved).split(
     "@media (prefers-color-scheme: dark)",
   );
   expect(beforeQuery).toContain(`--background: ${light};`);
@@ -111,30 +93,30 @@ test("dark colors apply only when the visitor prefers a dark scheme", () => {
 });
 
 test("a fixed scheme applies its colors whatever the visitor prefers", () => {
-  const css = themeCss(editorial, "dark");
+  const css = themeCss(resolved, "dark");
   expect(css).not.toContain("prefers-color-scheme");
-  expect(css).toContain(`--background: ${editorial.colors.dark.default.background};`);
-  expect(css).not.toContain(`--background: ${editorial.colors.light.default.background};`);
+  expect(css).toContain(`--background: ${resolved.colors.dark.default.background};`);
+  expect(css).not.toContain(`--background: ${resolved.colors.light.default.background};`);
 });
 
 test("each surface re-scopes the semantic colors for its section", () => {
-  expect(rule(themeCss(editorial, "light"), '[data-surface="brand"]')).toContain(
-    `--background: ${editorial.colors.light.brand.background};`,
+  expect(rule(themeCss(resolved, "light"), '[data-surface="brand"]')).toContain(
+    `--background: ${resolved.colors.light.brand.background};`,
   );
 });
 
 test("a brand's logo for dark backgrounds shows only on dark surfaces", () => {
-  const light = themeCss(editorial, "light");
+  const light = themeCss(resolved, "light");
   expect(rule(light, '[data-surface="default"]')).toContain("--theme-on-dark: none;");
   expect(rule(light, '[data-surface="inverse"]')).toContain("--theme-on-dark: inline-block;");
   expect(rule(light, '[data-surface="inverse"]')).toContain("--theme-on-light: none;");
-  expect(rule(themeCss(editorial, "dark"), '[data-surface="default"]')).toContain(
+  expect(rule(themeCss(resolved, "dark"), '[data-surface="default"]')).toContain(
     "--theme-on-dark: inline-block;",
   );
 });
 
 test("pages load the theme's two fonts from the site itself", () => {
-  const css = themeCss({ ...editorial, fonts: { heading: "fraunces", body: "onest" } });
+  const css = themeCss({ ...resolved, fonts: { heading: "fraunces", body: "onest" } });
   const sources = Array.from(css.matchAll(/src: url\(([^)]+)\)/g), (match) => match[1]);
   expect(sources.length).toBeGreaterThan(0);
   for (const source of sources) expect(source).toMatch(/^\/_fonts\/(fraunces|onest)-/);

@@ -13,7 +13,7 @@ import type {
 } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { commitBatch, type Writes } from "@repo/domain/commit";
-import { resolveTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
 import type { Connection } from "../../src/store.ts";
@@ -58,7 +58,7 @@ export const fixtureDraft = Schema.decodeSync(Draft)({
   brand: {
     brand: "brand_harbour",
     number: 1,
-    theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+    theme: resolveTheme(defaultTheme).theme,
     identity: noIdentity,
   },
   pages: {

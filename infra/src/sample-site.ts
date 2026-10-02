@@ -8,7 +8,7 @@ import { FormId } from "@repo/contracts/ids";
 import { PageDocument, PagePath } from "@repo/contracts/page";
 import { SiteParts } from "@repo/contracts/site";
 import { contentHash, MediaFile, SnapshotManifest } from "@repo/contracts/snapshot";
-import { BrandTheme, resolveTheme } from "@repo/tokens";
+import { resolveTheme, ThemeValues } from "@repo/tokens";
 import { Schema } from "effect";
 
 const extensions = {
@@ -24,7 +24,7 @@ const SampleSite = Schema.Struct({
   brand: Schema.Struct({
     id: BrandId,
     name: Schema.String,
-    theme: BrandTheme,
+    theme: ThemeValues,
     identity: BrandIdentity,
   }),
   site: Schema.Struct({ id: SiteId, name: Schema.String }),
