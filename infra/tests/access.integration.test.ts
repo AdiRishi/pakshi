@@ -41,8 +41,8 @@ test("an org admin shapes who can do what, and every screen for it meets WCAG 2.
 }) => {
   const priya = await browserFor(browser, "admin");
   const brand = unique("City Libraries");
-  const site = unique("Northbank Libraries");
-  const address = uniqueAddress("northbank");
+  const site = unique("Eastgate Archives");
+  const address = uniqueAddress("eastgate");
   const role = unique("Content reviewer");
   await createBrand(priya, brand);
   const draft = await createSite(priya, site, brand, address);
