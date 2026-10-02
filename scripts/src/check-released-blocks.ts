@@ -7,7 +7,8 @@
  *   removes a version nothing uses any more.
  * - A released version's baseline screenshots may change only with a new
  *   entry in the rendering changes log that names the version, because that
- *   changes what live sites show.
+ *   changes what live sites show. They go without one when the version's
+ *   whole folder goes.
  *
  * Usage: node scripts/src/check-released-blocks.ts <base ref>
  */
@@ -69,13 +70,15 @@ export const releasedBlockProblems = (root: string, base: string) => {
     existsSync(join(root, renderingLog)) ? readFileSync(join(root, renderingLog), "utf8") : "[]",
   );
 
+  const removedWhole = (type: string, version: string) =>
+    !existsSync(join(root, blocksSource, type, `v${version}`));
+
   const problems: Array<string> = [];
   for (const path of changed) {
     const folder = versionFolder.exec(path);
     if (folder !== null) {
       const [, type = "", version = ""] = folder;
-      const removedWhole = !existsSync(join(root, blocksSource, type, `v${version}`));
-      if (released(type, version) && !removedWhole)
+      if (released(type, version) && !removedWhole(type, version))
         problems.push(
           `${path}: ${type} v${version} is released, so its folder can't change. Make a new version instead.`,
         );
@@ -84,7 +87,8 @@ export const releasedBlockProblems = (root: string, base: string) => {
     const baseline = baselineFile.exec(path);
     if (baseline !== null && atBase.has(path)) {
       const [, type = "", version = ""] = baseline;
-      if (!newlyLogged.has(`${type}@${version}`))
+      const removedWithVersion = removedWhole(type, version) && !existsSync(join(root, path));
+      if (!removedWithVersion && !newlyLogged.has(`${type}@${version}`))
         problems.push(
           `${path}: ${type} v${version} is released, so its screenshots change only with an entry for ${type}@${version} in ${renderingLog}.`,
         );
