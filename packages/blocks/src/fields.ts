@@ -1,8 +1,11 @@
 import { ItemId } from "@repo/contracts/ids";
 import type { CollectionKind } from "@repo/contracts/page";
 import { FormRef, Link, MediaRef, PageRef } from "@repo/contracts/references";
-import { Schema } from "effect";
+import { Effect, Schema } from "effect";
 
+import { IconName } from "./icon-names.ts";
+
+export { IconName } from "./icon-names.ts";
 import {
   isEmptyRichText,
   type RichTextDocument,
@@ -66,8 +69,32 @@ export interface NumberField extends FieldBase<"number">, Schemas<number> {
   readonly max: number;
 }
 
+/**
+ * One of a few named options that sets how a block shows, such as how many
+ * columns it has. Its first option is the one new content starts with, and
+ * the one a block left without it reads as.
+ */
+export interface ChoiceField<Option extends string = string>
+  extends FieldBase<"choice">, Schemas<Option> {
+  readonly options: readonly [Option, ...Array<Option>];
+  /** What each option is called, from the block's presentation; an option it doesn't name shows as itself. */
+  readonly labels: Readonly<Record<string, string>>;
+  /** The variants the choice changes anything in, from the block's presentation, or null for all of them. */
+  readonly layouts: ReadonlyArray<string> | null;
+}
+
+/** An icon from the library's set, such as one beside a feature. */
+export interface IconField extends FieldBase<"icon">, Schemas<IconName> {}
+
 /** The fields a list item can have. Items don't hold lists, because documents nest two levels at most. */
-type ItemFieldKind = TextField | RichTextField | LinkField | FormField | MediaField | CtaField;
+type ItemFieldKind =
+  | TextField
+  | RichTextField
+  | LinkField
+  | FormField
+  | MediaField
+  | CtaField
+  | IconField;
 
 export type ItemFields = Readonly<Record<string, ItemFieldKind | Optional<ItemFieldKind>>>;
 
@@ -80,11 +107,11 @@ export interface ListField<Item extends ItemFields = ItemFields> extends FieldBa
 }
 
 /*
- * Only a block's own fields may be a collection or a number. They set what
- * the whole block shows, and the checks on where a collection points read
- * only a block's own fields.
+ * Only a block's own fields may be a collection, a number or a choice. They
+ * set what the whole block shows, and the checks on where a collection
+ * points read only a block's own fields.
  */
-type RequiredField = ItemFieldKind | ListField | CollectionField | NumberField;
+type RequiredField = ItemFieldKind | ListField | CollectionField | NumberField | ChoiceField;
 
 export type Field = RequiredField | Optional<RequiredField>;
 
@@ -241,6 +268,33 @@ export const number = (options: {
   };
 };
 
+/** One of a few named options, such as a layout's columns, the first of which new content starts with. */
+export const choice = <const Option extends string>(options: {
+  readonly title: string;
+  readonly options: readonly [Option, ...Array<Option>];
+}): ChoiceField<Option> => {
+  const schema = Schema.Literals(options.options);
+  return {
+    kind: "choice",
+    title: options.title,
+    optional: false,
+    options: options.options,
+    labels: {},
+    layouts: null,
+    draft: schema,
+    complete: schema,
+  };
+};
+
+/** An icon from the library's set. */
+export const icon = (options: { readonly title: string }): IconField => ({
+  kind: "icon",
+  title: options.title,
+  optional: false,
+  draft: IconName,
+  complete: IconName,
+});
+
 /** A value read from props as the field's schemas decode it. */
 type ValueOf<F extends Field> = F["draft"]["Type"];
 
@@ -259,18 +313,24 @@ export type PropsOf<F extends Fields> = {
 /** One item of a list: its ID and its own fields. */
 export type ListItem<Item extends Fields> = { readonly id: ItemId } & PropsOf<Item>;
 
+/** A field's schema as a key of its block's props: absent when optional, its first option when a choice left out. */
+type KeySchema =
+  | Schema.Decoder<unknown>
+  | Schema.optionalKey<Schema.Decoder<unknown>>
+  | Schema.withDecodingDefaultKey<Schema.Decoder<unknown>>;
+
+const keySchema = (field: Field, mode: "draft" | "complete"): KeySchema => {
+  if (field.optional) return Schema.optionalKey(field[mode]);
+  if (field.kind === "choice")
+    return field[mode].pipe(Schema.withDecodingDefaultKey(Effect.succeed(field.options[0])));
+  return field[mode];
+};
+
 const fieldSchemas = (
   fields: Fields,
   mode: "draft" | "complete",
-): Readonly<
-  Record<string, Schema.Decoder<unknown> | Schema.optionalKey<Schema.Decoder<unknown>>>
-> =>
-  Object.fromEntries(
-    Object.entries(fields).map(([name, field]) => [
-      name,
-      field.optional ? Schema.optionalKey(field[mode]) : field[mode],
-    ]),
-  );
+): Readonly<Record<string, KeySchema>> =>
+  Object.fromEntries(Object.entries(fields).map(([name, field]) => [name, keySchema(field, mode)]));
 
 /**
  * The schema for props with these fields, in either mode. A draft keeps

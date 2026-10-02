@@ -300,6 +300,8 @@ const fieldSummary = (field: Field, value: Json): string | undefined => {
     case "list":
     case "collection":
     case "number":
+    case "choice":
+    case "icon":
       return undefined;
   }
 };

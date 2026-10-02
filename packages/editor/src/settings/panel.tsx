@@ -63,6 +63,14 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
   if (contract === undefined) return null;
   const label = blockLabel(definitions, instance);
   const placeholders = placeholderPaths(definitions, instance);
+  // Choices set how the block looks, so they sit with its layout rather than its content.
+  const fields = Object.entries(contract.fields);
+  const content = fields.filter(([, definition]) => definition.kind !== "choice");
+  const choices = fields.filter(
+    ([, definition]) =>
+      definition.kind === "choice" &&
+      (definition.layouts === null || definition.layouts.includes(instance.variant)),
+  );
   const placeholderTitles = [
     ...new Set(placeholders.map((path) => fieldAt(contract.fields, path)?.title ?? path.join(" "))),
   ];
@@ -109,7 +117,7 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
         </Alert>
       )}
       <Section title="Content">
-        {Object.entries(contract.fields).map(([name, definition]) => (
+        {content.map(([name, definition]) => (
           <FieldControl
             key={name}
             field={{ target: props.target, block: props.block, path: [name] }}
@@ -119,6 +127,7 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
         ))}
       </Section>
       {(contract.variants.length > 1 ||
+        choices.length > 0 ||
         (contract.placement !== "item" && contract.surfaces.length > 1)) && (
         <Section title="Layout and style">
           <Appearance
@@ -127,6 +136,14 @@ function BlockSettings(props: { readonly target: Target; readonly block: BlockId
             instance={instance}
             contract={contract}
           />
+          {choices.map(([name, definition]) => (
+            <FieldControl
+              key={name}
+              field={{ target: props.target, block: props.block, path: [name] }}
+              definition={definition}
+              value={instance.props[name]}
+            />
+          ))}
         </Section>
       )}
     </>

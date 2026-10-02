@@ -108,13 +108,15 @@ const migrateBlock = (
   const end = to[block.type];
   if (start === undefined || end === undefined || start >= end) return block;
   let props: StoredProps = block.props;
+  let variant = block.variant;
   for (let version = start + 1; version <= end; version += 1) {
-    const migrate = library.get(blockKey(block.type, version))?.migrate;
-    if (migrate === undefined || migrate === null)
+    const definition = library.get(blockKey(block.type, version));
+    if (definition === undefined || definition.migrate === null)
       throw new Error(`${blockKey(block.type, version)} can't take content from v${version - 1}.`);
-    props = migrate(props);
+    props = definition.migrate(props, variant);
+    variant = definition.renamedVariants[variant] ?? variant;
   }
-  return { ...block, props };
+  return { ...block, variant, props };
 };
 
 const migrateBlocks = (
@@ -226,6 +228,8 @@ const valueKinds = {
   list: "list",
   collection: "link",
   number: "number",
+  choice: "choice",
+  icon: "choice",
 } as const satisfies Record<Field["kind"], ValueKind>;
 
 // Ordered lists -------------------------------------------------------------------

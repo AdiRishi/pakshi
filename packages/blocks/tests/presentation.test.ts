@@ -32,10 +32,19 @@ test("every block type has a presentation, and every presentation is a block typ
 });
 
 test.each(latest)(
-  "%s's presentation labels its newest version's layouts and no others",
-  (type, block) => {
-    expect(Object.keys(presentationOf(type).variants).toSorted()).toEqual(
-      block.variants.toSorted(),
+  "%s's presentation labels its versions' layouts and no others",
+  async (type, block) => {
+    const versions = await Promise.all(
+      registeredVersions
+        .filter((registered) => registered.type === type)
+        .map(({ version }) => loadBlock(type, { [type]: version })),
+    );
+    const layouts = new Set(versions.flatMap((version) => version.variants));
+    expect(Object.keys(presentationOf(type).variants)).toEqual(
+      expect.arrayContaining([...block.variants]),
+    );
+    expect(Object.keys(presentationOf(type).variants).filter((name) => !layouts.has(name))).toEqual(
+      [],
     );
   },
 );

@@ -29,6 +29,8 @@ import {
   PilcrowIcon,
   PlusIcon,
   RectangleHorizontalIcon,
+  SlidersHorizontalIcon,
+  SparklesIcon,
   TypeIcon,
 } from "lucide-react";
 import { type ReactNode, useId } from "react";
@@ -79,6 +81,8 @@ const icons: Readonly<Record<Field["kind"], LucideIcon>> = {
   list: ListIcon,
   collection: NewspaperIcon,
   number: HashIcon,
+  choice: SlidersHorizontalIcon,
+  icon: SparklesIcon,
 };
 
 /** The kinds of part drawn on the block, which a row picks there. */
@@ -136,6 +140,10 @@ const summaryOf = (field: Field, value: Schema.Json | undefined, draft: Draft): 
       });
     case "number":
       return read(field.draft, value, (number) => plain(String(number)));
+    case "choice":
+      return read(field.draft, value, (option) => plain(field.labels[option] ?? option));
+    case "icon":
+      return read(field.draft, value, (name) => plain(name.replaceAll("-", " ")));
   }
 };
 
@@ -209,7 +217,8 @@ const usePick = () => {
   const { document } = useCanvasControls();
   return (field: FieldTarget, kind: Field["kind"], row: HTMLButtonElement) => {
     if (kind === "link") return ui.openLink(field, row);
-    if (kind === "collection" || kind === "number") return ui.openSetting(field, row);
+    if (kind === "collection" || kind === "number" || kind === "choice" || kind === "icon")
+      return ui.openSetting(field, row);
     store.select({ kind: "field", ...field });
     // The part is on the page once the selection has rendered, as a newly added one is.
     requestAnimationFrame(() => {

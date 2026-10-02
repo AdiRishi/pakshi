@@ -47,6 +47,8 @@ type BlockSpec<
   readonly variants: readonly [Variant, ...Array<Variant>];
   readonly agent: BlockContract["agent"];
   readonly migrate?: NonNullable<BlockContract["migrate"]>;
+  /** The previous version's variants this version renames, and what it calls each now. */
+  readonly renamedVariants?: Readonly<Record<string, Variant>>;
   readonly changes?: NonNullable<BlockContract["changes"]>;
   readonly component: ComponentType<BlockComponentProps<F, Variant>>;
 };
@@ -119,10 +121,11 @@ const contractOf = <F extends Fields, Variant extends string, P extends Placemen
     type: spec.type,
     version: spec.version,
     title: presentation.name,
-    fields: labelledFields(spec.props, presentation.fields),
+    fields: labelledFields(spec.props, presentation),
     variants: spec.variants,
     agent: spec.agent,
     migrate: spec.migrate ?? null,
+    renamedVariants: spec.renamedVariants ?? {},
     changes: spec.changes ?? null,
   };
   const placed: PlacementSpec = spec;

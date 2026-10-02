@@ -1,6 +1,6 @@
 import { RichTextDocument } from "@repo/blocks";
 import type { BlockContract } from "@repo/blocks/contract";
-import { type Field, type Fields, fieldParts } from "@repo/blocks/fields";
+import { type Field, type Fields, fieldParts, IconName } from "@repo/blocks/fields";
 import { markdownAllowed, richTextFromMarkdown, richTextToMarkdown } from "@repo/blocks/markdown";
 import { collectionKinds } from "@repo/contracts/collections";
 import { ItemId, randomId } from "@repo/contracts/ids";
@@ -125,6 +125,10 @@ const describeField = (field: Field): Json => {
       };
     case "number":
       return { ...base, min: field.min, max: field.max, value: "a whole number" };
+    case "choice":
+      return { ...base, options: Arr.fromIterable(field.options), value: "one of the options" };
+    case "icon":
+      return { ...base, options: Arr.fromIterable(IconName.literals), value: "an icon's name" };
     case "list":
       return {
         ...base,

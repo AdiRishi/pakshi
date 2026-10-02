@@ -17,7 +17,7 @@ import {
 } from "../scripts/generate-registry.ts";
 import type { BlockDefinition } from "../src/block.tsx";
 import { type SiteData, SiteDataProvider } from "../src/components.tsx";
-import { blockKey } from "../src/contract.ts";
+import { blockKey, type StoredProps } from "../src/contract.ts";
 import { propsSchema } from "../src/fields.ts";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import {
@@ -89,21 +89,29 @@ test.each(
     .filter(({ type, version }) => version > 1 && blockKey(type, version - 1) in registry)
     .map(({ type, version }) => [blockKey(type, version), type, version] as const),
 )(
-  "%s says what it changes and takes the content of the version before it",
+  "%s says what it changes and takes the content and layouts of the version before it",
   async (_key, type, version) => {
     const block = await load(type, version);
     expect(block.changes).not.toBeNull();
     if (block.migrate === null) throw new Error(`${type}@${version} has no migration.`);
     const migrate = block.migrate;
-    const complete = Schema.is(propsSchema(block.fields, "complete"));
+    // A choice left out reads as its first option, so completeness is what decodes.
+    const decodeComplete = Schema.decodeUnknownExit(propsSchema(block.fields, "complete"));
+    const complete = (props: StoredProps) => decodeComplete(props)._tag === "Success";
     const previous = blockFixtures.filter(
       (entry) => entry.type === type && entry.version === version - 1,
     );
     expect(previous.length).toBeGreaterThan(0);
     expect(
       previous
-        .filter((entry) => !complete(migrate(entry.fixture.props)))
+        .filter((entry) => !complete(migrate(entry.fixture.props, entry.fixture.variant)))
         .map((entry) => entry.name),
+    ).toEqual([]);
+    const before = await load(type, version - 1);
+    expect(
+      before.variants.filter(
+        (variant) => !block.variants.includes(block.renamedVariants[variant] ?? variant),
+      ),
     ).toEqual([]);
   },
 );
@@ -255,7 +263,7 @@ describe("blog lists and post headers", () => {
   test("a blog list of the first version keeps its heading and lists twelve posts until a blog is chosen", async () => {
     const block = await load("post-list", 2);
     if (block.migrate === null) throw new Error("post-list@2 has no migration.");
-    const migrated = block.migrate({ heading: "News", intro: "What's happening." });
+    const migrated = block.migrate({ heading: "News", intro: "What's happening." }, "list");
     expect(migrated).toEqual({
       heading: "News",
       intro: "What's happening.",

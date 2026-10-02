@@ -74,9 +74,15 @@ export type BlockContract = Placement & {
   readonly agent: { readonly purpose: string; readonly avoid?: ReadonlyArray<string> };
   /**
    * Turns the previous version's props into this version's, so content can
-   * move up any number of versions. A block's first version has none.
+   * move up any number of versions. It's told the variant the content had in
+   * the previous version too. A block's first version has none.
    */
-  readonly migrate: ((previous: StoredProps) => StoredProps) | null;
+  readonly migrate: ((previous: StoredProps, variant: string) => StoredProps) | null;
+  /**
+   * The previous version's variants that this version calls by another
+   * name, which upgrading moves content onto. Variants it keeps aren't listed.
+   */
+  readonly renamedVariants: Readonly<Record<string, string>>;
   /**
    * What this version changes from the one before, in a sentence or two for
    * the editors deciding whether to adopt it. A block's first version has none.

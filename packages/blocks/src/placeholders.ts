@@ -258,7 +258,9 @@ const placeholdersIn = (
     case "collection":
       return isPageRef(value) && value.id === placeholderCollection ? [[]] : [];
     case "number":
-      // A number is a setting, such as how many posts to show, which any value of fits.
+    case "choice":
+    case "icon":
+      // A setting, such as how many posts to show, or an icon: any value of it fits.
       return [];
     case "cta": {
       // A short label such as "Get started" can be real, so a button is a placeholder while its link is.
