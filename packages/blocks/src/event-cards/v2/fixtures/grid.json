@@ -1,0 +1,80 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "kicker": "Open to everyone",
+    "heading": "Summer events.",
+    "headingRest": "Come and see the boats, even if you're not a student.",
+    "actions": [
+      {
+        "id": "it_all",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "columns": "3"
+  },
+  "slots": {
+    "events": [
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sat 5 July",
+          "time": "10am to 4pm",
+          "place": "The boatshed, North Quay",
+          "title": "Open workshop",
+          "body": "See this year's boats half-built and have a go with a plane and a spokeshave.",
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "The jetty under the boatshed roof on a misty morning"
+          },
+          "link": {
+            "label": "Plan your visit",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Fri 11 July",
+          "time": "4pm",
+          "place": "The slipway",
+          "title": "Launch day",
+          "body": "Students put their boats in the water for the first time. Come and cheer them on.",
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleHarbour",
+            "alt": "Two sailing boats on the harbour at sunset"
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sat 19 July",
+          "time": "7pm",
+          "place": "The Net Loft",
+          "title": "Harbour supper",
+          "body": "A shared supper to end the summer. Tickets include food and a drink.",
+          "link": {
+            "label": "Buy supper tickets",
+            "link": "https://example.org/supper"
+          }
+        }
+      }
+    ]
+  }
+}

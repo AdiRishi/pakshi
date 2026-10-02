@@ -1,0 +1,44 @@
+{
+  "variant": "grid",
+  "surface": "tint",
+  "props": {
+    "heading": "In the gallery at the harbour office",
+    "intro": "Two small shows this summer, free to visit whenever the office is open.",
+    "actions": [],
+    "columns": "2"
+  },
+  "slots": {
+    "events": [
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Until 3 May 2027",
+          "place": "Harbour office, upstairs",
+          "title": "Hulls: drawings from the boatyard",
+          "body": "Builders' drawings from a hundred years of the North Quay yard, many shown for the first time.",
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleHarbour",
+            "alt": "Two sailing boats on the harbour at sunset"
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "12 July to 30 August",
+          "place": "Harbour office, ground floor",
+          "title": "Students' work, summer 2027",
+          "body": "Models, plans and photographs from this year's students.",
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "The jetty under the boatshed roof on a misty morning"
+          }
+        }
+      }
+    ]
+  }
+}

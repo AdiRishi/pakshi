@@ -7,9 +7,16 @@ import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholde
 import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
 import eventCard1default from "./event-card/v1/fixtures/default.json" with { type: "json" };
 import eventCard1placeholder from "./event-card/v1/fixtures/placeholder.json" with { type: "json" };
+import eventCard2default from "./event-card/v2/fixtures/default.json" with { type: "json" };
+import eventCard2noImage from "./event-card/v2/fixtures/no-image.json" with { type: "json" };
+import eventCard2placeholder from "./event-card/v2/fixtures/placeholder.json" with { type: "json" };
 import eventCards1grid from "./event-cards/v1/fixtures/grid.json" with { type: "json" };
 import eventCards1list from "./event-cards/v1/fixtures/list.json" with { type: "json" };
 import eventCards1placeholder from "./event-cards/v1/fixtures/placeholder.json" with { type: "json" };
+import eventCards2gridTwo from "./event-cards/v2/fixtures/grid-two.json" with { type: "json" };
+import eventCards2grid from "./event-cards/v2/fixtures/grid.json" with { type: "json" };
+import eventCards2list from "./event-cards/v2/fixtures/list.json" with { type: "json" };
+import eventCards2placeholder from "./event-cards/v2/fixtures/placeholder.json" with { type: "json" };
 import faq1list from "./faq/v1/fixtures/list.json" with { type: "json" };
 import faq1placeholder from "./faq/v1/fixtures/placeholder.json" with { type: "json" };
 import faq1twoColumns from "./faq/v1/fixtures/two-columns.json" with { type: "json" };
@@ -112,9 +119,16 @@ export const fixtureFiles = [
   { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },
   { type: "event-card", version: 1, name: "default", fixture: eventCard1default },
   { type: "event-card", version: 1, name: "placeholder", fixture: eventCard1placeholder },
+  { type: "event-card", version: 2, name: "default", fixture: eventCard2default },
+  { type: "event-card", version: 2, name: "no-image", fixture: eventCard2noImage },
+  { type: "event-card", version: 2, name: "placeholder", fixture: eventCard2placeholder },
   { type: "event-cards", version: 1, name: "grid", fixture: eventCards1grid },
   { type: "event-cards", version: 1, name: "list", fixture: eventCards1list },
   { type: "event-cards", version: 1, name: "placeholder", fixture: eventCards1placeholder },
+  { type: "event-cards", version: 2, name: "grid-two", fixture: eventCards2gridTwo },
+  { type: "event-cards", version: 2, name: "grid", fixture: eventCards2grid },
+  { type: "event-cards", version: 2, name: "list", fixture: eventCards2list },
+  { type: "event-cards", version: 2, name: "placeholder", fixture: eventCards2placeholder },
   { type: "faq", version: 1, name: "list", fixture: faq1list },
   { type: "faq", version: 1, name: "placeholder", fixture: faq1placeholder },
   { type: "faq", version: 1, name: "two-columns", fixture: faq1twoColumns },
