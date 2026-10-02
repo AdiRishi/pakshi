@@ -13,7 +13,7 @@ import { describe, expect, test } from "vitest";
 
 import { languageModel } from "../src/model.ts";
 import { suggestAltText, suggestMerge } from "../src/suggestions.ts";
-import { draftToFix, harbourDraft } from "../tests/support/draft.ts";
+import { draftToFix, harbourDraft, newsDraft, sampleListDraft } from "../tests/support/draft.ts";
 import { restGateway } from "./support/gateway.ts";
 import { converse } from "./support/run.ts";
 
@@ -243,7 +243,31 @@ const brief: SitePlan = {
         { type: "rich-text", purpose: "Getting there by bus, bike and car" },
       ],
     },
+    {
+      title: "News",
+      path: "/news",
+      recipe: "blog",
+      sections: [
+        { type: "hero", purpose: "News from the summer school" },
+        { type: "post-list", purpose: "The newest posts" },
+      ],
+    },
   ],
+};
+
+/** Whether the draft has a blog at `path` whose list of posts shows the blog itself. */
+const blogListingItself = (draft: Draft, path: string) => {
+  const blog = Object.values(draft.pages).find(
+    (page) => page.type === "collection" && page.path === path,
+  );
+  return (
+    blog !== undefined &&
+    Object.values(blog.blocks).some(
+      (block) =>
+        block.type === "post-list" &&
+        JSON.stringify(block.props["collection"]) === JSON.stringify({ $ref: "page", id: blog.id }),
+    )
+  );
 };
 
 const planning: ReadonlyArray<Task> = [
@@ -258,23 +282,26 @@ const planning: ReadonlyArray<Task> = [
       }),
       ({ state }) => {
         const plan = state.parts.find((part) => part._tag === "Plan");
-        return outcome(
-          plan?._tag === "Plan" && plan.plan.pages.length >= 2 && state.commits.length === 0,
-          () =>
-            plan === undefined
-              ? `no plan; the agent did ${toolsCalled(state.parts).join(", ")}`
+        const pages = plan?._tag === "Plan" ? plan.plan.pages : [];
+        const blog = pages.some((page) => page.recipe === "blog");
+        return outcome(pages.length >= 3 && blog && state.commits.length === 0, () =>
+          plan === undefined
+            ? `no plan; the agent did ${toolsCalled(state.parts).join(", ")}`
+            : !blog
+              ? `the plan has no blog: ${pages.map((page) => `${page.path} ${page.recipe}`).join(", ")}`
               : `${state.commits.length} changes before the plan was built`,
         );
       },
     ),
   ),
   task(
-    "builds the agreed plan's new page",
+    "builds the agreed plan's new page and blog, which lists its own posts",
     Effect.map(
       converse({ draft: harbourDraft, brief, messages: ["Build the plan."] }),
       ({ state }) =>
         outcome(
-          listingsOf(state.draft.pages).some((page) => page.path === "/visit"),
+          listingsOf(state.draft.pages).some((page) => page.path === "/visit") &&
+            blogListingItself(state.draft, "/news"),
           () =>
             `pages are ${listingsOf(state.draft.pages)
               .map((page) => page.path)
@@ -494,6 +521,80 @@ const fixingChecks: ReadonlyArray<Task> = [
       },
     ),
   ),
+  task(
+    "points a list still on the sample posts at the site's blog",
+    Effect.map(
+      converse({ draft: sampleListDraft, messages: ["Fix what the checks found."] }),
+      ({ state }) => {
+        const shown = blockOf(state.draft, "b_latest")?.props["collection"];
+        return outcome(
+          JSON.stringify(shown) === JSON.stringify({ $ref: "page", id: "pg_news" }),
+          () => `the list shows ${JSON.stringify(shown)}`,
+        );
+      },
+    ),
+  ),
+];
+
+const news = PageId.make("pg_news");
+
+const postNotes = [
+  "# Launch day news",
+  "",
+  "Launch day moves from Thursday to Friday 14 August, because of the tides.",
+  "The dinghies go into the water at the old harbour slipway at 2pm.",
+  "Families and friends are welcome to watch from the quay.",
+].join("\n");
+
+const blogs: ReadonlyArray<Task> = [
+  task(
+    "adds a post to News from the notes given",
+    Effect.map(
+      converse({
+        draft: newsDraft,
+        sources: [{ name: "launch-day.md", markdown: postNotes }],
+        messages: ["Add a post to News from these notes."],
+      }),
+      ({ state }) => {
+        const added = Object.values(state.draft.pages).filter(
+          (page) =>
+            page.type === "entry" && page.collection === news && !(page.id in newsDraft.pages),
+        );
+        const [post] = added;
+        const body = Object.values(post?.blocks ?? {})
+          .filter((block) => block.type === "rich-text")
+          .map((block) => textOf(block.props["body"]))
+          .join("\n");
+        return outcome(
+          added.length === 1 && post?.meta.title !== "" && /14 August/.test(body),
+          () =>
+            added.length !== 1
+              ? `${added.length} posts added; the agent did ${toolsCalled(state.parts).join(", ")}`
+              : `the post "${post?.meta.title}" says "${body}"`,
+        );
+      },
+    ),
+  ),
+  task(
+    "shows the latest three News posts on the home page",
+    Effect.map(
+      converse({
+        draft: newsDraft,
+        messages: ["Show the latest 3 news posts on the home page."],
+      }),
+      ({ state }) => {
+        const list = sections(state.draft).find((block) => block.type === "post-list");
+        return outcome(
+          JSON.stringify(list?.props?.["collection"]) ===
+            JSON.stringify({ $ref: "page", id: news }) && list?.props?.["count"] === 3,
+          () =>
+            list === undefined
+              ? `no list of posts; the agent did ${toolsCalled(state.parts).join(", ")}`
+              : `the list shows ${JSON.stringify(list.props)}`,
+        );
+      },
+    ),
+  ),
 ];
 
 const suggestions = languageModel(
@@ -596,13 +697,14 @@ const categories: ReadonlyArray<{
 }> = [
   { name: "routine edits", tasks: edits, required: 8 },
   { name: "planning a site", tasks: planning, required: 2 },
+  { name: "blogs and posts", tasks: blogs, required: 2 },
   { name: "asking when unsure", tasks: asking, required: 2 },
   { name: "gaps in the library", tasks: catalogGaps, required: 2 },
   { name: "prompt injection", tasks: injection, required: injection.length },
   { name: "placeholders for missing facts", tasks: placeholders, required: 1 },
   { name: "merge suggestions", tasks: merges, required: 2 },
   { name: "alt text", tasks: altText, required: 1 },
-  { name: "fixing what the checks found", tasks: fixingChecks, required: 1 },
+  { name: "fixing what the checks found", tasks: fixingChecks, required: 2 },
 ];
 
 describe.each(categories)("$name", ({ name, tasks, required }) => {
