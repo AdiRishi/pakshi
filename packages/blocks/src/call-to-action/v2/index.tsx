@@ -18,7 +18,10 @@ const props = {
   form: optional(form({ title: "Sign-up form" })),
   image: optional(media({ title: "Image" })),
   mediaSide: choice({ title: "Image side", options: ["end", "start"] }),
-  backdrop: choice({ title: "Backdrop", options: ["none", "glow", "grid", "dots"] }),
+  backdrop: choice({
+    title: "Backdrop",
+    options: ["none", "glow", "arc", "grid", "dots", "stripes", "noise"],
+  }),
 };
 
 type Variant = "centered" | "split" | "panel" | "image";

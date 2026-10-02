@@ -183,7 +183,7 @@ const Picture = ({
   readonly sizes: string;
 }) =>
   hero.image === undefined ? null : (
-    <Frame style={hero.frame}>
+    <Frame kind={hero.frame}>
       <Media
         field="image"
         value={hero.image}

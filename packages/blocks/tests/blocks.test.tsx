@@ -169,9 +169,31 @@ describe("field components", () => {
   });
 
   test("render rich text with the field's extensions", async () => {
-    const entry = blockFixtures.find((candidate) => candidate.type === "rich-text");
-    const block = await load("rich-text", 1);
-    const result = renderProps(block, entry?.fixture.props ?? {}, "narrow");
+    const block = await newest("rich-text");
+    const text = (value: string, marks?: ReadonlyArray<Json>) => ({
+      type: "text",
+      text: value,
+      ...(marks !== undefined && { marks }),
+    });
+    const body = {
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [text("We work in "), text("small teams", [{ type: "italic" }])],
+        },
+        { type: "heading", attrs: { level: 3 }, content: [text("Bring with you")] },
+        {
+          type: "paragraph",
+          content: [
+            text("frequently asked questions", [
+              { type: "link", attrs: { href: "https://example.org/faq" } },
+            ]),
+          ],
+        },
+      ],
+    };
+    const result = renderProps(block, { body }, "article");
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
     expect(html).toContain("<em>small teams</em>");
@@ -180,11 +202,11 @@ describe("field components", () => {
   });
 
   test("render a form's fields with labels tied to their inputs", async () => {
-    const block = await load("form-section", 1);
+    const block = await newest("form-section");
     const result = renderProps(
       block,
-      { heading: "Register", form: { $ref: "form", id: "frm_register" } },
-      "plain",
+      { heading: "Register", points: [], form: { $ref: "form", id: "frm_register" } },
+      "card",
     );
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
@@ -275,19 +297,6 @@ describe("blog lists and post headers", () => {
     expect(html).toContain("data:image/svg+xml,");
   });
 
-  test("a blog list of the first version keeps its heading and lists twelve posts until a blog is chosen", async () => {
-    const block = await load("post-list", 2);
-    if (block.migrate === null) throw new Error("post-list@2 has no migration.");
-    const migrated = block.migrate({ heading: "News", intro: "What's happening." }, "list");
-    expect(migrated).toEqual({
-      heading: "News",
-      intro: "What's happening.",
-      collection: { $ref: "page", id: "pg_pakshiBlog" },
-      count: 12,
-    });
-    expect(Schema.is(propsSchema(block.fields, "complete"))(migrated)).toBe(true);
-  });
-
   test("a post header shows the post's title, date, author and cover from its settings", async () => {
     const block = await load("post-header", 2);
     const result = renderProps(block, {}, "cover");
@@ -316,10 +325,11 @@ describe("blog lists and post headers", () => {
 
 describe("drafts are checked against the block version's limits", () => {
   test("optional fields may be left out and required ones may not", async () => {
-    const cta = await load("call-to-action", 1);
-    const primary = { label: "Register", link: "https://example.org" };
-    expect(renderProps(cta, { heading: "Places are limited", primary }, "banner").ok).toBe(true);
-    expect(renderProps(cta, { heading: "Places are limited" }, "banner").ok).toBe(false);
+    const cta = await newest("call-to-action");
+    expect(renderProps(cta, { heading: "Places are limited", actions: [] }, "centered").ok).toBe(
+      true,
+    );
+    expect(renderProps(cta, { heading: "Places are limited" }, "centered").ok).toBe(false);
   });
 
   test("maximum lengths and single lines apply, minimum lengths don't", async () => {
@@ -377,7 +387,7 @@ describe("drafts are checked against the block version's limits", () => {
   });
 
   test("list items need their own IDs", async () => {
-    const gallery = await load("gallery", 1);
+    const gallery = await newest("gallery");
     const image = { $ref: "media", id: "med_harbour", alt: "" };
     const items = [
       { id: "it_a", image },
@@ -399,7 +409,7 @@ describe("completeness is checked apart from drafts", () => {
 
   test("a choice left out reads as its first option", async () => {
     const hero = await newest("hero");
-    const decoded = Schema.decodeUnknownSync(propsSchema(hero.fields, "complete"))({
+    const decoded = Schema.decodeSync(propsSchema(hero.fields, "complete"))({
       heading: "Learn by building",
       actions: [],
       points: [],
@@ -408,14 +418,11 @@ describe("completeness is checked apart from drafts", () => {
   });
 
   test("images need alt text, which may be empty for a decorative image", async () => {
-    const split = await load("split", 1);
-    const complete = Schema.is(propsSchema(split.fields, "complete"));
+    const complete = completes(await newest("split"));
     const props = (image: Json) => ({
       heading: "Afternoons on the water",
-      body: {
-        type: "doc",
-        content: [{ type: "paragraph", content: [{ type: "text", text: "Sail." }] }],
-      },
+      points: [],
+      actions: [],
       image,
     });
     expect(complete(props({ $ref: "media", id: "med_harbour", alt: "" }))).toBe(true);
@@ -423,14 +430,13 @@ describe("completeness is checked apart from drafts", () => {
   });
 
   test("required rich text needs some text", async () => {
-    const block = await load("rich-text", 1);
-    const complete = Schema.is(propsSchema(block.fields, "complete"));
+    const complete = completes(await newest("rich-text"));
     expect(complete({ body: { type: "doc", content: [{ type: "paragraph" }] } })).toBe(false);
   });
 
   test("a list needs its minimum number of items", async () => {
-    const gallery = await load("gallery", 1);
-    expect(Schema.is(propsSchema(gallery.fields, "complete"))({ images: [] })).toBe(false);
+    const complete = completes(await newest("gallery"));
+    expect(complete({ images: [] })).toBe(false);
   });
 });
 

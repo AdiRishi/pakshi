@@ -25,7 +25,10 @@ export default {
       options: { alternate: "Take turns", end: "Photo right", start: "Photo left" },
     },
     verticalAlign: { options: { center: "Middle", top: "Top" } },
-    frame: { options: { plain: "Plain", framed: "Framed" }, layouts: ["standard"] },
+    frame: {
+      options: { plain: "Plain", framed: "On a tray", browser: "Browser window", phone: "Phone" },
+      layouts: ["standard"],
+    },
     background: { options: { full: "Full width", inset: "Inset panel" } },
   },
   fields: {

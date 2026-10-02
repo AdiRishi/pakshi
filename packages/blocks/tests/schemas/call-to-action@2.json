@@ -152,8 +152,11 @@
           "enum": [
             "none",
             "glow",
+            "arc",
             "grid",
-            "dots"
+            "dots",
+            "stripes",
+            "noise"
           ]
         }
       },
@@ -303,8 +306,11 @@
           "enum": [
             "none",
             "glow",
+            "arc",
             "grid",
-            "dots"
+            "dots",
+            "stripes",
+            "noise"
           ]
         }
       },

@@ -34,7 +34,15 @@ export default {
       layouts: ["panel"],
     },
     backdrop: {
-      options: { none: "None", glow: "Glow", grid: "Grid", dots: "Dots" },
+      options: {
+        none: "None",
+        glow: "Glow",
+        arc: "Rising glow",
+        grid: "Grid",
+        dots: "Dots",
+        stripes: "Stripes",
+        noise: "Grain",
+      },
       layouts: ["centered", "split", "panel"],
     },
   },

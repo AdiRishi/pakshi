@@ -975,7 +975,9 @@
           "type": "string",
           "enum": [
             "plain",
-            "framed"
+            "framed",
+            "browser",
+            "phone"
           ]
         },
         "background": {
@@ -1960,7 +1962,9 @@
           "type": "string",
           "enum": [
             "plain",
-            "framed"
+            "framed",
+            "browser",
+            "phone"
           ]
         },
         "background": {

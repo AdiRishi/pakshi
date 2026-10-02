@@ -10,11 +10,11 @@ export type FrameStyle = "plain" | "framed" | "browser" | "phone";
  * corners and shape suit the frame.
  */
 export const Frame = (props: {
-  readonly style: FrameStyle;
+  readonly kind: FrameStyle;
   readonly className?: string;
   readonly children: ReactNode;
 }) => {
-  switch (props.style) {
+  switch (props.kind) {
     case "plain":
       return <div className={props.className}>{props.children}</div>;
     case "framed":

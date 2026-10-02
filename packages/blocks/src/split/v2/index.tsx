@@ -4,6 +4,7 @@ import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Media, RichText, Text } from "../../components.tsx";
 import { choice, cta, icon, list, media, optional, richText, text } from "../../fields.ts";
 import { Actions } from "../../kit/actions.tsx";
+import { Frame, frameImageClass } from "../../kit/frame.tsx";
 import { Icon } from "../../kit/icon.tsx";
 import { Intro } from "../../kit/intro.tsx";
 import { Section } from "../../kit/section.tsx";
@@ -34,7 +35,7 @@ const props = {
   image: media({ title: "Image" }),
   mediaSide: choice({ title: "Image side", options: ["alternate", "end", "start"] }),
   verticalAlign: choice({ title: "Vertical alignment", options: ["center", "top"] }),
-  frame: choice({ title: "Image style", options: ["plain", "framed"] }),
+  frame: choice({ title: "Image style", options: ["plain", "framed", "browser", "phone"] }),
   background: choice({ title: "Background", options: ["full", "inset"] }),
 };
 
@@ -131,23 +132,21 @@ const SplitBlock = ({ props: split, variant }: BlockComponentProps<typeof props,
           >
             <Copy split={split} />
             <div className={pictureOrder[split.mediaSide]}>
-              {split.frame === "framed" ? (
-                <div className="rounded-xl border border-foreground/10 bg-foreground/4 p-2 shadow-card">
-                  <Media
-                    field="image"
-                    value={split.image}
-                    sizes="(min-width: 76rem) 36rem, (min-width: 48rem) 50vw, 100vw"
-                    className="w-full rounded-lg"
-                  />
-                </div>
-              ) : (
+              <Frame kind={split.frame}>
                 <Media
                   field="image"
                   value={split.image}
-                  sizes="(min-width: 76rem) 36rem, (min-width: 48rem) 50vw, 100vw"
-                  className="rounded-image aspect-4/5 w-full object-cover"
+                  sizes={
+                    split.frame === "phone"
+                      ? "19rem"
+                      : "(min-width: 76rem) 36rem, (min-width: 48rem) 50vw, 100vw"
+                  }
+                  className={cx(
+                    frameImageClass(split.frame),
+                    split.frame === "plain" && "aspect-4/5",
+                  )}
                 />
-              )}
+              </Frame>
             </div>
           </div>
         </Section>
