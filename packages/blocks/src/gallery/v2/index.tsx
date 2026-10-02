@@ -35,15 +35,22 @@ const gridColumns = {
   "4": "grid-cols-2 lg:grid-cols-4",
 } as const satisfies Record<Gallery["columns"], string>;
 
+/** Masonry keeps two columns on a phone, where one would be a long single file of photos. */
 const masonryColumns = {
-  "2": "sm:columns-2",
-  "3": "sm:columns-2 lg:columns-3",
+  "2": "columns-2",
+  "3": "columns-2 lg:columns-3",
   "4": "columns-2 lg:columns-4",
 } as const satisfies Record<Gallery["columns"], string>;
 
 const tileSizes = {
   "2": "(min-width: 40rem) 50vw, 100vw",
   "3": "(min-width: 64rem) 33vw, (min-width: 40rem) 50vw, 100vw",
+  "4": "(min-width: 64rem) 25vw, 50vw",
+} as const satisfies Record<Gallery["columns"], string>;
+
+const masonrySizes = {
+  "2": "50vw",
+  "3": "(min-width: 64rem) 33vw, 50vw",
   "4": "(min-width: 64rem) 25vw, 50vw",
 } as const satisfies Record<Gallery["columns"], string>;
 
@@ -155,13 +162,13 @@ const Images = ({ gallery, variant }: { readonly gallery: Gallery; readonly vari
       return (
         <ul
           className={cx(
-            "gap-4 [&>li]:mb-8 [&>li]:break-inside-avoid",
+            "gap-3 sm:gap-4 [&>li]:mb-6 [&>li]:break-inside-avoid sm:[&>li]:mb-8",
             masonryColumns[gallery.columns],
           )}
         >
           {gallery.images.map((item) => (
             <li key={item.id}>
-              <Figure item={item} sizes={tileSizes[gallery.columns]} imageClass="h-auto" />
+              <Figure item={item} sizes={masonrySizes[gallery.columns]} imageClass="h-auto" />
             </li>
           ))}
         </ul>

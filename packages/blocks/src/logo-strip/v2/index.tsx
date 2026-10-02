@@ -107,7 +107,7 @@ const LogoStripBlock = ({ props: strip, variant }: BlockComponentProps<typeof pr
         <Section spacing="flush" className="py-16 md:py-24">
           <div className="page-width flex flex-col items-center gap-10">
             <Caption strip={strip} className="text-center" />
-            <ul className="flex w-full flex-wrap items-center justify-center gap-x-14 gap-y-8 lg:justify-between">
+            <ul className="grid w-full grid-cols-2 items-center justify-items-center gap-x-6 gap-y-8 sm:flex sm:flex-wrap sm:justify-center sm:gap-x-14 lg:justify-between">
               {strip.logos.map((item) => (
                 <li key={item.id} className="flex">
                   <LogoImage strip={strip} item={item} />

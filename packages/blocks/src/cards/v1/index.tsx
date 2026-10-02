@@ -62,8 +62,10 @@ const CardsBlock = ({ props: section, variant }: BlockComponentProps<typeof prop
               columns[section.columns],
               rows === "lines" && "gap-x-10 border-b border-border",
               rows === "tiles" && "gap-4",
-              // Four narrow pictures with a title on each still read two to a row on a phone.
+              // Four narrow pictures with a title on each still read two to a row on a phone,
+              // and so do portraits, which one to a row would fill the screen.
               variant === "overlay" && section.columns === "4" && "grid-cols-2",
+              variant === "grid" && section.crop === "portrait" && "grid-cols-2 max-sm:gap-x-4",
               gaps[variant],
             )}
           />

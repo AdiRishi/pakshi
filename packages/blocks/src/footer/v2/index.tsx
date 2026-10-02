@@ -33,6 +33,28 @@ const props = {
 type Variant = "columns" | "simple" | "centered" | "wordmark";
 type Footer = BlockComponentProps<typeof props, Variant>["props"];
 
+/*
+ * Wordmark sizes for names of up to so many letters. Each is a whole class
+ * name, so Tailwind finds it; a name takes the first that holds it.
+ */
+const wordmarkFits = [
+  [3, "wordmark-fit-3"],
+  [4, "wordmark-fit-4"],
+  [5, "wordmark-fit-5"],
+  [6, "wordmark-fit-6"],
+  [7, "wordmark-fit-7"],
+  [8, "wordmark-fit-8"],
+  [10, "wordmark-fit-10"],
+  [12, "wordmark-fit-12"],
+  [14, "wordmark-fit-14"],
+  [17, "wordmark-fit-17"],
+  [20, "wordmark-fit-20"],
+  [24, "wordmark-fit-24"],
+] as const;
+
+const wordmarkFit = (name: string) =>
+  (wordmarkFits.find(([letters]) => name.length <= letters) ?? wordmarkFits[11])[1];
+
 const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 const quietLink = cx(
   "rounded-sm text-small text-muted-foreground transition-colors hover:text-foreground",
@@ -265,9 +287,11 @@ const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof prop
             </div>
           </div>
           {variant === "wordmark" && (
-            <p aria-hidden className="page-width wordmark mt-16 text-foreground">
-              {name}
-            </p>
+            <div className="page-width @container mt-16">
+              <p aria-hidden className={cx("wordmark text-foreground", wordmarkFit(name))}>
+                {name}
+              </p>
+            </div>
           )}
         </Root>
       );

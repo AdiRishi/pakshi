@@ -88,10 +88,32 @@ const typeScales = {
 } as const satisfies Record<ResolvedTheme["typeScale"], TypeScale>;
 
 /** Letter spacing by heading size, and the case headings are set in. */
+/*
+ * `glyph` is about how wide a heading letter runs, tracking included, so a
+ * line of known length can be sized to fill a width.
+ */
 const headingStyles = {
-  tight: { heading: "-0.015em", title: "-0.03em", display: "-0.04em", case: "none" },
-  normal: { heading: "-0.005em", title: "-0.015em", display: "-0.02em", case: "none" },
-  uppercase: { heading: "0.04em", title: "0.03em", display: "0.02em", case: "uppercase" },
+  tight: {
+    heading: "-0.015em",
+    title: "-0.03em",
+    display: "-0.04em",
+    case: "none",
+    glyph: "0.56",
+  },
+  normal: {
+    heading: "-0.005em",
+    title: "-0.015em",
+    display: "-0.02em",
+    case: "none",
+    glyph: "0.58",
+  },
+  uppercase: {
+    heading: "0.04em",
+    title: "0.03em",
+    display: "0.02em",
+    case: "uppercase",
+    glyph: "0.74",
+  },
 } as const satisfies Record<ResolvedTheme["headingStyle"], Record<string, string>>;
 
 /** How the short lines above headings and on badges are set. */
@@ -227,6 +249,7 @@ const variableRules = (theme: ResolvedTheme, scheme: ColorScheme | undefined, ro
     ["theme-font-body", fontStack(theme.fonts.body)],
     ["theme-heading-weight", String(theme.headingWeight)],
     ["theme-heading-case", heading.case],
+    ["theme-heading-glyph", heading.glyph],
     ["theme-text-small", rem(type.small)],
     ["theme-text-body", rem(type.body)],
     ["theme-text-lead", fluid(type.lead)],

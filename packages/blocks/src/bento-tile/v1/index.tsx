@@ -107,7 +107,7 @@ const BentoTile = ({ props: tile }: BlockComponentProps<typeof props, "default">
     <Root as="li" className={cx("flex", spans[tile.size])}>
       <div
         data-surface={surface}
-        className="card relative isolate flex min-h-60 w-full flex-col overflow-hidden md:min-h-72"
+        className="card relative isolate flex min-h-44 w-full flex-col overflow-hidden md:min-h-72"
       >
         {image === undefined ? (
           <>

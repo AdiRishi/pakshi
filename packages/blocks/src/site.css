@@ -238,11 +238,18 @@
 }
 
 /* A site's name set as large as the page is wide, across a line or two. */
+/*
+ * A wordmark fills the width of its container: `wordmark-fit-N` sizes a name
+ * of N letters by how wide the theme's heading letters run.
+ */
+@utility wordmark-fit-* {
+  font-size: calc(100cqi / (--value(integer) * var(--theme-heading-glyph)));
+}
+
 @utility wordmark {
   font-family: var(--theme-font-heading);
   font-weight: var(--theme-heading-weight);
   text-transform: var(--theme-heading-case);
-  font-size: clamp(3rem, 10vw, 13rem);
   line-height: 0.85;
   letter-spacing: var(--theme-tracking-display);
   text-wrap: balance;
