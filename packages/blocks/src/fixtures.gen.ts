@@ -54,6 +54,11 @@ import hero4stacked from "./hero/v4/fixtures/stacked.json" with { type: "json" }
 import imageCaption1narrow from "./image-caption/v1/fixtures/narrow.json" with { type: "json" };
 import imageCaption1placeholder from "./image-caption/v1/fixtures/placeholder.json" with { type: "json" };
 import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { type: "json" };
+import imageCaption2full from "./image-caption/v2/fixtures/full.json" with { type: "json" };
+import imageCaption2placeholder from "./image-caption/v2/fixtures/placeholder.json" with { type: "json" };
+import imageCaption2textSquare from "./image-caption/v2/fixtures/text-square.json" with { type: "json" };
+import imageCaption2text from "./image-caption/v2/fixtures/text.json" with { type: "json" };
+import imageCaption2wide from "./image-caption/v2/fixtures/wide.json" with { type: "json" };
 import location1imageLeft from "./location/v1/fixtures/image-left.json" with { type: "json" };
 import location1imageRight from "./location/v1/fixtures/image-right.json" with { type: "json" };
 import location1placeholder from "./location/v1/fixtures/placeholder.json" with { type: "json" };
@@ -183,6 +188,11 @@ export const fixtureFiles = [
   { type: "image-caption", version: 1, name: "narrow", fixture: imageCaption1narrow },
   { type: "image-caption", version: 1, name: "placeholder", fixture: imageCaption1placeholder },
   { type: "image-caption", version: 1, name: "wide", fixture: imageCaption1wide },
+  { type: "image-caption", version: 2, name: "full", fixture: imageCaption2full },
+  { type: "image-caption", version: 2, name: "placeholder", fixture: imageCaption2placeholder },
+  { type: "image-caption", version: 2, name: "text-square", fixture: imageCaption2textSquare },
+  { type: "image-caption", version: 2, name: "text", fixture: imageCaption2text },
+  { type: "image-caption", version: 2, name: "wide", fixture: imageCaption2wide },
   { type: "location", version: 1, name: "image-left", fixture: location1imageLeft },
   { type: "location", version: 1, name: "image-right", fixture: location1imageRight },
   { type: "location", version: 1, name: "placeholder", fixture: location1placeholder },

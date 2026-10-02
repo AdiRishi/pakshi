@@ -1,0 +1,14 @@
+{
+  "variant": "text",
+  "surface": "tint",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_sampleMei",
+      "alt": "Mei Chen, smiling, in the boatshed"
+    },
+    "caption": "Mei Chen has led the planking workshop since 2019.",
+    "credit": "Photo: Tom Penrose",
+    "crop": "square"
+  }
+}
