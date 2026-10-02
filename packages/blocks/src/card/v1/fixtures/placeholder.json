@@ -1,0 +1,12 @@
+{
+  "variant": "default",
+  "props": {
+    "icon": "compass",
+    "title": "Where it goes",
+    "text": "A line about the page this card leads to.",
+    "link": {
+      "$ref": "page",
+      "id": "pg_home"
+    }
+  }
+}

@@ -1,0 +1,85 @@
+{
+  "variant": "list",
+  "surface": "tint",
+  "props": {
+    "kicker": "Help",
+    "heading": "Questions before you book",
+    "actions": [],
+    "columns": "3",
+    "crop": "landscape",
+    "rows": "tiles"
+  },
+  "slots": {
+    "cards": [
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "calendar",
+          "title": "Dates and times",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "banknote",
+          "title": "Fees and bursaries",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "bed",
+          "title": "Where to stay",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "shirt",
+          "title": "What to bring",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "users",
+          "title": "Groups and schools",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "mail",
+          "title": "Contact the office",
+          "link": "mailto:office@example.org"
+        }
+      }
+    ]
+  }
+}

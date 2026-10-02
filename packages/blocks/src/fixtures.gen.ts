@@ -10,6 +10,16 @@ import callToAction2panelWords from "./call-to-action/v2/fixtures/panel-words.js
 import callToAction2panel from "./call-to-action/v2/fixtures/panel.json" with { type: "json" };
 import callToAction2placeholder from "./call-to-action/v2/fixtures/placeholder.json" with { type: "json" };
 import callToAction2split from "./call-to-action/v2/fixtures/split.json" with { type: "json" };
+import card1default from "./card/v1/fixtures/default.json" with { type: "json" };
+import card1icon from "./card/v1/fixtures/icon.json" with { type: "json" };
+import card1placeholder from "./card/v1/fixtures/placeholder.json" with { type: "json" };
+import cards1grid from "./cards/v1/fixtures/grid.json" with { type: "json" };
+import cards1listTiles from "./cards/v1/fixtures/list-tiles.json" with { type: "json" };
+import cards1list from "./cards/v1/fixtures/list.json" with { type: "json" };
+import cards1overlayLandscape from "./cards/v1/fixtures/overlay-landscape.json" with { type: "json" };
+import cards1overlay from "./cards/v1/fixtures/overlay.json" with { type: "json" };
+import cards1placeholder from "./cards/v1/fixtures/placeholder.json" with { type: "json" };
+import cards1tiles from "./cards/v1/fixtures/tiles.json" with { type: "json" };
 import contactDetails1columns from "./contact-details/v1/fixtures/columns.json" with { type: "json" };
 import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholder.json" with { type: "json" };
 import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
@@ -161,6 +171,16 @@ export const fixtureFiles = [
   { type: "call-to-action", version: 2, name: "panel", fixture: callToAction2panel },
   { type: "call-to-action", version: 2, name: "placeholder", fixture: callToAction2placeholder },
   { type: "call-to-action", version: 2, name: "split", fixture: callToAction2split },
+  { type: "card", version: 1, name: "default", fixture: card1default },
+  { type: "card", version: 1, name: "icon", fixture: card1icon },
+  { type: "card", version: 1, name: "placeholder", fixture: card1placeholder },
+  { type: "cards", version: 1, name: "grid", fixture: cards1grid },
+  { type: "cards", version: 1, name: "list-tiles", fixture: cards1listTiles },
+  { type: "cards", version: 1, name: "list", fixture: cards1list },
+  { type: "cards", version: 1, name: "overlay-landscape", fixture: cards1overlayLandscape },
+  { type: "cards", version: 1, name: "overlay", fixture: cards1overlay },
+  { type: "cards", version: 1, name: "placeholder", fixture: cards1placeholder },
+  { type: "cards", version: 1, name: "tiles", fixture: cards1tiles },
   { type: "contact-details", version: 1, name: "columns", fixture: contactDetails1columns },
   { type: "contact-details", version: 1, name: "placeholder", fixture: contactDetails1placeholder },
   { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },

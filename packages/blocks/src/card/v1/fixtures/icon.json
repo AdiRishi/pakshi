@@ -1,0 +1,12 @@
+{
+  "variant": "default",
+  "props": {
+    "icon": "map-pin",
+    "title": "Getting here",
+    "text": "Ten minutes' walk from the station.",
+    "link": {
+      "$ref": "page",
+      "id": "pg_programme"
+    }
+  }
+}

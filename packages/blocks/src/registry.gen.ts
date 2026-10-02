@@ -7,6 +7,8 @@ export const registry: Readonly<
   "bento@1": () => import("./bento/v1/index.tsx"),
   "bento-tile@1": () => import("./bento-tile/v1/index.tsx"),
   "call-to-action@2": () => import("./call-to-action/v2/index.tsx"),
+  "card@1": () => import("./card/v1/index.tsx"),
+  "cards@1": () => import("./cards/v1/index.tsx"),
   "contact-details@1": () => import("./contact-details/v1/index.tsx"),
   "event-card@1": () => import("./event-card/v1/index.tsx"),
   "event-cards@1": () => import("./event-cards/v1/index.tsx"),
