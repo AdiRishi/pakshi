@@ -167,3 +167,16 @@ describe("a part the block can leave out", () => {
     expect(document.querySelector("[aria-label='Remove this part']")).toBeNull();
   });
 });
+
+describe("a setting the block doesn't draw", () => {
+  test("opens from its row, and the block follows what's chosen", async () => {
+    const { canvas, parts } = await open("post-list");
+    await expect.element(parts.getByRole("button", { name: /^Blog\s*News/ })).toBeVisible();
+    await expect.poll(() => canvas().body.textContent).not.toContain("See all posts");
+
+    await userEvent.click(parts.getByRole("button", { name: /^How many/ }));
+    await userEvent.fill(page.getByRole("spinbutton", { name: "How many" }), "1");
+    await expect.poll(() => canvas().body.textContent).toContain("See all posts");
+    await expect.element(parts.getByRole("button", { name: /^How many\s*1/ })).toBeVisible();
+  });
+});

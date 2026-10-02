@@ -1,13 +1,23 @@
 import {
+  collectionFor,
   type Field,
   type Fields,
   placeholderTree,
   richTextLines,
   type SlotSpec,
+  withCollections,
 } from "@repo/blocks";
 import { BlockId, type BlockType, ItemId, type PageId, randomId } from "@repo/contracts/ids";
-import type { BlockList, InsertBlock, MoveBlock, Op, PropPath } from "@repo/contracts/ops";
+import type {
+  BlockList,
+  BlockTree,
+  InsertBlock,
+  MoveBlock,
+  Op,
+  PropPath,
+} from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument } from "@repo/contracts/page";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { type BlockContracts, blockTree } from "@repo/domain/document";
 import { Option, Schema } from "effect";
 import type { Json } from "effect/Schema";
@@ -94,9 +104,26 @@ export const allowedTypes = (
     .map((contract) => contract.type);
 };
 
-/** Inserts a new block of this type, with its placeholder content, after `after` in a list. */
+/**
+ * A new block of this type for a page, with its placeholder content. A
+ * listing in it shows the collection `collectionFor` picks for the page.
+ */
+export const newBlock = (
+  contracts: BlockContracts,
+  pages: Readonly<Record<PageId, PageDocument>>,
+  page: PageId,
+  type: BlockType,
+): BlockTree => {
+  const listings = listingsOf(pages);
+  return withCollections(placeholderTree(contracts, type), contracts, (kind) =>
+    collectionFor(listings, page, kind),
+  );
+};
+
+/** Inserts a new block of this type, as `newBlock` makes it, after `after` in a list. */
 export const insertOp = (
   contracts: BlockContracts,
+  pages: Readonly<Record<PageId, PageDocument>>,
   page: PageId,
   list: BlockList,
   after: BlockId | null,
@@ -106,7 +133,7 @@ export const insertOp = (
   page,
   list,
   after,
-  block: placeholderTree(contracts, type),
+  block: newBlock(contracts, pages, page, type),
 });
 
 /**

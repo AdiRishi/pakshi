@@ -9,11 +9,12 @@ import type { GhostPolicy } from "./ghost.tsx";
 import { CanvasMarks } from "./marks.tsx";
 import { MediaPopover } from "./media-popover.tsx";
 import { blockElement, fieldElement } from "./regions.ts";
+import { SettingPopover } from "./setting-popover.tsx";
 import { ButtonDestination, LinkPopover } from "./where-it-goes.tsx";
 
 /** A popover a field opened from the canvas, beside the element it came from. */
 export interface CanvasPopover {
-  readonly kind: "media" | "link" | "form";
+  readonly kind: "media" | "link" | "form" | "setting";
   readonly field: FieldTarget;
   readonly anchor: Element;
 }
@@ -98,6 +99,13 @@ export function CanvasChrome(props: {
       )}
       {popover?.kind === "form" && (
         <FormPopover
+          field={popover.field}
+          anchor={popover.anchor}
+          onClose={controls.closePopover}
+        />
+      )}
+      {popover?.kind === "setting" && (
+        <SettingPopover
           field={popover.field}
           anchor={popover.anchor}
           onClose={controls.closePopover}

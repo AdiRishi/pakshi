@@ -86,15 +86,15 @@ const hostAnchor = (element: Element) => {
 /**
  * The editor's shared state around a store: its services, the controls
  * Studio shows for the canvas, the keyboard shortcuts `keys` lists, and
- * announcements for screen readers. A form opened from the page goes to its
- * control in the settings panel, or to a popover beside it where there's no
- * panel.
+ * announcements for screen readers. A form or a setting opened from the
+ * page goes to its control in the settings panel, or to a popover beside it
+ * where there's no panel, as `choices` says.
  */
 export function EditorRoot(
   props: Omit<EditorServices, "store"> & {
     readonly store: EditorStore;
     readonly keys: ReadonlyArray<Command>;
-    readonly forms: "settings" | "popover";
+    readonly choices: "settings" | "popover";
     readonly children: ReactNode;
   },
 ) {
@@ -147,7 +147,7 @@ export function EditorRoot(
     ],
   );
 
-  const forms = props.forms;
+  const choices = props.choices;
   const ui = useMemo<EditorUi>(() => {
     const canvasBlock = (block: BlockId) =>
       canvasDocument?.querySelector<HTMLElement>(`[data-pakshi-block="${block}"]`) ?? null;
@@ -181,7 +181,12 @@ export function EditorRoot(
       openMedia: (field, anchor) => setPopover({ kind: "media", field, anchor }),
       openLink: (field, anchor) => setPopover({ kind: "link", field, anchor }),
       openForm: (field, anchor) =>
-        forms === "popover" ? setPopover({ kind: "form", field, anchor }) : revealControl(field),
+        choices === "popover" ? setPopover({ kind: "form", field, anchor }) : revealControl(field),
+      openSetting: (field, anchor) => {
+        if (choices === "popover") return setPopover({ kind: "setting", field, anchor });
+        store.select({ kind: "block", target: field.target, block: field.block });
+        revealControl(field);
+      },
       setActiveRichText: setRichText,
       focusInCanvas,
       revealControl,
@@ -220,7 +225,7 @@ export function EditorRoot(
         });
       },
     };
-  }, [canvasDocument, store, forms]);
+  }, [canvasDocument, store, choices]);
 
   const controls = useMemo<CanvasControls>(
     () => ({
@@ -335,7 +340,7 @@ export function EditorProvider(props: {
       store={store}
       examples="placeholder"
       keys={keyboardCommands}
-      forms="settings"
+      choices="settings"
     >
       {children}
     </EditorRoot>

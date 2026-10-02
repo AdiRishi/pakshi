@@ -89,7 +89,7 @@ export function BlockCustomizer(props: {
       settings={showcase.settings}
       scheme="light"
       keys={keys}
-      forms="popover"
+      choices="popover"
     >
       <ShowcaseProvider value={context}>
         <div className="flex flex-col gap-5">

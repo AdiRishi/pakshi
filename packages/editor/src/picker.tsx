@@ -1,4 +1,4 @@
-import { placeholderTree, presentationOf } from "@repo/blocks";
+import { presentationOf } from "@repo/blocks";
 import type { BlockType } from "@repo/contracts/ids";
 import {
   Command,
@@ -14,13 +14,13 @@ import {
   PopoverHeader,
   PopoverTitle,
 } from "@repo/ui/components/popover";
-import { type ComponentProps, useMemo, useRef, useState } from "react";
+import { type ComponentProps, useRef, useState } from "react";
 
 import { insert } from "./commands.ts";
 import { type InsertSpot, useEditorState, useEditorUi, useServices } from "./context.tsx";
 import { BlockPreview } from "./preview.tsx";
 import { type Origin, runCommand } from "./run-command.ts";
-import { allowedTypes, slotOf } from "./structure.ts";
+import { allowedTypes, newBlock, slotOf } from "./structure.ts";
 
 type Anchor = ComponentProps<typeof PopoverContent>["anchor"];
 
@@ -37,15 +37,17 @@ export function BlockPicker(props: {
 }) {
   const { store, definitions } = useServices();
   const ui = useEditorUi();
-  const page = useEditorState((state) => state.view.pages[state.page]);
+  const pages = useEditorState((state) => state.view.pages);
+  const pageId = useEditorState((state) => state.page);
+  const page = pages[pageId];
   const [types] = useState(() =>
     page === undefined ? [] : allowedTypes(page, definitions, props.spot.list),
   );
   const [active, setActive] = useState<string>(types[0] ?? "");
   const chosen = useRef(false);
-  const previews = useMemo(
-    () => new Map(types.map((type) => [type, placeholderTree(definitions, type)])),
-    [types, definitions],
+  // Made once, as the page is when the picker opens, so previews don't reload as others edit.
+  const [previews] = useState(
+    () => new Map(types.map((type) => [type, newBlock(definitions, pages, pageId, type)])),
   );
 
   const { list } = props.spot;
