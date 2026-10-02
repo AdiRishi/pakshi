@@ -83,6 +83,7 @@ export const describeViewer = Effect.fn("StudioApi.describeViewer")(function* (
       manageRoles: mayDefineRole(access, []),
       editWorkflow: authorize(access, "workflow.edit", { kind: "organization" }),
       readAudit: authorize(access, "audit.read", { kind: "organization" }),
+      upgradeBlocks: authorize(access, "blocks.upgrade", { kind: "organization" }),
     },
   };
 });

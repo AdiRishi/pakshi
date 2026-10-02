@@ -1,20 +1,14 @@
-import {
-  type BlockDefinition,
-  blockKey,
-  latestLockfile,
-  loadBlock,
-  registeredVersions,
-} from "@repo/blocks";
+import { blockKey, latestLockfile, loadBlock, registeredVersions } from "@repo/blocks";
 import { BlockType, SiteId } from "@repo/contracts/ids";
 import { Timestamp } from "@repo/contracts/release";
-import type { BlockVersionInfo, CatalogBlock, RemovableVersion } from "@repo/contracts/studio";
+import type { BlockVersionInfo, RemovableVersion } from "@repo/contracts/studio";
 import { type Cause, Effect, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 /*
- * The block library as Studio shows it: every version the registry holds,
- * with how many sites have each live, from D1's copy of what each site's
- * live release and open drafts pin.
+ * The block library's versions, and which of them D1's copy of each site's
+ * live release and open drafts pin. Every lockfile pins every block type, so
+ * pins say which versions must stay in the registry, not which a site shows.
  */
 
 /** How long a version no one pins stays in the registry before it can be removed. */
@@ -28,74 +22,27 @@ export const library = Effect.promise(async () => {
   return Map.groupBy(definitions, (definition) => definition.type);
 });
 
-const UsageRow = Schema.Struct({
-  type: BlockType,
-  version: Schema.Int,
-  holder: Schema.String,
-  site_id: SiteId,
-});
-type UsageRow = typeof UsageRow.Type;
-
 /** Every block version a site's live release or one of its open drafts pins. */
-const usage = Effect.fn("StudioApi.blockUsage")(function* () {
+const pinned = Effect.fn("StudioApi.pinnedBlocks")(function* () {
   const sql = yield* SqlClient.SqlClient;
   return yield* SqlSchema.findAll({
     Request: Schema.Void,
-    Result: UsageRow,
-    execute: () => sql`select key as type, value as version, holder, site_id
+    Result: Schema.Struct({ type: BlockType, version: Schema.Int }),
+    execute: () => sql`select key as type, value as version
       from block_usage, json_each(block_usage.lockfile)`,
   })(undefined);
 });
 
-/** How many sites have each version live, keyed as the registry names versions. */
-const liveCounts = (rows: ReadonlyArray<UsageRow>) => {
-  const counts = new Map<string, number>();
-  for (const row of rows) {
-    if (row.holder !== "live") continue;
-    const key = blockKey(row.type, row.version);
-    counts.set(key, (counts.get(key) ?? 0) + 1);
-  }
-  return counts;
-};
-
-const versionInfo = (
-  definition: BlockDefinition,
-  counts: ReadonlyMap<string, number>,
-): BlockVersionInfo => ({
-  version: definition.version,
-  changes: definition.changes,
-  sites: counts.get(blockKey(definition.type, definition.version)) ?? 0,
-});
-
-/** The block library, with how many sites have each version live. */
-export const catalog = Effect.fn("StudioApi.catalog")(function* () {
-  const [blocks, rows] = yield* Effect.all([library, usage()], { concurrency: "unbounded" });
-  const counts = liveCounts(rows);
-  return Array.from(blocks.values(), (versions): CatalogBlock => {
-    const latest = versions.at(-1);
-    if (latest === undefined) throw new Error("The registry lists a block with no versions.");
-    return {
-      type: latest.type,
-      title: latest.title,
-      purpose: latest.agent.purpose,
-      placement: latest.placement,
-      latest: latest.version,
-      versions: versions.map((definition) => versionInfo(definition, counts)).toReversed(),
-    };
-  }).toSorted((a, b) => a.title.localeCompare(b.title));
-});
-
 /** The versions of a block after `version`, oldest first. */
-export const newerVersions = Effect.fn("StudioApi.newerVersions")(function* (
-  type: BlockType,
-  version: number,
-) {
-  const [blocks, rows] = yield* Effect.all([library, usage()], { concurrency: "unbounded" });
-  const counts = liveCounts(rows);
-  return (blocks.get(type) ?? [])
-    .filter((definition) => definition.version > version)
-    .map((definition) => versionInfo(definition, counts));
-});
+export const newerVersions = (type: BlockType, version: number) =>
+  Effect.map(library, (blocks) =>
+    (blocks.get(type) ?? [])
+      .filter((definition) => definition.version > version)
+      .map((definition): BlockVersionInfo => ({
+        version: definition.version,
+        changes: definition.changes,
+      })),
+  );
 
 /** The title of a block type's newest version. */
 export const blockTitle = (type: BlockType) =>
@@ -127,7 +74,7 @@ export const removableVersions = Effect.fn("StudioApi.removableVersions")(functi
   const sql = yield* SqlClient.SqlClient;
   const [rows, lastUsed, unreported] = yield* Effect.all(
     [
-      usage(),
+      pinned(),
       SqlSchema.findAll({
         Request: Schema.Void,
         Result: Schema.Struct({ type: BlockType, version: Schema.Int, last_used_at: Timestamp }),
@@ -174,19 +121,4 @@ export const collectBlockUsage = Effect.fn("StudioApi.collectBlockUsage")(functi
     { concurrency: 10 },
   );
   return asked.flat();
-});
-
-/** The sites with a version of a block older than `latest` live. */
-export const sitesBehind = Effect.fn("StudioApi.sitesBehind")(function* (
-  type: BlockType,
-  latest: number,
-) {
-  const rows = yield* usage();
-  return Array.from(
-    new Set(
-      rows
-        .filter((row) => row.holder === "live" && row.type === type && row.version < latest)
-        .map((row) => row.site_id),
-    ),
-  );
 });

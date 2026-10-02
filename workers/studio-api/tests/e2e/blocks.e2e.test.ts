@@ -42,3 +42,23 @@ it.live("a block's usage names the person's sites whose live release shows it", 
     ]);
   }),
 );
+
+it.live("only the platform team sees which blocks sites can update", () =>
+  Effect.gen(function* () {
+    const meera = yield* studio(yield* admin);
+    const library = yield* newSite(meera, "Library", "library");
+    const priya = yield* studio(
+      yield* join(meera, { name: "Priya Shah", email: "priya@harbour.test" }, "editor", {
+        kind: "site",
+        id: library.site,
+      }),
+    );
+
+    // Every new site shows each block's newest version.
+    expect((yield* meera.blockUpdates()).behind).toEqual([]);
+    expect((yield* Effect.flip(priya.blockUpdates()))._tag).toBe("NotPermitted");
+    expect((yield* Effect.flip(priya.upgradeEverywhere({ type: "hero" })))._tag).toBe(
+      "NotPermitted",
+    );
+  }),
+);

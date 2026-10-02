@@ -1,6 +1,8 @@
+import { presentations } from "@repo/blocks";
 import { BlockExample, BlockNeed, type BlockRequests } from "@repo/contracts/studio";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
+import { Card } from "@repo/ui/components/card";
 import {
   Dialog,
   DialogContent,
@@ -46,6 +48,8 @@ export function RequestBlockDialog(props: {
   readonly open: boolean;
   readonly onOpenChange: (open: boolean) => void;
   readonly sites: BlockRequests["sites"];
+  /** Called once the request is filed. */
+  readonly onSent: () => void;
 }) {
   const ids = { need: useId(), site: useId(), example: useId() };
   const [need, setNeed] = useState("");
@@ -61,6 +65,7 @@ export function RequestBlockDialog(props: {
       setNeed("");
       setExample("");
       setTried(false);
+      props.onSent();
       return queryClient.invalidateQueries({ queryKey: blockRequestsQuery.queryKey });
     },
     onError: (error) => toast.error(error.message),
@@ -88,7 +93,7 @@ export function RequestBlockDialog(props: {
           }}
         >
           <DialogHeader>
-            <DialogTitle>Request a new block</DialogTitle>
+            <DialogTitle>Ask for a new block</DialogTitle>
             <DialogDescription>
               Describe what visitors should see and do. No technical details needed.
             </DialogDescription>
@@ -136,8 +141,8 @@ export function RequestBlockDialog(props: {
             </Field>
           </FieldGroup>
           <p className="text-sm text-muted-foreground">
-            The platform team reads every request. When the new block ships, it appears in this
-            catalog and Pakshi can use it on your pages.
+            The platform team reads every request. When the new block is ready, it appears with the
+            others here and Pakshi can use it on your pages.
           </p>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => props.onOpenChange(false)}>
@@ -154,7 +159,11 @@ export function RequestBlockDialog(props: {
 }
 
 /** The block requests a person may see: theirs, or every one for the platform team. */
-export function BlockRequestList(props: { readonly data: BlockRequests }) {
+export function BlockRequestList(props: {
+  readonly data: BlockRequests;
+  /** Opens the request form, or null for someone who may not ask for blocks. */
+  readonly onAsk: (() => void) | null;
+}) {
   const queryClient = useQueryClient();
   const close = useMutation({
     mutationFn: closeBlockRequest,
@@ -165,45 +174,52 @@ export function BlockRequestList(props: { readonly data: BlockRequests }) {
     onError: (error) => toast.error(error.message),
   });
   const { requests, can } = props.data;
-  if (requests.length === 0 && !can.close) return null;
+  if (requests.length === 0)
+    return (
+      <div className="flex flex-col items-start gap-3 py-9">
+        <p className="text-lg font-semibold">
+          {can.close ? "No one has asked for a block yet" : "You haven't asked for a block yet"}
+        </p>
+        {props.onAsk !== null && <Button onClick={props.onAsk}>Ask for a new block</Button>}
+      </div>
+    );
   return (
-    <section aria-labelledby="block-requests" className="flex flex-col gap-3">
-      <h2 id="block-requests" className="text-lg font-semibold">
-        {can.close ? "Block requests" : "Your block requests"}
-      </h2>
-      {requests.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No one has asked for a block yet.</p>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Asked for</TableHead>
-              <TableHead>For</TableHead>
-              <TableHead>By</TableHead>
-              <TableHead>
-                <span className="sr-only">Status</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {requests.map((request) => (
+    <Card className="gap-0 py-0">
+      <Table>
+        <TableHeader>
+          <TableRow className="bg-muted/50">
+            <TableHead className="px-4">Asked for</TableHead>
+            <TableHead className="px-4">For</TableHead>
+            <TableHead className="px-4">By</TableHead>
+            <TableHead className="px-4">
+              <span className="sr-only">Status</span>
+            </TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {requests.map((request) => {
+            const nearest =
+              request.nearest === null ? undefined : presentations.get(request.nearest);
+            return (
               <TableRow key={request.id}>
-                <TableCell className="max-w-xl whitespace-normal">
+                <TableCell className="max-w-xl px-4 py-3.5 align-top whitespace-normal">
                   <p>{request.need}</p>
                   {request.example !== "" && (
                     <p className="text-muted-foreground">Example: {request.example}</p>
                   )}
-                  {request.nearest !== null && (
-                    <p className="text-muted-foreground">Closest block: {request.nearest}</p>
+                  {nearest !== undefined && (
+                    <p className="text-muted-foreground">Closest block: {nearest.name}</p>
                   )}
                 </TableCell>
-                <TableCell>{request.site?.name ?? "Any site"}</TableCell>
-                <TableCell className="text-muted-foreground">
+                <TableCell className="px-4 py-3.5 align-top">
+                  {request.site?.name ?? "Any site"}
+                </TableCell>
+                <TableCell className="px-4 py-3.5 align-top text-muted-foreground">
                   {request.requestedBy.name}, {formatDay(request.requestedAt)}
                 </TableCell>
-                <TableCell className="text-right">
+                <TableCell className="px-4 py-3.5 text-right align-top">
                   {request.closedAt !== null ? (
-                    <Badge variant="secondary">Closed {formatDay(request.closedAt)}</Badge>
+                    <Badge variant="outline">Closed {formatDay(request.closedAt)}</Badge>
                   ) : can.close ? (
                     <Button
                       variant="outline"
@@ -215,14 +231,14 @@ export function BlockRequestList(props: { readonly data: BlockRequests }) {
                       <span className="sr-only"> the request from {request.requestedBy.name}</span>
                     </Button>
                   ) : (
-                    <Badge variant="outline">Open</Badge>
+                    <Badge className="bg-accent text-link">Open</Badge>
                   )}
                 </TableCell>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </section>
+            );
+          })}
+        </TableBody>
+      </Table>
+    </Card>
   );
 }
