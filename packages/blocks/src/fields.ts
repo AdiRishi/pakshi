@@ -168,7 +168,10 @@ export const media = (options: { readonly title: string }): MediaField => ({
   optional: false,
   parts: { alt: altText },
   draft: MediaRef,
-  complete: MediaRef.mapFields((fields) => ({ ...fields, alt: altText.complete })),
+  complete: MediaRef.mapFields((fields) => ({
+    ...fields,
+    alt: altText.complete.annotateKey({ messageMissingKey: "Fill this in" }),
+  })),
 });
 
 /** A call to action: a short label and a link. */
