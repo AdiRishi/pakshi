@@ -23,8 +23,8 @@ export default {
     },
     image: {
       $ref: "media",
-      id: "med_pakshiSea",
-      alt: "Two sailing boats on the water",
+      id: "med_sampleHarbour",
+      alt: "Two sailing boats on the harbour at sunset",
     },
     actions: [
       {
