@@ -25,6 +25,7 @@ export const registry: Readonly<
   "logo-strip@2": () => import("./logo-strip/v2/index.tsx"),
   "post-header@1": () => import("./post-header/v1/index.tsx"),
   "post-list@2": () => import("./post-list/v2/index.tsx"),
+  "post-list@3": () => import("./post-list/v3/index.tsx"),
   "pricing@1": () => import("./pricing/v1/index.tsx"),
   "pricing-plan@1": () => import("./pricing-plan/v1/index.tsx"),
   "quote@2": () => import("./quote/v2/index.tsx"),

@@ -79,6 +79,11 @@ import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { typ
 import postList2cards from "./post-list/v2/fixtures/cards.json" with { type: "json" };
 import postList2list from "./post-list/v2/fixtures/list.json" with { type: "json" };
 import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with { type: "json" };
+import postList3cards from "./post-list/v3/fixtures/cards.json" with { type: "json" };
+import postList3featured from "./post-list/v3/fixtures/featured.json" with { type: "json" };
+import postList3list from "./post-list/v3/fixtures/list.json" with { type: "json" };
+import postList3placeholder from "./post-list/v3/fixtures/placeholder.json" with { type: "json" };
+import postList3text from "./post-list/v3/fixtures/text.json" with { type: "json" };
 import pricing1cardsFour from "./pricing/v1/fixtures/cards-four.json" with { type: "json" };
 import pricing1cardsTwo from "./pricing/v1/fixtures/cards-two.json" with { type: "json" };
 import pricing1cards from "./pricing/v1/fixtures/cards.json" with { type: "json" };
@@ -219,6 +224,11 @@ export const fixtureFiles = [
   { type: "post-list", version: 2, name: "cards", fixture: postList2cards },
   { type: "post-list", version: 2, name: "list", fixture: postList2list },
   { type: "post-list", version: 2, name: "placeholder", fixture: postList2placeholder },
+  { type: "post-list", version: 3, name: "cards", fixture: postList3cards },
+  { type: "post-list", version: 3, name: "featured", fixture: postList3featured },
+  { type: "post-list", version: 3, name: "list", fixture: postList3list },
+  { type: "post-list", version: 3, name: "placeholder", fixture: postList3placeholder },
+  { type: "post-list", version: 3, name: "text", fixture: postList3text },
   { type: "pricing", version: 1, name: "cards-four", fixture: pricing1cardsFour },
   { type: "pricing", version: 1, name: "cards-two", fixture: pricing1cardsTwo },
   { type: "pricing", version: 1, name: "cards", fixture: pricing1cards },

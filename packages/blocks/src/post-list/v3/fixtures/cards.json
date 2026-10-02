@@ -1,0 +1,14 @@
+{
+  "variant": "cards",
+  "surface": "default",
+  "props": {
+    "kicker": "News",
+    "heading": "From the harbour",
+    "collection": {
+      "$ref": "page",
+      "id": "pg_news"
+    },
+    "count": 3,
+    "columns": "3"
+  }
+}

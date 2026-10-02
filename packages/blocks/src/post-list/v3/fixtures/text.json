@@ -1,0 +1,14 @@
+{
+  "variant": "text",
+  "surface": "inverse",
+  "props": {
+    "kicker": "Latest",
+    "heading": "What's new",
+    "collection": {
+      "$ref": "page",
+      "id": "pg_news"
+    },
+    "count": 1,
+    "columns": "2"
+  }
+}
