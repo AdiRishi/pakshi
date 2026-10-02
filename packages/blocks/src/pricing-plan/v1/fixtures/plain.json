@@ -1,0 +1,31 @@
+{
+  "variant": "default",
+  "props": {
+    "name": "Taster day",
+    "price": "£85",
+    "period": "per person",
+    "description": "One day in the boatshed, to see if it's for you.",
+    "features": [
+      {
+        "id": "it_feature1",
+        "feature": "A morning workshop"
+      },
+      {
+        "id": "it_feature2",
+        "feature": "An afternoon on the water"
+      },
+      {
+        "id": "it_feature3",
+        "feature": "Lunch on the quay"
+      }
+    ],
+    "button": {
+      "label": "Book a day",
+      "link": {
+        "$ref": "page",
+        "id": "pg_programme"
+      }
+    },
+    "featured": "no"
+  }
+}

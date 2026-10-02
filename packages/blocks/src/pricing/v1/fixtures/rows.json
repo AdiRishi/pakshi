@@ -1,0 +1,123 @@
+{
+  "variant": "rows",
+  "surface": "muted",
+  "props": {
+    "align": "start",
+    "kicker": "Summer 2027",
+    "heading": "Choose your place",
+    "intro": "All places run for the first two weeks of July. Prices include lunch and everything you need in the boatshed.",
+    "note": "Places are held for a week after you book, while you pay."
+  },
+  "slots": {
+    "plans": [
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Student place",
+          "price": "£350",
+          "period": "per person",
+          "description": "Ages 14 to 18. Five days building and sailing.",
+          "features": [
+            {
+              "id": "it_feature30",
+              "feature": "Ten workshops"
+            },
+            {
+              "id": "it_feature31",
+              "feature": "Every afternoon on the water"
+            },
+            {
+              "id": "it_feature32",
+              "feature": "Lunch every day"
+            }
+          ],
+          "button": {
+            "label": "Book a place",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Group of four",
+          "price": "£1,200",
+          "badge": "Save £200",
+          "period": "per group",
+          "description": "Four friends in the same group, all week.",
+          "features": [
+            {
+              "id": "it_feature33",
+              "feature": "Four student places"
+            },
+            {
+              "id": "it_feature34",
+              "feature": "Your own boat to build together"
+            }
+          ],
+          "button": {
+            "label": "Book as a group",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "inverse"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Bursary place",
+          "price": "Free",
+          "period": "for families on a low income",
+          "description": "The full week at no cost, with travel paid.",
+          "features": [
+            {
+              "id": "it_feature35",
+              "feature": "Everything a student place includes"
+            },
+            {
+              "id": "it_feature36",
+              "feature": "Travel to and from the harbour"
+            }
+          ],
+          "button": {
+            "label": "Apply for a bursary",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Day visitor",
+          "price": "£20",
+          "period": "per adult",
+          "description": "Parents and friends are welcome on Friday's launch day.",
+          "features": [],
+          "button": {
+            "label": "Book a visit",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      }
+    ]
+  }
+}

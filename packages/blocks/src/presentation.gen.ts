@@ -16,6 +16,8 @@ import location from "./location/presentation.ts";
 import logoStrip from "./logo-strip/presentation.ts";
 import postHeader from "./post-header/presentation.ts";
 import postList from "./post-list/presentation.ts";
+import pricing from "./pricing/presentation.ts";
+import pricingPlan from "./pricing-plan/presentation.ts";
 import quote from "./quote/presentation.ts";
 import richText from "./rich-text/presentation.ts";
 import split from "./split/presentation.ts";
@@ -44,6 +46,8 @@ export const presentations = {
   "logo-strip": logoStrip,
   "post-header": postHeader,
   "post-list": postList,
+  "pricing": pricing,
+  "pricing-plan": pricingPlan,
   "quote": quote,
   "rich-text": richText,
   "split": split,

@@ -16,6 +16,8 @@ import location from "./location/sample.ts";
 import logoStrip from "./logo-strip/sample.ts";
 import postHeader from "./post-header/sample.ts";
 import postList from "./post-list/sample.ts";
+import pricing from "./pricing/sample.ts";
+import pricingPlan from "./pricing-plan/sample.ts";
 import quote from "./quote/sample.ts";
 import richText from "./rich-text/sample.ts";
 import split from "./split/sample.ts";
@@ -44,6 +46,8 @@ export const samples = {
   "logo-strip": logoStrip,
   "post-header": postHeader,
   "post-list": postList,
+  "pricing": pricing,
+  "pricing-plan": pricingPlan,
   "quote": quote,
   "rich-text": richText,
   "split": split,

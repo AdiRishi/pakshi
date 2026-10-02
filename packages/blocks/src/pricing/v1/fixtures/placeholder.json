@@ -1,0 +1,89 @@
+{
+  "variant": "cards",
+  "surface": "default",
+  "props": {
+    "align": "center",
+    "heading": "Prices",
+    "intro": "Say what each option costs and what it includes."
+  },
+  "slots": {
+    "plans": [
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Name of the plan",
+          "price": "£0",
+          "period": "each",
+          "description": "Who it's for, in a sentence.",
+          "features": [
+            {
+              "id": "it_plan1One",
+              "feature": "Something it includes"
+            },
+            {
+              "id": "it_plan1Two",
+              "feature": "Something else it includes"
+            }
+          ],
+          "button": {
+            "label": "Choose this",
+            "link": "https://example.com"
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Name of the plan",
+          "price": "£0",
+          "period": "each",
+          "badge": "Best value",
+          "description": "Who it's for, in a sentence.",
+          "features": [
+            {
+              "id": "it_plan2One",
+              "feature": "Something it includes"
+            },
+            {
+              "id": "it_plan2Two",
+              "feature": "Something else it includes"
+            }
+          ],
+          "button": {
+            "label": "Choose this",
+            "link": "https://example.com"
+          },
+          "featured": "brand"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Name of the plan",
+          "price": "£0",
+          "period": "each",
+          "description": "Who it's for, in a sentence.",
+          "features": [
+            {
+              "id": "it_plan3One",
+              "feature": "Something it includes"
+            },
+            {
+              "id": "it_plan3Two",
+              "feature": "Something else it includes"
+            }
+          ],
+          "button": {
+            "label": "Choose this",
+            "link": "https://example.com"
+          },
+          "featured": "no"
+        }
+      }
+    ]
+  }
+}

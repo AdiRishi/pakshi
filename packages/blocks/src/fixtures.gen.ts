@@ -76,6 +76,14 @@ import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { typ
 import postList2cards from "./post-list/v2/fixtures/cards.json" with { type: "json" };
 import postList2list from "./post-list/v2/fixtures/list.json" with { type: "json" };
 import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with { type: "json" };
+import pricing1cardsFour from "./pricing/v1/fixtures/cards-four.json" with { type: "json" };
+import pricing1cardsTwo from "./pricing/v1/fixtures/cards-two.json" with { type: "json" };
+import pricing1cards from "./pricing/v1/fixtures/cards.json" with { type: "json" };
+import pricing1placeholder from "./pricing/v1/fixtures/placeholder.json" with { type: "json" };
+import pricing1rows from "./pricing/v1/fixtures/rows.json" with { type: "json" };
+import pricingPlan1default from "./pricing-plan/v1/fixtures/default.json" with { type: "json" };
+import pricingPlan1placeholder from "./pricing-plan/v1/fixtures/placeholder.json" with { type: "json" };
+import pricingPlan1plain from "./pricing-plan/v1/fixtures/plain.json" with { type: "json" };
 import quote1centered from "./quote/v1/fixtures/centered.json" with { type: "json" };
 import quote1placeholder from "./quote/v1/fixtures/placeholder.json" with { type: "json" };
 import quote1withPhoto from "./quote/v1/fixtures/with-photo.json" with { type: "json" };
@@ -190,6 +198,14 @@ export const fixtureFiles = [
   { type: "post-list", version: 2, name: "cards", fixture: postList2cards },
   { type: "post-list", version: 2, name: "list", fixture: postList2list },
   { type: "post-list", version: 2, name: "placeholder", fixture: postList2placeholder },
+  { type: "pricing", version: 1, name: "cards-four", fixture: pricing1cardsFour },
+  { type: "pricing", version: 1, name: "cards-two", fixture: pricing1cardsTwo },
+  { type: "pricing", version: 1, name: "cards", fixture: pricing1cards },
+  { type: "pricing", version: 1, name: "placeholder", fixture: pricing1placeholder },
+  { type: "pricing", version: 1, name: "rows", fixture: pricing1rows },
+  { type: "pricing-plan", version: 1, name: "default", fixture: pricingPlan1default },
+  { type: "pricing-plan", version: 1, name: "placeholder", fixture: pricingPlan1placeholder },
+  { type: "pricing-plan", version: 1, name: "plain", fixture: pricingPlan1plain },
   { type: "quote", version: 1, name: "centered", fixture: quote1centered },
   { type: "quote", version: 1, name: "placeholder", fixture: quote1placeholder },
   { type: "quote", version: 1, name: "with-photo", fixture: quote1withPhoto },

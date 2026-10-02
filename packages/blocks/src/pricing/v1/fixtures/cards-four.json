@@ -1,0 +1,139 @@
+{
+  "variant": "cards",
+  "surface": "tint",
+  "props": {
+    "align": "center",
+    "heading": "Courses for every age.",
+    "headingRest": "Pick the one that fits."
+  },
+  "slots": {
+    "plans": [
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Juniors",
+          "price": "£180",
+          "period": "per child",
+          "description": "Ages 10 to 13. Three mornings in the boatshed.",
+          "features": [
+            {
+              "id": "it_feature18",
+              "feature": "Three mornings"
+            },
+            {
+              "id": "it_feature19",
+              "feature": "Small, safe projects"
+            },
+            {
+              "id": "it_feature20",
+              "feature": "A take-home model boat"
+            }
+          ],
+          "button": {
+            "label": "Book juniors",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Summer school",
+          "price": "£350",
+          "badge": "Most popular",
+          "period": "per person",
+          "description": "Ages 14 to 18. The full five-day week.",
+          "features": [
+            {
+              "id": "it_feature21",
+              "feature": "Five full days"
+            },
+            {
+              "id": "it_feature22",
+              "feature": "A boat built as a group"
+            },
+            {
+              "id": "it_feature23",
+              "feature": "Every afternoon on the water"
+            }
+          ],
+          "button": {
+            "label": "Book a place",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "inverse"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Adults",
+          "price": "£160",
+          "period": "per weekend",
+          "description": "Weekend courses through the autumn.",
+          "features": [
+            {
+              "id": "it_feature24",
+              "feature": "Two full days"
+            },
+            {
+              "id": "it_feature25",
+              "feature": "Tools and timber"
+            },
+            {
+              "id": "it_feature26",
+              "feature": "Lunch both days"
+            }
+          ],
+          "button": {
+            "label": "See weekends",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Schools",
+          "price": "£1,400",
+          "period": "per class",
+          "description": "A week for a class of up to 24, with their teachers.",
+          "features": [
+            {
+              "id": "it_feature27",
+              "feature": "Five days for the whole class"
+            },
+            {
+              "id": "it_feature28",
+              "feature": "A lesson plan for each day"
+            },
+            {
+              "id": "it_feature29",
+              "feature": "A boat for the school to keep"
+            }
+          ],
+          "button": {
+            "label": "Ask about schools",
+            "link": "mailto:hello@example.org"
+          },
+          "featured": "no"
+        }
+      }
+    ]
+  }
+}
