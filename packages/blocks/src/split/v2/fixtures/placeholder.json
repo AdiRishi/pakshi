@@ -1,0 +1,96 @@
+{
+  "variant": "standard",
+  "surface": "default",
+  "props": {
+    "points": [
+      {
+        "id": "it_first",
+        "title": "A short point",
+        "body": "A sentence that backs up the heading.",
+        "icon": "sparkles"
+      }
+    ],
+    "actions": [
+      {
+        "id": "it_more",
+        "button": {
+          "label": "Read more",
+          "link": "https://example.com"
+        }
+      }
+    ],
+    "mediaSide": "alternate",
+    "verticalAlign": "center",
+    "frame": "plain",
+    "background": "full",
+    "kicker": "Why it matters",
+    "heading": "Tell the story behind it.",
+    "headingRest": "Pair a picture with what makes it worth a closer look.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "A few sentences about this one idea. Say what people will get out of it, and who it's for."
+            }
+          ]
+        },
+        {
+          "type": "bulletList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "What people will get out of it"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Who it's for"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "When and where it happens"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_pakshiArch",
+      "alt": ""
+    }
+  }
+}

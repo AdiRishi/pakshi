@@ -1,0 +1,54 @@
+{
+  "variant": "bleed",
+  "surface": "inverse",
+  "props": {
+    "points": [],
+    "actions": [
+      {
+        "id": "it_safety",
+        "button": {
+          "label": "How we keep you safe",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "mediaSide": "end",
+    "verticalAlign": "center",
+    "frame": "plain",
+    "background": "full",
+    "kicker": "Afternoons",
+    "heading": "Out on the water.",
+    "headingRest": "Sail the boats you helped build.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "After lunch, take what you made out on the harbour with an instructor. "
+            },
+            {
+              "type": "text",
+              "text": "Life jackets are provided.",
+              "marks": [
+                {
+                  "type": "bold"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    }
+  }
+}

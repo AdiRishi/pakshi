@@ -90,6 +90,11 @@ import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with
 import split1imageLeft from "./split/v1/fixtures/image-left.json" with { type: "json" };
 import split1imageRight from "./split/v1/fixtures/image-right.json" with { type: "json" };
 import split1placeholder from "./split/v1/fixtures/placeholder.json" with { type: "json" };
+import split2bleedInset from "./split/v2/fixtures/bleed-inset.json" with { type: "json" };
+import split2bleed from "./split/v2/fixtures/bleed.json" with { type: "json" };
+import split2placeholder from "./split/v2/fixtures/placeholder.json" with { type: "json" };
+import split2standardFramed from "./split/v2/fixtures/standard-framed.json" with { type: "json" };
+import split2standard from "./split/v2/fixtures/standard.json" with { type: "json" };
 import stats1cards from "./stats/v1/fixtures/cards.json" with { type: "json" };
 import stats1placeholder from "./stats/v1/fixtures/placeholder.json" with { type: "json" };
 import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
@@ -194,6 +199,11 @@ export const fixtureFiles = [
   { type: "split", version: 1, name: "image-left", fixture: split1imageLeft },
   { type: "split", version: 1, name: "image-right", fixture: split1imageRight },
   { type: "split", version: 1, name: "placeholder", fixture: split1placeholder },
+  { type: "split", version: 2, name: "bleed-inset", fixture: split2bleedInset },
+  { type: "split", version: 2, name: "bleed", fixture: split2bleed },
+  { type: "split", version: 2, name: "placeholder", fixture: split2placeholder },
+  { type: "split", version: 2, name: "standard-framed", fixture: split2standardFramed },
+  { type: "split", version: 2, name: "standard", fixture: split2standard },
   { type: "stats", version: 1, name: "cards", fixture: stats1cards },
   { type: "stats", version: 1, name: "placeholder", fixture: stats1placeholder },
   { type: "stats", version: 1, name: "row", fixture: stats1row },
