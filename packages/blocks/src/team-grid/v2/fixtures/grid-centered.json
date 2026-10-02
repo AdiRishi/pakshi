@@ -1,0 +1,57 @@
+{
+  "variant": "grid",
+  "surface": "tint",
+  "props": {
+    "heading": "In the kitchen and the office",
+    "intro": "The people who keep the week running, from breakfast to the last boat in.",
+    "actions": [],
+    "columns": "3",
+    "align": "center"
+  },
+  "slots": {
+    "people": [
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleAsha",
+            "alt": "Asha Patel"
+          },
+          "name": "Asha Patel",
+          "role": "Cook",
+          "bio": "Asha cooks lunch for everyone, every day, and knows who's vegetarian."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_samplePriya",
+            "alt": "Priya Nair"
+          },
+          "name": "Priya Nair",
+          "role": "Bookings and bursaries",
+          "bio": "Priya answers questions about dates, places and help with fees."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleDan",
+            "alt": "Dan Okafor"
+          },
+          "name": "Dan Okafor",
+          "role": "Safety officer",
+          "bio": "Dan checks every boat and every life jacket before anyone sets off."
+        }
+      }
+    ]
+  }
+}

@@ -34,6 +34,8 @@ export const registry: Readonly<
   "split@1": () => import("./split/v1/index.tsx"),
   "stats@1": () => import("./stats/v1/index.tsx"),
   "team-grid@1": () => import("./team-grid/v1/index.tsx"),
+  "team-grid@2": () => import("./team-grid/v2/index.tsx"),
   "team-member@1": () => import("./team-member/v1/index.tsx"),
+  "team-member@2": () => import("./team-member/v2/index.tsx"),
   "timeline@1": () => import("./timeline/v1/index.tsx"),
 };

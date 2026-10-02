@@ -1,13 +1,22 @@
 import type { BlockSample } from "../presentation.ts";
-import type teamGrid from "./v1/index.tsx";
+import type teamGrid from "./v2/index.tsx";
 
 export default {
-  variant: "four-columns",
+  variant: "grid",
   surface: "default",
   props: {
-    heading: "Your mentors",
-    intro:
-      "Every mentor builds or repairs boats for a living. Each one looks after six students all week.",
+    kicker: "Mentors",
+    heading: "Your mentors.",
+    headingRest: "Every one of them builds or repairs boats for a living.",
+    intro: "Each mentor looks after six students, all week, in the boatshed and on the water.",
+    actions: [
+      {
+        id: "it_crew",
+        button: { label: "Meet the whole crew", link: { $ref: "page", id: "pg_programme" } },
+      },
+    ],
+    columns: "4",
+    align: "start",
   },
   slots: {
     people: [
@@ -15,55 +24,40 @@ export default {
         type: "team-member",
         variant: "default",
         props: {
-          photo: {
-            $ref: "media",
-            id: "med_sampleTom",
-            alt: "Tom Penrose",
-          },
+          image: { $ref: "media", id: "med_sampleTom", alt: "Tom Penrose" },
           name: "Tom Penrose",
           role: "Boatbuilder and lead mentor",
-          bio: "Tom has built wooden boats on this harbour for twenty years. He runs the morning workshops.",
+          bio: "Tom has built wooden boats on this harbour for twenty years.",
+          link: { $ref: "page", id: "pg_programme" },
         },
       },
       {
         type: "team-member",
         variant: "default",
         props: {
-          photo: {
-            $ref: "media",
-            id: "med_sampleMei",
-            alt: "Mei Chen",
-          },
+          image: { $ref: "media", id: "med_sampleMei", alt: "Mei Chen" },
           name: "Mei Chen",
           role: "Sailmaker",
-          bio: "Mei makes and mends sails in the loft above the boatshed. Ask her about knots.",
+          bio: "Mei makes and mends sails in the loft above the boatshed.",
         },
       },
       {
         type: "team-member",
         variant: "default",
         props: {
-          photo: {
-            $ref: "media",
-            id: "med_sampleDan",
-            alt: "Dan Okafor",
-          },
+          image: { $ref: "media", id: "med_sampleDan", alt: "Dan Okafor" },
           name: "Dan Okafor",
           role: "Sailing instructor",
-          bio: "Dan takes everyone out on the water in the afternoons, and keeps them safe.",
+          bio: "Dan takes everyone out on the water in the afternoons.",
         },
       },
       {
         type: "team-member",
         variant: "default",
         props: {
-          photo: {
-            $ref: "media",
-            id: "med_sampleAsha",
-            alt: "Asha Patel",
-          },
+          image: { $ref: "media", id: "med_sampleAsha", alt: "Asha Patel" },
           name: "Asha Patel",
-          role: "Kitchen",
+          role: "Cook",
           bio: "Asha cooks lunch for everyone, every day.",
         },
       },

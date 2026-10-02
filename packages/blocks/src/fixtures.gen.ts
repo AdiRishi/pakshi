@@ -90,8 +90,15 @@ import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
 import teamGrid1fourColumns from "./team-grid/v1/fixtures/four-columns.json" with { type: "json" };
 import teamGrid1placeholder from "./team-grid/v1/fixtures/placeholder.json" with { type: "json" };
 import teamGrid1threeColumns from "./team-grid/v1/fixtures/three-columns.json" with { type: "json" };
+import teamGrid2gridCentered from "./team-grid/v2/fixtures/grid-centered.json" with { type: "json" };
+import teamGrid2grid from "./team-grid/v2/fixtures/grid.json" with { type: "json" };
+import teamGrid2list from "./team-grid/v2/fixtures/list.json" with { type: "json" };
+import teamGrid2overlay from "./team-grid/v2/fixtures/overlay.json" with { type: "json" };
+import teamGrid2placeholder from "./team-grid/v2/fixtures/placeholder.json" with { type: "json" };
 import teamMember1default from "./team-member/v1/fixtures/default.json" with { type: "json" };
 import teamMember1placeholder from "./team-member/v1/fixtures/placeholder.json" with { type: "json" };
+import teamMember2default from "./team-member/v2/fixtures/default.json" with { type: "json" };
+import teamMember2placeholder from "./team-member/v2/fixtures/placeholder.json" with { type: "json" };
 import timeline1agenda from "./timeline/v1/fixtures/agenda.json" with { type: "json" };
 import timeline1placeholder from "./timeline/v1/fixtures/placeholder.json" with { type: "json" };
 import timeline1vertical from "./timeline/v1/fixtures/vertical.json" with { type: "json" };
@@ -188,8 +195,15 @@ export const fixtureFiles = [
   { type: "team-grid", version: 1, name: "four-columns", fixture: teamGrid1fourColumns },
   { type: "team-grid", version: 1, name: "placeholder", fixture: teamGrid1placeholder },
   { type: "team-grid", version: 1, name: "three-columns", fixture: teamGrid1threeColumns },
+  { type: "team-grid", version: 2, name: "grid-centered", fixture: teamGrid2gridCentered },
+  { type: "team-grid", version: 2, name: "grid", fixture: teamGrid2grid },
+  { type: "team-grid", version: 2, name: "list", fixture: teamGrid2list },
+  { type: "team-grid", version: 2, name: "overlay", fixture: teamGrid2overlay },
+  { type: "team-grid", version: 2, name: "placeholder", fixture: teamGrid2placeholder },
   { type: "team-member", version: 1, name: "default", fixture: teamMember1default },
   { type: "team-member", version: 1, name: "placeholder", fixture: teamMember1placeholder },
+  { type: "team-member", version: 2, name: "default", fixture: teamMember2default },
+  { type: "team-member", version: 2, name: "placeholder", fixture: teamMember2placeholder },
   { type: "timeline", version: 1, name: "agenda", fixture: timeline1agenda },
   { type: "timeline", version: 1, name: "placeholder", fixture: timeline1placeholder },
   { type: "timeline", version: 1, name: "vertical", fixture: timeline1vertical },
