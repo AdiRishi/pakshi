@@ -1,18 +1,19 @@
 import { describe, expect, it } from "@effect/vitest";
-import { FormId } from "@repo/contracts/ids";
+import type { Draft } from "@repo/contracts/draft";
+import { BlockId, FormId, PageId } from "@repo/contracts/ids";
 import { freeze } from "@repo/domain/freeze";
 import { Effect, Layer } from "effect";
 import { Chat } from "effect/unstable/ai";
 
 import { runTurn } from "../src/turn.ts";
-import { draftToFix } from "./support/draft.ts";
+import { draftToFix, harbourDraft } from "./support/draft.ts";
 import { type Reply, scriptedModel } from "./support/model.ts";
 import { desk } from "./support/workspace.ts";
 
-/** Runs a turn on the draft with issues to fix, with the model replying from a script. */
-const fixing = (script: ReadonlyArray<Reply>) =>
+/** Runs a turn on a draft with issues to fix, with the model replying from a script. */
+const fixing = (script: ReadonlyArray<Reply>, draft: Draft = draftToFix) =>
   Effect.gen(function* () {
-    const { state, layer, contracts } = yield* Effect.promise(() => desk(draftToFix));
+    const { state, layer, contracts } = yield* Effect.promise(() => desk(draft));
     const model = scriptedModel(script);
     yield* runTurn({
       chat: yield* Chat.empty,
@@ -33,6 +34,37 @@ const site = (...ops: ReadonlyArray<object>) => ({
 });
 
 const contact = FormId.make("frm_contact");
+const home = PageId.make("pg_home");
+const signUp = BlockId.make("b_signup");
+
+/** The Harbour draft with a form section still showing the placeholder form. */
+const withPlaceholderForm = (draft: Draft): Draft => {
+  const page = draft.pages[home];
+  if (page === undefined) return draft;
+  return {
+    ...draft,
+    pages: {
+      ...draft.pages,
+      [home]: {
+        ...page,
+        root: [...page.root, signUp],
+        blocks: {
+          ...page.blocks,
+          [signUp]: {
+            type: "form-section",
+            variant: "card",
+            surface: "muted",
+            props: {
+              heading: "Sign up for the summer school",
+              intro: "We'll email you the timetable.",
+              form: { $ref: "form", id: "frm_pakshiContact" },
+            },
+          },
+        },
+      },
+    },
+  };
+};
 
 describe("fixing what the checks found", () => {
   it.effect("the agent reads every issue with its IDs, and which ones are the person's", () =>
@@ -112,6 +144,51 @@ describe("fixing what the checks found", () => {
       expect(state.parts).toContainEqual(
         expect.objectContaining({ label: "Published Old programme again in the draft" }),
       );
+    }),
+  );
+
+  it.effect("replaces a placeholder form with a form of the draft's own", () =>
+    Effect.gen(function* () {
+      const { state, calls, left } = yield* fixing(
+        [
+          { calls: [{ name: "check_draft", params: {} }] },
+          {
+            calls: [
+              {
+                name: "apply_ops",
+                params: {
+                  page: "pg_home",
+                  ops: [
+                    {
+                      op: "setForm",
+                      form: {
+                        id: "frm_signup",
+                        name: "Sign up",
+                        fields: [
+                          { kind: "shortText", id: "ff_name", label: "Name", required: true },
+                        ],
+                        submitLabel: "Sign up",
+                      },
+                    },
+                    {
+                      op: "setProp",
+                      block: signUp,
+                      path: ["form"],
+                      value: { $ref: "form", id: "frm_signup" },
+                    },
+                  ],
+                },
+              },
+            ],
+          },
+        ],
+        withPlaceholderForm(harbourDraft),
+      );
+      expect(JSON.stringify(calls[1]?.prompt)).toContain(
+        "field form: still the placeholder form. Point it at one of the draft's forms, or add one with setForm",
+      );
+      expect(left).toEqual(["NoFormEmails"]);
+      expect(state.draft.forms[FormId.make("frm_signup")]?.name).toBe("Sign up");
     }),
   );
 

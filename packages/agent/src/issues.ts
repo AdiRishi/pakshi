@@ -78,12 +78,14 @@ const brokenTo = (draft: Draft, issue: Extract<CheckIssue, { readonly _tag: "Bro
     : `links to ${issue.page} "${linked.meta.title || linked.path}", which is unpublished in this draft. Point it at a published page, or ask the person whether to publish ${issue.page} again with setStatus.`;
 };
 
-const describe = (issue: CheckIssue, draft: Draft) => {
+const describe = (issue: CheckIssue, draft: Draft, contracts: BlockContracts) => {
   switch (issue._tag) {
     case "Incomplete":
       return `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: ${issue.message}.`;
     case "Placeholder":
-      return `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: still the block's placeholder content.`;
+      return fieldKind(draft, contracts, issue) === "form"
+        ? `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: still the placeholder form. Point it at one of the draft's forms, or add one with setForm and point it there.`
+        : `${blockAt(issue.place, issue.block)}, field ${issue.path.join(".")}: still the block's placeholder content.`;
     case "MissingMeta":
       return `${issue.place.title} (${issue.place.target}): no ${issue.field}. Set it with setMeta.`;
     case "BrokenLink":
@@ -106,6 +108,6 @@ const describe = (issue: CheckIssue, draft: Draft) => {
 /** An issue as the agent reads it: where it is, by ID, how to fix it, or that only a person can. */
 export const issueForAgent = (issue: CheckIssue, draft: Draft, contracts: BlockContracts) => {
   const reason = personOnly(issue, draft, contracts);
-  const line = describe(issue, draft);
+  const line = describe(issue, draft, contracts);
   return reason === null ? line : `${line} ${forPerson[reason]}`;
 };
