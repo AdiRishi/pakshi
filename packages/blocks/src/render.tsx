@@ -1,4 +1,5 @@
 import type { BlockId, BlockType } from "@repo/contracts/ids";
+import type { BlockTree } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument } from "@repo/contracts/page";
 import type { SiteParts } from "@repo/contracts/site";
 import type { Lockfile } from "@repo/contracts/snapshot";
@@ -115,6 +116,26 @@ export const renderBlock = (
   if (!result.ok) throw new Error(`Block ${id} can't render: ${result.problem}`);
   return <Fragment key={id}>{result.element}</Fragment>;
 };
+
+/** A block tree as the flat instances a page stores: the block, then each of its items. */
+export const flattenTree = (tree: BlockTree): ReadonlyArray<readonly [BlockId, BlockInstance]> => {
+  const { id, slots, ...block } = tree;
+  const items = Object.values(slots ?? {}).flat();
+  const root: BlockInstance =
+    slots === undefined
+      ? block
+      : {
+          ...block,
+          slots: Object.fromEntries(
+            Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
+          ),
+        };
+  return [[id, root], ...items.map(({ id: itemId, ...item }) => [itemId, item] as const)];
+};
+
+/** Renders one block tree, such as a new block or a preview, with the items in its slots. */
+export const renderTree = (definitions: ReadonlyMap<BlockType, BlockDefinition>, tree: BlockTree) =>
+  renderBlock(definitions, Object.fromEntries(flattenTree(tree)), tree.id);
 
 /** Renders a page with the site's header and footer, at the lockfile's block versions. */
 export const renderPage = async (page: PageDocument, parts: SiteParts, lockfile: Lockfile) => {

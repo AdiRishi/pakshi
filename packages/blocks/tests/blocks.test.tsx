@@ -18,7 +18,7 @@ import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
 import { blockKey } from "../src/contract.ts";
 import { propsSchema } from "../src/fields.ts";
-import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "../src/fixtures.ts";
+import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import { placeholderForm, placeholderPaths, placeholderTree } from "../src/placeholders.ts";
 import { registry } from "../src/registry.gen.ts";
 import {
@@ -26,7 +26,7 @@ import {
   loadBlock,
   loadBlocks,
   registeredVersions,
-  renderBlock,
+  renderTree,
 } from "../src/render.tsx";
 import { siteData } from "../src/site-data.ts";
 
@@ -45,9 +45,9 @@ const markup = (element: React.ReactElement) =>
   renderToStaticMarkup(<SiteDataProvider value={site}>{element}</SiteDataProvider>);
 
 /** Renders a block at a version, with the items in its slots at their newest. */
-const renderTree = async (tree: BlockTree, version: number) => {
+const renderAt = async (tree: BlockTree, version: number) => {
   const definitions = await loadBlocks({ ...latestLockfile, [tree.type]: version });
-  return markup(renderBlock(definitions, Object.fromEntries(flattenTree(tree)), tree.id));
+  return markup(renderTree(definitions, tree));
 };
 
 const renderProps = (
@@ -105,7 +105,7 @@ describe.each(
 )("%s v%i fixture %s", (type, version, _name, entry) => {
   test("renders, with a section's surface on its root", async () => {
     const block = await load(type, version);
-    const html = await renderTree(fixtureTree(entry), version);
+    const html = await renderAt(fixtureTree(entry), version);
     expect(html).toMatch(
       block.placement === "item" ? /^<li / : `data-surface="${entry.fixture.surface}"`,
     );

@@ -104,7 +104,7 @@ export function Frame(props: {
   readonly siteCss: string;
   readonly theme: ResolvedTheme;
   readonly scheme: ColorScheme;
-  readonly extraCss?: string;
+  readonly extraCss?: string | undefined;
   readonly className?: string;
   readonly style?: CSSProperties;
   /** A frame that only shows something: it takes no focus and hides from assistive technology. */

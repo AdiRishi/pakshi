@@ -1,5 +1,5 @@
-import { loadBlocks, registeredVersions } from "@repo/blocks";
-import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
+import { flattenTree, loadBlocks, registeredVersions } from "@repo/blocks";
+import { blockFixtures, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
 import {
   BlockId,
   type BlockType,

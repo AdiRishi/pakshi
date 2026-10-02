@@ -9,6 +9,9 @@ import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 import type { Origin } from "./run-command.ts";
 import { type EditorState, type EditorStore, fieldKey } from "./store.ts";
 
+/** An image in the library the editor offers: what it shows and places of an image. */
+export type EditorImage = Pick<MediaSummary, "id" | "alt" | "width" | "height">;
+
 /**
  * What the editor needs from Studio besides the draft: block versions, images
  * and their addresses, and what a page is rendered with.
@@ -16,7 +19,7 @@ import { type EditorState, type EditorStore, fieldKey } from "./store.ts";
 export interface EditorServices {
   readonly store: EditorStore;
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
-  readonly media: ReadonlyArray<MediaSummary>;
+  readonly media: ReadonlyArray<EditorImage>;
   /** The address the canvas loads an image from. */
   readonly mediaSrc: (id: MediaId) => string;
   /** The address of the stylesheet `sites` renders pages with. */

@@ -3,7 +3,7 @@ import { Draft } from "@repo/contracts/draft";
 import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { BlockTree, Target } from "@repo/contracts/ops";
-import { type BlockInstance, PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
+import { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
 import { PublishedSettings } from "@repo/contracts/settings";
 import { Menus } from "@repo/contracts/site";
 import { type Lockfile, MediaFile } from "@repo/contracts/snapshot";
@@ -16,7 +16,7 @@ import { BlockFixture, type BlockContract } from "./contract.ts";
 import site from "./fixture-site.json" with { type: "json" };
 import { fixtureFiles } from "./fixtures.gen.ts";
 import { withFreshId } from "./placeholders.ts";
-import { latestLockfile } from "./render.tsx";
+import { flattenTree, latestLockfile } from "./render.tsx";
 import { sampleMedia } from "./sample-media.ts";
 import { samples } from "./samples.gen.ts";
 import { siteData } from "./site-data.ts";
@@ -78,22 +78,6 @@ export const fixtureTree = (entry: (typeof blockFixtures)[number]): BlockTree =>
     entry.type,
     entry.fixture,
   );
-
-/** A block tree as the flat instances a page stores: the block, then each of its items. */
-export const flattenTree = (tree: BlockTree): ReadonlyArray<readonly [BlockId, BlockInstance]> => {
-  const { id, slots, ...block } = tree;
-  const items = Object.values(slots ?? {}).flat();
-  const root: BlockInstance =
-    slots === undefined
-      ? block
-      : {
-          ...block,
-          slots: Object.fromEntries(
-            Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
-          ),
-        };
-  return [[id, root], ...items.map(({ id: itemId, ...item }) => [itemId, item] as const)];
-};
 
 const home = PageId.make("pg_home");
 
@@ -173,8 +157,11 @@ export interface BlockShowcase {
   readonly settings: PublishedSettings;
   /** Where the block to show is: the home page, or the site's header and footer. */
   readonly target: Target;
-  /** The block to show: the sample's own block, or for an item, the section that holds it. */
-  readonly block: BlockId;
+  /**
+   * The block to show, with its items: the sample's own block, or for an
+   * item, the section that holds it. Its ID is the block's in the draft.
+   */
+  readonly tree: BlockTree;
   /** The images samples show, which every showcase's library holds. */
   readonly media: ReadonlyArray<ShowcaseImage>;
   /** What the draft's blocks read beyond their props, for rendering it outside the editor. */
@@ -234,7 +221,7 @@ export const blockShowcase = (
     draft,
     settings: fixtureSite.settings,
     target: sitewide ? "site" : home,
-    block: block.id,
+    tree: block,
     media: showcaseMedia,
     data: siteData({
       settings: fixtureSite.settings,

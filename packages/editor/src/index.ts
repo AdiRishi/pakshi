@@ -1,3 +1,4 @@
+export type { EditorImage } from "./context.tsx";
 export type { Notice } from "./notices.ts";
 export type {
   Connection,
@@ -27,6 +28,7 @@ export {
   useToolbarCommands,
 } from "./editor.tsx";
 export { Frame as SiteFrame } from "./canvas/frame.tsx";
+export { ScaledBlockPreview, ScaledSiteFrame } from "./preview.tsx";
 export { Outline as EditorOutline } from "./outline.tsx";
 export { EditorParticipants } from "./participants.tsx";
 export { presenceColorCount } from "./presence.ts";
