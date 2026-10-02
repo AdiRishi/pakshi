@@ -1,3 +1,4 @@
+import { pageNumberOf } from "@repo/contracts/collections";
 import { SiteId, SnapshotId, SubmissionId } from "@repo/contracts/ids";
 import { reviewBasePath } from "@repo/contracts/studio";
 import { createFileRoute } from "@tanstack/react-router";
@@ -24,7 +25,8 @@ export const Route = createFileRoute("/review/$siteId/$submissionId/$")({
         const site = Schema.decodeOption(SiteId)(params.siteId);
         const submission = Schema.decodeOption(SubmissionId)(params.submissionId);
         const asked = requested(params._splat ?? "");
-        const search = new URL(request.url).searchParams;
+        const url = new URL(request.url);
+        const search = url.searchParams;
         const version = Schema.decodeUnknownOption(Version)(search.get("version") ?? "submitted");
         const snapshot = Schema.decodeUnknownOption(SnapshotId)(search.get("snapshot"));
         if (
@@ -68,6 +70,7 @@ export const Route = createFileRoute("/review/$siteId/$submissionId/$")({
           address: (path) => `${base}${path}?${search.toString()}`,
           bar: null,
           changed: review.changed,
+          number: pageNumberOf(url),
         });
       },
     },
