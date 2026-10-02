@@ -9,6 +9,9 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 098 | An overlaid header takes the surface of the section under it                       | 2026-10-03 | Accepted            |
+| 097 | The editor canvas opens every disclosure                                           | 2026-10-03 | Accepted            |
+| 096 | The rebuilt block library replaces the old versions outright                       | 2026-10-03 | Accepted            |
 | 095 | Blocks are built on a shared kit, and designed in a lab                            | 2026-10-03 | Accepted            |
 | 094 | A block version can rename the layouts of the one before it                        | 2026-10-03 | Accepted            |
 | 093 | Blocks offer choices and icons as fields                                           | 2026-10-03 | Accepted            |
@@ -104,6 +107,30 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 098 — An overlaid header takes the surface of the section under it [#decision-098]
+
+**Context.** A header set over the first section has a transparent background, so its text takes its own surface's colors over someone else's background. A dark photo hero under a header on the default surface left the logo and menu unreadable, and nothing in the editor said to change the header's surface too.
+
+**Decision.** The theme's CSS gives an overlaid header the surface of the page's first section: each surface's rule also matches a header's `[data-overlay]` content when the next element is `main` and its first section has that surface. A header that isn't overlaid keeps its own surface.
+
+**Consequences.** Changing the first section's surface changes the header with it, in sites and in the canvas, which both put the header right before `main`. A header's surface choice does nothing while it's overlaid.
+
+## 097 — The editor canvas opens every disclosure [#decision-097]
+
+**Context.** FAQ answers sit in closed `details` elements, which work without a script on sites. In the canvas a closed answer couldn't be clicked, tabbed to or edited.
+
+**Decision.** The kit's `Disclosure` renders open whenever blocks render in the editor. The check that the canvas renders each fixture as sites does opens every disclosure on the published page before comparing.
+
+**Consequences.** The canvas shows FAQs longer than visitors first see them. Other closed elements, such as the header's phone menu, keep their fields elsewhere on the page or stay closed.
+
+## 096 — The rebuilt block library replaces the old versions outright [#decision-096]
+
+**Context.** The blocks were redesigned from research into product, brand, editorial, nonprofit and event sites. Nothing is in production yet, and a dev stage can be wiped.
+
+**Decision.** Every superseded version folder is deleted with its golden schema and baseline screenshots, and no migrations are written to the new versions. New versions keep counting from the old numbers, such as hero v4, because the released-blocks check compares against `main`.
+
+**Consequences.** A stage made before must be destroyed with `pnpm dev:destroy`. With one version of each block, the domain's migration tests build their own next versions, and the tests of adopting upgrades and removing unused versions have nothing to cover until a second version exists.
 
 ## 095 — Blocks are built on a shared kit, and designed in a lab [#decision-095]
 
