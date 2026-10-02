@@ -118,14 +118,14 @@ const TestimonialsBlock = ({
     case "scroller":
       return (
         <Section>
-          <div className="page-width flex flex-col gap-14 md:gap-16">
-            {intro}
+          <div className="flex flex-col gap-14 md:gap-16">
+            <div className="page-width">{intro}</div>
             <Slot
               name="items"
               as="ul"
               className={cx(
                 scrollerClass,
-                "-mx-gutter [&>li]:shrink-0 [&>li]:snap-start",
+                "[&>li]:shrink-0 [&>li]:snap-start",
                 scrollerWidths[section.columns],
                 styles[section.style],
               )}

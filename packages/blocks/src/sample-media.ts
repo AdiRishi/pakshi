@@ -132,6 +132,10 @@ export const sampleMedia: ReadonlyMap<MediaId, ResolvedMedia & { readonly alt: s
   placeholder("med_pakshiCircles", "A painting of coloured circles"),
   placeholder("med_pakshiArch", "An open doorway with the sea beyond"),
   placeholder("med_pakshiSea", "Two sailing boats on the water"),
+  placeholder("med_pakshiLogoCircle", "Logo"),
+  placeholder("med_pakshiLogoSquare", "Logo"),
+  placeholder("med_pakshiLogoTriangle", "Logo"),
+  placeholder("med_pakshiLogoWave", "Logo"),
   image(
     "med_sampleTom",
     "Tom Penrose",

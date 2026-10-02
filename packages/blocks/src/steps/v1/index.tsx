@@ -142,7 +142,7 @@ const StepsBlock = ({ props: steps, variant }: BlockComponentProps<typeof props,
     }
     case "list":
       return (
-        <Section className="!overflow-clip">
+        <Section>
           <div className="page-width grid gap-14 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-20">
             <div className="lg:sticky lg:top-24 lg:self-start">{intro("start")}</div>
             <ol>

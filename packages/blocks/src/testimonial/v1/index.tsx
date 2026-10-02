@@ -16,8 +16,7 @@ const props = {
  * a light surface and light on a dark one, which the surface's
  * --theme-on-dark says. A browser without style queries leaves it dark.
  */
-const logoInk =
-  "h-8 w-auto self-start object-contain brightness-0 opacity-75 [@container_style(--theme-on-dark:inline-block)]:invert";
+const logoInk = "h-8 w-auto self-start object-contain logo-ink opacity-75";
 
 const Testimonial = ({ props: item }: BlockComponentProps<typeof props, "default">) => (
   <Root as="li" className="flex">

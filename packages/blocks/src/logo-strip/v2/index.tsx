@@ -33,7 +33,7 @@ type Logo = LogoStrip["logos"][number];
  * `--theme-on-dark`, which a style query reads.
  */
 const colors = {
-  mono: "grayscale opacity-65 transition-opacity hover:opacity-100 [@container_style(--theme-on-dark:inline-block)]:brightness-0 [@container_style(--theme-on-dark:inline-block)]:invert",
+  mono: "logo-ink opacity-60 transition-opacity hover:opacity-100",
   original: "",
 } as const satisfies Record<LogoStrip["color"], string>;
 

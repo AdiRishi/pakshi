@@ -25,7 +25,6 @@
   --font-heading: var(--theme-font-heading);
   --font-body: var(--theme-font-body);
   --font-label: var(--theme-label-font);
-  --font-weight-heading: var(--theme-heading-weight);
 
   --text-small: var(--theme-text-small);
   --text-small--line-height: 1.5;
@@ -78,6 +77,19 @@
 
 @utility on-dark-only {
   display: var(--theme-on-dark);
+}
+
+/*
+ * Draws a logo in one ink that suits the surface it's on: black on light
+ * backgrounds, white on dark ones, so partners' logos sit together.
+ */
+@utility logo-ink {
+  filter: var(--theme-logo-ink);
+}
+
+/* The theme's heading weight, for type set in the heading font outside a heading. */
+@utility heading-weight {
+  font-weight: var(--theme-heading-weight);
 }
 
 /** The width a page's content runs to, inside the page's side margins. */

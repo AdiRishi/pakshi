@@ -95,7 +95,7 @@ const FaqBlock = ({ props: faq, variant }: BlockComponentProps<typeof props, Var
       // A section clips what overflows it so its backdrop stays inside; clipping
       // without making it a scroll container lets the intro stick to the window.
       return (
-        <Section className="!overflow-clip">
+        <Section>
           <div className="page-width grid gap-12 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-20">
             <div className="flex flex-col gap-8 lg:sticky lg:top-24 lg:self-start">
               <Intro content={faq} />

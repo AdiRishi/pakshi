@@ -7,8 +7,8 @@ import type { ReactNode } from "react";
  * the page's edge while its first card lines up with the content above.
  */
 export const scrollerClass = cx(
-  "flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4 scroll-pl-gutter",
-  "[scrollbar-width:thin] px-gutter md:gap-6",
+  "scroller-row flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4",
+  "[scrollbar-width:thin] md:gap-6",
 );
 
 /** How wide each card in a scroller is, by how many show at once on a large screen. */

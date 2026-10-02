@@ -163,6 +163,15 @@
   }
 }
 
+/*
+ * A row that scrolls sideways across the whole width of its section, with
+ * its first and last items lined up with the page's content.
+ */
+@utility scroller-row {
+  padding-inline: max(var(--theme-gutter), (100% - var(--theme-width)) / 2);
+  scroll-padding-inline: max(var(--theme-gutter), (100% - var(--theme-width)) / 2);
+}
+
 /* Long-form text set for reading: a comfortable measure, rhythm and lists. */
 @utility prose {
   font-size: var(--theme-text-body);

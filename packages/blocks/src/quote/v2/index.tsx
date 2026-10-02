@@ -27,8 +27,7 @@ const quoteSize = (quote: Quote) => (quote.quote.length > 240 ? "text-heading" :
  * a light surface and light on a dark one, which the surface's
  * --theme-on-dark says. A browser without style queries leaves them dark.
  */
-const logoInk =
-  "w-auto object-contain brightness-0 opacity-80 [@container_style(--theme-on-dark:inline-block)]:invert";
+const logoInk = "w-auto object-contain logo-ink opacity-80";
 
 const Logo = ({ quote, className }: { readonly quote: Quote; readonly className?: string }) =>
   quote.logo === undefined ? null : (

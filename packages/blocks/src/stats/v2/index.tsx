@@ -68,7 +68,7 @@ const Figure = ({
         as="span"
         value={stat.value}
         className={cx(
-          "block font-heading leading-none tabular-nums",
+          "block font-heading heading-weight leading-none tabular-nums",
           size === "display" ? "text-display" : "text-title",
         )}
       />

@@ -98,12 +98,32 @@ const sea = inlineSvg(
     `<path d="M1090 552V440L1160 552Z" fill="#F7F1E8"/><path d="M1082 558H1166L1152 574H1096Z" fill="#2B3A3F"/>`,
 );
 
+/** A placeholder logo: a simple mark beside the word "Logo", in one ink. */
+const logo = (mark: string) =>
+  inlineSvg(
+    480,
+    120,
+    `<g fill="#3A3A3A">${mark}<text x="140" y="78" font-family="system-ui, sans-serif" font-size="52" font-weight="600">Logo</text></g>`,
+  );
+
 /** The placeholder images, by the IDs placeholders use. */
 export const placeholderMedia: ReadonlyMap<MediaId, ResolvedMedia> = new Map([
   [MediaId.make("med_pakshiHills"), hills],
   [MediaId.make("med_pakshiCircles"), circles],
   [MediaId.make("med_pakshiArch"), arch],
   [MediaId.make("med_pakshiSea"), sea],
+  [MediaId.make("med_pakshiLogoCircle"), logo(`<circle cx="70" cy="60" r="40"/>`)],
+  [
+    MediaId.make("med_pakshiLogoSquare"),
+    logo(`<rect x="32" y="22" width="76" height="76" rx="14"/>`),
+  ],
+  [MediaId.make("med_pakshiLogoTriangle"), logo(`<path d="M70 18L114 100H26Z"/>`)],
+  [
+    MediaId.make("med_pakshiLogoWave"),
+    logo(
+      `<path d="M24 76c15-32 31-32 46 0s31 32 46 0" fill="none" stroke="#3A3A3A" stroke-width="14" stroke-linecap="round"/>`,
+    ),
+  ],
 ]);
 
 /** A contact form a new form section shows until someone chooses one of the site's forms. */

@@ -6,34 +6,34 @@
     "heading": "Who we work with",
     "logos": [
       {
-        "id": "it_hills",
+        "id": "it_circle",
         "logo": {
           "$ref": "media",
-          "id": "med_pakshiHills",
+          "id": "med_pakshiLogoCircle",
           "alt": ""
         }
       },
       {
-        "id": "it_circles",
+        "id": "it_square",
         "logo": {
           "$ref": "media",
-          "id": "med_pakshiCircles",
+          "id": "med_pakshiLogoSquare",
           "alt": ""
         }
       },
       {
-        "id": "it_arch",
+        "id": "it_triangle",
         "logo": {
           "$ref": "media",
-          "id": "med_pakshiArch",
+          "id": "med_pakshiLogoTriangle",
           "alt": ""
         }
       },
       {
-        "id": "it_sea",
+        "id": "it_wave",
         "logo": {
           "$ref": "media",
-          "id": "med_pakshiSea",
+          "id": "med_pakshiLogoWave",
           "alt": ""
         }
       }

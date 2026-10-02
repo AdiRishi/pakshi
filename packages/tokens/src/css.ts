@@ -174,6 +174,7 @@ const surfaceDeclarations = (colors: SurfaceColors, cards: ResolvedTheme["cards"
     ...Object.entries(colors).map(([name, value]) => [name, value] as const),
     ["theme-on-light", dark ? "none" : "inline-block"],
     ["theme-on-dark", dark ? "inline-block" : "none"],
+    ["theme-logo-ink", dark ? "brightness(0) invert(1)" : "brightness(0)"],
     [
       "theme-card-border",
       { outline: colors.border, filled: "transparent", raised: colors.border }[cards],

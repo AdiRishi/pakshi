@@ -33,7 +33,7 @@ export const Section = (props: {
   readonly children: ReactNode;
 }) => {
   const body = cx(
-    "relative isolate overflow-hidden bg-background text-foreground",
+    "relative isolate overflow-clip bg-background text-foreground",
     props.spacing !== "flush" && "py-section",
     backdrops[props.backdrop ?? "none"],
     props.className,
