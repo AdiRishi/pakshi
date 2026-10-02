@@ -1,3 +1,4 @@
+import { pageNumberOf } from "@repo/contracts/collections";
 import { DraftId, SiteId } from "@repo/contracts/ids";
 import { previewBasePath } from "@repo/contracts/studio";
 import { createFileRoute } from "@tanstack/react-router";
@@ -61,6 +62,7 @@ export const Route = createFileRoute("/preview/$siteId/$draftId/$")({
                     : null,
               },
               changed: [],
+              number: pageNumberOf(new URL(request.url)),
             });
           }
         }

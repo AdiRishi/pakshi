@@ -42,7 +42,7 @@ export function LiveThumbnail(props: {
   readonly className?: string;
 }) {
   const data = useMemo(
-    () => viewData(props.home, (media) => siteMediaSrc(props.site, media)),
+    () => viewData(props.home, { number: 1, src: (media) => siteMediaSrc(props.site, media) }),
     [props.home, props.site],
   );
   const picture = (

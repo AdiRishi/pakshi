@@ -43,8 +43,9 @@ const linksTo = (markup: string, address: (path: string) => string) =>
 
 /**
  * A page of a site as its own document, rendered with the same blocks and
- * theme as `sites`. Its images load from under `base`, and `address` says
- * where each of its links to the site's pages goes.
+ * theme as `sites`. Its images load from under `base`, `address` says where
+ * each of its links to the site's pages goes, and `number` is the page of a
+ * blog's posts to show, as `sites` reads it from the address.
  */
 export const siteDocument = async (
   view: SiteView,
@@ -52,12 +53,16 @@ export const siteDocument = async (
     readonly base: string;
     readonly address: (path: string) => string;
     readonly bar: Parameters<typeof PreviewBar>[0] | null;
+    readonly number: number;
     /** Blocks to mark as changed, for a review. */
     readonly changed: ReadonlyArray<BlockId>;
   },
 ) => {
   const data = {
-    ...viewData(view, (id) => `${options.base}/${mediaSegment}/${id}`),
+    ...viewData(view, {
+      number: options.number,
+      src: (id) => `${options.base}/${mediaSegment}/${id}`,
+    }),
     preview: { changed: new Set(options.changed) },
   };
   const page = view.page;
