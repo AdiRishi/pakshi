@@ -22,7 +22,8 @@ const backdrops = {
  * own width, usually `page-width`.
  *
  * An inset section draws its background as a rounded panel a little in from
- * the page's edges, on the page's own background.
+ * the page's edges, on the page's own background. A full one starts closer
+ * to a section on the same surface above it.
  */
 export const Section = (props: {
   readonly backdrop?: Backdrop | undefined;
@@ -32,17 +33,17 @@ export const Section = (props: {
   readonly className?: string;
   readonly children: ReactNode;
 }) => {
+  const flush = props.spacing === "flush";
   const body = cx(
     "relative isolate overflow-clip bg-background text-foreground",
-    props.spacing !== "flush" && "py-section",
     backdrops[props.backdrop ?? "none"],
     props.className,
   );
   return props.background === "inset" ? (
     <Root className="px-2 py-1 text-foreground sm:px-3">
-      <div className={cx(body, "rounded-xl")}>{props.children}</div>
+      <div className={cx(body, "rounded-xl", !flush && "py-section")}>{props.children}</div>
     </Root>
   ) : (
-    <Root className={body}>{props.children}</Root>
+    <Root className={cx(body, !flush && "section-space")}>{props.children}</Root>
   );
 };

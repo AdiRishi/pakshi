@@ -278,7 +278,7 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
               "absolute inset-0 -z-10",
               center
                 ? "bg-background/55"
-                : "bg-linear-to-t from-background/90 via-background/45 to-background/5",
+                : "bg-linear-to-t from-background/90 via-background/55 to-background/35",
             )}
           />
           <div className="page-width py-section">

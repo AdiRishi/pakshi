@@ -142,7 +142,7 @@ const StatsBlock = ({ props: stats, variant }: BlockComponentProps<typeof props,
         <Section background={stats.background}>
           <div className="page-width grid gap-14 lg:grid-cols-2 lg:gap-20">
             {intro}
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-10">
+            <dl className="grid grid-cols-2 gap-x-6 gap-y-12 sm:gap-x-10 [&>:last-child:nth-child(odd)]:col-span-2">
               {stats.stats.map((stat) => (
                 <Figure
                   key={stat.id}

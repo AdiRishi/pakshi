@@ -65,6 +65,24 @@
 }
 
 /*
+ * A section's space above and below. One that follows a section on the same
+ * surface continues the same band of color, so it starts closer: two sections'
+ * worth of space between them reads as a break that isn't there.
+ */
+@utility section-space {
+  padding-block: var(--theme-section-space);
+
+  :where(main) > :where([data-surface="default"]) + &:where([data-surface="default"]),
+  :where(main) > :where([data-surface="muted"]) + &:where([data-surface="muted"]),
+  :where(main) > :where([data-surface="tint"]) + &:where([data-surface="tint"]),
+  :where(main) > :where([data-surface="brand"]) + &:where([data-surface="brand"]),
+  :where(main) > :where([data-surface="accent"]) + &:where([data-surface="accent"]),
+  :where(main) > :where([data-surface="inverse"]) + &:where([data-surface="inverse"]) {
+    padding-top: calc(var(--theme-section-space) / 2);
+  }
+}
+
+/*
  * Section backdrops: a glow of the section's button color from the top, or a
  * fine grid or dots in its border color, fading out. Each sits behind the
  * section's content in a layer of its own, so the fade never touches it.
