@@ -133,6 +133,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     saveBrandLook: unused,
     saveVoiceGuide: unused,
     blockCatalog: unused,
+    blockUsage: unused,
     siteBlocks: unused,
     adoptUpgrade: unused,
     upgradeEverywhere: unused,

@@ -16,12 +16,25 @@ import { Effect, Option, Schema } from "effect";
 import { SqlClient, SqlSchema } from "effect/unstable/sql";
 
 import { describeScope, loadAccess } from "./access.ts";
+import { everyPlace } from "./places.ts";
 
 const SiteRow = Schema.Struct({
   id: SiteId,
   name: Schema.String,
   brand_id: BrandId,
   address: Schema.NullOr(Schema.String),
+});
+
+/** The sites a person holds any permission on, by name. */
+export const sitesOf = Effect.fn("StudioApi.sitesOf")(function* (person: Person) {
+  const [{ access }, places] = yield* Effect.all([loadAccess(person.id), everyPlace], {
+    concurrency: "unbounded",
+  });
+  return Array.from(places.values()).flatMap(({ scope, resource }) =>
+    resource.kind === "site" && scope.kind === "site" && permissionsOn(access, resource).length > 0
+      ? [{ id: scope.id, name: scope.name }]
+      : [],
+  );
 });
 
 /** A site, whoever is asking. Callers decide what the person may see of it. */

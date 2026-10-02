@@ -13,6 +13,11 @@ export const getBlockCatalog = createServerFn({ method: "GET" }).handler(() =>
   studio((client) => client.blockCatalog()),
 );
 
+/** The person's sites whose live release shows a block. */
+export const getBlockUsage = createServerFn({ method: "GET" })
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ type: BlockType })))
+  .handler(({ data }) => studio((client) => client.blockUsage(data)));
+
 /** The blocks a site's live release pins, and the upgrades it could adopt. */
 export const getSiteBlocks = createServerFn({ method: "GET" })
   .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId })))
