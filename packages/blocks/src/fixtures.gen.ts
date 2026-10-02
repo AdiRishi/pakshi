@@ -5,6 +5,10 @@ import callToAction1placeholder from "./call-to-action/v1/fixtures/placeholder.j
 import contactDetails1columns from "./contact-details/v1/fixtures/columns.json" with { type: "json" };
 import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholder.json" with { type: "json" };
 import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
+import contactDetails2cards from "./contact-details/v2/fixtures/cards.json" with { type: "json" };
+import contactDetails2columns from "./contact-details/v2/fixtures/columns.json" with { type: "json" };
+import contactDetails2placeholder from "./contact-details/v2/fixtures/placeholder.json" with { type: "json" };
+import contactDetails2split from "./contact-details/v2/fixtures/split.json" with { type: "json" };
 import eventCard1default from "./event-card/v1/fixtures/default.json" with { type: "json" };
 import eventCard1placeholder from "./event-card/v1/fixtures/placeholder.json" with { type: "json" };
 import eventCard2default from "./event-card/v2/fixtures/default.json" with { type: "json" };
@@ -121,6 +125,10 @@ export const fixtureFiles = [
   { type: "contact-details", version: 1, name: "columns", fixture: contactDetails1columns },
   { type: "contact-details", version: 1, name: "placeholder", fixture: contactDetails1placeholder },
   { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },
+  { type: "contact-details", version: 2, name: "cards", fixture: contactDetails2cards },
+  { type: "contact-details", version: 2, name: "columns", fixture: contactDetails2columns },
+  { type: "contact-details", version: 2, name: "placeholder", fixture: contactDetails2placeholder },
+  { type: "contact-details", version: 2, name: "split", fixture: contactDetails2split },
   { type: "event-card", version: 1, name: "default", fixture: eventCard1default },
   { type: "event-card", version: 1, name: "placeholder", fixture: eventCard1placeholder },
   { type: "event-card", version: 2, name: "default", fixture: eventCard2default },

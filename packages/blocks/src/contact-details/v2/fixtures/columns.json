@@ -1,0 +1,14 @@
+{
+  "variant": "columns",
+  "surface": "default",
+  "props": {
+    "kicker": "Contact",
+    "heading": "Find us, or drop us a line.",
+    "intro": "The boatshed is at the far end of North Quay, past the lifeboat station.",
+    "actions": [],
+    "email": "hello@example.org",
+    "phone": "01632 960431",
+    "address": "The Boatshed\nNorth Quay\nWestbay WB3 4HQ",
+    "hours": "Monday to Friday, 9am to 4pm\nEvery day during summer school"
+  }
+}

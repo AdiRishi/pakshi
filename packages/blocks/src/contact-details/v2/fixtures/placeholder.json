@@ -1,0 +1,13 @@
+{
+  "variant": "columns",
+  "surface": "default",
+  "props": {
+    "heading": "Get in touch",
+    "intro": "Say how quickly people can expect a reply.",
+    "actions": [],
+    "email": "hello@example.com",
+    "phone": "01632 960000",
+    "address": "1 High Street\nYour Town\nAB1 2CD",
+    "hours": "Monday to Friday, 9am to 5pm\nSaturday, 10am to 1pm"
+  }
+}

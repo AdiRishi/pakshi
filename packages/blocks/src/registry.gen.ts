@@ -6,6 +6,7 @@ export const registry: Readonly<
 > = {
   "call-to-action@1": () => import("./call-to-action/v1/index.tsx"),
   "contact-details@1": () => import("./contact-details/v1/index.tsx"),
+  "contact-details@2": () => import("./contact-details/v2/index.tsx"),
   "event-card@1": () => import("./event-card/v1/index.tsx"),
   "event-card@2": () => import("./event-card/v2/index.tsx"),
   "event-cards@1": () => import("./event-cards/v1/index.tsx"),
