@@ -13,6 +13,7 @@ import {
 import { Input } from "@repo/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
 import { Predicate, Schema } from "effect";
+import { ArrowDownIcon, ArrowUpIcon, PlusIcon, XIcon } from "lucide-react";
 import { type ComponentType, type ReactNode, useRef, useState } from "react";
 
 import { useDraftSiteData } from "../canvas/page-view.tsx";
@@ -22,8 +23,12 @@ import {
   type FieldTarget,
   useEditorState,
   useEditorUi,
+  useServices,
   useStore,
 } from "../context.tsx";
+import { neededParts } from "../layouts.ts";
+import { addListItem, listRoom, moveListItem, removeListItem } from "../lists.ts";
+import { addItemLabel, fewestLabel, fullLabel, itemLabel, listNaming } from "../naming.ts";
 import { FieldPresence } from "../participants.tsx";
 import { AltTextSuggestion } from "./alt-text-suggestion.tsx";
 import { FieldInput, FieldTextarea } from "./field-text.tsx";
@@ -73,6 +78,24 @@ interface ControlProps<F extends Field> {
 
 type KindOf<K extends FieldKind> = Extract<Field, { readonly kind: K }>;
 
+/** Whether a field is a part the block's chosen layout needs, so it can't be removed. */
+const useNeeded = (field: FieldTarget) => {
+  const { definitions } = useServices();
+  return useEditorState((state) => {
+    const instance = (field.target === "site" ? state.view.parts : state.view.pages[field.target])
+      ?.blocks[field.block];
+    const contract = instance === undefined ? undefined : definitions.get(instance.type);
+    const [name] = field.path;
+    return (
+      field.path.length === 1 &&
+      name !== undefined &&
+      instance !== undefined &&
+      contract !== undefined &&
+      neededParts(contract, instance.variant).has(name)
+    );
+  });
+};
+
 /** A labelled row with the field's errors, and a remove button for an optional field that's set. */
 function ControlRow<F extends Field>(props: {
   readonly field: FieldTarget;
@@ -84,6 +107,7 @@ function ControlRow<F extends Field>(props: {
 }) {
   const store = useStore();
   const { run } = useRun();
+  const needed = useNeeded(props.field);
   const incomplete =
     props.value !== undefined && !Schema.is(props.definition.complete)(props.value);
   return (
@@ -100,13 +124,14 @@ function ControlRow<F extends Field>(props: {
           )}
         </FieldLabel>
         <FieldPresence field={props.field} />
-        {props.definition.optional && props.value !== undefined && (
+        {props.definition.optional && props.value !== undefined && !needed && (
           <Button variant="ghost" size="xs" onClick={() => run([setProp(props.field, undefined)])}>
             Remove
           </Button>
         )}
       </div>
       {props.children}
+      {needed && <FieldDescription>The chosen layout needs it.</FieldDescription>}
       {props.description !== undefined && <FieldDescription>{props.description}</FieldDescription>}
       {incomplete && props.errors.length === 0 && (
         <FieldDescription>
@@ -384,6 +409,7 @@ function MediaControl(props: ControlProps<KindOf<"media">>) {
 
 function CtaControl(props: ControlProps<KindOf<"cta">>) {
   const { run, errors } = useRun();
+  const needed = useNeeded(props.field);
   const page = useEditorState((state) => state.page);
   if (props.value === undefined)
     return (
@@ -407,7 +433,7 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
     <FieldSet id={controlId(props.field)}>
       <div className="flex items-center justify-between gap-2">
         <FieldLegend variant="label">{props.definition.title}</FieldLegend>
-        {props.definition.optional && (
+        {props.definition.optional && !needed && (
           <Button variant="ghost" size="xs" onClick={() => run([setProp(props.field, undefined)])}>
             Remove
           </Button>
@@ -427,29 +453,106 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
   );
 }
 
+/** A list's items, each with its own fields, which can be moved, removed and added to within the list's limits. */
 function ListControl(props: ControlProps<KindOf<"list">>) {
+  const ui = useEditorUi();
+  const { definitions, examples } = useServices();
+  const { run, errors } = useRun();
+  const { field, definition } = props;
+  const instance = useEditorState(
+    (state) =>
+      (field.target === "site" ? state.view.parts : state.view.pages[field.target])?.blocks[
+        field.block
+      ],
+  );
+  const contract = instance === undefined ? undefined : definitions.get(instance.type);
+  const [list] = field.path;
+  if (instance === undefined || contract === undefined || list === undefined) return null;
   const items = props.value ?? [];
+  const naming = listNaming(contract, list);
+  const room = listRoom(definition, items.length);
+  const change = { target: field.target, block: field.block, props: instance.props, list };
+  const step = (op: Op | undefined, message: string) => {
+    if (op !== undefined && run([op])) ui.announce(message);
+  };
   return (
     <FieldSet>
-      <FieldLegend variant="label">{props.definition.title}</FieldLegend>
+      <FieldLegend variant="label">{definition.title}</FieldLegend>
       {items.map((item, index) => {
         const { id } = item;
+        const label = itemLabel(naming, index);
         return (
           <FieldSet key={id} className="rounded-md border p-4">
-            <FieldLegend variant="label">
-              {props.definition.title} {index + 1}
-            </FieldLegend>
-            {Object.entries(props.definition.item).map(([name, definition]) => (
+            <div className="flex items-center justify-between gap-2">
+              <FieldLegend variant="label">{label}</FieldLegend>
+              <div className="flex items-center">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Move ${label} earlier`}
+                  disabled={index === 0}
+                  onClick={() =>
+                    step(moveListItem({ ...change, id, by: -1 }), `Moved ${label} earlier.`)
+                  }
+                >
+                  <ArrowUpIcon />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Move ${label} later`}
+                  disabled={index === items.length - 1}
+                  onClick={() =>
+                    step(moveListItem({ ...change, id, by: 1 }), `Moved ${label} later.`)
+                  }
+                >
+                  <ArrowDownIcon />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Remove ${label}`}
+                  disabled={!room.canRemove}
+                  onClick={() =>
+                    step(removeListItem({ ...change, field: definition, id }), `Removed ${label}.`)
+                  }
+                >
+                  <XIcon />
+                </Button>
+              </div>
+            </div>
+            {Object.entries(definition.item).map(([name, itemField]) => (
               <FieldControl
                 key={name}
-                field={{ ...props.field, path: [...props.field.path, id, name] }}
-                definition={definition}
+                field={{ ...field, path: [...field.path, id, name] }}
+                definition={itemField}
                 value={item[name]}
               />
             ))}
           </FieldSet>
         );
       })}
+      {room.canAdd ? (
+        <Button
+          variant="outline"
+          size="sm"
+          className="self-start"
+          onClick={() => {
+            const added = addListItem({ ...change, contract, source: examples });
+            if (added !== undefined && run([added.op]))
+              ui.announce(`Added ${itemLabel(naming, items.length)}.`);
+          }}
+        >
+          <PlusIcon />
+          {addItemLabel(naming)}
+        </Button>
+      ) : (
+        <FieldDescription>{fullLabel(naming, definition.max)}</FieldDescription>
+      )}
+      {!room.canRemove && items.length > 0 && (
+        <FieldDescription>{fewestLabel(definition.min)}.</FieldDescription>
+      )}
+      <FieldError errors={[...errors]} />
     </FieldSet>
   );
 }

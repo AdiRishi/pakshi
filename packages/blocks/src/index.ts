@@ -3,6 +3,7 @@ export type { BlockContract, Placement, SlotSpec, StoredProps } from "./contract
 export { BlockFixture, blockKey } from "./contract.ts";
 export { defineBlock } from "./block.tsx";
 export type {
+  EditableAttributes,
   FieldAddress,
   FieldEditing,
   PostSummary,

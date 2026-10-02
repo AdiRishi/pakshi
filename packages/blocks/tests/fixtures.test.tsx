@@ -7,7 +7,13 @@ import { expect, test } from "vitest";
 
 import { SiteDataProvider } from "../src/components.tsx";
 import { propsSchema } from "../src/fields.ts";
-import { blockSamples, blockShowcase, placeholderItem, showcaseMediaSrc } from "../src/fixtures.ts";
+import {
+  blockSamples,
+  blockShowcase,
+  exampleValue,
+  placeholderItem,
+  showcaseMediaSrc,
+} from "../src/fixtures.ts";
 import { presentationOf } from "../src/presentation.ts";
 import { latestLockfile, loadBlocks, renderPage, renderTree } from "../src/render.tsx";
 
@@ -121,13 +127,35 @@ test("a new list item copies the sample's item at that place, with an ID of its 
     Schema.Array(Schema.Struct({ id: ItemId, question: Schema.String })),
   )(blockSamples.get("faq")?.props["questions"]);
   const first = Schema.decodeUnknownSync(Schema.Struct({ id: ItemId, question: Schema.String }))(
-    placeholderItem(faq, "questions", 0),
+    placeholderItem(faq, "questions", 0, "sample"),
   );
   expect(first.question).toBe(questions[0]?.question);
   expect(questions.map((question) => question.id)).not.toContain(first.id);
   const again = Schema.decodeUnknownSync(Schema.Struct({ id: ItemId, question: Schema.String }))(
-    placeholderItem(faq, "questions", questions.length),
+    placeholderItem(faq, "questions", questions.length, "sample"),
   );
   expect(again.question).toBe(first.question);
   expect(again.id).not.toBe(first.id);
+});
+
+test("a new list item for a real site copies the placeholder, whose images every site has", () => {
+  const logos = newest.get("logo-strip");
+  if (logos?.placement !== "section") throw new Error("logo-strip isn't a section.");
+  const placeholders = Schema.decodeUnknownSync(Schema.Array(Schema.Struct({ logo: MediaRef })))(
+    logos.placeholder.props["logos"],
+  );
+  const item = Schema.decodeUnknownSync(Schema.Struct({ id: ItemId, logo: MediaRef }))(
+    placeholderItem(logos, "logos", 0, "placeholder"),
+  );
+  expect(item.logo).toEqual(placeholders[0]?.logo);
+});
+
+test("an example for a part the sample leaves out comes from the placeholder", () => {
+  const faq = newest.get("faq");
+  const hero = newest.get("hero");
+  if (faq?.placement !== "section" || hero === undefined)
+    throw new Error("faq and hero aren't in the registry.");
+  expect(blockSamples.get("faq")?.props["intro"]).toBeUndefined();
+  expect(exampleValue(faq, ["intro"], "sample")).toBe(faq.placeholder.props["intro"]);
+  expect(exampleValue(hero, ["kicker"], "sample")).toBe(blockSamples.get("hero")?.props["kicker"]);
 });

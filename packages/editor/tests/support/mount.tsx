@@ -99,7 +99,7 @@ export const openEditor = async (
           <EditorOutline />
         </aside>
         <div style={{ flex: 1 }}>
-          <EditorCanvas width={1024} accent="blue" presence={presenceColors} />
+          <EditorCanvas width={1024} accent="blue" warning="darkorange" presence={presenceColors} />
         </div>
         <aside aria-label="Settings" style={{ width: 360, flexShrink: 0, overflowY: "auto" }}>
           <EditorSettings />

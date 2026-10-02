@@ -14,6 +14,7 @@ export default {
     heading: { hint: "Say what this part is about" },
     intro: { hint: "A sentence to introduce it" },
     address: { hint: "The address, one part to a line" },
+    phone: { label: "Phone number" },
     hours: { hint: "Like Monday to Friday, 9am to 4pm" },
   },
 } satisfies Presentation<typeof contactDetails>;

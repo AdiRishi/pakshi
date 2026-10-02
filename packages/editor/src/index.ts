@@ -27,7 +27,7 @@ export {
   useShowBlock,
   useToolbarCommands,
 } from "./editor.tsx";
-export { Frame as SiteFrame } from "./canvas/frame.tsx";
+export { type CanvasColors, Frame as SiteFrame } from "./canvas/frame.tsx";
 export { ScaledBlockPreview, ScaledSiteFrame } from "./preview.tsx";
 export { Outline as EditorOutline } from "./outline.tsx";
 export { EditorParticipants } from "./participants.tsx";

@@ -15,6 +15,6 @@ export default {
   fields: {
     name: { hint: "Their name" },
     role: { hint: "What they do" },
-    bio: { hint: "A sentence or two" },
+    bio: { label: "Short bio", hint: "A sentence or two" },
   },
 } satisfies Presentation<typeof teamMember>;

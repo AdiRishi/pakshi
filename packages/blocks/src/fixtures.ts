@@ -13,9 +13,10 @@ import type { Json } from "effect/Schema";
 
 import type { SiteData } from "./components.tsx";
 import { BlockFixture, type BlockContract } from "./contract.ts";
+import type { Field } from "./fields.ts";
 import site from "./fixture-site.json" with { type: "json" };
 import { fixtureFiles } from "./fixtures.gen.ts";
-import { withFreshId } from "./placeholders.ts";
+import { placeholderForm, withFreshId } from "./placeholders.ts";
 import { flattenTree, latestLockfile } from "./render.tsx";
 import { sampleMedia } from "./sample-media.ts";
 import { samples } from "./samples.gen.ts";
@@ -235,25 +236,94 @@ export const blockShowcase = (
 };
 
 /**
- * A new item for a block's list field, from its type's sample or else its
- * placeholder: the item at `index`, counting round when the list holds fewer,
- * with a new ID.
+ * Where example content comes from: the type's showcase sample, which the
+ * block's own page shows, or the placeholder a new block starts with, which
+ * every site can show and the checks flag until it's replaced.
  */
-export const placeholderItem = (contract: BlockContract, list: string, index: number) => {
-  const listed = (props: Readonly<Record<string, Json>> | undefined) => {
-    const value = props?.[list];
-    return isJsonArray(value) ? value : [];
-  };
+export type ExampleSource = "sample" | "placeholder";
+
+const propsOf = (contract: BlockContract, source: ExampleSource) => {
   const sampled =
     latestLockfile[contract.type] === contract.version
-      ? listed(blockSamples.get(contract.type)?.props)
-      : [];
-  const placeholders =
+      ? blockSamples.get(contract.type)?.props
+      : undefined;
+  const placeholder =
     contract.placement === "section" || contract.placement === "item"
-      ? listed(contract.placeholder.props)
-      : [];
-  const items = sampled.length > 0 ? sampled : placeholders;
+      ? contract.placeholder.props
+      : undefined;
+  return source === "sample" ? [sampled, placeholder] : [placeholder, sampled];
+};
+
+const listedIn = (props: Readonly<Record<string, Json>> | undefined, list: string) => {
+  const value = props?.[list];
+  return isJsonArray(value) ? value : [];
+};
+
+/**
+ * A new item for a block's list field, from `source` or else the other: the
+ * item at `index`, counting round when the list holds fewer, with a new ID.
+ */
+export const placeholderItem = (
+  contract: BlockContract,
+  list: string,
+  index: number,
+  source: ExampleSource,
+) => {
+  const items =
+    propsOf(contract, source)
+      .map((props) => listedIn(props, list))
+      .find((listed) => listed.length > 0) ?? [];
   const item = items[index % Math.max(items.length, 1)];
   if (item === undefined) throw new Error(`${contract.type} has no example ${list} to copy.`);
   return withFreshId(item);
+};
+
+const isJsonObject = Schema.is(Schema.JsonObject);
+
+/** A value for a field that no example has, shaped by its kind so the field's draft schema takes it. */
+const madeUpValue = (field: Field): Json => {
+  switch (field.kind) {
+    case "text":
+      return field.title.slice(0, field.max);
+    case "richText":
+      return {
+        type: "doc",
+        content: [{ type: "paragraph", content: [{ type: "text", text: field.title }] }],
+      };
+    case "media":
+      return { $ref: "media", id: "med_pakshiSea", alt: "" };
+    case "cta":
+      return { label: field.title.slice(0, field.parts.label.max), link: "https://example.org" };
+    case "link":
+      return "https://example.org";
+    case "form":
+      return { $ref: "form", id: placeholderForm.id };
+    case "list":
+      return [];
+  }
+};
+
+/**
+ * Example content for one of a block's fields: a field of its own, as
+ * `[name]`, or a field of its list items, as `[list, name]`. It comes from
+ * `source`, or else the other, or else is made up to fit the field.
+ */
+export const exampleValue = (
+  contract: BlockContract,
+  path: readonly [string] | readonly [string, string],
+  source: ExampleSource,
+): Json => {
+  const [name, itemName] = path;
+  const field = contract.fields[name];
+  const definition =
+    itemName === undefined ? field : field?.kind === "list" ? field.item[itemName] : undefined;
+  if (definition === undefined) throw new Error(`${contract.type} has no field ${path.join(".")}.`);
+  const found = propsOf(contract, source).flatMap((props): ReadonlyArray<Json> => {
+    if (itemName === undefined) return props?.[name] === undefined ? [] : [props[name]];
+    return listedIn(props, name).flatMap((item) => {
+      const value = isJsonObject(item) ? item[itemName] : undefined;
+      return value === undefined ? [] : [value];
+    });
+  });
+  return found[0] ?? madeUpValue(definition);
 };

@@ -14,6 +14,9 @@ const heroField = (canvas: Document, field: string) =>
     `[data-pakshi-block='b_herocentered'] [data-pakshi-field='${field}']`,
   );
 
+const savedButton = (siteDoc: ReturnType<typeof fakeSiteDoc>) => () =>
+  siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"];
+
 const heroHeading = (siteDoc: ReturnType<typeof fakeSiteDoc>) =>
   siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["heading"];
 
@@ -155,11 +158,19 @@ describe("the keyboard alone", () => {
     await expect.element(page.getByRole("dialog")).toBeVisible();
   });
 
-  test("moves from a button on the page to its settings with Enter", async () => {
-    const { canvas } = await open();
-    heroField(canvas(), "cta")?.focus();
-    await userEvent.keyboard("{Enter}");
-    await expect.poll(() => document.activeElement?.id).toMatch(/cta-label$/);
+  test("types a button's words on the page, where Escape puts back what it had", async () => {
+    const { siteDoc, canvas } = await open();
+    const button = heroField(canvas(), "cta");
+    if (button === null) throw new Error("The hero has no button.");
+    button.focus();
+    canvas().getSelection()?.selectAllChildren(button);
+    canvas().getSelection()?.collapseToEnd();
+    await userEvent.keyboard(" now");
+    await expect.poll(savedButton(siteDoc)).toMatchObject({ label: "See the programme now" });
+    await userEvent.keyboard("{Enter} today{Escape}");
+    await expect.poll(() => button?.textContent).toBe("See the programme now");
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(savedButton(siteDoc)()).toMatchObject({ label: "See the programme now" });
   });
 });
 
@@ -211,22 +222,22 @@ describe("uploading an image", () => {
   });
 });
 
-describe("a link's settings", () => {
-  test("switch a button from a page on the site to an external address", async () => {
+describe("where a button goes", () => {
+  test("is chosen under the button while it's selected: a page, or a web address typed without https://", async () => {
     const { siteDoc, canvas } = await open();
     heroField(canvas(), "cta")?.focus();
-    await userEvent.keyboard("{Enter}");
-    await userEvent.selectOptions(
-      page.getByLabelText("Link: where it goes"),
-      "An external address",
-    );
+    const panel = page.getByRole("region", { name: "Where the button goes" });
+    await userEvent.click(panel.getByRole("button", { name: "News" }));
+    await expect
+      .poll(savedButton(siteDoc))
+      .toEqual({ label: "See the programme", link: { $ref: "page", id: "pg_news" } });
     await userEvent.fill(
-      page.getByRole("textbox", { name: "Link", exact: true }),
-      "https://example.org/apply",
+      panel.getByRole("textbox", { name: "Or a web address" }),
+      "example.org/apply",
     );
     await userEvent.keyboard("{Tab}");
     await expect
-      .poll(() => siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"])
+      .poll(savedButton(siteDoc))
       .toEqual({ label: "See the programme", link: "https://example.org/apply" });
   });
 });

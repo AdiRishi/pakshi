@@ -19,7 +19,7 @@ export default {
   fields: {
     heading: { hint: "Say what this part is about" },
     address: { hint: "The address, one part to a line" },
-    directions: { hint: "Like the nearest station or where to park" },
+    directions: { label: "Directions", hint: "Like the nearest station or where to park" },
   },
   needs: {
     "image-left": ["map"],

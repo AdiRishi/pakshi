@@ -32,12 +32,14 @@ export function AltTextSuggestion(props: { readonly field: FieldTarget; readonly
   const settle = (next: Suggesting) =>
     setAsked((current) => (current.image === image ? { image, suggesting: next } : current));
   const ask = () => {
+    if (suggestAltText === null) return;
     setSuggesting({ status: "asking" });
     suggestAltText(props.media, block).then(
       (text) => settle(text === null ? { status: "none" } : { status: "suggested", text }),
       () => settle({ status: "none" }),
     );
   };
+  if (suggestAltText === null) return null;
   switch (suggesting.status) {
     case "idle":
       return (

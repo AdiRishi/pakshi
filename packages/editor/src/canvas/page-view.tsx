@@ -1,10 +1,12 @@
 import { type PageEntry, SiteDataProvider, siteData } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
-import type { BlockId } from "@repo/contracts/ids";
+import type { BlockId, BlockType, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
-import { useMemo } from "react";
+import { type ReactNode, useMemo } from "react";
 
 import { TargetProvider, useEditorState, useServices } from "../context.tsx";
+import { type Ghost, ghosted, ghostSlotItem } from "../ghosts.ts";
+import { GhostsProvider, useGhosting, useGhostPolicy } from "./ghost.tsx";
 
 const holderOf = (draft: Draft, target: Target) =>
   target === "site" ? draft.parts : draft.pages[target];
@@ -12,36 +14,113 @@ const holderOf = (draft: Draft, target: Target) =>
 /**
  * One placed block, rendered with the same component `sites` uses. It reads
  * only its own instance, so an edit re-renders only the blocks it touches;
- * items in a section's slots are blocks of their own.
+ * items in a section's slots are blocks of their own. Where the canvas's
+ * ghost policy says so, the block shows the parts it doesn't have.
  */
-function BlockView(props: { readonly target: Target; readonly id: BlockId }) {
-  const { definitions } = useServices();
+export function BlockView(props: { readonly target: Target; readonly id: BlockId }) {
+  const { definitions, examples } = useServices();
+  const policy = useGhostPolicy();
   const block = useEditorState((state) => holderOf(state.view, props.target)?.blocks[props.id]);
-  const slots = useMemo(
+  const ghosting = useGhosting(props.target, props.id);
+  const definition = block === undefined ? undefined : definitions.get(block.type);
+  if (block !== undefined && definition === undefined)
+    throw new Error(`The lockfile pins no version of ${block.type}.`);
+  const shown = useMemo(
     () =>
-      Object.fromEntries(
-        Object.entries(block?.slots ?? {}).map(([slot, items]) => [
-          slot,
-          items.map((item) => <BlockView key={item} target={props.target} id={item} />),
-        ]),
-      ),
-    [block?.slots, props.target],
+      block === undefined || definition === undefined || ghosting === null
+        ? { props: block?.props ?? {}, ghosts: noGhosts }
+        : ghosted({
+            contract: definition,
+            target: props.target,
+            block: props.id,
+            props: block.props,
+            ghosting,
+            source: examples,
+          }),
+    [block, definition, ghosting, props.target, props.id, examples],
   );
+  const addsToSlots =
+    ghosting?.addItems === true && policy?.slotItems === true && props.target !== "site";
+  const slots = useMemo(() => {
+    const placed = block?.slots ?? {};
+    const names =
+      definition?.placement === "section" ? Object.keys(definition.slots) : Object.keys(placed);
+    return Object.fromEntries(
+      names.map((slot) => {
+        const items = placed[slot] ?? [];
+        const accepted = definition?.placement === "section" ? definition.slots[slot] : undefined;
+        const [type] = accepted?.accepts ?? [];
+        return [
+          slot,
+          [
+            ...items.map((item) => <BlockView key={item} target={props.target} id={item} />),
+            ...(addsToSlots && props.target !== "site" && type !== undefined
+              ? [
+                  <GhostSlotItem
+                    key="ghost"
+                    page={props.target}
+                    section={props.id}
+                    slot={slot}
+                    type={type}
+                    after={items.at(-1) ?? null}
+                  />,
+                ]
+              : []),
+          ],
+        ];
+      }),
+    );
+  }, [block?.slots, definition, addsToSlots, props.target, props.id]);
   const rendered = useMemo(() => {
-    if (block === undefined) return null;
-    const definition = definitions.get(block.type);
-    if (definition === undefined) throw new Error(`The lockfile pins no version of ${block.type}.`);
+    if (block === undefined || definition === undefined) return null;
     return definition.render({
       id: props.id,
-      props: block.props,
+      props: shown.props,
       variant: block.variant,
       surface: block.surface,
       slots,
     });
-  }, [block, definitions, props.id, slots]);
+  }, [block, definition, props.id, shown.props, slots]);
   if (rendered === null) return null;
   if (!rendered.ok) throw new Error(`Block ${props.id} can't render: ${rendered.problem}`);
-  return rendered.element;
+  return (
+    <GhostsProvider block={props.id} ghosts={shown.ghosts} ghost={false}>
+      {rendered.element}
+    </GhostsProvider>
+  );
+}
+
+const noGhosts: ReadonlyMap<string, Ghost> = new Map();
+
+/** An item a slot doesn't have yet, whose first part is the button that adds it. */
+function GhostSlotItem(props: {
+  readonly page: PageId;
+  readonly section: BlockId;
+  readonly slot: string;
+  readonly type: BlockType;
+  readonly after: BlockId | null;
+}) {
+  const { definitions } = useServices();
+  const { page, section, slot, type, after } = props;
+  const ghost = useMemo(
+    () => ghostSlotItem({ contracts: definitions, page, section, slot, type, after }),
+    [definitions, page, section, slot, type, after],
+  );
+  const definition = definitions.get(type);
+  const rendered = definition?.render({
+    id: ghost.tree.id,
+    props: ghost.tree.props,
+    variant: ghost.tree.variant,
+    surface: undefined,
+    slots: {},
+  });
+  if (rendered === undefined || !rendered.ok)
+    throw new Error(`A new ${type} can't render in ${section}.`);
+  return (
+    <GhostsProvider block={ghost.tree.id} ghosts={ghost.ghosts} ghost>
+      {rendered.element}
+    </GhostsProvider>
+  );
 }
 
 const sameEntries = (a: ReadonlyArray<PageEntry>, b: ReadonlyArray<PageEntry>) =>
@@ -84,6 +163,16 @@ export const useDraftSiteData = () => {
     });
   }, [settings, identity, menus, pages, forms, media, mediaSrc]);
 };
+
+/** Part of the draft rendered on its own, such as a single block, with what blocks read from the site. */
+export function SitePart(props: { readonly target: Target; readonly children: ReactNode }) {
+  const data = useDraftSiteData();
+  return (
+    <SiteDataProvider value={data}>
+      <TargetProvider value={props.target}>{props.children}</TargetProvider>
+    </SiteDataProvider>
+  );
+}
 
 /** The page being edited, with the site's header and footer, as `sites` lays it out. */
 export function PageView() {

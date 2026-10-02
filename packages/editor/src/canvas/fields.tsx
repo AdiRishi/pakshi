@@ -1,6 +1,7 @@
 import {
   type FieldAddress,
   type FieldEditing,
+  presentations,
   richTextExtensions,
   toJsonContent,
 } from "@repo/blocks";
@@ -11,6 +12,7 @@ import type { Node as DocumentNode } from "@tiptap/pm/model";
 import { Mapping } from "@tiptap/pm/transform";
 import { Option, Schema } from "effect";
 import {
+  type ClipboardEvent,
   type ComponentProps,
   type KeyboardEvent,
   useCallback,
@@ -33,6 +35,7 @@ import { useBlockDrop, useDropPlacement } from "../dnd.tsx";
 import type { Selection } from "../store.ts";
 import { allowedTypes } from "../structure.ts";
 import { mapOffset, rebaseText } from "../text-changes.ts";
+import { GhostButton, useGhost, useIsGhostBlock } from "./ghost.tsx";
 import { changeTo, rebaseOnto, remoteChange } from "./rich-text-sync.ts";
 
 const samePath = (a: ReadonlyArray<string>, b: ReadonlyArray<string>) =>
@@ -128,29 +131,35 @@ const insertAtCaret = (element: HTMLElement, text: string) => {
 // Plain text ----------------------------------------------------------------
 
 /**
- * Plain text edited in place. The element is uncontrolled: typing changes it
- * directly, and the editor writes to it only when the stored value differs
- * from what it shows, keeping the caret where it was in the text.
+ * Plain text edited in place, on an element the caller renders with the
+ * returned props. The element is uncontrolled: typing changes it directly,
+ * and the editor writes to it only when the stored value differs from what
+ * it shows, keeping the caret where it was in the text. Focusing it selects
+ * `select`, which is the text's own field or, for a button's label, the button.
  */
-const EditableText: FieldEditing["Text"] = (props) => {
+const usePlainText = (options: {
+  readonly field: FieldTarget;
+  readonly select: FieldTarget;
+  readonly value: string;
+  readonly max: number;
+  readonly multiline: boolean;
+  readonly label: string;
+}) => {
   const store = useStore();
-  const { field, selected } = useField(props);
-  const element = useRef<HTMLElement>(null);
+  const { field, max, multiline } = options;
+  const element = useRef<HTMLElement | null>(null);
   /** The field's text when an input method started composing, or null when none is. */
   const composingFrom = useRef<string | null>(null);
-  const value = useRef(props.value);
-  const definition = props.definition;
-  if (definition.kind !== "text") throw new Error(`${props.path.join(".")} isn't plain text.`);
-  const { max, multiline } = definition;
+  const value = useRef(options.value);
 
   // Nothing is written into the field while an input method composes in it.
   useLayoutEffect(() => {
-    value.current = props.value;
+    value.current = options.value;
     const current = element.current;
-    if (current === null || composingFrom.current !== null || current.textContent === props.value)
+    if (current === null || composingFrom.current !== null || current.textContent === options.value)
       return;
-    replaceText(current, props.value);
-  }, [props.value]);
+    replaceText(current, options.value);
+  }, [options.value]);
 
   const commit = () => {
     const current = element.current;
@@ -161,7 +170,7 @@ const EditableText: FieldEditing["Text"] = (props) => {
       burstKey(field),
     );
     // A refused edit leaves the stored value, so the element shows it again.
-    if (errors.length > 0) current.textContent = props.value;
+    if (errors.length > 0) current.textContent = value.current;
   };
 
   // React's onBeforeInput doesn't report deletions, so the native event checks the length.
@@ -185,66 +194,107 @@ const EditableText: FieldEditing["Text"] = (props) => {
     return () => current.removeEventListener("beforeinput", guard);
   }, [max, multiline]);
 
+  return {
+    ref: (node: HTMLElement | null) => {
+      element.current = node;
+    },
+    contentEditable: "plaintext-only" as const,
+    suppressContentEditableWarning: true,
+    role: "textbox",
+    tabIndex: 0,
+    "aria-label": options.label,
+    "aria-multiline": multiline,
+    onFocus: () => store.select({ kind: "field", ...options.select }),
+    onBlur: () => store.endBurst(),
+    onInput: commit,
+    onCompositionStart: () => {
+      composingFrom.current = element.current?.textContent ?? "";
+    },
+    onCompositionEnd: () => {
+      const current = element.current;
+      const base = composingFrom.current;
+      composingFrom.current = null;
+      // A change that arrived while composing applies now, with the composed text made again on it.
+      if (current !== null && base !== null && value.current !== base)
+        replaceText(current, rebaseText(base, current.textContent ?? "", value.current));
+      commit();
+    },
+    onPaste: (event: ClipboardEvent<HTMLElement>) => {
+      event.preventDefault();
+      const current = element.current;
+      if (current === null) return;
+      const pasted = event.clipboardData.getData("text/plain");
+      const text = multiline ? pasted : pasted.replace(/\s*\n\s*/g, " ");
+      const room =
+        max -
+        (current.textContent?.length ?? 0) +
+        (current.ownerDocument.getSelection()?.toString().length ?? 0);
+      insertAtCaret(current, text.slice(0, Math.max(0, room)));
+      commit();
+    },
+    onKeyDown: (event: KeyboardEvent<HTMLElement>) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        event.stopPropagation();
+        store.cancelBurst();
+        element.current?.closest<HTMLElement>("[data-pakshi-block]")?.focus();
+      } else if (event.key === "Enter" && !multiline) {
+        event.preventDefault();
+        store.endBurst();
+      }
+    },
+  };
+};
+
+/** The hint an empty field shows, from its block type's presentation, or else its title. */
+const useHint = (field: FieldTarget, title: string) => {
+  const type = useEditorState(
+    (state) =>
+      (field.target === "site" ? state.view.parts : state.view.pages[field.target])?.blocks[
+        field.block
+      ]?.type,
+  );
+  // A list item's fields are named in presentations as `list.field`, without the item's ID.
+  const [name, , part] = field.path;
+  const named = part === undefined ? name : `${name}.${part}`;
+  const presentation = type === undefined ? undefined : presentations.get(type);
+  return (named === undefined ? undefined : presentation?.fields[named]?.hint) ?? title;
+};
+
+/** Plain text edited in place, or the button that adds it when the block doesn't have it. */
+const EditableText: FieldEditing["Text"] = (props) => {
+  const ghost = useGhost(props.block, props.path);
+  if (ghost?.kind === "hidden") return null;
+  if (ghost !== undefined) return <GhostButton ghost={ghost} />;
+  return <PlainText {...props} />;
+};
+
+function PlainText(props: ComponentProps<FieldEditing["Text"]>) {
+  const { field, selected } = useField(props);
+  const definition = props.definition;
+  if (definition.kind !== "text") throw new Error(`${props.path.join(".")} isn't plain text.`);
+  const editing = usePlainText({
+    field,
+    select: field,
+    value: props.value,
+    max: definition.max,
+    multiline: definition.multiline,
+    label: definition.title,
+  });
+  const hint = useHint(field, definition.title);
   const Element = props.as;
   return (
     <Element
-      ref={(node: HTMLElement | null) => {
-        element.current = node;
-      }}
+      {...editing}
       className={props.className}
-      contentEditable="plaintext-only"
-      suppressContentEditableWarning
-      // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role -- a heading edited in place must stay a heading, so it's an editable element with the textbox role
-      role="textbox"
-      tabIndex={0}
-      aria-label={definition.title}
-      aria-multiline={multiline}
       data-pakshi-field={field.path.join(".")}
       data-pakshi-selected={selected || undefined}
       data-pakshi-empty={props.value === "" || undefined}
-      data-pakshi-placeholder={definition.title}
-      onFocus={() => store.select({ kind: "field", ...field })}
-      onBlur={() => store.endBurst()}
-      onInput={commit}
-      onCompositionStart={() => {
-        composingFrom.current = element.current?.textContent ?? "";
-      }}
-      onCompositionEnd={() => {
-        const current = element.current;
-        const base = composingFrom.current;
-        composingFrom.current = null;
-        // A change that arrived while composing applies now, with the composed text made again on it.
-        if (current !== null && base !== null && value.current !== base)
-          replaceText(current, rebaseText(base, current.textContent ?? "", value.current));
-        commit();
-      }}
-      onPaste={(event) => {
-        event.preventDefault();
-        const current = element.current;
-        if (current === null) return;
-        const pasted = event.clipboardData.getData("text/plain");
-        const text = multiline ? pasted : pasted.replace(/\s*\n\s*/g, " ");
-        const room =
-          max -
-          (current.textContent?.length ?? 0) +
-          (current.ownerDocument.getSelection()?.toString().length ?? 0);
-        insertAtCaret(current, text.slice(0, Math.max(0, room)));
-        commit();
-      }}
-      onKeyDown={(event: KeyboardEvent<HTMLElement>) => {
-        if (event.key === "Escape") {
-          event.preventDefault();
-          event.stopPropagation();
-          store.cancelBurst();
-          element.current?.closest<HTMLElement>("[data-pakshi-block]")?.focus();
-        } else if (event.key === "Enter" && !multiline) {
-          event.preventDefault();
-          store.endBurst();
-        }
-      }}
+      data-pakshi-short={props.value.trim().length < definition.min || undefined}
+      data-pakshi-placeholder={hint}
     />
   );
-};
+}
 
 // Rich text -----------------------------------------------------------------
 
@@ -255,6 +305,13 @@ const EditableText: FieldEditing["Text"] = (props) => {
  * goes to TipTap's own history, which never holds other people's changes.
  */
 const EditableRichText: FieldEditing["RichText"] = (props) => {
+  const ghost = useGhost(props.block, props.path);
+  if (ghost?.kind === "hidden") return null;
+  if (ghost !== undefined) return <GhostButton ghost={ghost} />;
+  return <RichTextEditor {...props} />;
+};
+
+function RichTextEditor(props: ComponentProps<FieldEditing["RichText"]>) {
   const store = useStore();
   const ui = useEditorUi();
   const { field, selected } = useField(props);
@@ -369,14 +426,26 @@ const EditableRichText: FieldEditing["RichText"] = (props) => {
   }, [props.value]);
 
   return (
-    <div ref={element} className={props.className} data-pakshi-selected={selected || undefined} />
+    <div
+      ref={element}
+      className={props.className}
+      data-pakshi-selected={selected || undefined}
+      data-pakshi-short={!Schema.is(definition.complete)(props.value) || undefined}
+    />
   );
-};
+}
 
-// Media and buttons ---------------------------------------------------------
+// Media, buttons and forms --------------------------------------------------
 
 /** An image placed on the page. Choosing it opens the media popover in Studio. */
 const EditableMedia: FieldEditing["Media"] = (props) => {
+  const ghost = useGhost(props.block, props.path);
+  if (ghost?.kind === "hidden") return null;
+  if (ghost !== undefined) return <GhostButton ghost={ghost} area={props.className} />;
+  return <PlacedImage {...props} />;
+};
+
+function PlacedImage(props: ComponentProps<FieldEditing["Media"]>) {
   const store = useStore();
   const ui = useEditorUi();
   const { field, selected } = useField(props);
@@ -410,35 +479,71 @@ const EditableMedia: FieldEditing["Media"] = (props) => {
       }}
     />
   );
+}
+
+/**
+ * A button on the page. Its label is edited in place, and while it's
+ * selected Studio shows where it goes underneath.
+ */
+const EditableCta: FieldEditing["Cta"] = (props) => {
+  const ghost = useGhost(props.block, props.path);
+  if (ghost?.kind === "hidden") return null;
+  if (ghost !== undefined) return <GhostButton ghost={ghost} />;
+  return <PlacedButton {...props} />;
 };
 
-/** A button on the page. Choosing it selects it, and the settings panel edits its label and link. */
-const EditableCta: FieldEditing["Cta"] = (props) => {
-  const store = useStore();
-  const ui = useEditorUi();
+function PlacedButton(props: ComponentProps<FieldEditing["Cta"]>) {
   const { field, selected } = useField(props);
+  const definition = props.definition;
+  if (definition.kind !== "cta") throw new Error(`${props.path.join(".")} isn't a button.`);
+  const label = definition.parts.label;
+  const editing = usePlainText({
+    field: { ...field, path: [...field.path, "label"] },
+    select: field,
+    value: props.value.label,
+    max: label.max,
+    multiline: false,
+    label: definition.title,
+  });
   return (
+    // oxlint-disable-next-line jsx-a11y/anchor-has-content -- the editor writes the label into the element itself, as it does for text
     <a
+      {...editing}
       href={props.href}
       className={props.className}
       data-pakshi-field={field.path.join(".")}
       data-pakshi-selected={selected || undefined}
-      onClick={(event) => {
-        event.preventDefault();
-        store.select({ kind: "field", ...field });
-        ui.revealControl(field);
-      }}
-      onFocus={() => store.select({ kind: "field", ...field })}
-      onKeyDown={(event) => {
-        if (event.key === "Enter") {
-          event.preventDefault();
-          ui.revealControl(field);
-        }
-      }}
-    >
-      {props.value.label}
-    </a>
+      data-pakshi-empty={props.value.label === "" || undefined}
+      data-pakshi-short={props.value.label.trim().length < label.min || undefined}
+      data-pakshi-placeholder="Button words"
+    />
   );
+}
+
+/** A form from the site's forms. Choosing it opens the choice of form. */
+const EditableForm: FieldEditing["Form"] = (props) => {
+  const store = useStore();
+  const ui = useEditorUi();
+  const { field, selected } = useField(props);
+  const open = (form: HTMLElement) => {
+    store.select({ kind: "field", ...field });
+    ui.openForm(field, form);
+  };
+  return props.render({
+    role: "button",
+    tabIndex: 0,
+    "aria-label": `Change ${props.definition.title.toLowerCase()}`,
+    "aria-haspopup": "dialog",
+    "data-pakshi-field": field.path.join("."),
+    "data-pakshi-selected": selected || undefined,
+    onClick: (event) => open(event.currentTarget),
+    onKeyDown: (event) => {
+      if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        open(event.currentTarget);
+      }
+    },
+  });
 };
 
 // Blocks --------------------------------------------------------------------
@@ -474,7 +579,7 @@ function RootElement({
           frame !== null && event.target instanceof frame.Element ? event.target : null;
         if (clicked === null || clicked.closest("[data-pakshi-block]") !== event.currentTarget)
           return;
-        if (clicked.closest("[data-pakshi-field]") !== null) return;
+        if (clicked.closest("[data-pakshi-field], [data-pakshi-add]") !== null) return;
         store.select({ kind: "block", target, block: props.block });
       }}
     >
@@ -495,9 +600,21 @@ function PageBlockRoot(props: RootProps & { readonly page: PageId }) {
   return <RootElement {...props} attach={attach} />;
 }
 
-/** The header and footer belong to every page, so nothing is dropped beside them. */
+/**
+ * The header and footer belong to every page, so nothing is dropped beside
+ * them. A ghost item, which a slot doesn't have yet, can't be selected.
+ */
 const EditableRoot: FieldEditing["Root"] = (props) => {
   const target = useTarget();
+  const ghost = useIsGhostBlock(props.block);
+  if (ghost) {
+    const Tag = props.element;
+    return (
+      <Tag data-surface={props.surface} className={props.className} data-pakshi-ghost>
+        {props.children}
+      </Tag>
+    );
+  }
   return target === "site" ? (
     <RootElement {...props} />
   ) : (
@@ -547,4 +664,5 @@ export const fieldEditing: FieldEditing = {
   Media: EditableMedia,
   Cta: EditableCta,
   Slot: EditableSlot,
+  Form: EditableForm,
 };

@@ -9,7 +9,6 @@ import {
   EditorProvider,
   EditorSettings,
   type Notice,
-  presenceColorCount,
   type SaveStatus,
   useAccessEnded,
   useBehind,
@@ -69,6 +68,7 @@ import { uploadImage } from "@/features/media/upload";
 import { draftImage } from "@/features/preview/address";
 import { suggestAltText } from "@/features/sites/functions";
 
+import { canvasColors } from "./canvas-colors";
 import { liveConnection } from "./live-connection";
 
 import siteCss from "@repo/blocks/site.css?url";
@@ -83,17 +83,6 @@ const blocksQuery = (lockfile: Parameters<typeof loadBlocks>[0]) =>
     queryFn: () => loadBlocks(lockfile),
     staleTime: Number.POSITIVE_INFINITY,
   });
-
-const themeValue = (name: string) =>
-  getComputedStyle(document.documentElement).getPropertyValue(name).trim();
-
-/** The colors the canvas draws with, read from Studio's theme so they match Studio. */
-const canvasColors = () => ({
-  accent: themeValue("--ring"),
-  presence: Array.from({ length: presenceColorCount }, (_, index) =>
-    themeValue(`--presence-${index + 1}`),
-  ),
-});
 
 const showNotice = (notice: Notice) =>
   toast.warning(notice.title, { description: notice.description });
@@ -454,6 +443,7 @@ export function EditorPage(props: {
               <EditorCanvas
                 width={widths[width]}
                 accent={colors.accent}
+                warning={colors.warning}
                 presence={colors.presence}
               />
             </div>

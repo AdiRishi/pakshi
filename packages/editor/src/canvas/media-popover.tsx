@@ -2,40 +2,41 @@ import { fieldAt } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { Target } from "@repo/contracts/ops";
 import { Button } from "@repo/ui/components/button";
-import {
-  Popover,
-  PopoverContent,
-  PopoverDescription,
-  PopoverHeader,
-  PopoverTitle,
-  PopoverTrigger,
-} from "@repo/ui/components/popover";
+import { Field, FieldDescription, FieldLabel } from "@repo/ui/components/field";
+import { Popover, PopoverContent, PopoverHeader, PopoverTitle } from "@repo/ui/components/popover";
 import { Schema } from "effect";
-import { UploadIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { PlusIcon } from "lucide-react";
+import { useId, useRef, useState } from "react";
 
-import { type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
+import { burstKey, type FieldTarget, useEditorState, useServices, useStore } from "../context.tsx";
+import { neededParts } from "../layouts.ts";
 import { LibraryPicker } from "../library-picker.tsx";
 import { AltTextSuggestion } from "../settings/alt-text-suggestion.tsx";
-import { FieldControl, valueAt } from "../settings/controls.tsx";
-import { useCanvasRect } from "./anchor.tsx";
+import { valueAt } from "../settings/controls.tsx";
+import { FieldInput } from "../settings/field-text.tsx";
+import { screenRect } from "./anchor.tsx";
+import { DoneButton } from "./done.tsx";
 
 const holderOf = (draft: Draft, target: Target) =>
   target === "site" ? draft.parts : draft.pages[target];
 
+/** How tall an image must be drawn before its popover opens on top of it rather than under it. */
+const coveredHeight = 240;
+
 /**
- * Replaces an image with one from the library and edits its alt text. It
- * renders in Studio, anchored to the image's place in the canvas.
+ * Changes an image: another from the library, or one uploaded where uploads
+ * are allowed, and the words that describe it for people who can't see it,
+ * which belong to this placement. It renders in Studio, on the image itself.
  */
 export function MediaPopover(props: {
   readonly field: FieldTarget;
-  readonly anchor: HTMLElement;
-  readonly container: HTMLElement;
+  readonly anchor: Element;
   readonly onClose: () => void;
 }) {
   const store = useStore();
-  const { definitions, uploadImage } = useServices();
+  const { definitions, uploadImage, suggestAltText } = useServices();
   const fileInput = useRef<HTMLInputElement>(null);
+  const altId = useId();
   const [uploading, setUploading] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
   /** Adds the chosen file to the library and places it here. */
@@ -55,15 +56,26 @@ export function MediaPopover(props: {
       setUploading(false);
     }
   };
-  const rect = useCanvasRect(props.anchor, props.container);
   const block = useEditorState(
     (state) => holderOf(state.view, props.field.target)?.blocks[props.field.block],
   );
   const definition = block === undefined ? undefined : definitions.get(block.type);
   const field = definition === undefined ? undefined : fieldAt(definition.fields, props.field.path);
-  if (block === undefined || field?.kind !== "media") return null;
+  if (block === undefined || definition === undefined || field?.kind !== "media") return null;
   const value = valueAt(block.props, props.field.path);
   const chosen = value === undefined ? undefined : Schema.decodeSync(field.draft)(value);
+  const [name] = props.field.path;
+  const removable =
+    field.optional &&
+    chosen !== undefined &&
+    !(
+      props.field.path.length === 1 &&
+      name !== undefined &&
+      neededParts(definition, block.variant).has(name)
+    );
+  const altField = { ...props.field, path: [...props.field.path, "alt"] };
+  const drawn = screenRect(props.anchor);
+  const covers = drawn !== null && drawn.height > coveredHeight;
 
   return (
     <Popover
@@ -72,64 +84,86 @@ export function MediaPopover(props: {
         if (!open) props.onClose();
       }}
     >
-      <PopoverTrigger
-        nativeButton={false}
-        render={
-          <span
-            aria-hidden
-            className="pointer-events-none absolute"
-            style={
-              rect === null
-                ? { display: "none" }
-                : { top: rect.top, left: rect.left, width: rect.width, height: rect.height }
+      <PopoverContent
+        anchor={{ getBoundingClientRect: () => screenRect(props.anchor) ?? new DOMRect() }}
+        side="bottom"
+        align="start"
+        // A big image takes the popover on itself, so it opens where the image is.
+        sideOffset={covers && drawn !== null ? 24 - drawn.height : 8}
+        alignOffset={covers ? 24 : 0}
+        className="w-96 gap-5"
+      >
+        <PopoverHeader>
+          <PopoverTitle className="font-semibold">Change {field.title.toLowerCase()}</PopoverTitle>
+        </PopoverHeader>
+        <div className="-mx-1 max-h-64 overflow-y-auto p-1">
+          <LibraryPicker
+            label={`Photos to choose from for the ${field.title.toLowerCase()}`}
+            chosen={chosen?.id}
+            onChoose={(image) => store.run([{ op: "setProp", ...props.field, value: image }])}
+            add={
+              uploadImage === null ? undefined : (
+                <>
+                  <input
+                    ref={fileInput}
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    className="sr-only"
+                    tabIndex={-1}
+                    aria-hidden
+                    onChange={(event) => void upload(event.target)}
+                  />
+                  <button
+                    type="button"
+                    disabled={uploading}
+                    className="flex aspect-square w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed border-ring/40 bg-accent text-xs font-medium text-link hover:border-ring focus-visible:outline-2 focus-visible:outline-ring disabled:opacity-60"
+                    onClick={() => fileInput.current?.click()}
+                  >
+                    <PlusIcon className="size-4" />
+                    {uploading ? "Uploading" : "Upload"}
+                  </button>
+                </>
+              )
             }
           />
-        }
-      />
-      <PopoverContent side="right" align="start" className="w-96">
-        <PopoverHeader>
-          <PopoverTitle>{field.title}</PopoverTitle>
-          <PopoverDescription>Choose an image from the site's library.</PopoverDescription>
-        </PopoverHeader>
-        <LibraryPicker
-          label="Library"
-          chosen={chosen?.id}
-          onChoose={(image) => store.run([{ op: "setProp", ...props.field, value: image }])}
-        />
-        {uploadImage !== null && (
-          <>
-            <input
-              ref={fileInput}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/avif"
-              className="sr-only"
-              tabIndex={-1}
-              aria-hidden
-              onChange={(event) => void upload(event.target)}
-            />
-            <Button
-              variant="outline"
-              size="sm"
-              className="self-start"
-              disabled={uploading}
-              onClick={() => fileInput.current?.click()}
-            >
-              <UploadIcon />
-              {uploading ? "Uploading" : "Upload an image"}
-            </Button>
-            {problem !== null && <p className="text-sm text-destructive">{problem}</p>}
-          </>
+        </div>
+        {problem !== null && <p className="text-sm text-destructive">{problem}</p>}
+        <Field>
+          <FieldLabel htmlFor={altId}>Describe it for people who can't see it</FieldLabel>
+          <FieldInput
+            id={altId}
+            value={chosen?.alt ?? ""}
+            maxLength={field.parts.alt.max}
+            onValue={(alt) =>
+              store.run([{ op: "setProp", ...altField, value: alt }], burstKey(altField))
+            }
+            onBlur={() => store.endBurst()}
+          />
+          <FieldDescription>
+            Leave it empty if the photo is only there to look nice.
+          </FieldDescription>
+        </Field>
+        {chosen !== undefined && suggestAltText !== null && (
+          <AltTextSuggestion field={props.field} media={chosen.id} />
         )}
-        <FieldControl
-          field={{ ...props.field, path: [...props.field.path, "alt"] }}
-          definition={field.parts.alt}
-          value={chosen?.alt ?? ""}
-        />
-        {chosen !== undefined && <AltTextSuggestion field={props.field} media={chosen.id} />}
-        <p className="text-xs text-muted-foreground">
-          Say what the image shows for people who can't see it. Leave it empty if the image is only
-          decoration.
-        </p>
+        <div className="flex items-center justify-between gap-2">
+          {removable ? (
+            <Button
+              variant="link"
+              size="sm"
+              className="px-0 text-destructive"
+              onClick={() => {
+                store.run([{ op: "setProp", ...props.field }]);
+                props.onClose();
+              }}
+            >
+              Remove
+            </Button>
+          ) : (
+            <span />
+          )}
+          <DoneButton onClick={props.onClose} />
+        </div>
       </PopoverContent>
     </Popover>
   );
