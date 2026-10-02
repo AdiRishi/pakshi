@@ -1,0 +1,37 @@
+{
+  "variant": "split",
+  "surface": "tint",
+  "props": {
+    "align": "start",
+    "background": "full",
+    "kicker": "Why it works",
+    "heading": "A school that sends people back to sea.",
+    "intro": "We ask every student the same questions a year later. These are last year's answers.",
+    "stats": [
+      {
+        "id": "it_sailing",
+        "value": "81%",
+        "label": "Still sailing",
+        "detail": "A year after the course"
+      },
+      {
+        "id": "it_built",
+        "value": "23",
+        "label": "Boats built since",
+        "detail": "By former students, at home or in clubs"
+      },
+      {
+        "id": "it_clubs",
+        "value": "17",
+        "label": "Joined a club",
+        "detail": "Rowing, sailing or a boatbuilding guild"
+      },
+      {
+        "id": "it_return",
+        "value": "94%",
+        "label": "Would come back",
+        "detail": "And most brought a friend"
+      }
+    ]
+  }
+}

@@ -1,0 +1,207 @@
+{
+  "placement": "section",
+  "variants": [
+    "row",
+    "grid",
+    "marquee",
+    "split"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "tint",
+    "brand",
+    "accent",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "logos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "logo": {
+                "type": "object",
+                "properties": {
+                  "$ref": {
+                    "type": "string",
+                    "enum": [
+                      "media"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^med_[A-Za-z0-9]{1,64}$"
+                  },
+                  "alt": {
+                    "type": "string",
+                    "maxLength": 250
+                  }
+                },
+                "required": [
+                  "$ref",
+                  "id"
+                ],
+                "additionalProperties": true
+              },
+              "link": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "$ref": {
+                        "type": "string",
+                        "enum": [
+                          "page"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                      }
+                    },
+                    "required": [
+                      "$ref",
+                      "id"
+                    ],
+                    "additionalProperties": true
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "logo"
+            ],
+            "additionalProperties": true
+          },
+          "maxItems": 12
+        },
+        "color": {
+          "type": "string",
+          "enum": [
+            "mono",
+            "original"
+          ]
+        }
+      },
+      "required": [
+        "logos"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "heading": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "logos": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^it_[A-Za-z0-9]{1,64}$"
+              },
+              "logo": {
+                "type": "object",
+                "properties": {
+                  "$ref": {
+                    "type": "string",
+                    "enum": [
+                      "media"
+                    ]
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^med_[A-Za-z0-9]{1,64}$"
+                  },
+                  "alt": {
+                    "type": "string",
+                    "maxLength": 250
+                  }
+                },
+                "required": [
+                  "$ref",
+                  "id",
+                  "alt"
+                ],
+                "additionalProperties": true
+              },
+              "link": {
+                "anyOf": [
+                  {
+                    "type": "object",
+                    "properties": {
+                      "$ref": {
+                        "type": "string",
+                        "enum": [
+                          "page"
+                        ]
+                      },
+                      "id": {
+                        "type": "string",
+                        "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                      }
+                    },
+                    "required": [
+                      "$ref",
+                      "id"
+                    ],
+                    "additionalProperties": true
+                  },
+                  {
+                    "type": "string"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "id",
+              "logo"
+            ],
+            "additionalProperties": true
+          },
+          "minItems": 2,
+          "maxItems": 12
+        },
+        "color": {
+          "type": "string",
+          "enum": [
+            "mono",
+            "original"
+          ]
+        }
+      },
+      "required": [
+        "logos"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

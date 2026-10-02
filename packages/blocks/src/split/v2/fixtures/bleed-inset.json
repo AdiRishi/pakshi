@@ -1,0 +1,44 @@
+{
+  "variant": "bleed",
+  "surface": "muted",
+  "props": {
+    "points": [
+      {
+        "id": "it_crew",
+        "title": "Twelve shipwrights",
+        "body": "All of them still building boats for a living."
+      },
+      {
+        "id": "it_slip",
+        "title": "One working slipway",
+        "body": "Watch a launch on the Friday high tide."
+      }
+    ],
+    "actions": [],
+    "mediaSide": "start",
+    "verticalAlign": "center",
+    "frame": "plain",
+    "background": "inset",
+    "heading": "A yard with a long memory.",
+    "headingRest": "North Quay has built boats since 1891.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "The yard's crew teach every class. Between them they have launched more than three hundred boats, from dinghies to pilot cutters."
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_sampleHarbour",
+      "alt": "Sailing boats moored in the harbour"
+    }
+  }
+}

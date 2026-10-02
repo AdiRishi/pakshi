@@ -1,0 +1,10 @@
+{
+  "variant": "start",
+  "surface": "default",
+  "props": {
+    "size": "large",
+    "kicker": "What we believe",
+    "heading": "Say in one sentence what you stand for.",
+    "headingRest": "Then use two or three more to explain why it matters, and to whom. Keep it short enough to read in one breath."
+  }
+}

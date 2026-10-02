@@ -1,0 +1,18 @@
+{
+  "variant": "start",
+  "surface": "brand",
+  "props": {
+    "size": "huge",
+    "heading": "A boat is a promise kept to the sea.",
+    "headingRest": "Every joint we cut, every plank we steam, is made to hold when it matters.",
+    "name": "Tom Penrose",
+    "role": "Master shipwright, North Quay Boatyard",
+    "link": {
+      "label": "Meet the mentors",
+      "link": {
+        "$ref": "page",
+        "id": "pg_programme"
+      }
+    }
+  }
+}

@@ -4,7 +4,10 @@ import type { BlockDefinition } from "./block.tsx";
 export const registry: Readonly<
   Record<string, () => Promise<{ readonly default: BlockDefinition }>>
 > = {
+  "bento@1": () => import("./bento/v1/index.tsx"),
+  "bento-tile@1": () => import("./bento-tile/v1/index.tsx"),
   "call-to-action@1": () => import("./call-to-action/v1/index.tsx"),
+  "call-to-action@2": () => import("./call-to-action/v2/index.tsx"),
   "contact-details@1": () => import("./contact-details/v1/index.tsx"),
   "event-card@1": () => import("./event-card/v1/index.tsx"),
   "event-cards@1": () => import("./event-cards/v1/index.tsx"),
@@ -19,12 +22,16 @@ export const registry: Readonly<
   "image-caption@1": () => import("./image-caption/v1/index.tsx"),
   "location@1": () => import("./location/v1/index.tsx"),
   "logo-strip@1": () => import("./logo-strip/v1/index.tsx"),
+  "logo-strip@2": () => import("./logo-strip/v2/index.tsx"),
   "post-header@1": () => import("./post-header/v1/index.tsx"),
   "post-list@2": () => import("./post-list/v2/index.tsx"),
   "quote@1": () => import("./quote/v1/index.tsx"),
   "rich-text@1": () => import("./rich-text/v1/index.tsx"),
   "split@1": () => import("./split/v1/index.tsx"),
+  "split@2": () => import("./split/v2/index.tsx"),
+  "statement@1": () => import("./statement/v1/index.tsx"),
   "stats@1": () => import("./stats/v1/index.tsx"),
+  "stats@2": () => import("./stats/v2/index.tsx"),
   "team-grid@1": () => import("./team-grid/v1/index.tsx"),
   "team-member@1": () => import("./team-member/v1/index.tsx"),
   "timeline@1": () => import("./timeline/v1/index.tsx"),

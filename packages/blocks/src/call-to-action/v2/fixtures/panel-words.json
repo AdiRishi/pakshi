@@ -1,0 +1,29 @@
+{
+  "variant": "panel",
+  "surface": "tint",
+  "props": {
+    "heading": "Bring your school.",
+    "headingRest": "Groups of up to twelve, with a mentor for every six.",
+    "actions": [
+      {
+        "id": "it_enquire",
+        "button": {
+          "label": "Plan a group visit",
+          "link": "mailto:groups@example.org"
+        }
+      },
+      {
+        "id": "it_dates",
+        "button": {
+          "label": "See the dates",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "backdrop": "dots",
+    "mediaSide": "end"
+  }
+}

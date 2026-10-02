@@ -1,0 +1,23 @@
+{
+  "variant": "split",
+  "surface": "muted",
+  "props": {
+    "heading": "Hear when places open.",
+    "headingRest": "One email a month from the harbour, and nothing else.",
+    "actions": [
+      {
+        "id": "it_question",
+        "button": {
+          "label": "Ask a question",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    ],
+    "form": {
+      "$ref": "form",
+      "id": "frm_newsletter"
+    },
+    "mediaSide": "end",
+    "backdrop": "none"
+  }
+}

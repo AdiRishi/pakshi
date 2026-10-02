@@ -1,0 +1,11 @@
+{
+  "variant": "default",
+  "props": {
+    "title": "A short title",
+    "body": "A sentence about this point.",
+    "icon": "sparkles",
+    "size": "small",
+    "media": "bottom",
+    "tone": "default"
+  }
+}
