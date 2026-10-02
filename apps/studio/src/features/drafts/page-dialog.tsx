@@ -1,5 +1,5 @@
 import type { BatchError } from "@repo/contracts/ops";
-import { PagePath, Slug } from "@repo/contracts/page";
+import { PagePath, Slug, slugFor } from "@repo/contracts/page";
 import { entryAddress } from "@repo/contracts/snapshot";
 import { Button } from "@repo/ui/components/button";
 import {
@@ -27,8 +27,6 @@ import {
 import { useMutation } from "@tanstack/react-query";
 import { Option, Schema } from "effect";
 import { useId, useState } from "react";
-
-import { slugFor } from "./page-address";
 
 const decodePath = Schema.decodeOption(PagePath);
 const decodeSlug = Schema.decodeOption(Slug);
@@ -129,7 +127,7 @@ export function PageDialog(props: {
                     title,
                     address: addressEdited
                       ? current.address
-                      : `${under === null ? "/" : ""}${slugFor(title)}`,
+                      : `${under === null ? "/" : ""}${slugFor(title) ?? ""}`,
                   }));
                 }}
               />

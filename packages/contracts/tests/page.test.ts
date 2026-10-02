@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { PageDocument } from "../src/page.ts";
+import { PageDocument, slugFor } from "../src/page.ts";
 
 const page = {
   schema: "pakshi.page/1",
@@ -68,6 +68,25 @@ test("a slug is one lowercase segment", () => {
   for (const slug of ["", "news/opening", "/opening", "Opening", "two--dashes"]) {
     expect(issues({ ...entry, slug })).not.toBe("");
   }
+});
+
+describe("a slug made from a title", () => {
+  test("keeps its words in lowercase, without accents or punctuation", () => {
+    expect(slugFor("Dates announced!")).toBe("dates-announced");
+    expect(slugFor("  Café   de l'été 2027 ")).toBe("cafe-de-l-ete-2027");
+  });
+
+  test("is cut at a word to fit the longest slug", () => {
+    const title = "Summer school ".repeat(8);
+    expect(slugFor(title)).toBe(
+      "summer-school-summer-school-summer-school-summer-school-summer-school-summer",
+    );
+    expect(slugFor("a".repeat(90))).toBe("a".repeat(80));
+  });
+
+  test("is null for a title with no letter or digit", () => {
+    expect(slugFor("¿?! ✨")).toBeNull();
+  });
 });
 
 describe("document integrity", () => {

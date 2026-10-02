@@ -10,12 +10,36 @@ export const PagePath = Schema.String.check(
 );
 export type PagePath = typeof PagePath.Type;
 
+const slugLength = 80;
+
 /** An entry's own part of its address, one segment below its collection's, such as `dates-announced`. */
 export const Slug = Schema.String.check(
   Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/),
-  Schema.isMaxLength(80),
+  Schema.isMaxLength(slugLength),
 );
 export type Slug = typeof Slug.Type;
+
+const isSlug = Schema.is(Slug);
+
+/**
+ * A slug made from a title, such as `dates-announced` from "Dates
+ * announced!": its letters and digits, accents dropped, in lowercase words
+ * joined by hyphens and cut at a word to fit. Null when the title has no
+ * letter or digit to make one from.
+ */
+export const slugFor = (title: string): Slug | null => {
+  const words = title
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/[a-z0-9]+/g);
+  const joined = (words ?? []).join("-");
+  const cut = joined.slice(0, slugLength + 1);
+  const lastWord = cut.lastIndexOf("-");
+  const slug =
+    joined.length <= slugLength ? joined : cut.slice(0, lastWord === -1 ? slugLength : lastWord);
+  return isSlug(slug) ? slug : null;
+};
 
 /** What a collection holds. Each kind is built in, with its own entry meta and recipes. */
 export const CollectionKind = Schema.Literals(["blog"]);

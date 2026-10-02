@@ -369,7 +369,7 @@ function EntryAddress(props: { readonly collection: PagePath; readonly value: Sl
   const [typed, setTyped] = useState<string>(props.value);
   const [redirect, setRedirect] = useState(true);
   const [errors, setErrors] = useState<ReadonlyArray<{ readonly message: string }>>([]);
-  const prefix = props.collection === "/" ? "/" : `${props.collection}/`;
+  const prefix = entryAddress(props.collection, "");
   const previous = entryAddress(props.collection, props.value);
   const save = () => {
     if (typed === props.value) return;

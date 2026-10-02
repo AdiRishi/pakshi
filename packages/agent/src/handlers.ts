@@ -10,10 +10,10 @@ import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import { type BlockId, type BlockType, PageId, randomId } from "@repo/contracts/ids";
 import type { Op, Target } from "@repo/contracts/ops";
-import { type CollectionKind, pageName, type PagePath, Slug } from "@repo/contracts/page";
+import { type CollectionKind, pageName, type PagePath, slugFor } from "@repo/contracts/page";
 import { addressOf, entryAddress, listingsOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
-import { DateTime, Effect, Option, Result, Schema } from "effect";
+import { DateTime, Effect, Option, Result } from "effect";
 
 import { describeContract } from "./content.ts";
 import {
@@ -103,20 +103,6 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
     }),
   );
 });
-
-const isSlug = Schema.is(Slug);
-
-/** A slug made from a title: its lowercase words joined by hyphens, cut at a word to fit. */
-const slugFor = (title: string) => {
-  const words = title
-    .toLowerCase()
-    .normalize("NFKD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .match(/[a-z0-9]+/g);
-  const joined = (words ?? []).join("-");
-  const slug = joined.length <= 80 ? joined : joined.slice(0, 81).replace(/-[^-]*$/, "");
-  return isSlug(slug) ? slug : null;
-};
 
 /** Why a block type can't start a new page, or null when it can. */
 const notASection = (contracts: BlockContracts, type: BlockType) => {
