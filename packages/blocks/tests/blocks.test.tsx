@@ -289,7 +289,7 @@ describe("blog lists and post headers", () => {
   });
 
   test("a post header shows the post's title, date, author and cover from its settings", async () => {
-    const block = await load("post-header", 1);
+    const block = await load("post-header", 2);
     const result = renderProps(block, {}, "cover");
     if (!result.ok) throw new Error(result.problem);
     const html = renderToStaticMarkup(
@@ -300,13 +300,14 @@ describe("blog lists and post headers", () => {
       </SiteDataProvider>,
     );
     expect(html).toContain(">Meet this year&#x27;s mentors</h1>");
-    expect(html).toContain('<time dateTime="2027-04-15">15 April 2027</time>, Sam Okafor');
+    expect(html).toContain('<time dateTime="2027-04-15">15 April 2027</time>');
+    expect(html).toContain(">Sam Okafor</span>");
     expect(html).toContain('src="/_media/med_harbour"');
     expect(html).toContain('alt="Boats moored in a calm harbour"');
   });
 
   test("off a post, a post header shows a sample post", async () => {
-    const block = await load("post-header", 1);
+    const block = await load("post-header", 2);
     const result = renderProps(block, {}, "simple");
     if (!result.ok) throw new Error(result.problem);
     expect(markup(result.element)).toContain(">Our plans for the year ahead</h1>");

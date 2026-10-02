@@ -76,6 +76,12 @@ import logoStrip2split from "./logo-strip/v2/fixtures/split.json" with { type: "
 import postHeader1cover from "./post-header/v1/fixtures/cover.json" with { type: "json" };
 import postHeader1placeholder from "./post-header/v1/fixtures/placeholder.json" with { type: "json" };
 import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { type: "json" };
+import postHeader2centered from "./post-header/v2/fixtures/centered.json" with { type: "json" };
+import postHeader2cover from "./post-header/v2/fixtures/cover.json" with { type: "json" };
+import postHeader2placeholder from "./post-header/v2/fixtures/placeholder.json" with { type: "json" };
+import postHeader2simple from "./post-header/v2/fixtures/simple.json" with { type: "json" };
+import postHeader2splitTint from "./post-header/v2/fixtures/split-tint.json" with { type: "json" };
+import postHeader2split from "./post-header/v2/fixtures/split.json" with { type: "json" };
 import postList2cards from "./post-list/v2/fixtures/cards.json" with { type: "json" };
 import postList2list from "./post-list/v2/fixtures/list.json" with { type: "json" };
 import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with { type: "json" };
@@ -221,6 +227,12 @@ export const fixtureFiles = [
   { type: "post-header", version: 1, name: "cover", fixture: postHeader1cover },
   { type: "post-header", version: 1, name: "placeholder", fixture: postHeader1placeholder },
   { type: "post-header", version: 1, name: "simple", fixture: postHeader1simple },
+  { type: "post-header", version: 2, name: "centered", fixture: postHeader2centered },
+  { type: "post-header", version: 2, name: "cover", fixture: postHeader2cover },
+  { type: "post-header", version: 2, name: "placeholder", fixture: postHeader2placeholder },
+  { type: "post-header", version: 2, name: "simple", fixture: postHeader2simple },
+  { type: "post-header", version: 2, name: "split-tint", fixture: postHeader2splitTint },
+  { type: "post-header", version: 2, name: "split", fixture: postHeader2split },
   { type: "post-list", version: 2, name: "cards", fixture: postList2cards },
   { type: "post-list", version: 2, name: "list", fixture: postList2list },
   { type: "post-list", version: 2, name: "placeholder", fixture: postList2placeholder },
