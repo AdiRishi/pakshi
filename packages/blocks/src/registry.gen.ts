@@ -30,6 +30,7 @@ export const registry: Readonly<
   "post-header@1": () => import("./post-header/v1/index.tsx"),
   "post-list@2": () => import("./post-list/v2/index.tsx"),
   "quote@1": () => import("./quote/v1/index.tsx"),
+  "quote@2": () => import("./quote/v2/index.tsx"),
   "rich-text@1": () => import("./rich-text/v1/index.tsx"),
   "split@1": () => import("./split/v1/index.tsx"),
   "stats@1": () => import("./stats/v1/index.tsx"),

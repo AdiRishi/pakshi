@@ -1,0 +1,11 @@
+{
+  "variant": "panel",
+  "surface": "brand",
+  "props": {
+    "quote": "We fund a lot of projects. This is the one people stop us in the street to talk about.",
+    "name": "Ruth Alder",
+    "role": "Programme lead, County Arts Council",
+    "logo": { "$ref": "media", "id": "med_sampleArtsCouncil", "alt": "County Arts Council" },
+    "mediaSide": "start"
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "variant": "centered",
+  "surface": "default",
+  "props": {
+    "quote": "Put someone's own words here, as they said them. A sentence or two about what it was like is plenty.",
+    "name": "Their name",
+    "role": "Who they are",
+    "image": { "$ref": "media", "id": "med_pakshiCircles", "alt": "" },
+    "mediaSide": "start"
+  }
+}

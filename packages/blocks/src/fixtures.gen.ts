@@ -79,6 +79,13 @@ import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with
 import quote1centered from "./quote/v1/fixtures/centered.json" with { type: "json" };
 import quote1placeholder from "./quote/v1/fixtures/placeholder.json" with { type: "json" };
 import quote1withPhoto from "./quote/v1/fixtures/with-photo.json" with { type: "json" };
+import quote2centeredLogo from "./quote/v2/fixtures/centered-logo.json" with { type: "json" };
+import quote2centered from "./quote/v2/fixtures/centered.json" with { type: "json" };
+import quote2panelBrand from "./quote/v2/fixtures/panel-brand.json" with { type: "json" };
+import quote2panel from "./quote/v2/fixtures/panel.json" with { type: "json" };
+import quote2placeholder from "./quote/v2/fixtures/placeholder.json" with { type: "json" };
+import quote2splitEnd from "./quote/v2/fixtures/split-end.json" with { type: "json" };
+import quote2split from "./quote/v2/fixtures/split.json" with { type: "json" };
 import richText1narrow from "./rich-text/v1/fixtures/narrow.json" with { type: "json" };
 import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with { type: "json" };
 import split1imageLeft from "./split/v1/fixtures/image-left.json" with { type: "json" };
@@ -177,6 +184,13 @@ export const fixtureFiles = [
   { type: "quote", version: 1, name: "centered", fixture: quote1centered },
   { type: "quote", version: 1, name: "placeholder", fixture: quote1placeholder },
   { type: "quote", version: 1, name: "with-photo", fixture: quote1withPhoto },
+  { type: "quote", version: 2, name: "centered-logo", fixture: quote2centeredLogo },
+  { type: "quote", version: 2, name: "centered", fixture: quote2centered },
+  { type: "quote", version: 2, name: "panel-brand", fixture: quote2panelBrand },
+  { type: "quote", version: 2, name: "panel", fixture: quote2panel },
+  { type: "quote", version: 2, name: "placeholder", fixture: quote2placeholder },
+  { type: "quote", version: 2, name: "split-end", fixture: quote2splitEnd },
+  { type: "quote", version: 2, name: "split", fixture: quote2split },
   { type: "rich-text", version: 1, name: "narrow", fixture: richText1narrow },
   { type: "rich-text", version: 1, name: "placeholder", fixture: richText1placeholder },
   { type: "split", version: 1, name: "image-left", fixture: split1imageLeft },
