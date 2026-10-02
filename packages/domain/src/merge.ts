@@ -1,6 +1,7 @@
 import { type BlockContract, blockKey, type StoredProps } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import type { BrandRevision } from "@repo/contracts/brand";
+import { entriesOf } from "@repo/contracts/collections";
 import type { SiteContent } from "@repo/contracts/draft";
 import type { FormDefinition } from "@repo/contracts/form";
 import { BlockId, type BlockType, type FormId, type PageId } from "@repo/contracts/ids";
@@ -721,12 +722,9 @@ const decideCollections = (merge: Merge, sides: Sides<SiteContent["pages"]>) => 
     const kept = draft ?? live;
     if (kept === undefined || (draft !== undefined && live !== undefined)) continue;
     const keptOn: Side = draft === undefined ? "live" : "draft";
-    const untouched =
-      same(base, kept) &&
-      Object.values(sides[keptOn]).every(
-        (page) =>
-          page.type !== "entry" || page.collection !== base.id || same(sides.base[page.id], page),
-      );
+    const entries = (pages: SiteContent["pages"]) =>
+      Object.fromEntries(entriesOf(Object.values(pages), base).map((entry) => [entry.id, entry]));
+    const untouched = same(base, kept) && same(entries(sides.base), entries(sides[keptOn]));
     const keep =
       !untouched &&
       merge.conflict({
