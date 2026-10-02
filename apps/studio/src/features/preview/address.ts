@@ -1,4 +1,4 @@
-import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
+import type { DraftId, MediaId, SiteId, SnapshotId } from "@repo/contracts/ids";
 import { PagePath } from "@repo/contracts/page";
 import { mediaSegment, previewBasePath } from "@repo/contracts/studio";
 import { Option, Schema } from "effect";
@@ -22,3 +22,18 @@ export const requested = (rest: string) => {
   const path = Schema.decodeOption(PagePath)(`/${rest.replace(/\/$/, "")}`);
   return Option.isSome(path) ? ({ kind: "page", path: path.value } as const) : null;
 };
+
+/**
+ * Where a link to `path` on the site goes inside a review at `base`. It keeps
+ * its own query, such as a page of posts, and stays on the version and
+ * snapshot being reviewed.
+ */
+export const reviewLink =
+  (base: string, review: { readonly version: string; readonly snapshot: SnapshotId }) =>
+  (path: string) => {
+    // Only the path, query and fragment are read, so any origin does.
+    const link = new URL(path, "https://site.invalid");
+    link.searchParams.set("version", review.version);
+    link.searchParams.set("snapshot", review.snapshot);
+    return `${base}${link.pathname}${link.search}${link.hash}`;
+  };

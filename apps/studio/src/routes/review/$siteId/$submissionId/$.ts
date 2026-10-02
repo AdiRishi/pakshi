@@ -5,7 +5,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { env } from "cloudflare:workers";
 import { Option, Schema } from "effect";
 
-import { requested } from "@/features/preview/address";
+import { requested, reviewLink } from "@/features/preview/address";
 import { siteDocument, unavailableDocument } from "@/features/preview/render";
 import { callStudio } from "@/server/studio-rpc";
 
@@ -66,8 +66,7 @@ export const Route = createFileRoute("/review/$siteId/$submissionId/$")({
         const base = `${reviewBasePath}/${site.value}/${submission.value}`;
         return siteDocument(review.view, {
           base,
-          // Links keep to the version and snapshot being reviewed.
-          address: (path) => `${base}${path}?${search.toString()}`,
+          address: reviewLink(base, { version: version.value, snapshot: snapshot.value }),
           bar: null,
           changed: review.changed,
           number: pageNumberOf(url),
