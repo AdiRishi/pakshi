@@ -565,11 +565,15 @@ export const DraftPageSummary = Schema.Union(
 );
 export type DraftPageSummary = typeof DraftPageSummary.Type;
 
-/** A draft's pages, menus and redirects, as its Pages and menus screen shows them. */
+/**
+ * A draft's pages, menus and redirects, as its Pages and menus screen shows
+ * them, with the block versions it builds a new blog or post from.
+ */
 export const DraftPages = Schema.Struct({
   site: SiteLabel,
   live: LiveRelease,
   draft: DraftSummary,
+  lockfile: Lockfile,
   pages: Schema.Array(DraftPageSummary),
   menus: Menus,
   redirects: Redirects,

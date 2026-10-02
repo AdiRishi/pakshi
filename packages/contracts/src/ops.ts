@@ -229,13 +229,16 @@ export const Op = Schema.Union([
 ]);
 export type Op = typeof Op.Type;
 
+/** The most ops one batch holds. */
+export const batchLimit = 500;
+
 /**
  * Ops applied together, all or none. An undo batch instead applies each op
  * that would erase no one else's change since, and passes over the rest.
  */
 export const Batch = Schema.Struct({
   id: BatchId,
-  ops: Schema.Array(Op).check(Schema.isMinLength(1), Schema.isMaxLength(500)),
+  ops: Schema.Array(Op).check(Schema.isMinLength(1), Schema.isMaxLength(batchLimit)),
   undo: Schema.optionalKey(Schema.Boolean),
 });
 export type Batch = typeof Batch.Type;
