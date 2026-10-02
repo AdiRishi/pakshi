@@ -30,6 +30,7 @@ test("the agent edits a draft for its person, and its turn undoes whole", async 
   const canvas = await openHome(priya, draft);
   await addTextSection(priya, canvas, "Story time", "Every Saturday at ten.");
 
+  await priya.getByRole("tab", { name: "Ask Pakshi" }).click();
   await priya
     .getByLabel("Message Pakshi", { exact: true })
     .fill("Change the heading 'Story time' to 'Story hour'.");
