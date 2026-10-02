@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 088 | Blocks are named and shown from files beside their released versions               | 2026-10-02 | Accepted            |
 | 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
 | 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
 | 085 | Alerts and the security review move out of checkpoint 11                           | 2026-10-01 | Accepted            |
@@ -57,7 +58,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted            |
 | 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Amended by 080      |
 | 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted            |
-| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Accepted            |
+| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Amended by 088      |
 | 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted            |
 | 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted            |
 | 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted            |
@@ -96,6 +97,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 088 — Blocks are named and shown from files beside their released versions [#decision-088]
+
+**Context.** Studio's Blocks area is being redesigned for people who have never built a site: a gallery of every block, shown live in the order a page runs, and a page per block to try its layouts. A block's title lived in its released folder, which never changes, so it couldn't be made plain, and the editor named layouts by turning variant IDs such as `split-image` into words. Placeholder fixtures can't change either, and some fail as showcases: boats as team photos, landscapes as logos, no map in a location.
+
+**Decision.** Each block type keeps `presentation.ts` and `sample.ts` in `src/<type>/`, outside its version folders, and the registry generator lists both. A presentation gives the block's name, following the names site builders use, such as Hero, Features and Testimonial; a one-line summary; a hint; a label and description for each layout; how a list names its items; field labels and hints; the optional fields a layout needs; and the block's place in the gallery. `defineBlock` keeps the types of a version's fields and variants, so the compiler checks a presentation against the newest version, and a test catches one left on an older version. A contract's title and field titles come from it, so Studio, the editor and the agent use the same words. A sample is showcase content for the newest version, with images drawn for samples, and `blockShowcase` builds a throwaway draft of the fixture site around one. Studio shows blocks live, scaled from desktop width, rendering each preview only as it comes near the viewport.
+
+**Rejected.** New block versions only to change names or sample content, which would ask every site to adopt an upgrade that changes nothing they show.
+
+**Consequences.** Renaming a block or a layout is an ordinary change. A new block version must update its type's presentation and sample, which the tests enforce. Golden contracts no longer pin titles.
 
 ## 087 — Brands store every theme value, with no presets [#decision-087]
 
@@ -536,6 +547,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 **Decision.** The picker lists blocks by name, with search, and previews the highlighted one in the draft's theme with the placeholder content it will start with. The settings panel renders the selected block's own content in each of its layouts, and shows each background as a swatch of the theme's colors for that surface. Layout previews follow the block's content once typing pauses, so a keystroke never renders them.
 
 **Consequences.** A person sees exactly what they'll get before choosing. The picker renders one preview frame, and the settings panel one per layout.
+
+**Amended** by [decision 088](#decision-088): Studio's block gallery shows every block as a live preview of its sample, which renders only as it comes near the viewport.
 
 ## 038 — Items move up and down across sections [#decision-038]
 

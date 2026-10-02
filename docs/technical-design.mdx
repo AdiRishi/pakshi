@@ -210,6 +210,8 @@ export default defineBlock({
 
 Fixtures sit beside the definition, in `fixtures/*.json`, and the registry generator lists them with the block versions. A section or item also imports its `fixtures/placeholder.json` as `placeholder`: the content a new instance starts with, which the checks treat as a placeholder until someone changes it ([decision 037](/decision-log#decision-037)).
 
+How people see a block sits beside its versions, so it can change after a release ([decision 088](/decision-log#decision-088)). `src/<type>/presentation.ts` names the block, its layouts and its lists, labels and hints its fields, and places it in the gallery. It's checked against the newest version, and a contract's title and field titles come from it. `src/<type>/sample.ts` is showcase content for the newest version, which Studio's block gallery and block pages show in a throwaway draft.
+
 A block's placement says where it goes: a section at the top of a page, with a surface and optional slots of items; an item in a section's slot; or the site's header or footer. Each field has a title and two schemas: a draft schema with the limits enforced while typing, and a complete schema that adds minimum lengths and filled-in required values, which freezing checks ([decision 026](/decision-log#decision-026)).
 
 **Versioning rules** (refines [decision 001](/decision-log#decision-001)):
