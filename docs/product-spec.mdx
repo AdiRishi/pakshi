@@ -14,7 +14,7 @@ This doc defines what Pakshi does and for whom. It sits between the [vision](/vi
 | In this version                                                              | Not in this version                     |
 | ---------------------------------------------------------------------------- | --------------------------------------- |
 | Brands with theme (light and dark), identity and voice guide                 | Payments (Stripe Checkout)              |
-| Sites, pages, and blog posts as pages                                        | Scheduled publishing                    |
+| Sites, pages, and blogs of posts                                             | Scheduled publishing                    |
 | Agent builds and edits sites                                                 | Visual, node-based workflow editor      |
 | Visual editing on the page, live with others                                 | Comments on previews                    |
 | Named drafts that merge like branches and are shared like documents          | File uploads on forms                   |
@@ -118,8 +118,8 @@ Nine journeys cover the product. Each one reuses the same few building blocks: d
 - **Drafts:** every change happens in a named draft, such as "Summer event launch" or "Fix the date". A site can have any number of drafts, and several people can edit one draft at once. A quick fix is a small draft.
 - **Quick fix:** open a draft, click the text or image, change it. Changes save to the draft automatically; the live site is unchanged.
 - **Bigger change:** ask the agent ("add a speakers section", "make this shorter"). If a section is selected on the canvas, the agent knows what "this" means. Each agent turn can be undone in one click.
-- **Blog post:** create a post (title, excerpt, cover image, tags, author, body). The agent can draft it from notes.
-- **Pages and navigation:** create, rename, unpublish and delete pages, and edit the menus, header and footer, all in a draft.
+- **Blog post:** write a post in one of the site's blogs: its title, date, author, excerpt, tags, cover image and body. The agent can draft it from notes.
+- **Pages and navigation:** create, rename, unpublish and delete pages and blogs, and edit the menus, header and footer, all in a draft.
 
 **4. Share and approve** (editor, approver)
 
@@ -209,6 +209,10 @@ gitGraph
 - A menu link to a page follows it when the page's address changes. Unpublishing or deleting a page removes it from the menus in the same draft, and Pakshi says so.
 - **Unpublishing** a page marks it as unpublished in the draft. When the draft publishes, the page leaves the live site, the sitemap and the menus, and its address returns "gone" (HTTP 410) unless the editor adds a redirect, which Pakshi offers when unpublishing. The page stays in the draft and can be published again.
 - **Deleting** a page has the same effect on the live site, and also removes the page from the draft.
+- **Blogs** are pages that hold posts. A site can have several, each named for what it holds, such as News or Stories. A blog's page shows its own sections, usually a hero and a list of its posts. A blog lists its posts newest first, with no manual order.
+- A **post** lives in the blog it was written in and can't move to another. Its address is its blog's address plus its own slug, such as `/news/dates-announced`. Editors change only the slug, and moving a blog moves all its posts with it. A redirect from a blog's old address covers its posts too, so `/news/dates-announced` goes to `/updates/dates-announced`.
+- **Unpublishing a blog** takes its posts off the live site as well, and their addresses return "gone". Each post keeps its own status, so publishing the blog again brings back the posts that were published. A post shows on the live site only when both it and its blog are published.
+- **A blog can't be deleted while it holds posts.** Studio offers to delete the blog with all its posts, and their menu items, in one step.
 
 ### Sharing and previews
 
@@ -257,7 +261,8 @@ stateDiagram-v2
 - Any change that alters how a block looks creates a new version, shown to editors as v1, v2, v3 and so on. Any number of versions can be live at once. Sites on an older version see a banner encouraging them to upgrade, but are never forced.
 - An urgent fix is a new version like any other. The platform team can create upgrade drafts on every affected site at once.
 - A block version is kept while any draft or live release uses it, and for 3 months after the last one stops. The latest version of every block is always kept.
-- The library covers at least these page sections: hero, rich text, split, feature grid, call to action, gallery, form, blog list, header and footer, and grows to about 20 blocks and 4 recipes (landing, event, information site, blog), chosen from the sites Pakshi's first users build.
+- The library covers at least these page sections: hero, rich text, split, feature grid, call to action, gallery, form, blog list, post header, header and footer, and grows to about 20 blocks and 4 recipes (landing, event, information site, blog), chosen from the sites Pakshi's first users build.
+- A blog list shows the posts of one blog, chosen in its settings, and as many as the editor sets. On its own blog's page it shows every post, a page at a time with "Newer posts" and "Older posts" links. Anywhere else it shows the newest and links to the rest with "See all posts". A post header shows a post's title, date, author, excerpt and cover from the post's settings, and goes only on a post.
 
 ### Brands and themes
 
@@ -294,7 +299,7 @@ Each brand has a library (logos, approved images) that its sites can use; each s
 
 ### SEO and domains
 
-- Per page: title, description, social image (defaults to the page's hero image or the brand default), canonical URL and a no-index option. Automatic sitemap, robots.txt and blog RSS feed. Changing a page's address offers to add a redirect.
+- Per page: title, description, social image (defaults to a post's cover image, then the page's hero image, then the brand default), canonical URL and a no-index option. A post is shared as an article. Automatic sitemap, robots.txt, and an RSS feed for each blog at the blog's address plus `/rss.xml`, holding its newest 50 posts. Every page links each blog's feed. Changing a page's address offers to add a redirect.
 - Custom subdomains are added with guided DNS steps and automatic HTTPS. Root domains (example.org without www) aren't supported directly: sites use a subdomain such as www, and the root redirects to it.
 
 ### Accessibility

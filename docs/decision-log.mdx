@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 091 | Blogs are pages that hold posts                                                    | 2026-10-02 | Accepted            |
 | 090 | Studio sets its color scheme with a head script, and site previews keep their own  | 2026-10-02 | Accepted            |
 | 089 | The checks open from the top bar, and Pakshi fixes what it can of them             | 2026-10-02 | Accepted            |
 | 088 | Blocks are named and shown from files beside their released versions               | 2026-10-02 | Accepted            |
@@ -99,6 +100,22 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 091 — Blogs are pages that hold posts [#decision-091]
+
+**Context.** A blog post was a page with `type: "post"` at any address. A blog list showed every post on the site, and the site had one feed at `/blog/rss.xml`. That gives a site one blog in practice. An organization with news and stories couldn't keep them apart, a home page couldn't show the latest news without the stories, and moving the news section meant changing every post's address.
+
+**Decision.** A collection is a page that holds entries of one built-in kind, and an entry is a page in a collection. Both are page documents, so ops, history, previews, approvals and merging work on them unchanged. The one kind is a blog, whose entries are posts. People see "Blog" and "posts", as in Squarespace, and a blog can be named anything, such as News. The code uses the same words for the kind (`blog`, `PostMeta`, the `blog` and `post` recipes, `post-header`) and keeps `collection` and `entry` for the structure.
+
+- An entry stores only a slug. Its address is its collection's address plus the slug, resolved in one place, `listingsOf`. Moving a blog moves its posts with no ops on them, and a merge where one side moves the blog while the other adds a post puts the post at the new address. A post never moves to another blog, and a collection's kind never changes.
+- The document module keeps the rules: a post goes only in a blog, a blog with posts can't be deleted, an entry's address changes only through the new `setSlug` op, and no two addresses collide after a batch. A post is served only when it and its blog are both published.
+- A merge decides a blog that one side removed together with its posts. If the keeping side left the blog and its posts as they were, the blog goes; otherwise one conflict keeps or removes them all.
+- `post-list@2` shows one blog, named by a `collection` field, with a `number` field for how many posts. On its own blog's page it pages through every post with `?page=N`. Elsewhere it shows the newest and links to the blog. `post-header@1` shows a post's details from its meta, and its `entryOf: "blog"` keeps it to posts.
+- `post-list@1`, which listed every post on the site, is deleted with its fixtures, golden file and screenshots instead of being kept beside version 2. "Every post" means nothing once a site has several blogs, and stages start empty, so no site uses it.
+
+**Rejected.** A full address stored on each post, which would need an op per post to move a blog and would put a post added during a move at the old address. One listing block for every kind, when each kind lists its entries in its own way. A blog page that lists its posts by itself, which would take the layout away from editors; the list is a block they place and can move. Kinds defined by editors, with schemas and migrations, when built-in kinds cover what sites build.
+
+**Consequences.** RSS moves from `/blog/rss.xml` to one feed per blog at the blog's address plus `/rss.xml`, and a redirect from a blog's old address covers its posts and its feed. A second kind adds a `CollectionKind` literal, an entry member in the page and listing unions, an entry in `collectionKinds`, two recipes, a listing and a header block, with no change to addresses, merging, freezing or ops. A batch holds at most 500 ops, so deleting a blog with more posts than that takes several batches, each undone on its own. Documents saved before this change don't decode, so local stacks that hold them are destroyed and started again.
 
 ## 090 — Studio sets its color scheme with a head script, and site previews keep their own [#decision-090]
 

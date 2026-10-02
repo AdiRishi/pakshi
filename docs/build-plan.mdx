@@ -264,7 +264,7 @@ Everything else a real site needs.
 - [Forms and submissions](/product-spec#forms-and-submissions): the form editor in the editor's settings panel, intake into `SiteSubmissions` with the 64 KB cap, notification emails retried from its alarm ([decision 074](/decision-log#decision-074)), the checks for a notification address and for consent, the submissions screen, CSV export and deletion by email.
 - The [media library](/product-spec#media): brand and site libraries, uploads from the Media screen and from the editor's image popover, resizing with the Images binding ([decision 075](/decision-log#decision-075)), alt text, and retention by a daily job.
 - [Pages, menus, header and footer](/product-spec#pages-menus-header-and-footer): pages and menus in each draft, unpublishing and deleting pages with their menu items and an offer to redirect, and 410 for removed addresses.
-- [SEO](/product-spec#seo-and-domains): each page's sharing image, canonical address and no-index option, the sitemap, robots.txt, the blog RSS feed and redirects.
+- [SEO](/product-spec#seo-and-domains): each page's sharing image, canonical address and no-index option, the sitemap, robots.txt, an RSS feed for each blog at `/{blog}/rss.xml`, and redirects.
 - [Custom domains](/technical-design#domains): the domains screen with the CNAME and TXT records, and a scheduled check. In the dev stack only names under `.localhost` are proven ([decision 076](/decision-log#decision-076)).
 - [Deleting sites and brands](/product-spec#sites-and-brands), with the 30-day restore window and a daily purge ([decision 077](/decision-log#decision-077)).
 
