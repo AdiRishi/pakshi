@@ -66,11 +66,19 @@ await test("a new version of a released block is allowed", (context) => {
   assert.deepEqual(releasedBlockProblems(root, "main"), []);
 });
 
-await test("removing a whole released version is allowed", (context) => {
+await test("removing a whole released version, with its screenshots, is allowed", (context) => {
   const root = repository(context);
   rmSync(join(root, "packages/blocks/src/hero/v1"), { recursive: true });
+  rmSync(join(root, baseline));
   commit(root);
   assert.deepEqual(releasedBlockProblems(root, "main"), []);
+});
+
+await test("a kept version's screenshot can't be removed without an entry", (context) => {
+  const root = repository(context);
+  rmSync(join(root, baseline));
+  commit(root);
+  assert.equal(releasedBlockProblems(root, "main").length, 1);
 });
 
 await test("a released version's screenshot changes only with a rendering changes entry", (context) => {
