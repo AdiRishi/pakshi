@@ -1,5 +1,5 @@
 import type { BlockContract } from "@repo/blocks/contract";
-import { type Field, type Fields, propsSchema } from "@repo/blocks/fields";
+import { type Field, fieldAt, type Fields, propsSchema } from "@repo/blocks/fields";
 import { placeholderMedia, placeholderPaths } from "@repo/blocks/placeholders";
 import { linkTexts, RichTextDocument } from "@repo/blocks/rich-text";
 import type { SiteContent } from "@repo/contracts/draft";
@@ -79,6 +79,19 @@ const propPath = (
   return [String(name), String(id), ...rest.map(String)];
 };
 
+/**
+ * The name people know a field at a path by: a list item's own field by its
+ * name, and a part of an image or button with the field it belongs to, such
+ * as "Photo alt text".
+ */
+const fieldTitle = (contract: BlockContract, path: ReadonlyArray<string>) => {
+  const field = fieldAt(contract.fields, path);
+  const owner = path.length > 1 ? fieldAt(contract.fields, path.slice(0, -1)) : undefined;
+  if (field !== undefined && (owner?.kind === "media" || owner?.kind === "cta"))
+    return `${owner.title} ${field.title.toLowerCase()}`;
+  return field?.title ?? contract.fields[path[0] ?? ""]?.title ?? contract.title;
+};
+
 const contractOf = (contracts: BlockContracts, block: BlockInstance) => {
   const contract = contracts.get(block.type);
   if (contract === undefined) throw new Error(`The lockfile pins no version of ${block.type}.`);
@@ -100,8 +113,7 @@ export const incompleteProps = (
         Predicate.isNumber(key) ? key : String(Predicate.isObject(key) ? key.key : key),
       ),
     );
-    const [name = ""] = path;
-    return { path, field: contract.fields[name]?.title ?? contract.title, message: issue.message };
+    return { path, field: fieldTitle(contract, path), message: issue.message };
   });
 };
 
@@ -131,7 +143,7 @@ const placeholdersIn = (
     place,
     block: { id, title: contract.title },
     path,
-    field: contract.fields[path[0] ?? ""]?.title ?? contract.title,
+    field: fieldTitle(contract, path),
   }));
 };
 

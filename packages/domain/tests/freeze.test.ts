@@ -38,7 +38,7 @@ const about = complete.pages[PageId.make("pg_about")];
 if (about === undefined) throw new Error("The harbour draft has an about page.");
 
 describe("freezing", () => {
-  test("lists every incomplete field, naming list items by ID", () => {
+  test("lists every incomplete field, naming list items by ID and parts by their field", () => {
     const draft = edit(harbourDraft, [
       { op: "setProp", target: "pg_home", block: "b_hero", path: ["heading"], value: "" },
     ]);
@@ -56,6 +56,8 @@ describe("freezing", () => {
       expect.objectContaining({
         block: { id: "b_gallery", title: "Gallery" },
         path: ["images", "it_quay", "image", "alt"],
+        field: "Photo alt text",
+        message: "Fill this in",
       }),
     ]);
   });
