@@ -95,6 +95,13 @@ const openPublished = async (
   });
   const page = await context.newPage();
   await page.goto(fixturesUrl(site));
+  await page.evaluate(() => {
+    // The canvas opens every disclosure so its fields can be edited.
+    for (const disclosure of document.querySelectorAll<HTMLDetailsElement>(
+      "details[data-disclosure]",
+    ))
+      disclosure.open = true;
+  });
   await page.evaluate(() =>
     Promise.all(
       Array.from(document.images, (image) => {

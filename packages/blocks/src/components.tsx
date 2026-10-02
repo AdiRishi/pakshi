@@ -237,6 +237,9 @@ const FieldEditingContext = createContext<FieldEditing | null>(null);
 
 export const FieldEditingProvider = FieldEditingContext.Provider;
 
+/** Whether blocks render in the editor canvas, where every field must be reachable. */
+export const useEditing = () => useContext(FieldEditingContext) !== null;
+
 /** The field a component renders, from the block's own fields. */
 const useField = (field: FieldPath) => {
   const frame = useBlockFrame();
