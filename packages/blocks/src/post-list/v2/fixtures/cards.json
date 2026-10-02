@@ -1,0 +1,9 @@
+{
+  "variant": "cards",
+  "surface": "muted",
+  "props": {
+    "heading": "From the blog",
+    "collection": { "$ref": "page", "id": "pg_news" },
+    "count": 12
+  }
+}

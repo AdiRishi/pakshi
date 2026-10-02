@@ -1,0 +1,34 @@
+{
+  "placement": "section",
+  "variants": [
+    "simple",
+    "cover"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "brand",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "entryOf": "blog",
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "not": {
+        "type": "null"
+      }
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "not": {
+        "type": "null"
+      }
+    },
+    "definitions": {}
+  }
+}

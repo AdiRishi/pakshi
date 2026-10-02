@@ -1,5 +1,7 @@
-import { type Field, type FieldKind, placeholderForm } from "@repo/blocks";
+import { type Field, type FieldKind, placeholderCollection, placeholderForm } from "@repo/blocks";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { BatchError, Op } from "@repo/contracts/ops";
+import { pageName } from "@repo/contracts/page";
 import { ExternalUrl } from "@repo/contracts/references";
 import { listingsOf } from "@repo/contracts/snapshot";
 import { Button } from "@repo/ui/components/button";
@@ -454,6 +456,101 @@ function CtaControl(props: ControlProps<KindOf<"cta">>) {
   );
 }
 
+/** Chooses which of the site's collections of the field's kind a block shows, such as a blog's posts. */
+function CollectionControl(props: ControlProps<KindOf<"collection">>) {
+  const pages = useEditorState((state) => state.view.pages);
+  const { run, errors } = useRun();
+  const { definition, field } = props;
+  const names = collectionKinds[definition.collectionKind].names;
+  const kind = names.kind.toLowerCase();
+  const collections = Object.values(pages)
+    .filter((page) => page.type === "collection" && page.kind === definition.collectionKind)
+    .toSorted((a, b) => pageName(a).localeCompare(pageName(b)));
+  const current = props.value?.id ?? "";
+  const sample = current === placeholderCollection;
+  const gone = !sample && !collections.some((collection) => collection.id === current);
+  return (
+    <ControlRow
+      field={field}
+      definition={definition}
+      value={props.value}
+      errors={errors}
+      description={
+        collections.length === 0
+          ? `This site has no ${kind} yet. Add one in Pages and menus.`
+          : sample
+            ? `It shows sample ${names.many} until you choose a ${kind}.`
+            : undefined
+      }
+    >
+      <NativeSelect
+        id={controlId(field)}
+        value={current}
+        onChange={(event) => run([setProp(field, { $ref: "page", id: event.target.value })])}
+        className="w-full"
+      >
+        {sample && (
+          <NativeSelectOption value={placeholderCollection}>Sample {names.many}</NativeSelectOption>
+        )}
+        {gone && (
+          <NativeSelectOption value={current}>A {kind} that's been deleted</NativeSelectOption>
+        )}
+        {collections.map((collection) => (
+          <NativeSelectOption key={collection.id} value={collection.id}>
+            {pageName(collection)}
+          </NativeSelectOption>
+        ))}
+      </NativeSelect>
+    </ControlRow>
+  );
+}
+
+/** A whole number, saved as it's typed whenever it's within the field's limits. */
+function NumberControl(props: ControlProps<KindOf<"number">>) {
+  const store = useStore();
+  const { run, errors } = useRun();
+  const { definition, field } = props;
+  // What's typed while it's being typed, which may not be a number yet; the saved value otherwise.
+  const [typed, setTyped] = useState<string | null>(null);
+  if (props.value === undefined)
+    return (
+      <ControlRow field={field} definition={definition} value={props.value} errors={errors}>
+        <AddField title={definition.title} onAdd={() => run([setProp(field, definition.min)])} />
+      </ControlRow>
+    );
+  return (
+    <ControlRow
+      field={field}
+      definition={definition}
+      value={props.value}
+      errors={errors}
+      description={`From ${definition.min} to ${definition.max}`}
+    >
+      <Input
+        id={controlId(field)}
+        type="number"
+        inputMode="numeric"
+        min={definition.min}
+        max={definition.max}
+        step={1}
+        className="w-24"
+        value={typed ?? String(props.value)}
+        onChange={(event) => {
+          const text = event.target.value;
+          setTyped(text);
+          const number = Number(text);
+          if (text.trim() !== "" && Schema.is(definition.draft)(number))
+            run([setProp(field, number)], burstKey(field));
+        }}
+        onBlur={() => {
+          setTyped(null);
+          store.endBurst();
+        }}
+      />
+    </ControlRow>
+  );
+}
+
 /** A list's items, each with its own fields, which can be moved, removed and added to within the list's limits. */
 function ListControl(props: ControlProps<KindOf<"list">>) {
   const ui = useEditorUi();
@@ -570,6 +667,8 @@ const controls = {
   media: MediaControl,
   cta: CtaControl,
   list: ListControl,
+  collection: CollectionControl,
+  number: NumberControl,
 } satisfies { readonly [K in FieldKind]: ComponentType<ControlProps<KindOf<K>>> };
 
 /** A field's control, chosen by its kind. Each reads the draft and emits setProp; none keeps its own copy. */

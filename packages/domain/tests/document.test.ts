@@ -1,7 +1,7 @@
 import { placeholderTree } from "@repo/blocks";
 import { propsSchema } from "@repo/blocks/fields";
 import { FormDefinition } from "@repo/contracts/form";
-import { BlockId, FormId, PageId } from "@repo/contracts/ids";
+import { BlockId, BlockType, FormId, PageId } from "@repo/contracts/ids";
 import { BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
 import { listingsOf } from "@repo/contracts/snapshot";
@@ -71,6 +71,28 @@ const post = (id: string, slug: string, collection = "pg_news"): WireOp => ({
     root: [],
     blocks: {},
   },
+});
+
+/** Inserts a section of this type, with its placeholder content, at the top of the home page. */
+const insertSection = (type: string) =>
+  ({
+    op: "insertBlock",
+    page: "pg_home",
+    list: "root",
+    after: null,
+    block: placeholderTree(contracts, BlockType.make(type)),
+  }) satisfies WireOp;
+
+/** A new blog list of `collection`. */
+const listingTree = (collection: string) => {
+  const tree = placeholderTree(contracts, BlockType.make("post-list"));
+  return { ...tree, props: { ...tree.props, collection: { $ref: "page", id: collection } } };
+};
+
+/** Inserts a blog list of `collection` at the top of the home page. */
+const listingOf = (collection: string): WireOp => ({
+  ...insertSection("post-list"),
+  block: listingTree(collection),
 });
 
 const insertMore: WireOp = {
@@ -291,9 +313,13 @@ describe("applying ops", () => {
       })[0];
       const list = contract.placement === "section" ? ("root" as const) : host;
       if (list === undefined) throw new Error(`No section on the home page can hold a ${type}.`);
+      // A section that shows a post's details goes on a post.
+      const page = PageId.make(
+        contract.placement === "section" && contract.entryOf !== null ? "pg_dates" : "pg_home",
+      );
       const result = applyOps(
         harbourDraft,
-        [{ op: "insertBlock", page: PageId.make("pg_home"), list, after: null, block: tree }],
+        [{ op: "insertBlock", page, list, after: null, block: tree }],
         contracts,
       );
       expect(result.ok ? [] : result.errors).toEqual([]);
@@ -620,6 +646,42 @@ describe("each rule rejects the ops that break it", () => {
       "value",
     ],
     [
+      "a post header off a post",
+      { ...insertSection("post-header"), page: "pg_about" },
+      "placement",
+    ],
+    [
+      "a new page with a post header",
+      {
+        op: "createPage",
+        page: {
+          schema: "pakshi.page/1",
+          id: "pg_again",
+          type: "page",
+          path: "/again",
+          meta: { title: "Again", description: "" },
+          root: ["b_top"],
+          blocks: {
+            b_top: { type: "post-header", variant: "simple", surface: "default", props: {} },
+          },
+        },
+      },
+      "placement",
+    ],
+    ["a blog list of a page that isn't a blog", listingOf("pg_about"), "value"],
+    ["a blog list of a blog that doesn't exist", listingOf("pg_nope"), "value"],
+    [
+      "a blog list changed to show a page",
+      {
+        op: "setProp",
+        target: "pg_news",
+        block: "b_posts",
+        path: ["collection"],
+        value: { $ref: "page", id: "pg_dates" },
+      },
+      "value",
+    ],
+    [
       "a post-only field on a page",
       { op: "setMeta", page: "pg_home", field: "tags", value: ["x"] },
       "meta",
@@ -633,6 +695,29 @@ describe("each rule rejects the ops that break it", () => {
 
   test.each(cases)("%s", (_name, op, rule) => {
     expect(rejection(op)).toEqual(expect.arrayContaining([expect.objectContaining({ rule })]));
+  });
+});
+
+describe("blog lists", () => {
+  test("a new blog list shows the sample posts, a blog of the site, or a new blog itself", () => {
+    expect(apply(insertSection("post-list")).ok).toBe(true);
+    expect(apply(listingOf("pg_news")).ok).toBe(true);
+    const { id, slots: _, ...listing } = listingTree("pg_stories");
+    expect(
+      apply({
+        op: "createPage",
+        page: {
+          schema: "pakshi.page/1",
+          id: "pg_stories",
+          type: "collection",
+          kind: "blog",
+          path: "/stories",
+          meta: { title: "Stories", description: "" },
+          root: [id],
+          blocks: { [id]: listing },
+        },
+      }).ok,
+    ).toBe(true);
   });
 });
 

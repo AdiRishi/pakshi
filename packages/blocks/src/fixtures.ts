@@ -16,7 +16,7 @@ import { BlockFixture, type BlockContract } from "./contract.ts";
 import type { Field } from "./fields.ts";
 import site from "./fixture-site.json" with { type: "json" };
 import { fixtureFiles } from "./fixtures.gen.ts";
-import { placeholderForm, withFreshId } from "./placeholders.ts";
+import { placeholderCollection, placeholderForm, withFreshId } from "./placeholders.ts";
 import { flattenTree, latestLockfile } from "./render.tsx";
 import { sampleMedia } from "./sample-media.ts";
 import { samples } from "./samples.gen.ts";
@@ -285,6 +285,10 @@ const madeUpValue = (field: Field): Json => {
       return "https://example.org";
     case "form":
       return { $ref: "form", id: placeholderForm.id };
+    case "collection":
+      return { $ref: "page", id: placeholderCollection };
+    case "number":
+      return field.min;
     case "list":
       return [];
   }

@@ -49,9 +49,12 @@ import location1placeholder from "./location/v1/fixtures/placeholder.json" with 
 import logoStrip1grid from "./logo-strip/v1/fixtures/grid.json" with { type: "json" };
 import logoStrip1placeholder from "./logo-strip/v1/fixtures/placeholder.json" with { type: "json" };
 import logoStrip1row from "./logo-strip/v1/fixtures/row.json" with { type: "json" };
-import postList1cards from "./post-list/v1/fixtures/cards.json" with { type: "json" };
-import postList1list from "./post-list/v1/fixtures/list.json" with { type: "json" };
-import postList1placeholder from "./post-list/v1/fixtures/placeholder.json" with { type: "json" };
+import postHeader1cover from "./post-header/v1/fixtures/cover.json" with { type: "json" };
+import postHeader1placeholder from "./post-header/v1/fixtures/placeholder.json" with { type: "json" };
+import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { type: "json" };
+import postList2cards from "./post-list/v2/fixtures/cards.json" with { type: "json" };
+import postList2list from "./post-list/v2/fixtures/list.json" with { type: "json" };
+import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with { type: "json" };
 import quote1centered from "./quote/v1/fixtures/centered.json" with { type: "json" };
 import quote1placeholder from "./quote/v1/fixtures/placeholder.json" with { type: "json" };
 import quote1withPhoto from "./quote/v1/fixtures/with-photo.json" with { type: "json" };
@@ -123,9 +126,12 @@ export const fixtureFiles = [
   { type: "logo-strip", version: 1, name: "grid", fixture: logoStrip1grid },
   { type: "logo-strip", version: 1, name: "placeholder", fixture: logoStrip1placeholder },
   { type: "logo-strip", version: 1, name: "row", fixture: logoStrip1row },
-  { type: "post-list", version: 1, name: "cards", fixture: postList1cards },
-  { type: "post-list", version: 1, name: "list", fixture: postList1list },
-  { type: "post-list", version: 1, name: "placeholder", fixture: postList1placeholder },
+  { type: "post-header", version: 1, name: "cover", fixture: postHeader1cover },
+  { type: "post-header", version: 1, name: "placeholder", fixture: postHeader1placeholder },
+  { type: "post-header", version: 1, name: "simple", fixture: postHeader1simple },
+  { type: "post-list", version: 2, name: "cards", fixture: postList2cards },
+  { type: "post-list", version: 2, name: "list", fixture: postList2list },
+  { type: "post-list", version: 2, name: "placeholder", fixture: postList2placeholder },
   { type: "quote", version: 1, name: "centered", fixture: quote1centered },
   { type: "quote", version: 1, name: "placeholder", fixture: quote1placeholder },
   { type: "quote", version: 1, name: "with-photo", fixture: quote1withPhoto },

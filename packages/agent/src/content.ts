@@ -2,6 +2,7 @@ import { RichTextDocument } from "@repo/blocks";
 import type { BlockContract } from "@repo/blocks/contract";
 import { type Field, type Fields, fieldParts } from "@repo/blocks/fields";
 import { markdownAllowed, richTextFromMarkdown, richTextToMarkdown } from "@repo/blocks/markdown";
+import { collectionKinds } from "@repo/contracts/collections";
 import { ItemId, randomId } from "@repo/contracts/ids";
 import { Array as Arr, Result, Schema } from "effect";
 
@@ -117,6 +118,13 @@ const describeField = (field: Field): Json => {
       };
     case "cta":
       return { ...base, parts: describeFields(fieldParts(field)) };
+    case "collection":
+      return {
+        ...base,
+        value: `{"$ref": "page", "id": "pg_…"}, one of the site's ${collectionKinds[field.collectionKind].names.kind.toLowerCase()} pages`,
+      };
+    case "number":
+      return { ...base, min: field.min, max: field.max, value: "a whole number" };
     case "list":
       return {
         ...base,

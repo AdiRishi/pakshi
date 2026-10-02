@@ -70,7 +70,11 @@ export const slotOf = (
   return contract?.placement === "section" ? contract.slots[list.slot] : undefined;
 };
 
-/** The block types that can go in a list, by title: sections at the top level, and a slot's own item types. */
+/**
+ * The block types that can go in a list, by title: sections at the top level,
+ * and a slot's own item types. A section that shows an entry's details goes
+ * only on an entry of its kind.
+ */
 export const allowedTypes = (
   page: PageDocument,
   contracts: BlockContracts,
@@ -78,7 +82,8 @@ export const allowedTypes = (
 ): ReadonlyArray<BlockType> => {
   const addable = Array.from(contracts.values()).filter((contract) =>
     list === "root"
-      ? contract.placement === "section"
+      ? contract.placement === "section" &&
+        (contract.entryOf === null || (page.type === "entry" && page.kind === contract.entryOf))
       : contract.placement === "item" &&
         listsFor(page, contracts, contract.type).some((candidate) =>
           sameList(candidate.list, list),
@@ -266,6 +271,8 @@ const fieldSummary = (field: Field, value: Json): string | undefined => {
     case "link":
     case "form":
     case "list":
+    case "collection":
+    case "number":
       return undefined;
   }
 };

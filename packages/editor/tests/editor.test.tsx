@@ -718,7 +718,7 @@ describe("editing structure", () => {
     await userEvent.click(page.getByRole("button", { name: "Add a section" }));
     const sections = await options();
     expect(sections).toContain("Hero");
-    for (const excluded of ["Feature", "Header", "Footer"])
+    for (const excluded of ["Feature", "Header", "Footer", "Post header"])
       expect(sections).not.toContain(excluded);
   });
 

@@ -1,8 +1,0 @@
-{
-  "variant": "list",
-  "surface": "default",
-  "props": {
-    "heading": "Latest news",
-    "intro": "New posts show up here as soon as they're published."
-  }
-}

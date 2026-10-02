@@ -1,5 +1,6 @@
 import type { FormDefinition } from "@repo/contracts/form";
 import type { BlockId, FormId, MediaId, MenuItemId, PageId } from "@repo/contracts/ids";
+import type { PostMeta } from "@repo/contracts/page";
 import type { FormRef, Link, MediaRef } from "@repo/contracts/references";
 import type { Surface } from "@repo/tokens";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
@@ -15,6 +16,7 @@ import {
 
 import { useBlockFrame } from "./block.tsx";
 import { type Field, fieldAt } from "./fields.ts";
+import { samplePosts } from "./placeholders.ts";
 import { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 import type { RichTextDocument } from "./rich-text.ts";
 
@@ -33,20 +35,25 @@ export interface ResolvedMenuItem {
   readonly children: ReadonlyArray<Omit<ResolvedMenuItem, "children">>;
 }
 
-export interface PostSummary {
+/** An entry of a collection, such as a blog's post, at its address. */
+export interface SiteEntry {
+  readonly id: PageId;
+  readonly href: string;
+  readonly meta: PostMeta;
+}
+
+/** A collection, at its address, with its entries in the order its kind lists them. */
+export interface SiteCollection {
   readonly id: PageId;
   readonly href: string;
   readonly title: string;
-  readonly excerpt: string;
-  readonly date: string;
-  readonly author: string;
-  readonly cover: MediaRef | undefined;
+  readonly entries: ReadonlyArray<SiteEntry>;
 }
 
 /**
  * What blocks read beyond their own props: the site's name and menus, its
- * posts, and what references point at. `sites` builds it from a snapshot and
- * the editor from the draft, with `siteData`.
+ * collections, the page being shown, and what references point at. `sites`
+ * builds it from a snapshot and the editor from the draft, with `siteData`.
  */
 export interface SiteData {
   readonly name: string;
@@ -62,8 +69,8 @@ export interface SiteData {
     readonly main: ReadonlyArray<ResolvedMenuItem>;
     readonly footer: ReadonlyArray<ResolvedMenuItem>;
   };
-  /** Newest first. */
-  readonly posts: ReadonlyArray<PostSummary>;
+  /** The site's collections by page, and the placeholder collection with its sample posts. */
+  readonly collections: ReadonlyMap<PageId, SiteCollection>;
   readonly media: (id: MediaId) => ResolvedMedia | undefined;
   readonly pagePath: (id: PageId) => string | undefined;
   readonly form: (id: FormId) => FormDefinition | undefined;
@@ -74,6 +81,12 @@ export interface SiteData {
   readonly preview: { readonly changed: ReadonlySet<BlockId> } | null;
   /** The form whose answers the visitor has just sent, which thanks them instead of asking again. */
   readonly sent: FormId | null;
+  /**
+   * The page being shown, and which page of a collection's entries it shows,
+   * counting from 1. Null where blocks show outside a page, such as a theme's
+   * preview.
+   */
+  readonly current: { readonly page: PageId; readonly number: number } | null;
 }
 
 const SiteDataContext = createContext<SiteData | null>(null);
@@ -95,8 +108,30 @@ export const useLogo = () => useSiteData().logo;
 /** A menu's items, with links resolved to addresses. */
 export const useMenu = (name: "main" | "footer") => useSiteData().menus[name];
 
-/** The site's posts, newest first. */
-export const usePosts = () => useSiteData().posts;
+/** A collection with its entries, or undefined when the site has no such collection. */
+export const useCollection = (id: PageId) => useSiteData().collections.get(id);
+
+/** The page being shown, and which page of a collection's entries, or null outside a page. */
+export const useCurrentPage = () => useSiteData().current;
+
+/**
+ * The entry being shown, or a sample post where blocks show outside an
+ * entry, such as in the block gallery. Blocks that show an entry's details
+ * can only be placed on entries.
+ */
+export const entryShown = (site: SiteData): SiteEntry => {
+  const { current } = site;
+  const entry =
+    current === null
+      ? undefined
+      : Array.from(site.collections.values())
+          .flatMap((collection) => collection.entries)
+          .find((candidate) => candidate.id === current.page);
+  return entry ?? samplePosts[0];
+};
+
+/** The entry being shown, or a sample post outside one. */
+export const useEntry = () => entryShown(useSiteData());
 
 /** Where a link points: a page's current address, or the external address itself. */
 export const useHref = (link: Link) => {
@@ -283,19 +318,30 @@ export const Media = (options: MediaProps) => {
         priority={options.priority}
       />
     );
-  return (
-    <img
-      src={file.src}
-      srcSet={file.srcSet}
-      alt={options.value.alt ?? ""}
-      width={file.width}
-      height={file.height}
-      sizes={options.sizes}
-      loading={options.priority === true ? "eager" : "lazy"}
-      decoding="async"
-      className={options.className}
-    />
-  );
+  return imageElement(file, options);
+};
+
+const imageElement = (file: ResolvedMedia, options: Omit<MediaProps, "field">): ReactElement => (
+  <img
+    src={file.src}
+    srcSet={file.srcSet}
+    alt={options.value.alt ?? ""}
+    width={file.width}
+    height={file.height}
+    sizes={options.sizes}
+    loading={options.priority === true ? "eager" : "lazy"}
+    decoding="async"
+    className={options.className}
+  />
+);
+
+/**
+ * An image the block shows from the site rather than from its own fields,
+ * such as a post's cover. It's changed where the site keeps it.
+ */
+export const SiteImage = (options: Omit<MediaProps, "field">) => {
+  const file = useSiteData().media(options.value.id);
+  return file === undefined ? null : imageElement(file, options);
 };
 
 export const Cta = (options: CtaProps) => {

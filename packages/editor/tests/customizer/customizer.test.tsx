@@ -53,12 +53,27 @@ const open = async (type: BlockType) => {
   return { canvas, find, point, parts };
 };
 
+const types = Array.from(presentations.keys());
+const fieldless = (type: BlockType) =>
+  Object.keys(definitions.get(type)?.fields ?? {}).length === 0;
+
 describe("every block", () => {
-  test.each(Array.from(presentations.keys()))("%s has a page to try it on", async (type) => {
-    const { canvas, parts } = await open(type);
-    await expect.element(parts).toBeVisible();
-    expect(canvas().querySelector("[data-pakshi-field], [data-pakshi-add]")).not.toBeNull();
-  });
+  test.each(types.filter((type) => !fieldless(type)))(
+    "%s has a page to try it on",
+    async (type) => {
+      const { canvas, parts } = await open(type);
+      await expect.element(parts).toBeVisible();
+      expect(canvas().querySelector("[data-pakshi-field], [data-pakshi-add]")).not.toBeNull();
+    },
+  );
+
+  test.each(types.filter(fieldless))(
+    "%s, with no parts of its own, says what it shows from the site",
+    async (type) => {
+      const { parts } = await open(type);
+      await expect.element(parts.getByText("From your site")).toBeVisible();
+    },
+  );
 });
 
 describe("a list", () => {

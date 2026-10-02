@@ -35,13 +35,19 @@ if (header === undefined || footer === undefined)
 
 /**
  * A draft whose home page holds every section fixture of each block's first
- * version, under a header and footer from their fixtures.
+ * version, under a header and footer from their fixtures, but for those of
+ * sections that go only on posts.
  */
 export const fixtureDraft = draftOf({
   lockfile,
   header,
   footer,
-  sections: placed("section").map(fixtureTree),
+  sections: placed("section")
+    .filter((entry) => {
+      const definition = definitionsOf.get(entry.type);
+      return definition?.placement === "section" && definition.entryOf === null;
+    })
+    .map(fixtureTree),
 });
 
 export const definitions = definitionsOf;

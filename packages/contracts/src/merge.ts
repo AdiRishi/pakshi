@@ -30,6 +30,7 @@ export const ValueKind = Schema.Literals([
   "link",
   "form",
   "list",
+  "number",
   "choice",
   "address",
   "tags",

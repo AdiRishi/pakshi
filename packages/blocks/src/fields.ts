@@ -1,5 +1,6 @@
 import { ItemId } from "@repo/contracts/ids";
-import { FormRef, Link, MediaRef } from "@repo/contracts/references";
+import type { CollectionKind } from "@repo/contracts/page";
+import { FormRef, Link, MediaRef, PageRef } from "@repo/contracts/references";
 import { Schema } from "effect";
 
 import {
@@ -54,6 +55,17 @@ export interface CtaField
   readonly parts: { readonly label: TextField; readonly link: LinkField };
 }
 
+/** A collection of one kind, such as one of the site's blogs, whose entries the block lists. */
+export interface CollectionField extends FieldBase<"collection">, Schemas<PageRef> {
+  readonly collectionKind: CollectionKind;
+}
+
+/** A whole number from `min` to `max`. */
+export interface NumberField extends FieldBase<"number">, Schemas<number> {
+  readonly min: number;
+  readonly max: number;
+}
+
 /** The fields a list item can have. Items don't hold lists, because documents nest two levels at most. */
 type ItemFieldKind = TextField | RichTextField | LinkField | FormField | MediaField | CtaField;
 
@@ -67,7 +79,12 @@ export interface ListField<Item extends ItemFields = ItemFields> extends FieldBa
   readonly complete: Schema.Decoder<ReadonlyArray<ListItem<Item>>>;
 }
 
-type RequiredField = ItemFieldKind | ListField;
+/*
+ * Only a block's own fields may be a collection or a number. They set what
+ * the whole block shows, and the checks on where a collection points read
+ * only a block's own fields.
+ */
+type RequiredField = ItemFieldKind | ListField | CollectionField | NumberField;
 
 export type Field = RequiredField | Optional<RequiredField>;
 
@@ -185,6 +202,42 @@ export const cta = (options: { readonly title: string }): CtaField => {
     parts: { label, link: target },
     draft: Schema.Struct({ label: label.draft, link: target.draft }),
     complete: Schema.Struct({ label: label.complete, link: target.complete }),
+  };
+};
+
+/** One of the site's collections of this kind, such as a blog whose posts the block lists. */
+export const collection = (options: {
+  readonly title: string;
+  readonly kind: CollectionKind;
+}): CollectionField => ({
+  kind: "collection",
+  title: options.title,
+  optional: false,
+  collectionKind: options.kind,
+  draft: PageRef,
+  complete: PageRef,
+});
+
+/** A whole number from `min` to `max`, such as how many posts to show. */
+export const number = (options: {
+  readonly title: string;
+  readonly min: number;
+  readonly max: number;
+}): NumberField => {
+  const schema = Schema.Int.check(
+    Schema.isBetween(
+      { minimum: options.min, maximum: options.max },
+      { message: `Use a whole number from ${options.min} to ${options.max}` },
+    ),
+  );
+  return {
+    kind: "number",
+    title: options.title,
+    optional: false,
+    min: options.min,
+    max: options.max,
+    draft: schema,
+    complete: schema,
   };
 };
 

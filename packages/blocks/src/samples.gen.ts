@@ -14,6 +14,7 @@ import hero from "./hero/sample.ts";
 import imageCaption from "./image-caption/sample.ts";
 import location from "./location/sample.ts";
 import logoStrip from "./logo-strip/sample.ts";
+import postHeader from "./post-header/sample.ts";
 import postList from "./post-list/sample.ts";
 import quote from "./quote/sample.ts";
 import richText from "./rich-text/sample.ts";
@@ -39,6 +40,7 @@ export const samples = {
   "image-caption": imageCaption,
   "location": location,
   "logo-strip": logoStrip,
+  "post-header": postHeader,
   "post-list": postList,
   "quote": quote,
   "rich-text": richText,

@@ -1,4 +1,5 @@
 import { BlockType } from "@repo/contracts/ids";
+import type { CollectionKind } from "@repo/contracts/page";
 import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 
@@ -44,6 +45,11 @@ export type Placement =
       readonly slots: Readonly<Record<string, SlotSpec>>;
       /** Interactive blocks hydrate on the site, so they must be top-level sections. */
       readonly interactive: boolean;
+      /**
+       * The kind of entry the section belongs on, such as a blog's posts, when
+       * it shows the entry's own details; null when it goes on any page.
+       */
+      readonly entryOf: CollectionKind | null;
       readonly placeholder: BlockFixture;
     }
   | { readonly placement: "item"; readonly placeholder: BlockFixture }
