@@ -22,6 +22,7 @@ import quote from "./quote/presentation.ts";
 import richText from "./rich-text/presentation.ts";
 import split from "./split/presentation.ts";
 import stats from "./stats/presentation.ts";
+import steps from "./steps/presentation.ts";
 import teamGrid from "./team-grid/presentation.ts";
 import teamMember from "./team-member/presentation.ts";
 import testimonial from "./testimonial/presentation.ts";
@@ -52,6 +53,7 @@ export const presentations = {
   "rich-text": richText,
   "split": split,
   "stats": stats,
+  "steps": steps,
   "team-grid": teamGrid,
   "team-member": teamMember,
   "testimonial": testimonial,

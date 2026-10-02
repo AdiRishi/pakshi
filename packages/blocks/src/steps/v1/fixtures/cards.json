@@ -1,0 +1,30 @@
+{
+  "variant": "cards",
+  "surface": "inverse",
+  "props": {
+    "heading": "What happens on launch day",
+    "intro": "Friday is the day the boats meet the water.",
+    "steps": [
+      {
+        "id": "it_morning",
+        "title": "Finishing touches",
+        "text": "A last coat of varnish and a check from the yard manager.",
+        "icon": "brush"
+      },
+      {
+        "id": "it_slipway",
+        "title": "Down the slipway",
+        "text": "Each group carries its boat to the water at high tide.",
+        "icon": "waves"
+      },
+      {
+        "id": "it_sail",
+        "title": "First sail",
+        "text": "Students sail their own boats round the harbour, with families on the quay.",
+        "icon": "sailboat"
+      }
+    ],
+    "actions": [],
+    "align": "start"
+  }
+}

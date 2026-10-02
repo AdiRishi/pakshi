@@ -37,6 +37,7 @@ export const registry: Readonly<
   "rich-text@1": () => import("./rich-text/v1/index.tsx"),
   "split@1": () => import("./split/v1/index.tsx"),
   "stats@1": () => import("./stats/v1/index.tsx"),
+  "steps@1": () => import("./steps/v1/index.tsx"),
   "team-grid@1": () => import("./team-grid/v1/index.tsx"),
   "team-member@1": () => import("./team-member/v1/index.tsx"),
   "testimonial@1": () => import("./testimonial/v1/index.tsx"),

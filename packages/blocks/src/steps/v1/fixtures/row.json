@@ -1,0 +1,48 @@
+{
+  "variant": "row",
+  "surface": "default",
+  "props": {
+    "kicker": "How it works",
+    "heading": "From first plank to first sail.",
+    "headingRest": "Your week in four steps.",
+    "steps": [
+      {
+        "id": "it_stepBook",
+        "title": "Book a place",
+        "text": "Choose a week and pay a deposit. Bursary places are free.",
+        "icon": "ticket"
+      },
+      {
+        "id": "it_stepMeet",
+        "title": "Meet your group",
+        "text": "Monday morning in the boatshed: tools, safety and a cup of tea.",
+        "icon": "users"
+      },
+      {
+        "id": "it_stepBuild",
+        "title": "Build your boat",
+        "text": "Three days of planking, fastening and fitting out, with a mentor beside you.",
+        "icon": "hammer"
+      },
+      {
+        "id": "it_stepLaunch",
+        "title": "Launch it",
+        "text": "On Friday the boats go in the water, and families come down to watch.",
+        "icon": "sailboat"
+      }
+    ],
+    "actions": [
+      {
+        "id": "it_book",
+        "button": {
+          "label": "Book a place",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "align": "start"
+  }
+}
