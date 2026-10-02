@@ -1,0 +1,66 @@
+{
+  "variant": "sidebar",
+  "surface": "inverse",
+  "props": {
+    "kicker": "Our story",
+    "heading": "Why we teach at a working harbour.",
+    "headingRest": "The best classroom we know.",
+    "intro": "Boats have been built on North Quay for three hundred years. We think that's the place to learn.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "A working harbour teaches things a classroom can't. The tide sets the timetable. The weather decides what gets done. And the people mending nets and hauling engines next door are glad to answer a question."
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "attrs": {
+            "level": 2
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Learning from the yard"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Our mentors are shipwrights, riggers and sailmakers who work on the quay all year. They teach the way they were taught: by doing the job alongside you, and showing you the mistakes before you make them."
+            }
+          ]
+        },
+        {
+          "type": "heading",
+          "attrs": {
+            "level": 2
+          },
+          "content": [
+            {
+              "type": "text",
+              "text": "Leaving something behind"
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Every boat built at the summer school goes on to sail. Some are raffled for the harbour trust, some go to the rowing club, and a few go home with the families who built them."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

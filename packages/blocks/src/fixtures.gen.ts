@@ -85,6 +85,11 @@ import quote2splitEnd from "./quote/v2/fixtures/split-end.json" with { type: "js
 import quote2split from "./quote/v2/fixtures/split.json" with { type: "json" };
 import richText1narrow from "./rich-text/v1/fixtures/narrow.json" with { type: "json" };
 import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with { type: "json" };
+import richText2articlePlain from "./rich-text/v2/fixtures/article-plain.json" with { type: "json" };
+import richText2article from "./rich-text/v2/fixtures/article.json" with { type: "json" };
+import richText2placeholder from "./rich-text/v2/fixtures/placeholder.json" with { type: "json" };
+import richText2sidebarTint from "./rich-text/v2/fixtures/sidebar-tint.json" with { type: "json" };
+import richText2sidebar from "./rich-text/v2/fixtures/sidebar.json" with { type: "json" };
 import split2bleedInset from "./split/v2/fixtures/bleed-inset.json" with { type: "json" };
 import split2bleed from "./split/v2/fixtures/bleed.json" with { type: "json" };
 import split2placeholder from "./split/v2/fixtures/placeholder.json" with { type: "json" };
@@ -209,6 +214,11 @@ export const fixtureFiles = [
   { type: "quote", version: 2, name: "split", fixture: quote2split },
   { type: "rich-text", version: 1, name: "narrow", fixture: richText1narrow },
   { type: "rich-text", version: 1, name: "placeholder", fixture: richText1placeholder },
+  { type: "rich-text", version: 2, name: "article-plain", fixture: richText2articlePlain },
+  { type: "rich-text", version: 2, name: "article", fixture: richText2article },
+  { type: "rich-text", version: 2, name: "placeholder", fixture: richText2placeholder },
+  { type: "rich-text", version: 2, name: "sidebar-tint", fixture: richText2sidebarTint },
+  { type: "rich-text", version: 2, name: "sidebar", fixture: richText2sidebar },
   { type: "split", version: 2, name: "bleed-inset", fixture: split2bleedInset },
   { type: "split", version: 2, name: "bleed", fixture: split2bleed },
   { type: "split", version: 2, name: "placeholder", fixture: split2placeholder },

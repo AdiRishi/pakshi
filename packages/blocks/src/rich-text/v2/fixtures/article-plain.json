@@ -1,0 +1,38 @@
+{
+  "variant": "article",
+  "surface": "muted",
+  "props": {
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "The summer school began in 2009 with six students, one borrowed boatshed and a dinghy that took the whole summer to finish. It still sails from North Quay every Saturday."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Since then more than two thousand people have learned to build and sail with us. Some came back as mentors. A few now run boatyards of their own."
+            }
+          ]
+        },
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "We're still a small charity, run by the people who teach here. Every fee goes back into the boats, the tools and the bursaries that keep places open to anyone who wants one."
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

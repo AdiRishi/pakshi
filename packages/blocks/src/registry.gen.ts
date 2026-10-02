@@ -27,6 +27,7 @@ export const registry: Readonly<
   "pricing-plan@1": () => import("./pricing-plan/v1/index.tsx"),
   "quote@2": () => import("./quote/v2/index.tsx"),
   "rich-text@1": () => import("./rich-text/v1/index.tsx"),
+  "rich-text@2": () => import("./rich-text/v2/index.tsx"),
   "split@2": () => import("./split/v2/index.tsx"),
   "statement@1": () => import("./statement/v1/index.tsx"),
   "stats@2": () => import("./stats/v2/index.tsx"),
