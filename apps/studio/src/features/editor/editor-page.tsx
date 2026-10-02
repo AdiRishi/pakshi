@@ -1,6 +1,6 @@
-import { loadBlocks } from "@repo/blocks";
 import type { DraftId, PageId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
+import { pageName } from "@repo/contracts/page";
 import type { OpenedDraft, SiteAbilities } from "@repo/contracts/studio";
 import {
   EditorCanvas,
@@ -13,10 +13,10 @@ import {
   useAccessEnded,
   useBehind,
   useDraftClosure,
+  useDraftView,
   useEditorStatus,
   useOutdated,
   usePage,
-  usePageTitle,
   useShowBlock,
   useToolbarCommands,
 } from "@repo/editor";
@@ -42,7 +42,7 @@ import { Button, buttonVariants } from "@repo/ui/components/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import {
   CircleAlertIcon,
@@ -63,6 +63,7 @@ import { Logo } from "@/components/logo";
 import { ChatPanel } from "@/features/agent/chat-panel";
 import { Conversation } from "@/features/agent/conversation";
 import { standing } from "@/features/approvals/describe";
+import { blocksQuery } from "@/features/blocks/blocks-query";
 import { ChecksButton } from "@/features/checks/checks-button";
 import type { ShownBlock } from "@/features/checks/issues";
 import { DraftActions } from "@/features/drafts/draft-actions";
@@ -78,13 +79,6 @@ import siteCss from "@repo/blocks/site.css?url";
 const widths = { desktop: null, tablet: 768, mobile: 375 } as const;
 type Width = keyof typeof widths;
 const widthNames = ["desktop", "tablet", "mobile"] as const satisfies ReadonlyArray<Width>;
-
-const blocksQuery = (lockfile: Parameters<typeof loadBlocks>[0]) =>
-  queryOptions({
-    queryKey: ["blocks", lockfile],
-    queryFn: () => loadBlocks(lockfile),
-    staleTime: Number.POSITIVE_INFINITY,
-  });
 
 const showNotice = (notice: Notice) =>
   toast.warning(notice.title, { description: notice.description });
@@ -113,7 +107,10 @@ type OpenedReady = Extract<OpenedDraft, { _tag: "Ready" }>;
 
 function Header(props: DraftContext & { readonly checks: ReactNode }) {
   const status = useEditorStatus();
-  const title = usePageTitle();
+  const view = useDraftView();
+  const page = view.pages[usePage()];
+  const title = page === undefined || page.meta.title === "" ? "Untitled" : page.meta.title;
+  const collection = page?.type === "entry" ? (view.pages[page.collection] ?? null) : null;
   const behind = useBehind();
   const closure = useDraftClosure();
   const save = saveCopy[status];
@@ -146,8 +143,29 @@ function Header(props: DraftContext & { readonly checks: ReactNode }) {
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
+          {collection !== null && (
+            <>
+              <BreadcrumbItem>
+                <BreadcrumbLink
+                  render={
+                    <Link
+                      to="/sites/$siteId/drafts/$draftId/pages/$pageId"
+                      params={{
+                        siteId: props.site.id,
+                        draftId: props.draft.id,
+                        pageId: collection.id,
+                      }}
+                    />
+                  }
+                >
+                  {pageName(collection)}
+                </BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+            </>
+          )}
           <BreadcrumbItem>
-            <BreadcrumbPage>{title || "Untitled"}</BreadcrumbPage>
+            <BreadcrumbPage>{title}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>

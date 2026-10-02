@@ -1,4 +1,5 @@
-import type { Activity, Part, SitePlan, Turn } from "@repo/contracts/agent";
+import { recipeById } from "@repo/blocks/recipes";
+import type { Activity, Part, PlannedPage, SitePlan, Turn } from "@repo/contracts/agent";
 import { useBlockTitle } from "@repo/editor";
 import { Badge } from "@repo/ui/components/badge";
 import { Button } from "@repo/ui/components/button";
@@ -103,12 +104,54 @@ function Question(props: {
   );
 }
 
+/** What a planned page's recipe makes: a page, a blog or a post. */
+const makesOf = (page: PlannedPage) => recipeById(page.recipe)?.makes.type ?? "page";
+
+const parentOf = (path: string) => path.slice(0, path.lastIndexOf("/")) || "/";
+
+/** A plan's pages in its order, with each planned post under the planned blog it goes in. */
+const plannedBranches = (pages: ReadonlyArray<PlannedPage>) => {
+  const blogs = new Set(
+    pages.filter((page) => makesOf(page) === "collection").map((page) => page.path),
+  );
+  const inPlannedBlog = (page: PlannedPage) =>
+    makesOf(page) === "entry" && blogs.has(parentOf(page.path));
+  return pages
+    .filter((page) => !inPlannedBlog(page))
+    .map((page) => ({
+      page,
+      posts:
+        makesOf(page) === "collection"
+          ? pages.filter((post) => inPlannedBlog(post) && parentOf(post.path) === page.path)
+          : [],
+    }));
+};
+
+function PlannedSections(props: { readonly page: PlannedPage }) {
+  const blockTitle = useBlockTitle();
+  return (
+    <>
+      <p className="flex items-baseline gap-1.5 text-sm">
+        <span className="font-semibold">{props.page.title}</span>
+        <span className="text-xs text-muted-foreground">{props.page.path}</span>
+      </p>
+      <ol className="flex flex-col gap-0.5 text-xs text-muted-foreground">
+        {props.page.sections.map((section, index) => (
+          <li key={`${section.type}-${index}`}>
+            <span className="font-medium text-foreground">{blockTitle(section.type)}</span>:{" "}
+            {section.purpose}
+          </li>
+        ))}
+      </ol>
+    </>
+  );
+}
+
 function PlanCard(props: {
   readonly plan: SitePlan;
   readonly status: "proposed" | "building" | "replaced";
   readonly onBuild: () => void;
 }) {
-  const blockTitle = useBlockTitle();
   const sections = props.plan.pages.reduce((count, page) => count + page.sections.length, 0);
   return (
     <section
@@ -133,20 +176,18 @@ function PlanCard(props: {
       </header>
       {props.plan.summary !== "" && <p className="text-sm">{props.plan.summary}</p>}
       <ol className="flex flex-col gap-2.5">
-        {props.plan.pages.map((page) => (
+        {plannedBranches(props.plan.pages).map(({ page, posts }) => (
           <li key={page.path} className="flex flex-col gap-1 rounded-lg bg-muted/60 px-2.5 py-2">
-            <p className="flex items-baseline gap-1.5 text-sm">
-              <span className="font-semibold">{page.title}</span>
-              <span className="text-xs text-muted-foreground">{page.path}</span>
-            </p>
-            <ol className="flex flex-col gap-0.5 text-xs text-muted-foreground">
-              {page.sections.map((section, index) => (
-                <li key={`${section.type}-${index}`}>
-                  <span className="font-medium text-foreground">{blockTitle(section.type)}</span>:{" "}
-                  {section.purpose}
-                </li>
-              ))}
-            </ol>
+            <PlannedSections page={page} />
+            {posts.length > 0 && (
+              <ol aria-label={`Posts in ${page.title}`} className="mt-1.5 flex flex-col gap-2">
+                {posts.map((post) => (
+                  <li key={post.path} className="flex flex-col gap-1 border-l-2 pl-2.5">
+                    <PlannedSections page={post} />
+                  </li>
+                ))}
+              </ol>
+            )}
           </li>
         ))}
       </ol>
