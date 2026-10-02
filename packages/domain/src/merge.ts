@@ -19,12 +19,13 @@ import {
   type BlockInstance,
   type PageDocument,
   PageMeta,
+  pageName,
   type PagePath,
   PostMeta,
 } from "@repo/contracts/page";
 import type { Link } from "@repo/contracts/references";
 import { MenuItem, type SiteParts } from "@repo/contracts/site";
-import type { Lockfile } from "@repo/contracts/snapshot";
+import { listingsOf, type Lockfile } from "@repo/contracts/snapshot";
 import { Equal, Option, Predicate, Schema } from "effect";
 import type { Json } from "effect/Schema";
 
@@ -41,7 +42,9 @@ import type { BlockContracts } from "./document.ts";
  * first. Three cases need a person: one value changed differently on both
  * sides, a block or page changed on one side and removed on the other, and
  * the same blocks reordered differently on both sides. Two pages that end up
- * with one address are a conflict too, so the merged draft stays valid.
+ * with one address are a conflict too, so the merged draft stays valid. A
+ * collection one side removed is decided together with its entries, because
+ * an entry can't outlive its collection.
  *
  * Before comparing, every side moves to the newest version of each block any
  * side uses, so edits are always compared in the same shape.
@@ -485,7 +488,8 @@ const metaFields = {
 
 const metaOf = (page: PageDocument | undefined): Readonly<Record<string, Json>> => page?.meta ?? {};
 
-const pageTitle = (page: PageDocument) => page.meta.title || page.path;
+/** A page's own part of its address: a page's or collection's path, or an entry's slug. */
+const ownAddress = (page: PageDocument) => (page.type === "entry" ? page.slug : page.path);
 
 /** The page as the three sides have it; the base is missing when both sides added it. */
 interface PageSides {
@@ -494,10 +498,14 @@ interface PageSides {
   readonly live: PageDocument;
 }
 
-/** A page both sides kept, merged three ways. */
+/**
+ * A page both sides kept, merged three ways. An entry's address is its slug,
+ * so a collection that moves on one side takes the other side's new entries
+ * with it.
+ */
 const mergePage = (merge: Merge, sides: PageSides): PageDocument => {
   const { draft, live } = sides;
-  const place: Place = { target: draft.id, title: pageTitle(draft) };
+  const place: Place = { target: draft.id, title: pageName(draft) };
   const spot = (name: string, field: string, kind: ValueKind): ValueSpot => ({
     key: key(name, draft.id),
     place,
@@ -505,10 +513,10 @@ const mergePage = (merge: Merge, sides: PageSides): PageDocument => {
     field,
     kind,
   });
-  const path = merge.value(spot("path", "Address", "address"), {
-    base: sides.base?.path ?? draft.path,
-    draft: draft.path,
-    live: live.path,
+  const address = merge.value(spot("path", "Address", "address"), {
+    base: ownAddress(sides.base ?? draft),
+    draft: ownAddress(draft),
+    live: ownAddress(live),
   });
   const status = merge.value(spot("status", "Published", "choice"), {
     base: sides.base?.status,
@@ -525,11 +533,16 @@ const mergePage = (merge: Merge, sides: PageSides): PageDocument => {
   }
   const { root: order, blocks } = mergeBlocks(merge, sides, place);
   const { status: _, ...rest } = draft;
-  const common = { ...rest, path, root: order, blocks };
-  const withStatus = status === undefined ? common : { ...common, status };
-  return withStatus.type === "post"
-    ? { ...withStatus, meta: Schema.decodeUnknownSync(PostMeta)(meta) }
-    : { ...withStatus, meta: Schema.decodeUnknownSync(PageMeta)(meta) };
+  const common = { ...rest, root: order, blocks };
+  const page = status === undefined ? common : { ...common, status };
+  // The kind of page, its collection and its kind never change, so they come from the draft.
+  switch (page.type) {
+    case "entry":
+      return { ...page, slug: address, meta: Schema.decodeUnknownSync(PostMeta)(meta) };
+    case "collection":
+    case "page":
+      return { ...page, path: address, meta: Schema.decodeUnknownSync(PageMeta)(meta) };
+  }
 };
 
 const sideNames = ["base", "draft", "live"] as const;
@@ -681,22 +694,80 @@ const reordered = (
   };
 };
 
+/** Removes a page from merged pages, with the entries it holds when it's a collection. */
+const removePage = (pages: Record<PageId, PageDocument>, id: PageId) => {
+  for (const page of Object.values(pages))
+    if (page.id === id || (page.type === "entry" && page.collection === id)) delete pages[page.id];
+};
+
+const otherSide = (side: Side): Side => (side === "draft" ? "live" : "draft");
+
+/**
+ * Whether each collection that one side removed and the other kept stays,
+ * with the side that kept it. It goes quietly when the keeping side left it
+ * and its entries as they were; otherwise someone decides for the collection
+ * and its entries together.
+ */
+const decideCollections = (merge: Merge, sides: Sides<SiteContent["pages"]>) => {
+  const decided = new Map<
+    PageId,
+    { readonly keep: boolean; readonly keptOn: Side; readonly untouched: boolean }
+  >();
+  for (const base of Object.values(sides.base)) {
+    if (base.type !== "collection") continue;
+    const [draft, live] = [sides.draft[base.id], sides.live[base.id]];
+    const kept = draft ?? live;
+    if (kept === undefined || (draft !== undefined && live !== undefined)) continue;
+    const keptOn: Side = draft === undefined ? "live" : "draft";
+    const untouched =
+      same(base, kept) &&
+      Object.values(sides[keptOn]).every(
+        (page) =>
+          page.type !== "entry" || page.collection !== base.id || same(sides.base[page.id], page),
+      );
+    const keep =
+      !untouched &&
+      merge.conflict({
+        _tag: "Removed",
+        key: key("removed", base.id),
+        place: { target: base.id, title: pageName(kept) },
+        block: null,
+        removedOn: otherSide(keptOn),
+      }) === keptOn;
+    decided.set(base.id, { keep, keptOn, untouched });
+  }
+  return decided;
+};
+
 /** Every page, kept, removed or merged three ways. */
 const mergePages = (merge: Merge, sides: Sides<SiteContent["pages"]>): SiteContent["pages"] => {
   const pages: Record<PageId, PageDocument> = {};
+  const collections = decideCollections(merge, sides);
   const ids = new Set(
     sideNames.flatMap((side) => Object.values(sides[side]).map((page) => page.id)),
   );
   for (const id of ids) {
     const [base, draft, live] = sideNames.map((side) => sides[side][id]);
+    const kept = draft ?? live;
+    const decided =
+      kept === undefined
+        ? undefined
+        : collections.get(kept.type === "entry" ? kept.collection : kept.id);
+    if (decided !== undefined) {
+      const page = sides[decided.keptOn][id];
+      if (page === undefined) continue;
+      if (decided.keep) pages[id] = page;
+      else if (decided.untouched && decided.keptOn === "draft")
+        merge.changes.push({ _tag: "PageRemoved", place: { target: id, title: pageName(page) } });
+      continue;
+    }
     if (draft !== undefined && live !== undefined) {
       pages[id] = mergePage(merge, { base, draft, live });
       continue;
     }
-    const kept = draft ?? live;
     if (kept === undefined) continue;
     const keptOn: Side = draft === undefined ? "live" : "draft";
-    const place: Place = { target: id, title: pageTitle(kept) };
+    const place: Place = { target: id, title: pageName(kept) };
     if (base === undefined) {
       pages[id] = kept;
       if (keptOn === "live") merge.changes.push({ _tag: "PageAdded", place });
@@ -708,26 +779,35 @@ const mergePages = (merge: Merge, sides: Sides<SiteContent["pages"]>): SiteConte
         key: key("removed", id),
         place,
         block: null,
-        removedOn: keptOn === "draft" ? "live" : "draft",
+        removedOn: otherSide(keptOn),
       }) === keptOn
     )
       pages[id] = kept;
   }
-  // Each side's addresses are unique, so at most one page from each shares one.
-  for (const [path, sharing] of Map.groupBy(Object.values(pages), (page) => page.path)) {
-    const livePage = sharing.find((page) => sides.live[page.id]?.path === path);
-    const draftPage = sharing.find((page) => page !== livePage);
-    if (sharing.length < 2 || livePage === undefined || draftPage === undefined) continue;
+  // Each side's addresses are unique, but an entry takes its slug and its
+  // collection's address from wherever they merged from, so two pages can
+  // end up sharing one. Keeping one side removes the other's page.
+  const liveAddresses = new Map(listingsOf(sides.live).map((page) => [page.id, page.path]));
+  for (;;) {
+    const clash = Array.from(Map.groupBy(listingsOf(pages), (page) => page.path)).find(
+      ([, sharing]) => sharing.length > 1,
+    );
+    if (clash === undefined) return pages;
+    const [path, sharing] = clash;
+    const rank = (page: (typeof sharing)[number]) =>
+      liveAddresses.get(page.id) === path ? 0 : page.id in sides.live ? 1 : 2;
+    const [livePage, draftPage] = sharing.toSorted((a, b) => rank(a) - rank(b));
+    if (livePage === undefined || draftPage === undefined)
+      throw new Error(`${path} is shared, so it has two pages.`);
     const side = merge.conflict({
       _tag: "Address",
       key: key("address", path),
       path,
-      draft: { id: draftPage.id, title: pageTitle(draftPage) },
-      live: { id: livePage.id, title: pageTitle(livePage) },
+      draft: { id: draftPage.id, title: pageName(draftPage) },
+      live: { id: livePage.id, title: pageName(livePage) },
     });
-    delete pages[side === "draft" ? livePage.id : draftPage.id];
+    removePage(pages, side === "draft" ? livePage.id : draftPage.id);
   }
-  return pages;
 };
 
 // The site ---------------------------------------------------------------------------

@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { noIdentity } from "@repo/contracts/brand";
 import { BlockId, BlockType, ItemId, MediaId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
 import type { Json } from "effect/Schema";
 import { renderToStaticMarkup } from "react-dom/server";
@@ -34,6 +35,7 @@ const load = (type: string, version: number) => loadBlock(type, { [type]: versio
 
 const site = siteData({
   ...fixtureSite,
+  pages: listingsOf(fixtureSite.pages),
   identity: noIdentity,
   media: (id) => {
     const file = fixtureSite.media[id];
@@ -388,6 +390,7 @@ describe("placeholders", () => {
   test("placeholder images and the placeholder form resolve on every site", () => {
     const bare = siteData({
       ...fixtureSite,
+      pages: listingsOf(fixtureSite.pages),
       identity: noIdentity,
       forms: {},
       media: () => undefined,

@@ -3,6 +3,7 @@ import { loadBlocks } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { Conflict } from "@repo/contracts/merge";
+import { pageName } from "@repo/contracts/page";
 import { objectKeys } from "@repo/contracts/snapshot";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Option, Schema } from "effect";
@@ -65,7 +66,7 @@ const placement = (draft: Draft, contractTitle: (type: string) => string, block:
     `a ${contractTitle(instance.type)} section`,
     page === undefined
       ? "in the site's header or footer"
-      : `on the page "${page.meta.title || page.path}"`,
+      : `on the page "${pageName(page)}"`,
     isString(heading) && heading !== "" ? `headed "${heading}"` : "",
   ]
     .filter((part) => part !== "")

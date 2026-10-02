@@ -1,5 +1,6 @@
 import { FormDefinition, type FormField } from "@repo/contracts/form";
 import { FormFieldId, FormId, type PageId, randomId } from "@repo/contracts/ids";
+import { pageName } from "@repo/contracts/page";
 import { Button } from "@repo/ui/components/button";
 import {
   Field,
@@ -266,7 +267,7 @@ export function FormEditor(props: { readonly form: FormDefinition }) {
   const pages = useEditorState((state) =>
     Object.values(state.view.pages).map((page) => ({
       id: page.id,
-      title: page.meta.title || page.path,
+      title: pageName(page),
     })),
   );
   const [problems, setProblems] = useState<ReadonlyArray<string>>([]);

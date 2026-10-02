@@ -45,7 +45,7 @@ it.live(
 
       const live = yield* priya.siteOverview({ site });
       expect(live.live.id).toBe(release.id);
-      expect(live.home?.page?.path).toBe("/");
+      expect(live.home?.page).toMatchObject({ path: "/" });
       expect(live.addresses.own).toBe(`http://${domain}`);
       expect(live.editing?.openDrafts).toBe(0);
     }),

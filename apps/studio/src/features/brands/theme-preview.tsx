@@ -2,6 +2,7 @@ import { galleryBlocks, latestLockfile, loadBlocks, renderTree, siteData } from 
 import { blockFixtures, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
 import type { BrandIdentity } from "@repo/contracts/brand";
 import type { BlockType, BrandId } from "@repo/contracts/ids";
+import { listingsOf } from "@repo/contracts/snapshot";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { ScaledSiteFrame } from "@repo/editor";
 import type { ColorScheme, ResolvedTheme } from "@repo/tokens";
@@ -70,7 +71,7 @@ export function ThemePreview(props: {
       settings: { name: props.brand.name, sharingImage: null },
       identity: props.identity,
       menus: fixtureSite.menus,
-      pages: fixtureSite.pages,
+      pages: listingsOf(fixtureSite.pages),
       forms: fixtureSite.forms,
       media: (id) => {
         const file = files.get(id);

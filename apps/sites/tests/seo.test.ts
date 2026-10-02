@@ -6,7 +6,7 @@ import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { blogFeed, pageMeta, redirectFor, sitemap } from "../src/lib/seo.ts";
+import { pageMeta, redirectFor, sitemap } from "../src/lib/seo.ts";
 
 const origin = "https://www.northbanklibraries.org";
 
@@ -55,9 +55,12 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
     listing("pg_home", "/"),
     listing("pg_borrow", "/borrow"),
     listing("pg_staff", "/staff", { noindex: true }),
+    { ...listing("pg_events", "/events"), type: "collection" as const, kind: "blog" as const },
     {
-      ...listing("pg_talks", "/blog/author-talks"),
-      type: "post" as const,
+      ...listing("pg_talks", "/events/author-talks"),
+      type: "entry" as const,
+      kind: "blog" as const,
+      collection: "pg_events",
       meta: {
         title: "Author talks",
         description: "",
@@ -85,10 +88,17 @@ const page = (props: Schema.JsonObject) =>
     },
   });
 
+const listed = (id: string) => {
+  const found = manifest.pages.find((candidate) => candidate.id === id);
+  if (found === undefined) throw new Error(`The manifest lists no ${id}.`);
+  return found;
+};
+
 describe("a page's sharing card", () => {
   test("shows the first image in its first section, or else the site's default", () => {
     const withHero = pageMeta(
       page({ heading: "Borrow", image: { $ref: "media", id: "med_shelves", alt: "Shelves" } }),
+      listed("pg_borrow"),
       manifest,
       origin,
     );
@@ -98,9 +108,35 @@ describe("a page's sharing card", () => {
       height: 900,
       alt: "Shelves",
     });
-    expect(pageMeta(page({ heading: "Borrow" }), manifest, origin).image?.alt).toBe(
-      "The reading room",
-    );
+    expect(
+      pageMeta(page({ heading: "Borrow" }), listed("pg_borrow"), manifest, origin).image?.alt,
+    ).toBe("The reading room");
+  });
+
+  test("shows a post as an article at its address in its blog, with its cover", () => {
+    const post = Schema.decodeSync(PageDocument)({
+      schema: "pakshi.page/1",
+      id: "pg_talks",
+      type: "entry",
+      kind: "blog",
+      collection: "pg_events",
+      slug: "author-talks",
+      meta: {
+        title: "Author talks",
+        description: "",
+        date: "2027-06-01",
+        author: "Sam",
+        tags: [],
+        excerpt: "Three talks in July.",
+        cover: { $ref: "media", id: "med_shelves", alt: "Shelves" },
+      },
+      root: [],
+      blocks: {},
+    });
+    const meta = pageMeta(post, listed("pg_talks"), manifest, origin);
+    expect(meta.canonical).toBe(`${origin}/events/author-talks`);
+    expect(meta.type).toBe("article");
+    expect(meta.image?.alt).toBe("Shelves");
   });
 });
 
@@ -112,16 +148,14 @@ describe("redirects", () => {
   });
 });
 
-describe("the sitemap and feed", () => {
-  test("leave out pages hidden from search engines", () => {
+describe("the sitemap", () => {
+  test("leaves out pages hidden from search engines", () => {
     const map = sitemap(manifest, origin);
     expect(map).toContain(`<loc>${origin}/borrow</loc>`);
     expect(map).not.toContain("/staff");
   });
 
-  test("list the blog's posts in the feed", () => {
-    expect(blogFeed(manifest, origin)).toContain(
-      `<item><title>Author talks</title><link>${origin}/blog/author-talks</link>`,
-    );
+  test("lists posts at their address in their blog", () => {
+    expect(sitemap(manifest, origin)).toContain(`<loc>${origin}/events/author-talks</loc>`);
   });
 });

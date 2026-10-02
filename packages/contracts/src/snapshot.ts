@@ -3,7 +3,7 @@ import { Predicate, Schema } from "effect";
 import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BlockType, FormId, MediaId, PageId, ReleaseId, SiteId, SnapshotId } from "./ids.ts";
-import { PageDocument, PageMeta, PagePath, PostMeta } from "./page.ts";
+import { CollectionKind, PageDocument, PageMeta, PagePath, PostMeta, type Slug } from "./page.ts";
 import { PublishedSettings } from "./settings.ts";
 import { Redirects, SiteParts } from "./site.ts";
 
@@ -29,14 +29,72 @@ export const Lockfile = Schema.Record(
 export type Lockfile = typeof Lockfile.Type;
 
 /**
- * A page as a site's page list shows it: enough for menus and blog lists to
- * show titles and post details without loading every page.
+ * A page as a site's page list shows it, at its address: enough for menus and
+ * post lists to show titles and post details without loading every page.
  */
 export const PageListing = Schema.Union([
   Schema.Struct({ id: PageId, path: PagePath, type: Schema.Literal("page"), meta: PageMeta }),
-  Schema.Struct({ id: PageId, path: PagePath, type: Schema.Literal("post"), meta: PostMeta }),
+  Schema.Struct({
+    id: PageId,
+    path: PagePath,
+    type: Schema.Literal("collection"),
+    kind: CollectionKind,
+    meta: PageMeta,
+  }),
+  Schema.Struct({
+    id: PageId,
+    path: PagePath,
+    type: Schema.Literal("entry"),
+    kind: Schema.Literal("blog"),
+    collection: PageId,
+    meta: PostMeta,
+  }),
 ]);
 export type PageListing = typeof PageListing.Type;
+
+/** An entry's address: its slug, one segment below its collection's address. */
+export const entryAddress = (collection: PagePath, slug: Slug): PagePath =>
+  collection === "/" ? `/${slug}` : `${collection}/${slug}`;
+
+/** A page's address among `pages`, which hold an entry's collection. */
+export const addressOf = (
+  pages: Readonly<Record<PageId, PageDocument>>,
+  page: PageDocument,
+): PagePath => {
+  if (page.type !== "entry") return page.path;
+  const collection = pages[page.collection];
+  if (collection?.type !== "collection")
+    throw new Error(`Entry ${page.id} is in ${page.collection}, which isn't a collection here.`);
+  return entryAddress(collection.path, page.slug);
+};
+
+/** A page's listing, at its address among `pages`. */
+export const listingOf = (
+  pages: Readonly<Record<PageId, PageDocument>>,
+  page: PageDocument,
+): PageListing => {
+  const path = addressOf(pages, page);
+  switch (page.type) {
+    case "page":
+      return { id: page.id, path, type: page.type, meta: page.meta };
+    case "collection":
+      return { id: page.id, path, type: page.type, kind: page.kind, meta: page.meta };
+    case "entry":
+      return {
+        id: page.id,
+        path,
+        type: page.type,
+        kind: page.kind,
+        collection: page.collection,
+        meta: page.meta,
+      };
+  }
+};
+
+/** Every page's listing, with each entry at the address its collection gives it. */
+export const listingsOf = (
+  pages: Readonly<Record<PageId, PageDocument>>,
+): ReadonlyArray<PageListing> => Object.values(pages).map((page) => listingOf(pages, page));
 
 /** A page's entry in the manifest: its listing, and the page object it's stored as. */
 export const SnapshotPage = Schema.Union(
@@ -63,9 +121,13 @@ export const SnapshotManifest = Schema.Struct({
   brand: BrandRevision,
   media: Schema.Record(MediaId, MediaFile),
   pages: Schema.Array(SnapshotPage),
-  /** Page objects of unpublished pages, which `sites` never reads, kept so a later draft can publish them again. */
+  /**
+   * Page objects the snapshot doesn't serve, which `sites` never reads: unpublished
+   * pages, and entries of unpublished collections. They're kept so a later
+   * draft can publish them again.
+   */
   unpublished: Schema.Array(ContentHash),
-  /** Addresses of unpublished and deleted pages, which answer 410 Gone. */
+  /** Addresses of pages served before and not now, which answer 410 Gone. */
   gone: Schema.Array(PagePath),
 });
 export type SnapshotManifest = typeof SnapshotManifest.Type;

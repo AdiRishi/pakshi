@@ -40,6 +40,7 @@ export const partChanged = (op: Op, draft: Draft, contracts: BlockContracts) => 
     case "setMeta":
       return `the page's ${metaTitles[op.field]}`;
     case "setPath":
+    case "setSlug":
       return "the page's address";
     case "insertBlock":
     case "moveBlock":

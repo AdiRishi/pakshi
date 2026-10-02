@@ -26,7 +26,7 @@ test("every fixture of every block version is shown on a fixture site", async ()
 
 test("each fixture site's pages render at its pinned block versions", async () => {
   for (const site of await fixtureSites()) {
-    expect(site.pages.map(({ page }) => page.path)).toContain(fixturesPath);
+    expect(site.manifest.pages.map((page) => page.path)).toContain(fixturesPath);
     for (const { page } of site.pages) {
       const rendered = await renderPage(page, site.manifest.parts, site.manifest.lockfile);
       expect(rendered.sections).toHaveLength(page.root.length);

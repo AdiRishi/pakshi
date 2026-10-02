@@ -28,6 +28,10 @@
       "types": "./src/brand.ts",
       "default": "./src/brand.ts"
     },
+    "./collections": {
+      "types": "./src/collections.ts",
+      "default": "./src/collections.ts"
+    },
     "./draft": {
       "types": "./src/draft.ts",
       "default": "./src/draft.ts"

@@ -10,6 +10,17 @@ export const PagePath = Schema.String.check(
 );
 export type PagePath = typeof PagePath.Type;
 
+/** An entry's own part of its address, one segment below its collection's, such as `dates-announced`. */
+export const Slug = Schema.String.check(
+  Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+  Schema.isMaxLength(80),
+);
+export type Slug = typeof Slug.Type;
+
+/** What a collection holds. Each kind is built in, with its own entry meta and recipes. */
+export const CollectionKind = Schema.Literals(["blog"]);
+export type CollectionKind = typeof CollectionKind.Type;
+
 /**
  * One placed block. Its props are checked against the block's own schema at
  * the draft's pinned version, which the page document doesn't know about.
@@ -57,7 +68,6 @@ export type PostMeta = typeof PostMeta.Type;
 const documentFields = {
   schema: Schema.Literal("pakshi.page/1"),
   id: PageId,
-  path: PagePath,
   recipe: Schema.optionalKey(Schema.String),
   status: Schema.optionalKey(Schema.Literal("unpublished")),
   /** Reserved so localization can be added without a migration. */
@@ -104,12 +114,48 @@ const integrity = Schema.makeFilter(
 );
 
 /**
- * A page or blog post: a flat map of block instances plus the ordered list of
- * sections. Blocks are addressed by ID, so an address never changes when
- * blocks move.
+ * A page: a flat map of block instances plus the ordered list of sections.
+ * Blocks are addressed by ID, so an address never changes when blocks move.
+ *
+ * A collection is a page that holds entries of one kind, such as a blog's
+ * posts. An entry is a page in a collection. It stores only its slug, so its
+ * address follows its collection's when the collection moves. Neither a
+ * collection's kind nor an entry's collection ever changes; an entry records
+ * its kind too, because a page object is read on its own.
  */
 export const PageDocument = Schema.Union([
-  Schema.Struct({ ...documentFields, type: Schema.Literal("page"), meta: PageMeta }),
-  Schema.Struct({ ...documentFields, type: Schema.Literal("post"), meta: PostMeta }),
+  Schema.Struct({
+    ...documentFields,
+    type: Schema.Literal("page"),
+    path: PagePath,
+    meta: PageMeta,
+  }),
+  Schema.Struct({
+    ...documentFields,
+    type: Schema.Literal("collection"),
+    path: PagePath,
+    kind: CollectionKind,
+    meta: PageMeta,
+  }),
+  Schema.Struct({
+    ...documentFields,
+    type: Schema.Literal("entry"),
+    kind: Schema.Literal("blog"),
+    collection: PageId,
+    slug: Slug,
+    meta: PostMeta,
+  }),
 ]).check(integrity);
 export type PageDocument = typeof PageDocument.Type;
+
+/** The meta schema a page's kind takes. */
+export const metaSchemaOf = (page: Pick<PageDocument, "type">) =>
+  page.type === "entry" ? PostMeta : PageMeta;
+
+/** What people call a page: its title, or its address or slug while it has none. */
+export const pageName = (
+  page: { readonly meta: { readonly title: string } } & (
+    | { readonly path: PagePath }
+    | { readonly slug: Slug }
+  ),
+) => page.meta.title || ("path" in page ? page.path : page.slug);

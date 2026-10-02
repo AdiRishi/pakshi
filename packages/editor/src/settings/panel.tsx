@@ -1,9 +1,11 @@
 import { fieldAt, placeholderPaths } from "@repo/blocks";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId } from "@repo/contracts/ids";
 import type { BatchError, MetaField, Op, Target } from "@repo/contracts/ops";
-import { PagePath, type PostMeta } from "@repo/contracts/page";
+import { type PageDocument, PagePath, type PostMeta, Slug } from "@repo/contracts/page";
 import { WebUrl } from "@repo/contracts/references";
+import { addressOf, entryAddress } from "@repo/contracts/snapshot";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
 import { Checkbox } from "@repo/ui/components/checkbox";
@@ -17,6 +19,12 @@ import {
   FieldLegend,
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from "@repo/ui/components/input-group";
 import { Label } from "@repo/ui/components/label";
 import { Switch } from "@repo/ui/components/switch";
 import { Option, Schema } from "effect";
@@ -295,10 +303,10 @@ function MetaImage(props: {
 const isPagePath = Schema.is(PagePath);
 
 /**
- * The page's address, saved once it's a valid address that no other page
- * has. Its old address can send visitors on to it.
+ * The address of a page or collection, saved once it's a valid address that
+ * no other page has. Its old address can send visitors on to it.
  */
-function PageAddress(props: { readonly value: PagePath }) {
+function PageAddress(props: { readonly value: PagePath; readonly note: string }) {
   const store = useStore();
   const page = useEditorState((state) => state.page);
   const id = useId();
@@ -335,7 +343,7 @@ function PageAddress(props: { readonly value: PagePath }) {
           if (event.key === "Enter") save();
         }}
       />
-      <FieldDescription>Menu links follow the page when its address changes.</FieldDescription>
+      <FieldDescription>{props.note}</FieldDescription>
       {typed !== props.value && (
         <Label className="font-normal">
           <Checkbox checked={redirect} onCheckedChange={setRedirect} />
@@ -344,6 +352,98 @@ function PageAddress(props: { readonly value: PagePath }) {
       )}
       <FieldError errors={[...errors]} />
     </Field>
+  );
+}
+
+const isSlug = Schema.is(Slug);
+
+/**
+ * An entry's address: its collection's address, which it can't change here,
+ * and its own slug below it, saved once it's valid and no other page has the
+ * address. Its old address can send visitors on to it.
+ */
+function EntryAddress(props: { readonly collection: PagePath; readonly value: Slug }) {
+  const store = useStore();
+  const page = useEditorState((state) => state.page);
+  const id = useId();
+  const [typed, setTyped] = useState<string>(props.value);
+  const [redirect, setRedirect] = useState(true);
+  const [errors, setErrors] = useState<ReadonlyArray<{ readonly message: string }>>([]);
+  const prefix = props.collection === "/" ? "/" : `${props.collection}/`;
+  const previous = entryAddress(props.collection, props.value);
+  const save = () => {
+    if (typed === props.value) return;
+    if (!isSlug(typed)) {
+      setErrors([
+        { message: "Use lowercase letters, numbers and hyphens, such as dates-announced." },
+      ]);
+      return;
+    }
+    const ops: Array<Op> = [{ op: "setSlug", page, slug: typed }];
+    if (redirect) ops.push({ op: "setRedirect", from: previous, to: { $ref: "page", id: page } });
+    setErrors(store.run(ops).map((error) => ({ message: error.message })));
+  };
+  return (
+    <Field data-invalid={errors.length > 0 || undefined}>
+      <FieldLabel htmlFor={id}>Address</FieldLabel>
+      <InputGroup>
+        <InputGroupAddon>
+          <InputGroupText>{prefix}</InputGroupText>
+        </InputGroupAddon>
+        <InputGroupInput
+          id={id}
+          value={typed}
+          spellCheck={false}
+          aria-invalid={errors.length > 0 || undefined}
+          onChange={(event) => setTyped(event.target.value)}
+          onBlur={save}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") save();
+          }}
+        />
+      </InputGroup>
+      <FieldDescription>Menu links follow the post when its address changes.</FieldDescription>
+      {typed !== props.value && (
+        <Label className="font-normal">
+          <Checkbox checked={redirect} onCheckedChange={setRedirect} />
+          Send visitors from {previous} here
+        </Label>
+      )}
+      <FieldError errors={[...errors]} />
+    </Field>
+  );
+}
+
+/** What the settings call a page: a page, or a collection or entry by its kind. */
+const nameOf = (page: PageDocument) => {
+  if (page.type === "page") return "Page";
+  const names = collectionKinds[page.kind].names;
+  return page.type === "collection"
+    ? names.kind
+    : `${names.one.charAt(0).toUpperCase()}${names.one.slice(1)}`;
+};
+
+/** Where a page's address is set: its own address, or an entry's slug below its collection. */
+function Address(props: { readonly page: PageDocument }) {
+  const { page } = props;
+  const pages = useEditorState((state) => state.view.pages);
+  if (page.type === "entry") {
+    const collection = pages[page.collection];
+    if (collection === undefined) return null;
+    const path = addressOf(pages, collection);
+    return <EntryAddress key={`${path}:${page.slug}`} collection={path} value={page.slug} />;
+  }
+  const many = page.type === "collection" ? collectionKinds[page.kind].names.many : null;
+  return (
+    <PageAddress
+      key={page.path}
+      value={page.path}
+      note={
+        many === null
+          ? "Menu links follow the page when its address changes."
+          : `Menu links follow it when its address changes, and its ${many} move with it.`
+      }
+    />
   );
 }
 
@@ -410,14 +510,12 @@ function PageSettings() {
     <>
       <div className="flex flex-col px-5 py-4">
         <span className="text-xs text-muted-foreground">Nothing selected</span>
-        <h2 className="text-lg font-semibold">
-          {page.type === "post" ? "Post settings" : "Page settings"}
-        </h2>
+        <h2 className="text-lg font-semibold">{nameOf(page)} settings</h2>
       </div>
       <Section title="Search and sharing">
         <MetaText
           field="title"
-          label={page.type === "post" ? "Post title" : "Page title"}
+          label={`${nameOf(page)} title`}
           value={page.meta.title}
           max={70}
           description="Shown in search results and browser tabs."
@@ -436,15 +534,15 @@ function PageSettings() {
           description="Shown when the page is shared. Without one, its hero image or the site's default is used."
           value={page.meta.image}
         />
-        <PageAddress key={page.path} value={page.path} />
+        <Address page={page} />
         <SearchEngines
           key={page.meta.canonical ?? ""}
           noindex={page.meta.noindex === true}
           canonical={page.meta.canonical ?? ""}
         />
       </Section>
-      {page.type === "post" && (
-        <Section title="Post">
+      {page.type === "entry" && (
+        <Section title={nameOf(page)}>
           <PostDate value={page.meta.date} />
           <MetaText
             field="author"

@@ -3,7 +3,8 @@ import type { Fields } from "@repo/blocks/fields";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
-import type { BlockInstance, PageDocument } from "@repo/contracts/page";
+import { type BlockInstance, pageName } from "@repo/contracts/page";
+import { addressOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
 import type { Surface } from "@repo/tokens";
 import { Schema } from "effect";
@@ -20,9 +21,6 @@ type Json = Schema.Json;
 
 const isRichText = Schema.is(RichTextDocument);
 const isString = Schema.is(Schema.String);
-
-/** A page's name, as people see it. */
-export const pageName = (page: PageDocument) => page.meta.title || page.path;
 
 /** A block's first line of text, to recognise it by. */
 const firstText = (fields: Fields, props: Readonly<Record<string, Json>>) => {
@@ -54,9 +52,10 @@ export const outline = (draft: Draft, contracts: BlockContracts) => {
     return block === undefined ? [] : [`  ${blockLine(contracts, id, block)}`];
   });
   const pages = Object.values(draft.pages)
+    .map((page) => ({ page, path: addressOf(draft.pages, page) }))
     .toSorted((a, b) => a.path.localeCompare(b.path))
-    .flatMap((page) => [
-      `${page.id} ${page.type} ${page.path} "${pageName(page)}"${page.status === "unpublished" ? " (unpublished)" : ""}${page.recipe === undefined ? "" : ` recipe ${page.recipe}`}`,
+    .flatMap(({ page, path }) => [
+      `${page.id} ${page.type === "page" ? page.type : `${page.type}(${page.kind})`} ${path} "${pageName(page)}"${page.status === "unpublished" ? " (unpublished)" : ""}${page.recipe === undefined ? "" : ` recipe ${page.recipe}`}`,
       ...page.root.flatMap((id) => {
         const block = page.blocks[id];
         if (block === undefined) return [];
@@ -157,7 +156,7 @@ export const pageView = (
   return {
     id: page.id,
     type: page.type,
-    path: page.path,
+    path: addressOf(draft.pages, page),
     status: page.status ?? "published",
     meta: page.meta,
     sections: chosen(page.root).map((id) => blockView(contracts, page, target, id, typing)),

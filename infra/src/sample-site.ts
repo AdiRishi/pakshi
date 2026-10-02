@@ -7,7 +7,14 @@ import { BrandId, MediaId, ReleaseId, SiteId, SnapshotId } from "@repo/contracts
 import { FormId } from "@repo/contracts/ids";
 import { PageDocument, PagePath } from "@repo/contracts/page";
 import { SiteParts } from "@repo/contracts/site";
-import { contentHash, MediaFile, SnapshotManifest } from "@repo/contracts/snapshot";
+import {
+  type ContentHash,
+  contentHash,
+  listingOf,
+  MediaFile,
+  type SnapshotPage,
+  SnapshotManifest,
+} from "@repo/contracts/snapshot";
 import { resolveTheme, ThemeValues } from "@repo/tokens";
 import { Schema } from "effect";
 
@@ -43,6 +50,14 @@ const readJson = <S extends Schema.Top & { readonly DecodingServices: never }>(
   schema: S,
 ) => readFile(fixture(path), "utf8").then(Schema.decodeUnknownSync(Schema.fromJsonString(schema)));
 
+/** A snapshot's page entries for pages stored under their hashes, each at its address. */
+export const manifestPages = (
+  stored: ReadonlyArray<{ readonly page: PageDocument; readonly hash: ContentHash }>,
+): ReadonlyArray<SnapshotPage> => {
+  const pages = Object.fromEntries(stored.map(({ page }) => [page.id, page]));
+  return stored.map(({ page, hash }) => ({ ...listingOf(pages, page), object: hash }));
+};
+
 /**
  * The hand-written snapshot that non-production stages serve: two pages built
  * from block fixtures, a header and footer with menus, the Harbour brand's
@@ -64,7 +79,7 @@ export const sampleSite = async () => {
       return { page, json, hash: await contentHash(json) };
     }),
   );
-  const manifest = Schema.decodeUnknownSync(SnapshotManifest)({
+  const manifest = Schema.decodeSync(SnapshotManifest)({
     schema: "pakshi.snapshot/1",
     id: site.snapshot,
     site: site.site.id,
@@ -80,13 +95,7 @@ export const sampleSite = async () => {
         { contentType: file.contentType, width: file.width, height: file.height },
       ]),
     ),
-    pages: pages.map(({ page, hash }) => ({
-      id: page.id,
-      path: page.path,
-      type: page.type,
-      meta: page.meta,
-      object: hash,
-    })),
+    pages: manifestPages(pages),
     unpublished: [],
     gone: site.gone,
   });

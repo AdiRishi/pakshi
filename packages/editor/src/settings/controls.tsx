@@ -1,6 +1,7 @@
 import { type Field, type FieldKind, placeholderForm } from "@repo/blocks";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import { ExternalUrl } from "@repo/contracts/references";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { Button } from "@repo/ui/components/button";
 import {
   Field as FieldRow,
@@ -287,7 +288,7 @@ function LinkChooser(props: ControlProps<KindOf<"link">>) {
           }
           className="w-full"
         >
-          {Object.values(pages).map((page) => (
+          {listingsOf(pages).map((page) => (
             <NativeSelectOption key={page.id} value={page.id}>
               {page.meta.title || "Untitled"} ({page.path})
             </NativeSelectOption>

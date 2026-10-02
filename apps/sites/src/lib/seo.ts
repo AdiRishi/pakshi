@@ -1,12 +1,12 @@
 import type { PageDocument, PagePath } from "@repo/contracts/page";
 import { MediaRef, type Link } from "@repo/contracts/references";
-import type { SnapshotManifest } from "@repo/contracts/snapshot";
+import type { PageListing, SnapshotManifest } from "@repo/contracts/snapshot";
 import { Predicate, Schema } from "effect";
 
 /*
  * What `sites` tells search engines and link previews about a site: each
- * page's sharing card, where a redirect goes, the sitemap, robots.txt and the
- * blog's feed. Everything comes from the live snapshot.
+ * page's sharing card, where a redirect goes, the sitemap and robots.txt.
+ * Everything comes from the live snapshot.
  */
 
 const isMediaRef = Schema.is(MediaRef);
@@ -32,7 +32,7 @@ const sharingImageOf = (page: PageDocument, manifest: SnapshotManifest) => {
   const hero = first === undefined ? undefined : page.blocks[first];
   return (
     page.meta.image ??
-    (page.type === "post" ? page.meta.cover : undefined) ??
+    (page.type === "entry" ? page.meta.cover : undefined) ??
     (hero === undefined ? undefined : firstImage(hero.props)) ??
     manifest.settings.sharingImage ??
     undefined
@@ -46,14 +46,22 @@ const escapeXml = (text: string) =>
     .replaceAll(">", "&gt;")
     .replaceAll('"', "&quot;");
 
-/** The meta tags a page's head holds for search engines and link previews. */
-export const pageMeta = (page: PageDocument, manifest: SnapshotManifest, origin: string) => {
+/**
+ * The meta tags a page's head holds for search engines and link previews,
+ * from the page and its listing in the manifest, which holds its address.
+ */
+export const pageMeta = (
+  page: PageDocument,
+  listing: PageListing,
+  manifest: SnapshotManifest,
+  origin: string,
+) => {
   const image = sharingImageOf(page, manifest);
   const file = image === undefined ? undefined : manifest.media[image.id];
   return {
-    canonical: page.meta.canonical ?? `${origin}${page.path}`,
+    canonical: page.meta.canonical ?? `${origin}${listing.path}`,
     noindex: page.meta.noindex === true,
-    type: page.type === "post" ? "article" : "website",
+    type: page.type === "entry" ? "article" : "website",
     image:
       image === undefined || file === undefined
         ? null
@@ -90,22 +98,3 @@ export const sitemap = (manifest: SnapshotManifest, origin: string) =>
 
 export const robots = (origin: string) =>
   ["User-agent: *", "Allow: /", `Sitemap: ${origin}/sitemap.xml`, ""].join("\n");
-
-/** The blog's posts as an RSS feed, newest first. */
-export const blogFeed = (manifest: SnapshotManifest, origin: string) => {
-  const posts = listed(manifest)
-    .flatMap((page) => (page.type === "post" ? [page] : []))
-    .toSorted((a, b) => (a.meta.date < b.meta.date ? 1 : -1));
-  const name = escapeXml(manifest.settings.name);
-  return [
-    '<?xml version="1.0" encoding="UTF-8"?>',
-    '<rss version="2.0">',
-    `<channel><title>${name}</title><link>${escapeXml(origin)}/</link><description>${name}</description>`,
-    ...posts.map(
-      (post) =>
-        `<item><title>${escapeXml(post.meta.title)}</title><link>${escapeXml(`${origin}${post.path}`)}</link><guid>${escapeXml(`${origin}${post.path}`)}</guid><pubDate>${new Date(`${post.meta.date}T00:00:00Z`).toUTCString()}</pubDate><description>${escapeXml(post.meta.excerpt)}</description></item>`,
-    ),
-    "</channel>",
-    "</rss>",
-  ].join("\n");
-};

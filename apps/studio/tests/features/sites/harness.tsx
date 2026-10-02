@@ -2,6 +2,7 @@ import { latestLockfile } from "@repo/blocks";
 import { blockFixtures, fixtureDraft, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
 import { DraftId, ReleaseId, SiteId, SnapshotId } from "@repo/contracts/ids";
 import { Timestamp } from "@repo/contracts/release";
+import { listingsOf } from "@repo/contracts/snapshot";
 import type { SiteOverview } from "@repo/contracts/studio";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
@@ -33,7 +34,9 @@ const draft = fixtureDraft({
   sections: [fixture("hero", "centered"), fixture("feature-grid", "three-columns")],
 });
 
-const homePage = Object.values(draft.pages).find((page) => page.path === "/");
+const homePage = Object.values(draft.pages).find(
+  (page) => page.type === "page" && page.path === "/",
+);
 if (homePage === undefined) throw new Error("The fixture site has a home page.");
 
 export const site = SiteId.make("site_harbour");
@@ -63,7 +66,7 @@ export const published: SiteOverview = {
     forms: draft.forms,
     lockfile: draft.lockfile,
     brand: draft.brand,
-    pages: fixtureSite.pages,
+    pages: listingsOf(fixtureSite.pages),
     media: fixtureSite.media,
     page: homePage,
   },

@@ -39,7 +39,8 @@ const data = {
 const { favicon } = manifest.brand.identity;
 const theme = themeCss(manifest.brand.theme);
 Astro.csp.insertStyleHash(await styleHash(theme));
-const seo = page === null ? null : pageMeta(page, manifest, Astro.url.origin);
+const seo =
+  page === null || entry === undefined ? null : pageMeta(page, entry, manifest, Astro.url.origin);
 // A new site's first release has no pages until its first draft publishes.
 const unpublished = manifest.pages.length === 0;
 const title =
@@ -79,11 +80,6 @@ const message = unpublished
           )}
           <meta name="twitter:card" content={seo.image ? "summary_large_image" : "summary"} />
         </>
-      )
-    }
-    {
-      manifest.pages.some((listing) => listing.type === "post") && (
-        <link rel="alternate" type="application/rss+xml" href="/blog/rss.xml" />
       )
     }
     {favicon && <link rel="icon" href={`/_media/${favicon}`} />}

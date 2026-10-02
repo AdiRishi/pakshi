@@ -7,11 +7,16 @@ import type { FormDefinition } from "@repo/contracts/form";
 import { BlockId, type FormId, type MediaId, type PageId } from "@repo/contracts/ids";
 import type { Place } from "@repo/contracts/merge";
 import type { Target } from "@repo/contracts/ops";
-import type { BlockInstance, PageDocument, PagePath } from "@repo/contracts/page";
+import {
+  type BlockInstance,
+  type PageDocument,
+  type PagePath,
+  pageName,
+} from "@repo/contracts/page";
 import type { Incomplete, CheckIssue } from "@repo/contracts/publishing";
 import { MediaRef, PageRef } from "@repo/contracts/references";
 import type { MenuItem } from "@repo/contracts/site";
-import type { SnapshotManifest } from "@repo/contracts/snapshot";
+import { listingsOf, type PageListing, type SnapshotManifest } from "@repo/contracts/snapshot";
 import { Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 import type { Json } from "effect/Schema";
 
@@ -28,10 +33,15 @@ import { type BlockContracts, formsUsedBy } from "./document.ts";
  * consent checkbox.
  */
 
+/** A page a site serves, with its listing at its address. */
+export interface ServedPage {
+  readonly listing: PageListing;
+  readonly document: PageDocument;
+}
+
 /** A draft ready to be written as a snapshot. */
 export interface Frozen {
-  /** The pages the snapshot serves: every page that isn't unpublished. */
-  readonly pages: ReadonlyArray<PageDocument>;
+  readonly pages: ReadonlyArray<ServedPage>;
   /** Addresses that answer 410 Gone: ones served before and not now, and ones gone already. */
   readonly gone: ReadonlyArray<PagePath>;
   /** The library images the snapshot shows. Built-in placeholder images need no file. */
@@ -313,9 +323,19 @@ const mediaIn = (field: Field, value: Json | undefined): ReadonlyArray<MediaId> 
   );
 };
 
-/** The pages a site serves: every page that isn't unpublished. */
-const servedPages = (content: SiteContent) =>
-  Object.values(content.pages).filter((page) => page.status !== "unpublished");
+/**
+ * The pages a site serves: every page and collection that isn't unpublished,
+ * and every published entry of a published collection.
+ */
+export const servedPages = (pages: SiteContent["pages"]): ReadonlyArray<ServedPage> =>
+  listingsOf(pages).flatMap((listing) => {
+    const document = pages[listing.id];
+    if (document === undefined) throw new Error(`${listing.id} has a listing but no page.`);
+    const collection = document.type === "entry" ? pages[document.collection] : undefined;
+    return document.status === "unpublished" || collection?.status === "unpublished"
+      ? []
+      : [{ listing, document }];
+  });
 
 /** The blocks a site shows, placed on its served pages or in its header and footer. */
 const placedBlocks = (
@@ -326,10 +346,10 @@ const placedBlocks = (
   readonly blocks: Readonly<Record<BlockId, BlockInstance>>;
 }> => [
   { target: "site", title: "Header and footer", blocks: content.parts.blocks },
-  ...servedPages(content).map((page) => ({
-    target: page.id,
-    title: page.meta.title || page.path,
-    blocks: page.blocks,
+  ...servedPages(content.pages).map(({ document }) => ({
+    target: document.id,
+    title: pageName(document),
+    blocks: document.blocks,
   })),
 ];
 
@@ -348,9 +368,9 @@ export const shownMedia = (
       for (const [name, field] of Object.entries(fields))
         for (const id of mediaIn(field, block.props[name])) media.add(id);
     }
-  for (const page of servedPages(content)) {
-    if (page.type === "post" && page.meta.cover) media.add(page.meta.cover.id);
-    if (page.meta.image) media.add(page.meta.image.id);
+  for (const { document } of servedPages(content.pages)) {
+    if (document.type === "entry" && document.meta.cover) media.add(document.meta.cover.id);
+    if (document.meta.image) media.add(document.meta.image.id);
   }
   for (const id of Object.values(content.brand.identity)) if (id !== null) media.add(id);
   for (const id of placeholderMedia.keys()) media.delete(id);
@@ -369,8 +389,8 @@ export const freeze = (
   previous: Pick<SnapshotManifest, "pages" | "gone">,
   notified: ReadonlySet<FormId>,
 ): FreezeResult => {
-  const pages = servedPages(content);
-  const served = new Set(pages.map((page) => page.id));
+  const pages = servedPages(content.pages);
+  const served = new Set(pages.map(({ document }) => document.id));
   const issues: ReadonlyArray<CheckIssue> = [
     ...placedBlocks(content).flatMap(({ target, title, blocks }) =>
       Object.entries(blocks).flatMap(([key, block]) => {
@@ -387,12 +407,12 @@ export const freeze = (
         ];
       }),
     ),
-    ...pages.flatMap((page) =>
+    ...pages.flatMap(({ document }) =>
       (["title", "description"] as const)
-        .filter((field) => page.meta[field].trim() === "")
+        .filter((field) => document.meta[field].trim() === "")
         .map((field) => ({
           _tag: "MissingMeta" as const,
-          place: { target: page.id, title: page.meta.title || page.path },
+          place: { target: document.id, title: pageName(document) },
           field,
         })),
     ),
@@ -405,7 +425,7 @@ export const freeze = (
   ];
   if (issues.length > 0) return { ok: false, issues };
 
-  const paths = new Set<string>(pages.map((page) => page.path));
+  const paths = new Set<string>(pages.map(({ listing }) => listing.path));
   const gone = Array.from(
     new Set([...previous.gone, ...previous.pages.map((page) => page.path)]),
   ).filter((path) => !paths.has(path));

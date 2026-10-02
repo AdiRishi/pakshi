@@ -35,7 +35,6 @@ import {
   FormId,
   InvitationId,
   MediaId,
-  PageId,
   ReleaseId,
   CustomRoleId,
   SiteId,
@@ -489,14 +488,6 @@ export const SiteSettingsView = Schema.Struct({
 });
 export type SiteSettingsView = typeof SiteSettingsView.Type;
 
-export const PageSummary = Schema.Struct({
-  id: PageId,
-  type: Schema.Literals(["page", "post"]),
-  path: PagePath,
-  title: Schema.String,
-});
-export type PageSummary = typeof PageSummary.Type;
-
 /** Whether a draft takes changes: open, published, or closed by someone without publishing. */
 export const DraftStatus = Schema.Literals(["open", "published", "closed"]);
 export type DraftStatus = typeof DraftStatus.Type;
@@ -560,15 +551,18 @@ export const SiteDrafts = Schema.Struct({
 });
 export type SiteDrafts = typeof SiteDrafts.Type;
 
-/** A draft's pages and posts. */
 /**
  * How a page in a draft stands against the live site: not there yet, changed,
- * the same as live, or unpublished in the draft.
+ * the same as live, or unpublished in the draft. An entry of an unpublished
+ * collection is unpublished too.
  */
 export const PageStanding = Schema.Literals(["new", "changed", "live", "unpublished"]);
 export type PageStanding = typeof PageStanding.Type;
 
-export const DraftPageSummary = Schema.Struct({ ...PageSummary.fields, standing: PageStanding });
+/** A page in a draft as its Pages and menus screen lists it. */
+export const DraftPageSummary = Schema.Union(
+  PageListing.members.map((member) => Schema.Struct({ ...member.fields, standing: PageStanding })),
+);
 export type DraftPageSummary = typeof DraftPageSummary.Type;
 
 /** A draft's pages, menus and redirects, as its Pages and menus screen shows them. */
@@ -714,7 +708,7 @@ export const Review = Schema.Struct({
   site: Schema.Struct({ id: SiteId, name: Schema.String }),
   submission: Submission,
   changes: Schema.Array(MergedChange),
-  pages: Schema.Array(PageSummary),
+  pages: Schema.Array(PageListing),
   decidable: Decidable,
 });
 export type Review = typeof Review.Type;

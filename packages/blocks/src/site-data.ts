@@ -1,33 +1,19 @@
 import type { BrandIdentity } from "@repo/contracts/brand";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { FormDefinition } from "@repo/contracts/form";
-import type { FormId, MediaId, PageId } from "@repo/contracts/ids";
-import type { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
+import type { FormId, MediaId } from "@repo/contracts/ids";
 import type { Link } from "@repo/contracts/references";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { Menus } from "@repo/contracts/site";
+import type { PageListing } from "@repo/contracts/snapshot";
 import { Order, Predicate } from "effect";
 
-import type { PostSummary, ResolvedMedia, SiteData } from "./components.tsx";
+import type { ResolvedMedia, SiteData } from "./components.tsx";
 import { placeholderForm, placeholderMedia } from "./placeholders.ts";
 
-/** What `siteData` needs of a page: a snapshot's page entry and a draft's page both have it. */
-export type PageEntry =
-  | {
-      readonly id: PageId;
-      readonly path: PagePath;
-      readonly type: "page";
-      readonly meta: PageMeta;
-    }
-  | {
-      readonly id: PageId;
-      readonly path: PagePath;
-      readonly type: "post";
-      readonly meta: PostMeta;
-    };
-
-const newestFirst = Order.combine(
-  Order.flip(Order.mapInput(Order.String, (post: PostSummary) => post.date)),
-  Order.mapInput(Order.String, (post: PostSummary) => post.title),
+const newestFirst = Order.mapInput(
+  collectionKinds.blog.order,
+  (post: Extract<PageListing, { type: "entry" }>) => post.meta,
 );
 
 /**
@@ -39,7 +25,7 @@ export const siteData = (site: {
   readonly settings: PublishedSettings;
   readonly identity: BrandIdentity;
   readonly menus: Menus;
-  readonly pages: ReadonlyArray<PageEntry>;
+  readonly pages: ReadonlyArray<PageListing>;
   readonly forms: Readonly<Record<FormId, FormDefinition>>;
   readonly media: (id: MediaId) => ResolvedMedia | undefined;
 }): SiteData => {
@@ -64,22 +50,17 @@ export const siteData = (site: {
       footer: site.menus.footer.map((item) => ({ ...resolve(item), children: [] })),
     },
     posts: site.pages
-      .flatMap((page) =>
-        page.type === "post"
-          ? [
-              {
-                id: page.id,
-                href: page.path,
-                title: page.meta.title,
-                excerpt: page.meta.excerpt,
-                date: page.meta.date,
-                author: page.meta.author,
-                cover: page.meta.cover,
-              },
-            ]
-          : [],
-      )
-      .toSorted(newestFirst),
+      .flatMap((page) => (page.type === "entry" ? [page] : []))
+      .toSorted(newestFirst)
+      .map((post) => ({
+        id: post.id,
+        href: post.path,
+        title: post.meta.title,
+        excerpt: post.meta.excerpt,
+        date: post.meta.date,
+        author: post.meta.author,
+        cover: post.meta.cover,
+      })),
     media: (id) => placeholderMedia.get(id) ?? site.media(id),
     pagePath: (id) => paths.get(id),
     form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),

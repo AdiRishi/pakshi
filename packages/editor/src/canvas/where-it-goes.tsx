@@ -45,11 +45,11 @@ const typedAddress = (typed: string) => {
   return /^[a-z][a-z0-9+.-]*:/i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
-/** The site's pages to link to, named as visitors know them, home first. */
+/** The site's pages and collections to link to, named as visitors know them, home first. */
 const usePages = () => {
   const pages = useEditorState((state) => state.view.pages);
   return Object.values(pages)
-    .filter((page) => page.type === "page")
+    .filter((page) => page.type !== "entry")
     .map((page) => ({
       id: page.id,
       name: page.path === "/" ? "Home" : page.meta.title || page.path,

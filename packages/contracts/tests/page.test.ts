@@ -38,22 +38,36 @@ test("a page of sections and items decodes", () => {
   expect(issues(page)).toBe("");
 });
 
-test("a post carries its date, author, tags and excerpt", () => {
-  const post = {
-    ...page,
-    type: "post",
-    path: "/news/opening-day",
-    meta: {
-      title: "Opening day",
-      description: "The doors open.",
-      date: "2027-01-12",
-      author: "Sam Okafor",
-      tags: ["news"],
-      excerpt: "We open on Monday.",
-    },
-  };
-  expect(issues(post)).toBe("");
-  expect(issues({ ...post, meta: page.meta })).not.toBe("");
+const post = {
+  ...page,
+  type: "entry",
+  kind: "blog",
+  collection: "pg_news",
+  slug: "opening-day",
+  meta: {
+    title: "Opening day",
+    description: "The doors open.",
+    date: "2027-01-12",
+    author: "Sam Okafor",
+    tags: ["news"],
+    excerpt: "We open on Monday.",
+  },
+};
+
+test("a post sits in a blog by its slug, and carries its date, author, tags and excerpt", () => {
+  const { path: _, ...entry } = post;
+  expect(issues(entry)).toBe("");
+  expect(issues({ ...entry, meta: page.meta })).not.toBe("");
+  const { collection: _collection, ...outside } = entry;
+  expect(issues(outside)).not.toBe("");
+});
+
+test("a slug is one lowercase segment", () => {
+  const { path: _, ...entry } = post;
+  expect(issues({ ...entry, slug: "opening-day-2" })).toBe("");
+  for (const slug of ["", "news/opening", "/opening", "Opening", "two--dashes"]) {
+    expect(issues({ ...entry, slug })).not.toBe("");
+  }
 });
 
 describe("document integrity", () => {

@@ -1,6 +1,7 @@
 import type { BlockContract } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import { fieldParts, propsSchema } from "@repo/blocks/fields";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type {
@@ -15,13 +16,23 @@ import type {
   SetForm,
   SetMeta,
   SetProp,
+  SetPath,
   SetRedirect,
+  SetSlug,
   SetStatus,
   Target,
 } from "@repo/contracts/ops";
-import { type BlockInstance, PageDocument, PageMeta, PostMeta } from "@repo/contracts/page";
+import {
+  type BlockInstance,
+  metaSchemaOf,
+  PageDocument,
+  PageMeta,
+  pageName,
+  PostMeta,
+} from "@repo/contracts/page";
 import { FormRef, MediaRef } from "@repo/contracts/references";
 import type { MenuItem, Menus, SiteParts } from "@repo/contracts/site";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { Equal, Predicate, Schema, SchemaIssue, SchemaParser } from "effect";
 
 /*
@@ -470,20 +481,18 @@ const removeBlock = (draft: Draft, page: PageId, id: BlockId) => {
 
 // Pages --------------------------------------------------------------------
 
-const postOnly = new Set<SetMeta["field"]>(["date", "author", "tags", "excerpt", "cover"]);
-
 const optionalMeta = new Set<SetMeta["field"]>(["cover", "image", "canonical", "noindex"]);
 
 const setMeta = (draft: Draft, op: SetMeta) => {
   const page = pageOf(draft, op.page);
-  if (page.type === "page" && postOnly.has(op.field))
-    throw reject("meta", `A page has no ${op.field}; only posts do.`, [op.field]);
+  if (!(op.field in metaSchemaOf(page).fields))
+    throw reject("meta", `A ${page.type} has no ${op.field}.`, [op.field]);
   if (op.value === undefined && !optionalMeta.has(op.field))
     throw reject("meta", `A ${page.type}'s ${op.field} can't be removed.`, [op.field]);
   const meta: Props = page.meta;
   const next = withKey(meta, op.field, op.value);
   const updated: Draft["pages"][PageId] =
-    page.type === "post"
+    page.type === "entry"
       ? { ...page, meta: check(PostMeta, next, "meta", []) }
       : { ...page, meta: check(PageMeta, next, "meta", []) };
   const previous = meta[op.field];
@@ -494,17 +503,77 @@ const setMeta = (draft: Draft, op: SetMeta) => {
   };
 };
 
-/** Rejects a page whose address another page in the draft has too. A page that's gone has none. */
-const checkPathFree = (draft: Draft, id: PageId) => {
-  const path = draft.pages[id]?.path;
-  const taken = Object.values(draft.pages).find((other) => other.path === path && other.id !== id);
-  if (taken !== undefined)
-    throw reject("path-taken", `${taken.meta.title || taken.id} already has the address ${path}.`);
+const setPath = (draft: Draft, op: SetPath) => {
+  const page = pageOf(draft, op.page);
+  if (page.type === "entry")
+    throw reject(
+      "page",
+      `${pageName(page)} takes its address from its ${collectionKinds[page.kind].names.kind.toLowerCase()}; change its slug instead.`,
+    );
+  return {
+    draft: { ...draft, pages: { ...draft.pages, [op.page]: { ...page, path: op.path } } },
+    inverse: { ...op, path: page.path } satisfies Op,
+  };
+};
+
+const setSlug = (draft: Draft, op: SetSlug) => {
+  const page = pageOf(draft, op.page);
+  if (page.type !== "entry")
+    throw reject("page", `${pageName(page)} isn't in a collection, so it has no slug.`);
+  return {
+    draft: { ...draft, pages: { ...draft.pages, [op.page]: { ...page, slug: op.slug } } },
+    inverse: { ...op, slug: page.slug } satisfies Op,
+  };
+};
+
+/** The entries a collection holds. */
+const entriesOf = (draft: Draft, collection: PageId) =>
+  Object.values(draft.pages).filter(
+    (page) => page.type === "entry" && page.collection === collection,
+  );
+
+/**
+ * Rejects two pages at one address, naming the op that last gave one of them
+ * its address: the page's own, or for an entry, its collection's too.
+ * `addressed` maps each page an op addressed to that op's position.
+ */
+const checkAddresses = (draft: Draft, addressed: ReadonlyMap<PageId, number>) => {
+  const opFor = (page: Draft["pages"][PageId]) =>
+    Math.max(
+      addressed.get(page.id) ?? -1,
+      page.type === "entry" ? (addressed.get(page.collection) ?? -1) : -1,
+    );
+  for (const [path, sharing] of Map.groupBy(listingsOf(draft.pages), (page) => page.path)) {
+    if (sharing.length < 2) continue;
+    const [taken, ...others] = sharing
+      .map((listing) => ({ listing, op: opFor(pageOf(draft, listing.id)) }))
+      .toSorted((a, b) => a.op - b.op);
+    const moved = others.at(-1);
+    if (taken === undefined || moved === undefined || moved.op === -1) continue;
+    return {
+      op: moved.op,
+      rejection: reject(
+        "path-taken",
+        `${pageName(taken.listing)} already has the address ${path}.`,
+      ),
+    };
+  }
+  return null;
 };
 
 const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: BlockContracts) => {
   if (page.id in draft.pages) throw reject("page-exists", `There's already a page ${page.id}.`);
   check(PageDocument, page, "page", []);
+  if (page.type === "entry") {
+    const collection = draft.pages[page.collection];
+    const names = collectionKinds[page.kind].names;
+    if (collection?.type !== "collection" || collection.kind !== page.kind)
+      throw reject(
+        "page",
+        `A ${names.one} goes in a ${names.kind.toLowerCase()}, and ${page.collection} isn't one.`,
+        ["collection"],
+      );
+  }
   const inPlace = (id: BlockId, path: BatchError["path"]) => {
     const block = blockOf(page, id);
     checkBlock({ ...block, id }, contractFor(contracts, block.type), path);
@@ -543,6 +612,14 @@ const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: Block
 
 const deletePage = (draft: Draft, id: PageId) => {
   const page = pageOf(draft, id);
+  const held = page.type === "collection" ? entriesOf(draft, id).length : 0;
+  if (page.type === "collection" && held > 0) {
+    const names = collectionKinds[page.kind].names;
+    throw reject(
+      "in-use",
+      `${pageName(page)} still holds ${held} ${held === 1 ? names.one : names.many}. Delete them first.`,
+    );
+  }
   const { [id]: _, ...pages } = draft.pages;
   return {
     draft: { ...draft, pages },
@@ -580,12 +657,12 @@ const imagesIn = (value: Json): ReadonlyArray<MediaId> => {
 export const imagesUsedBy = (blocks: BlockHolder["blocks"]): ReadonlySet<MediaId> =>
   new Set(Object.values(blocks).flatMap((block) => Object.values(block.props).flatMap(imagesIn)));
 
-/** The library images a page shows: in its blocks, and as its sharing image or a post's cover. */
+/** The library images a page shows: in its blocks, and as its sharing image or an entry's cover. */
 export const imagesOnPage = (page: Draft["pages"][PageId]): ReadonlySet<MediaId> =>
   new Set([
     ...imagesUsedBy(page.blocks),
     ...(page.meta.image === undefined ? [] : [page.meta.image.id]),
-    ...(page.type === "post" && page.meta.cover !== undefined ? [page.meta.cover.id] : []),
+    ...(page.type === "entry" && page.meta.cover !== undefined ? [page.meta.cover.id] : []),
   ]);
 
 /** The forms a value uses, wherever they sit in it. */
@@ -615,10 +692,7 @@ const removeForm = (draft: Draft, id: FormId) => {
   if (previous === undefined) throw reject("unknown-form", `There's no form ${id}.`);
   const holders = [
     { title: "the header or footer", blocks: draft.parts.blocks },
-    ...Object.values(draft.pages).map((page) => ({
-      title: page.meta.title || page.path,
-      blocks: page.blocks,
-    })),
+    ...Object.values(draft.pages).map((page) => ({ title: pageName(page), blocks: page.blocks })),
   ];
   const user = holders.find((holder) => formsUsedBy(holder.blocks).has(id));
   if (user !== undefined)
@@ -702,13 +776,10 @@ const applyOp = (draft: Draft, op: Op, contracts: BlockContracts) => {
       return removeBlock(draft, op.page, op.block);
     case "setMeta":
       return setMeta(draft, op);
-    case "setPath": {
-      const page = pageOf(draft, op.page);
-      return {
-        draft: { ...draft, pages: { ...draft.pages, [op.page]: { ...page, path: op.path } } },
-        inverse: { ...op, path: page.path },
-      };
-    }
+    case "setPath":
+      return setPath(draft, op);
+    case "setSlug":
+      return setSlug(draft, op);
     case "createPage":
       return createPage(draft, op.page, contracts);
     case "deletePage":
@@ -752,7 +823,7 @@ const applyOp = (draft: Draft, op: Op, contracts: BlockContracts) => {
 
 /** The page an op gives an address to, if it gives one. */
 const addressedBy = (op: Op) => {
-  if (op.op === "setPath") return op.page;
+  if (op.op === "setPath" || op.op === "setSlug") return op.page;
   if (op.op === "createPage") return op.page.id;
   return null;
 };
@@ -789,14 +860,8 @@ export const applyOps = (
       return rejected(error, index);
     }
   }
-  for (const [page, index] of addressed) {
-    try {
-      checkPathFree(current, page);
-    } catch (error) {
-      if (!(error instanceof Rejection)) throw error;
-      return rejected(error, index);
-    }
-  }
+  const clash = addressed.size === 0 ? null : checkAddresses(current, addressed);
+  if (clash !== null) return rejected(clash.rejection, clash.op);
   return { ok: true, draft: current, inverse, steps };
 };
 
@@ -823,7 +888,8 @@ export const applyEach = (
     try {
       const result = applyOp(current, op, contracts);
       const page = addressedBy(op);
-      if (page !== null) checkPathFree(result.draft, page);
+      const clash = page === null ? null : checkAddresses(result.draft, new Map([[page, 0]]));
+      if (clash !== null) throw clash.rejection;
       steps.push({ op, before: current });
       current = result.draft;
       inverse.unshift(result.inverse);

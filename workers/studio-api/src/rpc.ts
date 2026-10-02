@@ -8,7 +8,7 @@ import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release, Timestamp } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
 import { publishedOf, type SettingsView } from "@repo/contracts/settings";
-import { objectKeys, routingKeys } from "@repo/contracts/snapshot";
+import { listingsOf, objectKeys, routingKeys } from "@repo/contracts/snapshot";
 import {
   BlocksRemoved,
   CannotDecide,
@@ -236,9 +236,7 @@ const entriesPage = 50;
 const collaborator = (person: Person): Collaborator => ({ id: person.id, name: person.name });
 
 const pageSummaries = (draft: Draft) =>
-  Object.values(draft.pages)
-    .map((page) => ({ id: page.id, type: page.type, path: page.path, title: page.meta.title }))
-    .toSorted((a, b) => (a.path < b.path ? -1 : 1));
+  listingsOf(draft.pages).toSorted((a, b) => (a.path < b.path ? -1 : 1));
 
 /** Each site's SiteDoc, told of changes of access. */
 const liveAccessOf = (env: StudioApiEnv) =>

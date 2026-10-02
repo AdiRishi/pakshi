@@ -86,6 +86,5 @@ export {
   renderTree,
   withNewBlockTypes,
 } from "./render.tsx";
-export type { PageEntry } from "./site-data.ts";
 export { siteData } from "./site-data.ts";
 export { PreviewBar, SitePage } from "./site-page.tsx";

@@ -39,7 +39,8 @@ const fixturesUrl = (site: (typeof sites)[number]) =>
 
 /** The blocks a fixture site shows: its header, each section and item on the fixtures page, its footer. */
 const blocksOf = (site: (typeof sites)[number]) => {
-  const fixtures = site.pages.find(({ page }) => page.path === fixturesPath)?.page;
+  const listed = site.manifest.pages.find((page) => page.path === fixturesPath);
+  const fixtures = site.pages.find(({ page }) => page.id === listed?.id)?.page;
   const sections = (fixtures?.root ?? []).flatMap((id) => [
     id,
     ...Object.values(fixtures?.blocks[id]?.slots ?? {}).flat(),

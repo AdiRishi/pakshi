@@ -129,9 +129,12 @@ export const rebaseOps = (
     contentOps("site", id, from, to).forEach(emit);
   }
 
-  for (const page of Object.values(working.pages))
+  // A collection goes after its entries, and comes before them.
+  const entriesFirst = (a: PageDocument, b: PageDocument) =>
+    Number(b.type === "entry") - Number(a.type === "entry");
+  for (const page of Object.values(working.pages).toSorted(entriesFirst))
     if (!(page.id in content.pages)) emit({ op: "deletePage", page: page.id });
-  for (const target of Object.values(content.pages)) {
+  for (const target of Object.values(content.pages).toSorted((a, b) => entriesFirst(b, a))) {
     const current = working.pages[target.id];
     if (current === undefined) {
       addresses.push({ op: "createPage", page: target });
@@ -149,7 +152,10 @@ export const rebaseOps = (
           : { op: "setMeta", page: target.id, field, value: to },
       );
     }
-    if (current.path !== target.path)
+    if (current.type === "entry" && target.type === "entry") {
+      if (current.slug !== target.slug)
+        addresses.push({ op: "setSlug", page: target.id, slug: target.slug });
+    } else if (current.type !== "entry" && target.type !== "entry" && current.path !== target.path)
       addresses.push({ op: "setPath", page: target.id, path: target.path });
   }
   const removedForms: ReadonlyArray<Op> = Object.keys(working.forms)

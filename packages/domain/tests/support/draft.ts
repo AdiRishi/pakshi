@@ -11,7 +11,8 @@ const paragraph = (text: string) => ({
 
 /**
  * A draft of the Harbour site: a home page with a hero, a feature grid with
- * two items and a gallery, an about page, a post, and a form no page uses yet.
+ * two items and a gallery, an about page, a News blog with one post, and a
+ * form no page uses yet.
  */
 export const harbourDraft: Draft = Schema.decodeSync(Draft)({
   id: "dr_harbour",
@@ -126,11 +127,23 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
         },
       },
     },
+    pg_news: {
+      schema: "pakshi.page/1",
+      id: "pg_news",
+      type: "collection",
+      kind: "blog",
+      path: "/news",
+      meta: { title: "News", description: "What's happening at the harbour." },
+      root: [],
+      blocks: {},
+    },
     pg_dates: {
       schema: "pakshi.page/1",
       id: "pg_dates",
-      type: "post",
-      path: "/news/dates",
+      type: "entry",
+      kind: "blog",
+      collection: "pg_news",
+      slug: "dates",
       meta: {
         title: "Dates announced",
         description: "Summer school runs in July.",

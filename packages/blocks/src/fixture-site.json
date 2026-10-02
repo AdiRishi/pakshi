@@ -58,32 +58,45 @@
   "media": {
     "med_harbour": { "contentType": "image/jpeg", "width": 1600, "height": 1067 }
   },
-  "pages": [
-    {
+  "pages": {
+    "pg_home": {
+      "schema": "pakshi.page/1",
       "id": "pg_home",
-      "path": "/",
       "type": "page",
+      "path": "/",
       "meta": {
         "title": "Harbour Summer School",
         "description": "Five days of hands-on workshops at the harbour."
-      }
+      },
+      "root": [],
+      "blocks": {}
     },
-    {
+    "pg_programme": {
+      "schema": "pakshi.page/1",
       "id": "pg_programme",
+      "type": "page",
       "path": "/programme",
-      "type": "page",
-      "meta": { "title": "Programme", "description": "What happens each day." }
+      "meta": { "title": "Programme", "description": "What happens each day." },
+      "root": [],
+      "blocks": {}
     },
-    {
+    "pg_news": {
+      "schema": "pakshi.page/1",
       "id": "pg_news",
+      "type": "collection",
+      "kind": "blog",
       "path": "/news",
-      "type": "page",
-      "meta": { "title": "News", "description": "What's happening at the harbour." }
+      "meta": { "title": "News", "description": "What's happening at the harbour." },
+      "root": [],
+      "blocks": {}
     },
-    {
+    "pg_dates": {
+      "schema": "pakshi.page/1",
       "id": "pg_dates",
-      "path": "/news/dates-announced",
-      "type": "post",
+      "type": "entry",
+      "kind": "blog",
+      "collection": "pg_news",
+      "slug": "dates-announced",
       "meta": {
         "title": "Dates for this summer are out",
         "description": "Summer school runs in the first two weeks of July.",
@@ -91,12 +104,17 @@
         "author": "Meera Kapoor",
         "tags": ["dates"],
         "excerpt": "Summer school runs in the first two weeks of July, with places for 60 students each week."
-      }
+      },
+      "root": [],
+      "blocks": {}
     },
-    {
+    "pg_mentors": {
+      "schema": "pakshi.page/1",
       "id": "pg_mentors",
-      "path": "/news/meet-the-mentors",
-      "type": "post",
+      "type": "entry",
+      "kind": "blog",
+      "collection": "pg_news",
+      "slug": "meet-the-mentors",
       "meta": {
         "title": "Meet this year's mentors",
         "description": "Twelve boat builders are joining us.",
@@ -104,7 +122,9 @@
         "author": "Sam Okafor",
         "tags": ["mentors"],
         "excerpt": "Twelve boat builders from around the region are joining us as mentors."
-      }
+      },
+      "root": [],
+      "blocks": {}
     }
-  ]
+  }
 }
