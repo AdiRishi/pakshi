@@ -4,6 +4,7 @@ import { env } from "cloudflare:workers";
 
 import { takeFormPost } from "./lib/forms.ts";
 import { serveMedia } from "./lib/media.ts";
+import { pageCacheKey } from "./lib/page-cache.ts";
 import { secured } from "./lib/security.ts";
 import { liveSiteFor } from "./lib/snapshot.ts";
 
@@ -12,11 +13,9 @@ const mediaPrefix = "/_media/";
 
 /**
  * Finds the site for the request's host and serves its pages from the
- * Workers cache, and passes form posts on to sites-api. The key holds the
- * host, the site's release and this Worker's version, so a publish or a
- * deploy changes the key instead of needing a purge, and a page naming its
- * own address is cached per address. Only reads are cached. Every response
- * carries the headers that limit what the browser loads with it.
+ * Workers cache, and passes form posts on to sites-api. Only reads are
+ * cached. Every response carries the headers that limit what the browser
+ * loads with it.
  */
 export const onRequest = defineMiddleware(async (context, next) =>
   secured(await serve(context, next)),
@@ -36,7 +35,11 @@ const serve = async (context: APIContext, next: MiddlewareNext) => {
   if (!reading || context.url.searchParams.has("sent")) return next();
 
   const key = new Request(
-    `https://page-cache.pakshi/${context.url.host}/${site.live.release}/${env.CF_VERSION_METADATA.id}${context.url.pathname}`,
+    pageCacheKey({
+      url: context.url,
+      release: site.live.release,
+      worker: env.CF_VERSION_METADATA.id,
+    }),
   );
   const cache = await caches.open("pages");
   const cached = await cache.match(key);
