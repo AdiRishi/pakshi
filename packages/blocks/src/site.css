@@ -71,15 +71,20 @@
  */
 /*
  * A grid of items set to more columns than it has items fills its one row on
- * a wide screen: three features in a four-column grid take a third each.
+ * a wide screen: three features in a four-column grid take a third each. The
+ * examples the editor shows of items that could be added don't count.
  */
 @utility fill-row {
   @media (width >= 64rem) {
-    &:has(> :last-child:nth-child(2)) {
+    &:has(> :nth-child(2 of :not([data-pakshi-ghost]))):not(
+        :has(> :nth-child(3 of :not([data-pakshi-ghost])))
+      ) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
-    &:has(> :last-child:nth-child(3)) {
+    &:has(> :nth-child(3 of :not([data-pakshi-ghost]))):not(
+        :has(> :nth-child(4 of :not([data-pakshi-ghost])))
+      ) {
       grid-template-columns: repeat(3, minmax(0, 1fr));
     }
   }
