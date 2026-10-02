@@ -21,6 +21,7 @@ import { keyboardCommands, toolbarCommands, type Where } from "./commands.ts";
 import {
   type ActiveRichText,
   controlId,
+  type EditorImage,
   type EditorUi,
   type FieldTarget,
   type InsertSpot,
@@ -102,7 +103,7 @@ export function EditorProvider(props: {
   readonly live: LiveRelease;
   readonly page: PageId;
   readonly definitions: ReadonlyMap<BlockType, BlockDefinition>;
-  readonly media: ReadonlyArray<MediaSummary>;
+  readonly media: ReadonlyArray<EditorImage>;
   readonly mediaSrc: (id: MediaId) => string;
   readonly suggestAltText: (media: MediaId, block: BlockId) => Promise<string | null>;
   /** Adds an image to the site's library, or null for someone who can't. */
@@ -140,7 +141,7 @@ export function EditorProvider(props: {
   } | null>(null);
   const [announcement, setAnnouncement] = useState("");
   // Images uploaded while the editor is open, which the library shows first.
-  const [uploaded, setUploaded] = useState<ReadonlyArray<MediaSummary>>([]);
+  const [uploaded, setUploaded] = useState<ReadonlyArray<EditorImage>>([]);
   const upload = props.uploadImage;
 
   const services = useMemo(

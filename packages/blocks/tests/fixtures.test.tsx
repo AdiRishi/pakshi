@@ -9,7 +9,7 @@ import { SiteDataProvider } from "../src/components.tsx";
 import { propsSchema } from "../src/fields.ts";
 import { blockSamples, blockShowcase, placeholderItem, showcaseMediaSrc } from "../src/fixtures.ts";
 import { presentationOf } from "../src/presentation.ts";
-import { latestLockfile, loadBlocks, renderBlock, renderPage } from "../src/render.tsx";
+import { latestLockfile, loadBlocks, renderPage, renderTree } from "../src/render.tsx";
 
 const newest = await loadBlocks(latestLockfile);
 const types = Array.from(newest.keys());
@@ -63,20 +63,17 @@ test.each(types)("%s's sample has what each of its layouts needs", (type) => {
 
 test.each(types)("%s's showcase renders in every layout, with every image it places", (type) => {
   const showcase = blockShowcase(newest, type);
-  const holder =
-    showcase.target === "site" ? showcase.draft.parts : showcase.draft.pages[showcase.target];
-  const shown = holder?.blocks[showcase.block];
-  if (shown === undefined || holder === undefined) throw new Error("The showcase lost its block.");
-  for (const variant of newest.get(shown.type)?.variants ?? []) {
-    const blocks = { ...holder.blocks, [showcase.block]: { ...shown, variant } };
+  for (const variant of newest.get(showcase.tree.type)?.variants ?? []) {
     const markup = renderToStaticMarkup(
       <SiteDataProvider value={showcase.data}>
-        {renderBlock(newest, blocks, showcase.block)}
+        {renderTree(newest, { ...showcase.tree, variant })}
       </SiteDataProvider>,
     );
     expect(markup).not.toBe("");
   }
-  const placed = Object.values(holder.blocks).flatMap((block) => imagesIn(block.props));
+  const holder =
+    showcase.target === "site" ? showcase.draft.parts : showcase.draft.pages[showcase.target];
+  const placed = Object.values(holder?.blocks ?? {}).flatMap((block) => imagesIn(block.props));
   const library = showcase.media.map((file) => file.id);
   expect(placed.filter((image) => showcase.data.media(image.id) === undefined)).toEqual([]);
   expect(library).toEqual(expect.arrayContaining(placed.map((image) => image.id)));
@@ -86,8 +83,8 @@ test.each(types)("%s's showcase renders in every layout, with every image it pla
 test("a section's showcase holds the section alone, between the sample header and footer", async () => {
   const showcase = blockShowcase(newest, "faq");
   const page = showcasePage(showcase);
-  expect(page.root).toEqual([showcase.block]);
-  expect(page.blocks[showcase.block]?.type).toBe("faq");
+  expect(page.root).toEqual([showcase.tree.id]);
+  expect(page.blocks[showcase.tree.id]?.type).toBe("faq");
   const rendered = await renderPage(page, showcase.draft.parts, showcase.draft.lockfile);
   const markup = renderToStaticMarkup(
     <SiteDataProvider value={showcase.data}>
@@ -103,7 +100,7 @@ test("a section's showcase holds the section alone, between the sample header an
 test("an item's showcase shows it in the section that holds it", () => {
   const showcase = blockShowcase(newest, "team-member");
   const page = showcasePage(showcase);
-  const section = page.blocks[showcase.block];
+  const section = page.blocks[showcase.tree.id];
   expect(section?.type).toBe("team-grid");
   const people = Object.values(section?.slots ?? {}).flat();
   expect(people.length).toBeGreaterThan(0);
@@ -113,7 +110,7 @@ test("an item's showcase shows it in the section that holds it", () => {
 test("a header's showcase is the site's header, on a page with nothing else", () => {
   const showcase = blockShowcase(newest, "header");
   expect(showcase.target).toBe("site");
-  expect(showcase.draft.parts.header).toBe(showcase.block);
+  expect(showcase.draft.parts.header).toBe(showcase.tree.id);
   expect(Object.values(showcase.draft.pages).every((page) => page.root.length === 0)).toBe(true);
 });
 

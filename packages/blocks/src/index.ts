@@ -73,6 +73,7 @@ export { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 export type { RichTextMark, RichTextNode } from "./rich-text.ts";
 export { RichTextDocument, richTextLines } from "./rich-text.ts";
 export {
+  flattenTree,
   latestLockfile,
   loadBlock,
   loadBlocks,
@@ -81,6 +82,7 @@ export {
   removedBlockVersions,
   renderBlock,
   renderPage,
+  renderTree,
   withNewBlockTypes,
 } from "./render.tsx";
 export type { PageEntry } from "./site-data.ts";
