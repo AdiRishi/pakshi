@@ -9,6 +9,10 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 095 | Blocks are built on a shared kit, and designed in a lab                            | 2026-10-03 | Accepted            |
+| 094 | A block version can rename the layouts of the one before it                        | 2026-10-03 | Accepted            |
+| 093 | Blocks offer choices and icons as fields                                           | 2026-10-03 | Accepted            |
+| 092 | Themes set color mode, a second color, type styles, buttons, cards and width       | 2026-10-03 | Accepted            |
 | 091 | Blogs are pages that hold posts                                                    | 2026-10-02 | Accepted            |
 | 090 | Studio sets its color scheme with a head script, and site previews keep their own  | 2026-10-02 | Accepted            |
 | 089 | The checks open from the top bar, and Pakshi fixes what it can of them             | 2026-10-02 | Accepted            |
@@ -100,6 +104,40 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 095 — Blocks are built on a shared kit, and designed in a lab [#decision-095]
+
+**Context.** Each block version wrote its own section wrapper, heading, buttons and spacing, so blocks drifted apart and none used shadcn/ui's component recipes. Checking a block's look meant running the whole stack and opening Studio.
+
+**Decision.** `packages/blocks/src/kit/` holds what most blocks share: `Section` (surface, spacing, backdrop and an inset panel), `Intro` and `Heading` (a short label, a heading with a softer continuation, an introduction), `Actions` and `buttonClass` (shadcn/ui's button variants in the theme's tokens), `Icon`, `Disclosure`, `Marquee` and `Scroller`. Blocks use the theme utilities only, as before. `pnpm --filter @repo/blocks lab` serves a page that renders every fixture of the newest versions, or a whole page in any theme, with Vite and the same site stylesheet.
+
+**Consequences.** Like the field components, the kit is shared by frozen versions, so a change to it that alters their output needs a rendering changes entry. The lab needs no Cloudflare profile, so block design and review no longer wait on a stack.
+
+## 094 — A block version can rename the layouts of the one before it [#decision-094]
+
+**Context.** `migrate` turned the previous version's props into the next one's, but layouts kept their names forever, so a version could only add layouts. Redesigning a block meant keeping names such as `three-columns` that no longer described a layout, once columns became a choice.
+
+**Decision.** A version lists `renamedVariants`, the previous version's layouts it calls by another name, and upgrading moves content onto them. `migrate` is told the layout the content had, so it can carry what the old layout meant into props, such as `two-columns` into a `columns` choice. A presentation labels renamed layouts in `retiredVariants`, because sites on older versions still show them. A test checks every old layout lands on one the new version has.
+
+**Consequences.** Old migrations take one argument and still type-check. The editor's layout picker and the agent see only the pinned version's layouts.
+
+## 093 — Blocks offer choices and icons as fields [#decision-093]
+
+**Context.** A block's look was one variant, so every combination of columns, alignment, image side and card style needed a variant of its own. Feature lists had no icons.
+
+**Decision.** Two field kinds join the others. A `choice` is a block-level setting with a few named options. Its first option is what new content starts with and what content without the key reads as, so headers and footers created empty, and content migrated from older versions, are complete without it. The editor shows choices under Layout and style, labelled by the block's presentation, which can name the layouts a choice applies to. An `icon` names an icon from a curated set of Lucide symbols and social networks' marks, picked from a searchable grid. Merging treats both as single values.
+
+**Consequences.** Variants are kept for genuinely different arrangements. An icon name stays in the set for as long as any page might use it, since released versions' golden schemas list the names.
+
+## 092 — Themes set color mode, a second color, type styles, buttons, cards and width [#decision-092]
+
+**Context.** Studying about fifty well-known sites, most of the difference between them came from a few choices the theme couldn't make: whether the site is dark, a second brand color, how headings are tracked and cased, how small labels look, pill or squared buttons, whether cards are outlined, filled or raised, and how wide the page runs. Display type also topped out near 50px where the sites use 64 to 140px.
+
+**Decision.** `ThemeValues` gains `colorMode` (light, dark or the visitor's), `accentColor` (optional), `headingStyle`, `labelStyle`, `buttons`, `cards` and `width`; the type scale gains two sizes and fluid steps, heading weight gains light and regular, the font list grows to 28, and two surfaces join the four: `tint`, a pale wash of the brand, and `accent`, the second color or a light shade of the first. Card style replaces shadow. The resolved theme becomes `pakshi.theme/2`. A revision, draft or snapshot stored in the first schema reads as the second: its colors stay as they were, its new surfaces are generated from its brand surface's color, and its shadow becomes its card style.
+
+**Rejected.** Presets, for the reasons in [087](#decision-087). Migrating stored themes, which would mean rewriting immutable snapshots.
+
+**Consequences.** Old snapshots render as before, except that type and spacing utilities now follow the new scales, which released block versions share; their changed screenshots are recorded in the rendering changes log. A theme that is always light or dark shows in that scheme in the editor whatever the scheme switch says.
 
 ## 091 — Blogs are pages that hold posts [#decision-091]
 

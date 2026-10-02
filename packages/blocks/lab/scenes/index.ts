@@ -1,6 +1,8 @@
 import type { Menus } from "@repo/contracts/site";
-import type { Surface, ThemeValues } from "@repo/tokens";
+import type { Surface } from "@repo/tokens";
 import type { Json } from "effect/Schema";
+
+import { landing } from "./landing.ts";
 
 export interface SceneBlock {
   readonly type: string;
@@ -19,14 +21,14 @@ export interface SceneBlock {
   >;
 }
 
+/** A whole page: its site's name and menus, header, sections and footer. */
 export interface Scene {
   readonly name: string;
   readonly siteName?: string;
-  readonly theme: Partial<ThemeValues>;
   readonly menus?: Menus;
   readonly header: SceneBlock;
   readonly footer: SceneBlock;
   readonly sections: ReadonlyArray<SceneBlock>;
 }
 
-export const scenes: ReadonlyArray<Scene> = [];
+export const scenes: ReadonlyArray<Scene> = [landing];

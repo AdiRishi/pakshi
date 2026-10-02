@@ -13,6 +13,7 @@ import { siteData } from "../src/site-data.ts";
 import { SitePage } from "../src/site-page.tsx";
 import { labMedia } from "./media.ts";
 import { type Scene, type SceneBlock, scenes } from "./scenes/index.ts";
+import { themes } from "./scenes/themes.ts";
 
 const params = new URLSearchParams(location.search);
 const scheme: ColorScheme = params.get("scheme") === "dark" ? "dark" : "light";
@@ -56,9 +57,12 @@ const data = (scene: Scene | undefined) =>
 
 const render = (block: BlockTree): ReactElement => renderTree(definitions, block);
 
+const themeName = params.get("theme");
+const theme = Object.entries(themes).find(([name]) => name === themeName)?.[1] ?? defaultTheme;
+
 const Page = ({ scene }: { readonly scene: Scene }) => (
   <>
-    <style>{themeCss(resolveTheme({ ...defaultTheme, ...scene.theme }).theme, scheme)}</style>
+    <style>{themeCss(resolveTheme(theme).theme, scheme)}</style>
     <SitePage
       site={data(scene)}
       header={render(tree(scene.header))}

@@ -221,6 +221,8 @@ A block's placement says where it goes: a section at the top of a page, with a s
 - Editors see versions as v1, v2, v3 and so on, and each site's lockfile pins those numbers. A number is never reused, so `hero@2` always names one folder of code ([decision 063](/decision-log#decision-063)).
 - Any change that alters a block's output is a new version. A version is released once its folder is on the base branch. Released versions are frozen: CI rejects any change to a released version's folder, except removing the whole folder. An urgent fix is a new version, and the platform team can create upgrade drafts on every site that uses the block.
 - Frozen folders import field builders (`text`, `richText`, `media`, `cta`) and helpers from `packages/blocks`, which build Effect schemas; they never import Effect directly, so a dependency upgrade never forces an edit to frozen code. Golden tests pin each version's placement, variants, surfaces and slots, and the generated JSON Schema of its props as drafts and as published.
+- Fields come from builders in `packages/blocks/src/fields.ts`: text, rich text, link, form, media, button, collection, number, list, and two block settings: `choice`, one of a few named options whose first is the default, and `icon` ([decision 093](/decision-log#decision-093)). A version may rename the previous version's layouts with `renamedVariants`, and its `migrate` is told the layout the content had ([decision 094](/decision-log#decision-094)).
+- Blocks build on the kit in `packages/blocks/src/kit/` (sections, openings, buttons in shadcn/ui's variants, icons, disclosures, marquees, scrollers), and `pnpm --filter @repo/blocks lab` renders them in any theme without the stack ([decision 095](/decision-log#decision-095)).
 - A block's component renders its fields through the field components in `packages/blocks` (text, rich text, media, link and slot). On the site they output plain markup. In Studio the [editor](/editor#with-blocks) makes the same markup editable, so a block needs no editor-specific code and the editor can improve without a new block version.
 - New sites start on the latest version of every block. A new draft also takes every block type its live release doesn't pin, at its latest version, so new blocks reach existing sites ([decision 067](/decision-log#decision-067)).
 - Each version after the first says in a sentence what it changes, which the upgrade banner and the block catalog show.
@@ -245,15 +247,16 @@ A block's placement says where it goes: a section at the top of a page, with a s
 
 A theme is a small set of tokens compiled into a CSS file of variables. Every site shares one Tailwind build; sites differ only in their variable file.
 
-| Token group     | Values                                                  |
-| --------------- | ------------------------------------------------------- |
-| Color           | Brand color (OKLCH), neutral tone (cool, neutral, warm) |
-| Surfaces        | Section backgrounds: default, muted, brand, inverse     |
-| Typography      | Heading and body fonts, type scale, heading weight      |
-| Shape and depth | Corner radius, shadow style (flat, soft, raised)        |
-| Density         | Section spacing (compact, comfortable, spacious)        |
-| Imagery         | Image corner style                                      |
-| Motion          | On or off                                               |
+| Token group     | Values                                                                                                                                                              |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Color           | Brand color, optional second color (OKLCH), neutral tone (cool, neutral, warm)                                                                                      |
+| Color mode      | Always light, always dark, or the visitor's setting                                                                                                                 |
+| Surfaces        | Section backgrounds: default, muted, tint, brand, accent, inverse                                                                                                   |
+| Typography      | Heading and body fonts (28), type scale (five sizes), heading weight, heading style (tight, normal, capitals), label style (plain, small capitals, pill, monospace) |
+| Shape and depth | Corner radius, buttons (theme corners or pill), cards (outline, filled, raised)                                                                                     |
+| Layout          | Section spacing (compact, comfortable, spacious), page width (narrow, regular, wide)                                                                                |
+| Imagery         | Image corner style                                                                                                                                                  |
+| Motion          | On or off                                                                                                                                                           |
 
 **How it works:**
 
@@ -261,7 +264,8 @@ A theme is a small set of tokens compiled into a CSS file of variables. Every si
 - **Brand revisions:** each save of a brand's theme or identity (logo, logo for dark backgrounds, favicon) is an immutable, numbered brand revision in D1, with the theme as set and as resolved. Each draft pins a revision, the way its lockfile pins block versions, and carries its resolved theme and identity, so freezing and rendering read the pinned revision, never the brand's latest, without reading D1. A merge keeps the newer revision ([decision 065](/decision-log#decision-065)). The voice guide isn't part of a revision: the agent follows the latest.
 - **Brand updates:** a new brand revision creates a Brand update draft on every site in the brand that moves its pin to the new revision. If a site already has an unpublished Brand update draft, that draft's pin moves instead. Each follows its site's workflow, so a live site changes only when that draft publishes. Other drafts pick up the revision by merging after it's live. Each site's `SiteDoc` records the newest revision it has taken, and the scheduled job offers the brand's newest again to a site a save couldn't reach ([decision 066](/decision-log#decision-066)). The revision reaches the draft as a batch of the person who saved it, so they count as having edited it. Rolling back the publish of a Brand update takes the site back to its older revision, so the newer one comes back as a Brand update draft.
 - **Identity:** the logos and favicon are images in the brand's library. The header shows the logo from its second version, and the version for dark backgrounds where the header's surface is dark; each page links the favicon.
-- **Surfaces:** blocks choose a surface, never a color. `[data-surface="brand"]` re-scopes shadcn's semantic variables (`--background`, `--primary` and so on), so every primitive inside that section adapts.
+- **Surfaces:** blocks choose a surface, never a color. `[data-surface="brand"]` re-scopes shadcn's semantic variables (`--background`, `--primary` and so on), so every primitive inside that section adapts. An item can set a surface on an element inside it, such as a bento tile or a featured plan.
+- **Schema versions:** the resolved theme is `pakshi.theme/2`. A theme stored in the first schema reads as the second, with its colors unchanged and its new surfaces generated from them ([decision 092](/decision-log#decision-092)).
 - **Palette:** generated in OKLCH from the one brand color and a neutral tone (cool, neutral or warm). Text colors are moved in lightness until they pass WCAG 2.2 AA contrast on what's behind them, and form field and focus outlines reach 3:1. The light scheme uses the brand color as chosen for buttons and links, so a brand color too light to read fails the check, and the theme can't be saved while any pair fails ([decision 069](/decision-log#decision-069)).
 - **Fonts:** a curated list of variable fonts, served from each app's own `/_fonts/` path as static assets, so no font request leaves the site ([decision 064](/decision-log#decision-064)).
 - **Motion:** with motion on, sections fade in as they scroll into view, through CSS alone; visitors who ask for less motion never see it, and the editor's canvas shows sections at once.
