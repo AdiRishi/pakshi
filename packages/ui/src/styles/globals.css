@@ -11,6 +11,7 @@
 
 /* shadcn's theme variables, set to the Studio designs' colors. */
 :root {
+  color-scheme: light;
   --background: #f3f9fe;
   --foreground: #0d2436;
   --card: #ffffff;
@@ -52,6 +53,52 @@
   --presence-5: #a8326b;
   --presence-6: #4b4fa8;
   --presence-foreground: #ffffff;
+  /*
+   * What the editor draws on a site's own page, in the site's colors rather
+   * than Studio's, so it stays the same in Studio's dark mode.
+   */
+  --canvas-accent: #1c74b8;
+  --canvas-warning: #7a4a00;
+}
+
+/*
+ * Studio at night: the brand's navy and sky after dark. Surfaces are navy,
+ * lighter the higher they sit, and the sky blue stays the brand's color.
+ * The presence colors hold white text in both schemes, so they don't change.
+ */
+.dark {
+  color-scheme: dark;
+  --background: #071a29;
+  --foreground: #e7f0f6;
+  --card: #0d2436;
+  --card-foreground: #e7f0f6;
+  --popover: #15304a;
+  --popover-foreground: #e7f0f6;
+  --primary: #48b0f0;
+  --primary-foreground: #0d2436;
+  --secondary: #173041;
+  --secondary-foreground: #c1d0db;
+  --muted: #173041;
+  --muted-foreground: #9fb3c3;
+  --accent: #123552;
+  --accent-foreground: #e7f0f6;
+  --destructive: #ff9b91;
+  --warning: #3e2909;
+  --warning-foreground: #f8cd7d;
+  --success: #113323;
+  --success-foreground: #8de4b2;
+  --border: #21384b;
+  --input: #597c99;
+  --ring: #48b0f0;
+  --link: #79c8fa;
+  --sidebar: #0d2436;
+  --sidebar-foreground: #c1d0db;
+  --sidebar-primary: #48b0f0;
+  --sidebar-primary-foreground: #0d2436;
+  --sidebar-accent: #123552;
+  --sidebar-accent-foreground: #e7f0f6;
+  --sidebar-border: #21384b;
+  --sidebar-ring: #48b0f0;
 }
 
 @theme inline {
@@ -98,6 +145,39 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 6px);
+}
+
+/*
+ * Stars for the sky beside Studio's sign-in forms at night, thinning out
+ * towards the horizon.
+ */
+@utility night-stars {
+  --star-bright: color-mix(in oklab, var(--foreground) 85%, transparent);
+  --star-dim: color-mix(in oklab, var(--foreground) 40%, transparent);
+  background-image:
+    radial-gradient(circle at 34% 21%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 8% 60%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 51% 14%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 42% 26%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 43% 60%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 91% 49%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 40% 69%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 43% 43%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 32% 59%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 13% 45%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 10% 15%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 50% 43%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 21% 57%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 57% 42%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 71% 29%, var(--star-bright) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 15% 36%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 74% 45%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 35% 32%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 81% 67%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 68% 16%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 95% 60%, var(--star-dim) 0 1px, transparent 1.5px),
+    radial-gradient(circle at 70% 63%, var(--star-dim) 0 1px, transparent 1.5px);
+  mask-image: linear-gradient(to bottom, black 35%, transparent 80%);
 }
 
 @layer base {
