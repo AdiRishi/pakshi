@@ -78,6 +78,10 @@ import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { typ
 import location1imageLeft from "./location/v1/fixtures/image-left.json" with { type: "json" };
 import location1imageRight from "./location/v1/fixtures/image-right.json" with { type: "json" };
 import location1placeholder from "./location/v1/fixtures/placeholder.json" with { type: "json" };
+import location2placeholder from "./location/v2/fixtures/placeholder.json" with { type: "json" };
+import location2splitStart from "./location/v2/fixtures/split-start.json" with { type: "json" };
+import location2split from "./location/v2/fixtures/split.json" with { type: "json" };
+import location2stacked from "./location/v2/fixtures/stacked.json" with { type: "json" };
 import logoStrip1grid from "./logo-strip/v1/fixtures/grid.json" with { type: "json" };
 import logoStrip1placeholder from "./logo-strip/v1/fixtures/placeholder.json" with { type: "json" };
 import logoStrip1row from "./logo-strip/v1/fixtures/row.json" with { type: "json" };
@@ -198,6 +202,10 @@ export const fixtureFiles = [
   { type: "location", version: 1, name: "image-left", fixture: location1imageLeft },
   { type: "location", version: 1, name: "image-right", fixture: location1imageRight },
   { type: "location", version: 1, name: "placeholder", fixture: location1placeholder },
+  { type: "location", version: 2, name: "placeholder", fixture: location2placeholder },
+  { type: "location", version: 2, name: "split-start", fixture: location2splitStart },
+  { type: "location", version: 2, name: "split", fixture: location2split },
+  { type: "location", version: 2, name: "stacked", fixture: location2stacked },
   { type: "logo-strip", version: 1, name: "grid", fixture: logoStrip1grid },
   { type: "logo-strip", version: 1, name: "placeholder", fixture: logoStrip1placeholder },
   { type: "logo-strip", version: 1, name: "row", fixture: logoStrip1row },

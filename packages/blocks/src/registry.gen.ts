@@ -29,6 +29,7 @@ export const registry: Readonly<
   "hero@4": () => import("./hero/v4/index.tsx"),
   "image-caption@1": () => import("./image-caption/v1/index.tsx"),
   "location@1": () => import("./location/v1/index.tsx"),
+  "location@2": () => import("./location/v2/index.tsx"),
   "logo-strip@1": () => import("./logo-strip/v1/index.tsx"),
   "post-header@1": () => import("./post-header/v1/index.tsx"),
   "post-list@2": () => import("./post-list/v2/index.tsx"),
