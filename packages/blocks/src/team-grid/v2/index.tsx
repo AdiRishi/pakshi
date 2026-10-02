@@ -64,7 +64,12 @@ const TeamGrid = ({ props: team, variant }: BlockComponentProps<typeof props, Va
           </Intro>
           {!center && <Actions actions={team.actions} others="link" className="md:shrink-0" />}
         </div>
-        <Slot name="people" as="ul" className={people[variant](team)} />
+        <Slot
+          name="people"
+          as="ul"
+          scrolls={variant === "overlay"}
+          className={people[variant](team)}
+        />
       </div>
     </Section>
   );

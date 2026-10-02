@@ -367,6 +367,8 @@ interface SlotProps {
   readonly name: string;
   readonly as?: "div" | "ul" | "ol" | undefined;
   readonly className?: string | undefined;
+  /** Whether the slot's element scrolls sideways, so the keyboard needs to reach it. */
+  readonly scrolls?: boolean;
 }
 
 /** A section's slot: the items placed in it, rendered inside this element. */
@@ -386,7 +388,11 @@ export const Slot = (options: SlotProps) => {
       </editing.Slot>
     );
   const Element = options.as ?? "div";
-  return <Element className={options.className}>{items}</Element>;
+  return (
+    <Element tabIndex={options.scrolls === true ? 0 : undefined} className={options.className}>
+      {items}
+    </Element>
+  );
 };
 
 const inputClass =

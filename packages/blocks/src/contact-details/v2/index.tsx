@@ -165,14 +165,12 @@ const ContactDetails = ({
             <address className="not-italic">
               <dl className={cx("grid gap-4", columns[shown.length])}>
                 {shown.map((detail) => (
-                  <div key={detail.key} className="card flex flex-col gap-6 p-6 md:p-7">
-                    <Badge icon={detail.icon} />
-                    <div className="flex flex-col gap-2">
-                      <dt className="text-small font-medium text-muted-foreground">
-                        {detail.label}
-                      </dt>
-                      <dd className="text-lead">{detail.value}</dd>
-                    </div>
+                  <div key={detail.key} className="card flex flex-col gap-2 p-6 md:p-7">
+                    <dt className="text-small flex flex-col gap-6 font-medium text-muted-foreground">
+                      <Badge icon={detail.icon} />
+                      {detail.label}
+                    </dt>
+                    <dd className="text-lead">{detail.value}</dd>
                   </div>
                 ))}
               </dl>

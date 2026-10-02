@@ -123,6 +123,7 @@ const TestimonialsBlock = ({
             <Slot
               name="items"
               as="ul"
+              scrolls
               className={cx(
                 scrollerClass,
                 "[&>li]:shrink-0 [&>li]:snap-start",
