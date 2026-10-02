@@ -1,5 +1,7 @@
+import { placeholderCollection } from "@repo/blocks/placeholders";
 import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
+import type { PageDocument } from "@repo/contracts/page";
 import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
@@ -157,3 +159,83 @@ export const draftToFix: Draft = Schema.decodeSync(Draft)({
     },
   },
 });
+
+/** A post in the News blog, with no sections yet. */
+export const newsPost = (
+  id: string,
+  slug: string,
+  title: string,
+  date: string,
+): typeof PageDocument.Encoded => ({
+  schema: "pakshi.page/1",
+  id,
+  type: "entry",
+  kind: "blog",
+  collection: "pg_news",
+  slug,
+  meta: { title, description: `${title}.`, date, author: "Sam Okafor", tags: [], excerpt: "" },
+  root: [],
+  blocks: {},
+});
+
+/** The Harbour draft with a News blog at /news, listing itself, and two posts. */
+export const newsDraft: Draft = Schema.decodeSync(Draft)({
+  ...Schema.encodeSync(Draft)(harbourDraft),
+  pages: {
+    ...Schema.encodeSync(Draft)(harbourDraft).pages,
+    pg_news: {
+      schema: "pakshi.page/1",
+      id: "pg_news",
+      type: "collection",
+      kind: "blog",
+      path: "/news",
+      recipe: "blog",
+      meta: { title: "News", description: "News from the harbour." },
+      root: ["b_newsList"],
+      blocks: {
+        b_newsList: {
+          type: "post-list",
+          variant: "list",
+          surface: "default",
+          props: {
+            heading: "News from the harbour",
+            collection: { $ref: "page", id: "pg_news" },
+            count: 12,
+          },
+        },
+      },
+    },
+    pg_dates: newsPost("pg_dates", "dates-announced", "Dates announced", "2026-08-01"),
+    pg_mentors: newsPost("pg_mentors", "meet-the-mentors", "Meet the mentors", "2026-09-15"),
+  },
+});
+
+/** The News draft with a list of posts on the home page that still shows the sample posts. */
+export const sampleListDraft: Draft = (() => {
+  const encoded = Schema.encodeSync(Draft)(newsDraft);
+  const home = encoded.pages["pg_home"];
+  if (home === undefined) throw new Error("The News draft has no home page.");
+  return Schema.decodeSync(Draft)({
+    ...encoded,
+    pages: {
+      ...encoded.pages,
+      pg_home: {
+        ...home,
+        root: [...home.root, "b_latest"],
+        blocks: {
+          ...home.blocks,
+          b_latest: {
+            type: "post-list",
+            variant: "cards",
+            surface: "default",
+            props: {
+              heading: "The latest from the harbour",
+              collection: { $ref: "page", id: placeholderCollection },
+              count: 3,
+            },
+          },
+        },
+      },
+    },
+  });
+})();

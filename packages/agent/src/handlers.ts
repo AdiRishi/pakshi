@@ -1,20 +1,26 @@
-import { recipeById } from "@repo/blocks/recipes";
-import type { Part } from "@repo/contracts/agent";
+import {
+  type NewPage,
+  pageFromRecipe,
+  type Recipe,
+  recipeById,
+  recipes,
+} from "@repo/blocks/recipes";
+import type { Part, PlannedPage } from "@repo/contracts/agent";
 import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import { type BlockId, type BlockType, PageId, randomId } from "@repo/contracts/ids";
 import type { Op, Target } from "@repo/contracts/ops";
-import { type PageDocument, pageName } from "@repo/contracts/page";
-import { addressOf } from "@repo/contracts/snapshot";
+import { type CollectionKind, pageName, type PagePath, Slug } from "@repo/contracts/page";
+import { addressOf, entryAddress, listingsOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
-import { Effect, Option, Result } from "effect";
+import { DateTime, Effect, Option, Result, Schema } from "effect";
 
 import { describeContract } from "./content.ts";
 import {
   blockOfOp,
-  buildBlock,
   describeErrors,
   describeOps,
+  newSection,
   toOps,
   typedOver,
   unknownMedia,
@@ -97,6 +103,89 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
     }),
   );
 });
+
+const isSlug = Schema.is(Slug);
+
+/** A slug made from a title: its lowercase words joined by hyphens, cut at a word to fit. */
+const slugFor = (title: string) => {
+  const words = title
+    .toLowerCase()
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .match(/[a-z0-9]+/g);
+  const joined = (words ?? []).join("-");
+  const slug = joined.length <= 80 ? joined : joined.slice(0, 81).replace(/-[^-]*$/, "");
+  return isSlug(slug) ? slug : null;
+};
+
+/** Why a block type can't start a new page, or null when it can. */
+const notASection = (contracts: BlockContracts, type: BlockType) => {
+  const contract = contracts.get(type);
+  if (contract === undefined)
+    return `This site has no ${type} block. It has ${Array.from(contracts.keys()).join(", ")}.`;
+  return contract.placement === "section" ? null : `A ${contract.title} block isn't a section.`;
+};
+
+/**
+ * Creates a page, blog or post from a recipe, with `sections` or the
+ * recipe's required ones, and any list of posts among them pointed at the
+ * blog `pageFromRecipe` picks.
+ */
+const createFromRecipe = Effect.fn("Agent.createFromRecipe")(function* (
+  call: string | undefined,
+  recipe: Recipe,
+  page: NewPage,
+  sections: ReadonlyArray<BlockType> | undefined,
+) {
+  const workspace = yield* Workspace;
+  const draft = yield* workspace.draft;
+  const contracts = yield* workspace.contracts;
+  const types =
+    sections ??
+    recipe.sections.filter((section) => section.required).map((section) => section.type);
+  const problems = types.flatMap((type) => notASection(contracts, type) ?? []);
+  if (problems.length > 0) return yield* fail(...new Set(problems));
+  const created = pageFromRecipe({
+    recipe,
+    contracts,
+    listings: listingsOf(draft.pages),
+    page,
+    sections: types,
+  });
+  yield* commitOps(call, draft, contracts, page.id, [{ op: "createPage", page: created }]);
+  return {
+    page: page.id,
+    sections: created.root.flatMap((block) => {
+      const placed = created.blocks[block];
+      return placed === undefined ? [] : [{ block, type: placed.type }];
+    }),
+  };
+});
+
+/**
+ * What's wrong with a planned page's recipe: one that doesn't exist, or one
+ * that makes an entry at an address that isn't one part below a collection
+ * of its kind among `collections`, the draft's and the plan's.
+ */
+const recipeProblems = (
+  page: PlannedPage,
+  collections: ReadonlyArray<{ readonly path: PagePath; readonly kind: CollectionKind }>,
+) => {
+  const makes = recipeById(page.recipe)?.makes;
+  if (makes === undefined) return [`${page.title}: there's no recipe ${page.recipe}`];
+  if (makes.type !== "entry") return [];
+  const parent = page.path.slice(0, page.path.lastIndexOf("/")) || "/";
+  if (
+    page.path !== "/" &&
+    collections.some(({ path, kind }) => path === parent && kind === makes.kind)
+  )
+    return [];
+  const { names } = collectionKinds[makes.kind];
+  const kind = names.kind.toLowerCase();
+  return [
+    `${page.title}: a ${names.one}'s address is its ${kind}'s address and one more part, such as /news/first-${names.one}, and ${page.path} isn't directly under a ${kind} in the draft or this plan`,
+  ];
+};
 
 /** The tools' handlers, over the services a turn provides. */
 export const agentHandlers = AgentTools.toLayer({
@@ -187,7 +276,7 @@ export const agentHandlers = AgentTools.toLayer({
       const contracts = yield* workspace.contracts;
       if (draft.pages[page] === undefined)
         return yield* fail(`There's no page ${page} in this draft.`);
-      const block = buildBlock(contracts, section);
+      const block = newSection(draft, contracts, page, section);
       if (Result.isFailure(block)) return yield* fail(block.failure);
       yield* commitOps(toolCallId, draft, contracts, page, [
         { op: "insertBlock", page, list: "root", after, block: block.success },
@@ -202,58 +291,66 @@ export const agentHandlers = AgentTools.toLayer({
 
   create_page: ({ recipe, title, description, path, sections }, { toolCallId }) =>
     Effect.gen(function* () {
-      const workspace = yield* Workspace;
-      const draft = yield* workspace.draft;
-      const contracts = yield* workspace.contracts;
       const found = recipeById(recipe);
       if (found === undefined) return yield* fail(`There's no recipe ${recipe}.`);
       if (found.makes.type === "entry") {
-        const names = collectionKinds[found.makes.kind].names;
+        const { names } = collectionKinds[found.makes.kind];
         return yield* fail(
-          `${found.title} makes a ${names.one}, which goes in a ${names.kind.toLowerCase()}. Create it in a ${names.kind.toLowerCase()}, not with create_page.`,
+          `${found.title} makes a ${names.one}, which goes in a ${names.kind.toLowerCase()}. Create it with create_entry in one of the draft's ${names.kind.toLowerCase()}s.`,
         );
       }
-      const types: ReadonlyArray<BlockType> =
-        sections ??
-        found.sections.filter((section) => section.required).map((section) => section.type);
-      const blocks = Result.all(types.map((type) => buildBlock(contracts, { type })));
-      if (Result.isFailure(blocks)) return yield* fail(blocks.failure);
-      const id = PageId.make(randomId("pg"));
-      const flat = blocks.success.flatMap((tree) => {
-        const { id: blockId, slots, ...block } = tree;
-        const items = Object.values(slots ?? {}).flat();
-        const placed =
-          slots === undefined
-            ? block
-            : {
-                ...block,
-                slots: Object.fromEntries(
-                  Object.entries(slots).map(([slot, list]) => [slot, list.map((item) => item.id)]),
-                ),
-              };
-        return [
-          [blockId, placed] as const,
-          ...items.map(({ id: itemId, ...item }) => [itemId, item] as const),
-        ];
-      });
-      const common = {
-        schema: "pakshi.page/1",
-        id,
-        path,
-        recipe: found.id,
-        root: blocks.success.map((block) => block.id),
-        blocks: Object.fromEntries(flat),
-        meta: { title, description },
-      } as const;
-      const page: PageDocument =
-        found.makes.type === "collection"
-          ? { ...common, type: "collection", kind: found.makes.kind }
-          : { ...common, type: "page" };
-      yield* commitOps(toolCallId, draft, contracts, id, [{ op: "createPage", page }]);
-      return {
-        page: id,
-        sections: blocks.success.map((block) => ({ block: block.id, type: block.type })),
-      };
+      const page = PageId.make(randomId("pg"));
+      return yield* createFromRecipe(
+        toolCallId,
+        found,
+        { id: page, path, meta: { title, description } },
+        sections,
+      );
+    }),
+
+  create_entry: ({ collection, title, slug, description, sections }, { toolCallId }) =>
+    Effect.gen(function* () {
+      const draft = yield* (yield* Workspace).draft;
+      const turn = yield* Turn;
+      const blog = draft.pages[collection];
+      if (blog?.type !== "collection") {
+        const blogs = Object.values(draft.pages).flatMap((page) =>
+          page.type === "collection" ? [`${page.id} "${pageName(page)}"`] : [],
+        );
+        return yield* fail(
+          `${blog === undefined ? `There's no page ${collection} in this draft` : `${pageName(blog)} (${collection}) isn't a blog`}. ${blogs.length === 0 ? "The draft has no blog yet: create one with create_page and the blog recipe first." : `Posts go in one of the draft's blogs: ${blogs.join(", ")}.`}`,
+        );
+      }
+      const recipe = recipes.find(
+        ({ makes }) => makes.type === "entry" && makes.kind === blog.kind,
+      );
+      if (recipe === undefined) return yield* fail(`There's no recipe for ${blog.kind} entries.`);
+      const chosen = slug ?? slugFor(title);
+      if (chosen === null)
+        return yield* fail(
+          "Give the post a slug, the last part of its address, in lowercase words joined by hyphens.",
+        );
+      const today = DateTime.formatIsoDateUtc(yield* DateTime.now);
+      const page = PageId.make(randomId("pg"));
+      const created = yield* createFromRecipe(
+        toolCallId,
+        recipe,
+        {
+          id: page,
+          collection,
+          slug: chosen,
+          meta: {
+            title,
+            description,
+            date: today,
+            author: turn.person.name,
+            tags: [],
+            excerpt: "",
+          },
+        },
+        sections,
+      );
+      return { ...created, path: entryAddress(blog.path, chosen) };
     }),
 
   get_preview_link: ({ page }, { toolCallId }) =>
@@ -295,11 +392,20 @@ export const agentHandlers = AgentTools.toLayer({
 
   propose_plan: ({ plan }, { toolCallId }) =>
     Effect.gen(function* () {
-      const contracts = yield* (yield* Workspace).contracts;
+      const workspace = yield* Workspace;
+      const contracts = yield* workspace.contracts;
+      const draft = yield* workspace.draft;
+      const collections = [
+        ...listingsOf(draft.pages).flatMap((listing) =>
+          listing.type === "collection" ? [{ path: listing.path, kind: listing.kind }] : [],
+        ),
+        ...plan.pages.flatMap((page) => {
+          const makes = recipeById(page.recipe)?.makes;
+          return makes?.type === "collection" ? [{ path: page.path, kind: makes.kind }] : [];
+        }),
+      ];
       const problems = plan.pages.flatMap((page) => [
-        ...(recipeById(page.recipe) === undefined
-          ? [`${page.title}: there's no recipe ${page.recipe}`]
-          : []),
+        ...recipeProblems(page, collections),
         ...page.sections.flatMap((section) =>
           contracts.get(section.type)?.placement === "section"
             ? []

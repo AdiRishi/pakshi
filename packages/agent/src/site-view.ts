@@ -1,13 +1,14 @@
 import { richTextLines, RichTextDocument } from "@repo/blocks";
 import type { Fields } from "@repo/blocks/fields";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
-import { type BlockInstance, pageName } from "@repo/contracts/page";
+import { type BlockInstance, type PageDocument, pageName } from "@repo/contracts/page";
 import { addressOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
 import type { Surface } from "@repo/tokens";
-import { Schema } from "effect";
+import { Order, Schema } from "effect";
 
 import { agentProps } from "./content.ts";
 import type { TypingIn } from "./workspace.ts";
@@ -16,6 +17,12 @@ import type { TypingIn } from "./workspace.ts";
  * The draft as the agent reads it: an outline of every page, one line per
  * section, and a page's full content in the agent's form.
  */
+
+type Collection = Extract<PageDocument, { readonly type: "collection" }>;
+type Entry = Extract<PageDocument, { readonly type: "entry" }>;
+
+/** How many of a blog's newest posts the outline names; get_page names them all. */
+const postsInOutline = 20;
 
 type Json = Schema.Json;
 
@@ -45,26 +52,64 @@ const blockLine = (contracts: BlockContracts, id: BlockId, block: BlockInstance)
   return `${id} ${block.type} (${look})${text === "" ? "" : `: "${shorten(text, 60)}"`}`;
 };
 
-/** Every page of the draft and each section on it, one line each, with the header and footer first. */
+/** A collection's entries, in its kind's order. */
+const entriesOf = (draft: Draft, collection: Collection) =>
+  Object.values(draft.pages)
+    .filter((page): page is Entry => page.type === "entry" && page.collection === collection.id)
+    .toSorted(Order.mapInput(collectionKinds[collection.kind].order, (entry) => entry.meta));
+
+const status = (page: PageDocument) => (page.status === "unpublished" ? " (unpublished)" : "");
+
+/** What a collection's kind calls `count` of its entries, such as "posts". */
+const entryNoun = (collection: Collection, count: number) => {
+  const { names } = collectionKinds[collection.kind];
+  return count === 1 ? names.one : names.many;
+};
+
+/** A page's line in the outline, and for a collection, its entries' lines after its sections'. */
+const pageLines = (draft: Draft, contracts: BlockContracts, page: PageDocument) => {
+  const recipe = page.recipe === undefined ? "" : ` recipe ${page.recipe}`;
+  const name = `${addressOf(draft.pages, page)} "${pageName(page)}"${status(page)}${recipe}`;
+  const sections = page.root.flatMap((id) => {
+    const block = page.blocks[id];
+    if (block === undefined) return [];
+    const items = Object.entries(block.slots ?? {}).flatMap(([slot, ids]) =>
+      ids.length === 0 ? [] : [`      ${slot}: ${ids.length} items`],
+    );
+    return [`  ${blockLine(contracts, id, block)}`, ...items];
+  });
+  if (page.type !== "collection") return [`${page.id} ${page.type} ${name}`, ...sections];
+  const entries = entriesOf(draft, page);
+  const older = entries.length - postsInOutline;
+  return [
+    `${page.id} collection(${page.kind}) ${name} — ${entries.length} ${entryNoun(page, entries.length)}`,
+    ...sections,
+    ...entries
+      .slice(0, postsInOutline)
+      .map(
+        (entry) =>
+          `  ${entry.id} entry(${entry.kind}) ${addressOf(draft.pages, entry)} "${pageName(entry)}" ${entry.meta.date}${status(entry)}`,
+      ),
+    ...(older > 0
+      ? [`  and ${older} older ${entryNoun(page, older)}, which get_page ${page.id} lists`]
+      : []),
+  ];
+};
+
+/**
+ * Every page of the draft and each section on it, one line each, with the
+ * header and footer first. A collection's newest entries follow it, one line
+ * each.
+ */
 export const outline = (draft: Draft, contracts: BlockContracts) => {
   const site = [draft.parts.header, draft.parts.footer].flatMap((id) => {
     const block = draft.parts.blocks[id];
     return block === undefined ? [] : [`  ${blockLine(contracts, id, block)}`];
   });
   const pages = Object.values(draft.pages)
-    .map((page) => ({ page, path: addressOf(draft.pages, page) }))
-    .toSorted((a, b) => a.path.localeCompare(b.path))
-    .flatMap(({ page, path }) => [
-      `${page.id} ${page.type === "page" ? page.type : `${page.type}(${page.kind})`} ${path} "${pageName(page)}"${page.status === "unpublished" ? " (unpublished)" : ""}${page.recipe === undefined ? "" : ` recipe ${page.recipe}`}`,
-      ...page.root.flatMap((id) => {
-        const block = page.blocks[id];
-        if (block === undefined) return [];
-        const items = Object.entries(block.slots ?? {}).flatMap(([slot, ids]) =>
-          ids.length === 0 ? [] : [`      ${slot}: ${ids.length} items`],
-        );
-        return [`  ${blockLine(contracts, id, block)}`, ...items];
-      }),
-    ]);
+    .filter((page) => page.type !== "entry")
+    .toSorted((a, b) => addressOf(draft.pages, a).localeCompare(addressOf(draft.pages, b)))
+    .flatMap((page) => pageLines(draft, contracts, page));
   return [
     "site (header and footer)",
     ...site,
@@ -153,7 +198,7 @@ export const pageView = (
     };
   const page = draft.pages[target];
   if (page === undefined) return null;
-  return {
+  const common = {
     id: page.id,
     type: page.type,
     path: addressOf(draft.pages, page),
@@ -161,6 +206,24 @@ export const pageView = (
     meta: page.meta,
     sections: chosen(page.root).map((id) => blockView(contracts, page, target, id, typing)),
   };
+  switch (page.type) {
+    case "page":
+      return common;
+    case "collection":
+      return {
+        ...common,
+        kind: page.kind,
+        entries: entriesOf(draft, page).map((entry) => ({
+          id: entry.id,
+          path: addressOf(draft.pages, entry),
+          title: pageName(entry),
+          date: entry.meta.date,
+          status: entry.status ?? "published",
+        })),
+      };
+    case "entry":
+      return { ...common, kind: page.kind, collection: page.collection, slug: page.slug };
+  }
 };
 
 /** The page a block is on, or null when no page holds it. */
