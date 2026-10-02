@@ -104,6 +104,11 @@ allowBuilds:
 
 minimumReleaseAge: 1440
 
+# Node gives each address 250ms to connect before trying the next. Cloudflare's
+# API can take longer on some networks, so every attempt times out and Alchemy
+# reports its state store as missing. curl, which waits longer, still connects.
+nodeOptions: --network-family-autoselection-attempt-timeout=2000
+
 # Effect's release candidates break between versions, but its packages depend on
 # each other with caret ranges, so a fresh resolve can mix them. Hold every
 # Effect package, direct or transitive, to the catalog's version.
