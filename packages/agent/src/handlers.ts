@@ -158,7 +158,7 @@ export const agentHandlers = AgentTools.toLayer({
         return yield* fail(
           `This site has no ${type} block. It has ${Array.from(contracts.keys()).join(", ")}.`,
         );
-      yield* activity(toolCallId, `Checked how a ${contract.title} works`);
+      yield* activity(toolCallId, `Checked how the ${contract.title} block works`);
       return describeContract(contract);
     }),
 

@@ -38,7 +38,7 @@ export const buildBlock = (
       `This site has no ${spec.type} block. It has ${Array.from(contracts.keys()).join(", ")}.`,
     );
   if (contract.placement !== "section" && contract.placement !== "item")
-    return Result.fail(`A ${contract.title} can't be added to a page.`);
+    return Result.fail(`A ${contract.title} block can't be added to a page.`);
   const tree = placeholderTree(contracts, spec.type);
   const props = storedProps(contract.fields, spec.props ?? {});
   if (Result.isFailure(props)) return Result.fail(describe(props.failure));
@@ -49,7 +49,7 @@ export const buildBlock = (
       if (slot === undefined || !slotNames.includes(slot))
         return Result.fail(
           slotNames.length === 0
-            ? `A ${contract.title} has no items.`
+            ? `A ${contract.title} block has no items.`
             : `Say which slot each item goes in: ${slotNames.join(" or ")}.`,
         );
       return Result.map(
@@ -261,7 +261,7 @@ export const describeErrors = (ops: ReadonlyArray<Op>, errors: ReadonlyArray<Bat
 
 const blockTitle = (draft: Draft, contracts: BlockContracts, target: Target, block: BlockId) => {
   const type = blockType(draft, target, block);
-  return type === undefined ? "section" : (contracts.get(type)?.title ?? type);
+  return type === undefined ? "section" : `${contracts.get(type)?.title ?? type} block`;
 };
 
 /** What ops did, in a line for the chat panel. `before` is the draft they applied to. */
@@ -293,7 +293,7 @@ export const describeOps = (
       case "setSurface":
         return `Changed the background of the ${title(first.block)}`;
       case "insertBlock":
-        return `Added a ${contracts.get(first.block.type)?.title ?? first.block.type}`;
+        return `Added a ${contracts.get(first.block.type)?.title ?? first.block.type} block`;
       case "moveBlock":
         return `Moved the ${title(first.block)}`;
       case "removeBlock":

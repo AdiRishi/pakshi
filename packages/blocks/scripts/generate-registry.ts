@@ -1,4 +1,4 @@
-import { readdir, readFile, writeFile } from "node:fs/promises";
+import { access, readdir, readFile, writeFile } from "node:fs/promises";
 
 const source = new URL("../src/", import.meta.url);
 
@@ -15,6 +15,10 @@ const blockVersions = async () => {
   }
   return found.toSorted(([a, x], [b, y]) => (a === b ? x - y : a < b ? -1 : 1));
 };
+
+/** A name as a JavaScript identifier, such as `callToAction`. */
+const binding = (name: string) =>
+  name.replace(/[^A-Za-z0-9]+(.)/g, (_, next: string) => next.toUpperCase());
 
 /** Builds the registry source from the block version folders under src/. */
 export const registrySource = async () =>
@@ -41,14 +45,12 @@ export const fixturesSource = async () => {
     const files = await readdir(new URL(`${type}/v${version}/fixtures/`, source)).catch(() => []);
     for (const file of files.filter((name) => name.endsWith(".json")).toSorted()) {
       const name = file.replace(/\.json$/, "");
-      const binding = `${type}${version}${name}`.replace(/[^A-Za-z0-9]+(.)/g, (_, next: string) =>
-        next.toUpperCase(),
-      );
+      const fixture = binding(`${type}${version}${name}`);
       imports.push(
-        `import ${binding} from "./${type}/v${version}/fixtures/${file}" with { type: "json" };`,
+        `import ${fixture} from "./${type}/v${version}/fixtures/${file}" with { type: "json" };`,
       );
       entries.push(
-        `  { type: "${type}", version: ${version}, name: "${name}", fixture: ${binding} },`,
+        `  { type: "${type}", version: ${version}, name: "${name}", fixture: ${fixture} },`,
       );
     }
   }
@@ -63,6 +65,33 @@ export const fixturesSource = async () => {
   ].join("\n");
 };
 
+/** Builds a module that maps each block type with this file in its folder to the file's default export. */
+const perTypeSource = async (file: string, name: string) => {
+  const types: Array<string> = [];
+  for (const type of await readdir(source, { withFileTypes: true }))
+    if (
+      type.isDirectory() &&
+      (await access(new URL(`${type.name}/${file}`, source)).then(
+        () => true,
+        () => false,
+      ))
+    )
+      types.push(type.name);
+  const sorted = types.toSorted();
+  return [
+    header,
+    ...sorted.map((type) => `import ${binding(type)} from "./${type}/${file}";`),
+    "",
+    `export const ${name} = {`,
+    ...sorted.map((type) => `  "${type}": ${binding(type)},`),
+    "};",
+    "",
+  ].join("\n");
+};
+
+/** Builds the list of every block type's presentation, from `src/<type>/presentation.ts`. */
+export const presentationsSource = () => perTypeSource("presentation.ts", "presentations");
+
 const write = async (file: string, next: string) => {
   const target = new URL(file, source);
   const current = await readFile(target, "utf8").catch(() => "");
@@ -72,4 +101,5 @@ const write = async (file: string, next: string) => {
 if (import.meta.main) {
   await write("registry.gen.ts", await registrySource());
   await write("fixtures.gen.ts", await fixturesSource());
+  await write("presentation.gen.ts", await presentationsSource());
 }

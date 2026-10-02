@@ -152,7 +152,7 @@ export const addTextSection = async (
     .getByRole("tabpanel", { name: "Outline" })
     .getByRole("button", { name: "Add a section" })
     .click();
-  await page.getByPlaceholder("Search blocks").fill("Rich text");
+  await page.getByPlaceholder("Search blocks").fill("Text");
   await page.keyboard.press("Enter");
   const section = canvas.locator('[data-pakshi-block]:has([data-pakshi-field="body"])').last();
   await typeInto(page, section.locator('[data-pakshi-field="heading"]'), heading);

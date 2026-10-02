@@ -269,7 +269,7 @@ describe("a conflict", () => {
     const live = edit(base, [gallery([...full, "it_live"])]);
     const { conflicts } = merge({ draft, live }, {}, base);
     expect(conflicts).toEqual([
-      expect.objectContaining({ _tag: "Changed", field: "Images", kind: "list" }),
+      expect.objectContaining({ _tag: "Changed", field: "Photos", kind: "list" }),
     ]);
     const images = block(
       merge({ draft, live }, choosing(conflicts, "live"), base).content,
@@ -319,7 +319,7 @@ describe("a conflict", () => {
     expect(conflicts).toEqual([
       expect.objectContaining({
         _tag: "Removed",
-        block: { id: "b_features", title: "Feature grid" },
+        block: { id: "b_features", title: "Features" },
         removedOn: "live",
       }),
     ]);
@@ -360,7 +360,7 @@ describe("a conflict", () => {
         draft: [
           { id: "b_gallery", title: "Gallery" },
           { id: "b_hero", title: "Hero" },
-          { id: "b_features", title: "Feature grid" },
+          { id: "b_features", title: "Features" },
         ],
       }),
     ]);

@@ -53,6 +53,15 @@ export {
   richText,
   text,
 } from "./fields.ts";
+export type {
+  BlockPresentation,
+  BlockSample,
+  FieldLabel,
+  ItemNaming,
+  LayoutLabel,
+  Presentation,
+} from "./presentation.ts";
+export { galleryBlocks, layoutOf, presentationOf, presentations } from "./presentation.ts";
 export {
   placeholderForm,
   placeholderMedia,

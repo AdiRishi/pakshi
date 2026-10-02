@@ -1,20 +1,21 @@
-import type { BlockDefinition } from "@repo/blocks";
+import { type BlockDefinition, layoutOf } from "@repo/blocks";
 import type { BlockId } from "@repo/contracts/ids";
 import type { BlockTree, Op, Target } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
 import type { Surface } from "@repo/tokens";
-import { Field, FieldLabel, FieldLegend, FieldSet, FieldTitle } from "@repo/ui/components/field";
+import {
+  Field,
+  FieldDescription,
+  FieldLabel,
+  FieldLegend,
+  FieldSet,
+  FieldTitle,
+} from "@repo/ui/components/field";
 import { RadioGroup, RadioGroupItem } from "@repo/ui/components/radio-group";
 import { useEffect, useId, useMemo, useState } from "react";
 
 import { useEditorState, useServices, useStore } from "../context.tsx";
 import { BlockPreview } from "../preview.tsx";
-
-/** "split-image" as "Split image". */
-export const humanize = (name: string) => {
-  const words = name.replace(/-/g, " ");
-  return words.charAt(0).toUpperCase() + words.slice(1);
-};
 
 const surfaceNames: Readonly<Record<Surface, string>> = {
   default: "Page background",
@@ -98,20 +99,24 @@ export function Appearance(props: {
               if (variant !== undefined) run({ op: "setVariant", target, block, variant });
             }}
           >
-            {props.contract.variants.map((variant) => (
-              <FieldLabel key={variant} htmlFor={`${idPrefix}-variant-${variant}`}>
-                <Field className="gap-2">
-                  <BlockPreview
-                    tree={variantTrees.get(variant) ?? tree}
-                    title={`${props.contract.title} as ${humanize(variant)}`}
-                  />
-                  <div className="flex items-center justify-between gap-2">
-                    <FieldTitle>{humanize(variant)}</FieldTitle>
-                    <RadioGroupItem value={variant} id={`${idPrefix}-variant-${variant}`} />
-                  </div>
-                </Field>
-              </FieldLabel>
-            ))}
+            {props.contract.variants.map((variant) => {
+              const layout = layoutOf(props.contract.type, variant);
+              return (
+                <FieldLabel key={variant} htmlFor={`${idPrefix}-variant-${variant}`}>
+                  <Field className="gap-2">
+                    <BlockPreview
+                      tree={variantTrees.get(variant) ?? tree}
+                      title={`${props.contract.title}: ${layout.label}`}
+                    />
+                    <div className="flex items-center justify-between gap-2">
+                      <FieldTitle>{layout.label}</FieldTitle>
+                      <RadioGroupItem value={variant} id={`${idPrefix}-variant-${variant}`} />
+                    </div>
+                    <FieldDescription>{layout.description}</FieldDescription>
+                  </Field>
+                </FieldLabel>
+              );
+            })}
           </RadioGroup>
         </FieldSet>
       )}
