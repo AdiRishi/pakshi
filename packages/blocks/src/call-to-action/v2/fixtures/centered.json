@@ -1,0 +1,31 @@
+{
+  "variant": "centered",
+  "surface": "default",
+  "props": {
+    "kicker": "Summer 2027",
+    "heading": "Come and build a boat.",
+    "headingRest": "Places for July open on 1 March.",
+    "intro": "Five days at North Quay Boatyard for anyone over sixteen. No experience needed, and every tool is provided.",
+    "actions": [
+      {
+        "id": "it_register",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_programme",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "backdrop": "glow",
+    "mediaSide": "end"
+  }
+}

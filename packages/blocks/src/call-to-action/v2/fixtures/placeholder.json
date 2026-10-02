@@ -1,0 +1,28 @@
+{
+  "variant": "centered",
+  "surface": "muted",
+  "props": {
+    "kicker": "One last thing",
+    "heading": "Ask for one thing.",
+    "headingRest": "Say what happens when someone clicks.",
+    "intro": "A sentence about why now is a good time. One clear next step works better than three.",
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Get started",
+          "link": "https://example.com"
+        }
+      },
+      {
+        "id": "it_second",
+        "button": {
+          "label": "Ask a question",
+          "link": "mailto:hello@example.com"
+        }
+      }
+    ],
+    "mediaSide": "end",
+    "backdrop": "none"
+  }
+}

@@ -5,6 +5,7 @@ export const registry: Readonly<
   Record<string, () => Promise<{ readonly default: BlockDefinition }>>
 > = {
   "call-to-action@1": () => import("./call-to-action/v1/index.tsx"),
+  "call-to-action@2": () => import("./call-to-action/v2/index.tsx"),
   "contact-details@1": () => import("./contact-details/v1/index.tsx"),
   "event-card@1": () => import("./event-card/v1/index.tsx"),
   "event-cards@1": () => import("./event-cards/v1/index.tsx"),

@@ -2,6 +2,12 @@
 import callToAction1banner from "./call-to-action/v1/fixtures/banner.json" with { type: "json" };
 import callToAction1centered from "./call-to-action/v1/fixtures/centered.json" with { type: "json" };
 import callToAction1placeholder from "./call-to-action/v1/fixtures/placeholder.json" with { type: "json" };
+import callToAction2centered from "./call-to-action/v2/fixtures/centered.json" with { type: "json" };
+import callToAction2image from "./call-to-action/v2/fixtures/image.json" with { type: "json" };
+import callToAction2panelWords from "./call-to-action/v2/fixtures/panel-words.json" with { type: "json" };
+import callToAction2panel from "./call-to-action/v2/fixtures/panel.json" with { type: "json" };
+import callToAction2placeholder from "./call-to-action/v2/fixtures/placeholder.json" with { type: "json" };
+import callToAction2split from "./call-to-action/v2/fixtures/split.json" with { type: "json" };
 import contactDetails1columns from "./contact-details/v1/fixtures/columns.json" with { type: "json" };
 import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholder.json" with { type: "json" };
 import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
@@ -100,6 +106,12 @@ export const fixtureFiles = [
   { type: "call-to-action", version: 1, name: "banner", fixture: callToAction1banner },
   { type: "call-to-action", version: 1, name: "centered", fixture: callToAction1centered },
   { type: "call-to-action", version: 1, name: "placeholder", fixture: callToAction1placeholder },
+  { type: "call-to-action", version: 2, name: "centered", fixture: callToAction2centered },
+  { type: "call-to-action", version: 2, name: "image", fixture: callToAction2image },
+  { type: "call-to-action", version: 2, name: "panel-words", fixture: callToAction2panelWords },
+  { type: "call-to-action", version: 2, name: "panel", fixture: callToAction2panel },
+  { type: "call-to-action", version: 2, name: "placeholder", fixture: callToAction2placeholder },
+  { type: "call-to-action", version: 2, name: "split", fixture: callToAction2split },
   { type: "contact-details", version: 1, name: "columns", fixture: contactDetails1columns },
   { type: "contact-details", version: 1, name: "placeholder", fixture: contactDetails1placeholder },
   { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },
