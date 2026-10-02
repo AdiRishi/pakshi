@@ -14,8 +14,8 @@ import { definitions, fakeSiteDoc, fixtureDraft, meera, sam } from "./support/si
  * holds while the person is working in the field or view the change reaches.
  */
 
-const hero = BlockId.make("b_herocentered");
-const original = "Summer school at the harbour";
+const hero = BlockId.make("b_herosplit");
+const original = "Learn by building";
 
 const setHeading = (value: string): Op => ({
   op: "setProp",

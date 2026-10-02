@@ -70,9 +70,9 @@ afterEach(() => {
 describe("moving a block by one", () => {
   test("a section swaps with its neighbour, and can't move past either end of the page", () => {
     const { choose, run, home } = open();
-    choose("b_calltoactioncentered");
+    choose("b_bentoplaceholder");
     expect(run(moveUp, undefined)).toBe(true);
-    expect(home().root.slice(0, 2)).toEqual(["b_calltoactioncentered", "b_calltoactionbanner"]);
+    expect(home().root.slice(0, 2)).toEqual(["b_bentoplaceholder", "b_bentogrid"]);
     expect(run(moveUp, undefined)).toBe(false);
     const last = home().root.at(-1);
     if (last === undefined) throw new Error("The page has sections.");
@@ -85,21 +85,21 @@ describe("moving a block by one", () => {
     choose("b_featuregridplaceholderitems2");
     run(moveDown, undefined);
     expect(slot("b_featuregridplaceholder")).toHaveLength(2);
-    expect(slot("b_featuregridthreecolumns")?.[0]).toBe("b_featuregridplaceholderitems2");
+    expect(slot("b_featuregridsplit")?.[0]).toBe("b_featuregridplaceholderitems2");
   });
 
   test("an item at the start of its slot moves to the end of the previous section that can hold it", () => {
     const { choose, run, slot } = open();
-    choose("b_featuregridtwocolumnsitems0");
+    choose("b_featuregridlistitems0");
     run(moveUp, undefined);
-    expect(slot("b_featuregridthreecolumns")?.at(-1)).toBe("b_featuregridtwocolumnsitems0");
+    expect(slot("b_featuregridgrid")?.at(-1)).toBe("b_featuregridlistitems0");
   });
 
   test("an item stops at the first and last slots on the page that can hold it", () => {
     const { choose, run } = open();
-    choose("b_featuregridplaceholderitems0");
+    choose("b_featuregridgriditems0");
     expect(run(moveUp, undefined)).toBe(false);
-    choose("b_featuregridtwocolumnsitems1");
+    choose("b_featuregridsplititems3");
     expect(run(moveDown, undefined)).toBe(false);
   });
 
@@ -108,7 +108,7 @@ describe("moving a block by one", () => {
     choose("b_featuregridplaceholderitems2");
     run(moveDown, undefined);
     expect(announced.at(-1)).toBe(
-      "Moved Something to show for it down, 1 of 4 in What's included.",
+      "Moved Something to show for it down, 1 of 5 in Why the harbour.",
     );
   });
 });
@@ -117,32 +117,32 @@ describe("moving an item to another section", () => {
   test("puts it at the end of that section's slot", () => {
     const { choose, run, slot } = open();
     choose("b_featuregridplaceholderitems0");
-    const list = { block: id("b_featuregridtwocolumns"), slot: "items" };
+    const list = { block: id("b_featuregridsplit"), slot: "items" };
     expect(run(moveTo, { list })).toBe(true);
-    expect(slot("b_featuregridtwocolumns")?.at(-1)).toBe("b_featuregridplaceholderitems0");
+    expect(slot("b_featuregridsplit")?.at(-1)).toBe("b_featuregridplaceholderitems0");
   });
 
   test("refuses a section that can't hold it", () => {
     const { choose, run } = open();
     choose("b_featuregridplaceholderitems0");
-    expect(run(moveTo, { list: { block: id("b_herocentered"), slot: "items" } })).toBe(false);
+    expect(run(moveTo, { list: { block: id("b_herostacked"), slot: "items" } })).toBe(false);
   });
 });
 
 describe("duplicating", () => {
   test("places a copy with new IDs for it and its items right after it, and chooses the copy", () => {
     const { store, choose, run, home } = open();
-    choose("b_featuregridthreecolumns");
+    choose("b_featuregridlist");
     run(duplicate, undefined);
-    const copy = home().root[home().root.indexOf(id("b_featuregridthreecolumns")) + 1];
+    const copy = home().root[home().root.indexOf(id("b_featuregridlist")) + 1];
     if (copy === undefined) throw new Error("No copy was placed.");
-    expect(copy).not.toBe("b_featuregridthreecolumns");
+    expect(copy).not.toBe("b_featuregridlist");
     expect(store.getState().selection).toEqual({ kind: "block", target: page, block: copy });
     const items = home().blocks[copy]?.slots?.["items"] ?? [];
-    expect(items).toHaveLength(3);
-    for (const item of items) expect(item).not.toMatch(/^b_featuregridthreecolumns/);
+    expect(items).toHaveLength(4);
+    for (const item of items) expect(item).not.toMatch(/^b_featuregridlist/);
     expect(home().blocks[items[0] ?? id("b_missing")]?.props).toEqual(
-      home().blocks[id("b_featuregridthreecolumnsitems0")]?.props,
+      home().blocks[id("b_featuregridlistitems0")]?.props,
     );
   });
 });
@@ -150,36 +150,36 @@ describe("duplicating", () => {
 describe("removing", () => {
   test("chooses the block that takes its place", () => {
     const { store, choose, run } = open();
-    choose("b_calltoactionbanner");
+    choose("b_bentogrid");
     run(remove, undefined);
-    expect(store.getState().selection?.block).toBe("b_calltoactioncentered");
+    expect(store.getState().selection?.block).toBe("b_bentoplaceholder");
   });
 
   test("chooses the block before it at the end of a list, and the section once its last item goes", () => {
     const { store, choose, run } = open();
-    choose("b_featuregridtwocolumnsitems1");
+    choose("b_eventcardsgridtwoevents1");
     run(remove, undefined);
-    expect(store.getState().selection?.block).toBe("b_featuregridtwocolumnsitems0");
+    expect(store.getState().selection?.block).toBe("b_eventcardsgridtwoevents0");
     run(remove, undefined);
-    expect(store.getState().selection?.block).toBe("b_featuregridtwocolumns");
+    expect(store.getState().selection?.block).toBe("b_eventcardsgridtwo");
   });
 });
 
 describe("adding", () => {
   test("a new block starts with its placeholder content and is chosen", () => {
     const { store, run, home } = open();
-    const list = { block: id("b_featuregridtwocolumns"), slot: "items" };
+    const list = { block: id("b_featuregridsplit"), slot: "items" };
     run(insert, { list, after: null, type: BlockType.make("feature-item") });
-    const added = home().blocks[id("b_featuregridtwocolumns")]?.slots?.["items"]?.[0];
+    const added = home().blocks[id("b_featuregridsplit")]?.slots?.["items"]?.[0];
     if (added === undefined) throw new Error("Nothing was added.");
-    expect(home().blocks[added]?.props["title"]).toBe("Another reason to care");
+    expect(home().blocks[added]?.props["title"]).toBe("A short title");
     expect(store.getState().selection).toEqual({ kind: "block", target: page, block: added });
   });
 
   test("refuses a block the spot doesn't allow", () => {
     const { run, home } = open();
     const before = home();
-    const list = { block: id("b_featuregridtwocolumns"), slot: "items" };
+    const list = { block: id("b_featuregridsplit"), slot: "items" };
     expect(run(insert, { list, after: null, type: BlockType.make("hero") })).toBe(false);
     expect(run(insert, { list: "root", after: null, type: BlockType.make("feature-item") })).toBe(
       false,
@@ -205,12 +205,12 @@ describe("adding", () => {
 
   test("adding after a block opens the picker for the spot right after it", () => {
     const { choose, run, picked } = open();
-    choose("b_featuregridthreecolumnsitems1");
+    choose("b_featuregridgriditems1");
     run(addAfter, undefined);
     expect(picked).toEqual([
       {
-        list: { block: "b_featuregridthreecolumns", slot: "items" },
-        after: "b_featuregridthreecolumnsitems1",
+        list: { block: "b_featuregridgrid", slot: "items" },
+        after: "b_featuregridgriditems1",
       },
     ]);
   });
@@ -222,7 +222,7 @@ describe("structure commands", () => {
     store.select({
       kind: "field",
       target: page,
-      block: id("b_herocentered"),
+      block: id("b_herostacked"),
       path: ["heading"],
     });
     expect(run(remove, undefined)).toBe(false);
@@ -242,7 +242,7 @@ describe("structure commands", () => {
     step(null, () => run(insert, { list: "root", after: null, type: BlockType.make("hero") }));
     step("b_featuregridplaceholderitems2", () => run(moveDown, undefined));
     step("b_gallerygrid", () => run(duplicate, undefined));
-    step("b_splitimageleft", () => run(remove, undefined));
+    step("b_splitstandard", () => run(remove, undefined));
     for (const expected of snapshots.toReversed().slice(1)) {
       store.undo();
       expect(home()).toEqual(expected);
@@ -253,14 +253,21 @@ describe("structure commands", () => {
 describe("entering a block", () => {
   test("reaches a field inside a list when the block has none of its own", () => {
     const { store, choose, run } = open();
-    store.run([{ op: "setProp", target: page, block: id("b_gallerygrid"), path: ["heading"] }]);
+    store.run(
+      ["kicker", "heading", "headingRest"].map((field) => ({
+        op: "setProp",
+        target: page,
+        block: id("b_gallerygrid"),
+        path: [field],
+      })),
+    );
     choose("b_gallerygrid");
     expect(run(enterBlock, undefined)).toBe(true);
     expect(store.getState().selection).toEqual({
       kind: "field",
       target: page,
       block: "b_gallerygrid",
-      path: ["images", "it_boats", "image"],
+      path: ["images", "it_evening", "image"],
     });
   });
 });

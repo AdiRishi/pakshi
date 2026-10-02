@@ -1,4 +1,4 @@
-import { loadBlocks, registeredVersions } from "@repo/blocks";
+import { latestLockfile as lockfile, loadBlocks } from "@repo/blocks";
 import { blockFixtures, fixtureDraft as draftOf, fixtureTree } from "@repo/blocks/fixtures";
 import type { Draft } from "@repo/contracts/draft";
 import { BatchId, randomId, type TurnId } from "@repo/contracts/ids";
@@ -15,11 +15,6 @@ import { commitBatch, type Writes } from "@repo/domain/commit";
 
 import type { Connection } from "../../src/store.ts";
 
-// Each block's first version, whose fields these tests were written against.
-const lockfile = Object.fromEntries(
-  registeredVersions.toReversed().map(({ type, version }) => [type, version]),
-);
-
 const definitionsOf = await loadBlocks(lockfile);
 const placed = (placement: string) =>
   blockFixtures.filter(
@@ -34,9 +29,9 @@ if (header === undefined || footer === undefined)
   throw new Error("Blocks need header and footer fixtures.");
 
 /**
- * A draft whose home page holds every section fixture of each block's first
- * version, under a header and footer from their fixtures, but for those of
- * sections that go only on posts.
+ * A draft whose home page holds every section fixture of the library, under a
+ * header and footer from their fixtures, but for those of sections that go
+ * only on posts.
  */
 export const fixtureDraft = draftOf({
   lockfile,

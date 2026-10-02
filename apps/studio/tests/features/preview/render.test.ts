@@ -72,7 +72,8 @@ describe("a previewed page", () => {
     });
     const shown = mainText(await preview(page, 1));
     expect(shown).toContain("Meet this year's mentors");
-    expect(shown).toContain("15 April 2027, Sam Okafor");
+    expect(shown).toContain("15 April 2027");
+    expect(shown).toContain("Sam Okafor");
     expect(shown).not.toContain("Our plans for the year ahead");
   });
 

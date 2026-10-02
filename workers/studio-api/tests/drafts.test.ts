@@ -82,7 +82,7 @@ it.effect("a rejected batch changes nothing and says why", () =>
   Effect.gen(function* () {
     const id = yield* withDraft;
     const store = yield* drafts;
-    const outcome = yield* store.commit(sam, id, setHeading("bat_long", "x".repeat(81)), byPerson);
+    const outcome = yield* store.commit(sam, id, setHeading("bat_long", "x".repeat(91)), byPerson);
     expect(outcome).toMatchObject({
       status: "rejected",
       errors: [{ rule: "value", path: ["heading"] }],

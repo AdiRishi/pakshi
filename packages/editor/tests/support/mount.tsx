@@ -1,7 +1,7 @@
 import type { BlockDefinition } from "@repo/blocks";
-import { fixtureSite } from "@repo/blocks/fixtures";
+import { blockShowcase, fixtureSite } from "@repo/blocks/fixtures";
 import type { Draft } from "@repo/contracts/draft";
-import { type BlockType, MediaId, PageId } from "@repo/contracts/ids";
+import { BlockType, MediaId, PageId } from "@repo/contracts/ids";
 import type { MediaSummary } from "@repo/contracts/studio";
 import { expect } from "vitest";
 import { render } from "vitest-browser-react";
@@ -32,12 +32,14 @@ export const pattern: MediaSummary = {
   alt: "",
 };
 
-const media: ReadonlyArray<MediaSummary> = [
+/** The library: the fixture site's image, the images drawn for samples that fixtures show, and the pattern. */
+const media = [
   ...Object.entries(fixtureSite.media).map(([id, file]) => ({
     id: MediaId.make(id),
     ...file,
     alt: "Two sailing boats on a calm harbour at sunset",
   })),
+  ...blockShowcase(definitions, BlockType.make("hero")).media,
   pattern,
 ];
 

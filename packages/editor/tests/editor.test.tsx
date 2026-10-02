@@ -9,16 +9,23 @@ import { page, userEvent } from "vitest/browser";
 import { home, openEditor as open, pattern } from "./support/mount.tsx";
 import { definitions, fakeSiteDoc, fixtureDraft, sam } from "./support/site-doc.ts";
 
-const heroField = (canvas: Document, field: string) =>
-  canvas.querySelector<HTMLElement>(
-    `[data-pakshi-block='b_herocentered'] [data-pakshi-field='${field}']`,
-  );
+const hero = BlockId.make("b_herostacked");
 
-const savedButton = (siteDoc: ReturnType<typeof fakeSiteDoc>) => () =>
-  siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"];
+/** The hero's second button, which goes to the programme. */
+const button = "actions.it_secondary.button";
+
+const heroField = (canvas: Document, field: string) =>
+  canvas.querySelector<HTMLElement>(`[data-pakshi-block='${hero}'] [data-pakshi-field='${field}']`);
+
+const isList = Schema.is(Schema.Array(Schema.Struct({ id: Schema.String, button: Schema.Json })));
+
+const savedButton = (siteDoc: ReturnType<typeof fakeSiteDoc>) => () => {
+  const actions = siteDoc.draft().pages[home]?.blocks[hero]?.props["actions"];
+  return isList(actions) ? actions.find((action) => action.id === "it_secondary")?.button : null;
+};
 
 const heroHeading = (siteDoc: ReturnType<typeof fakeSiteDoc>) =>
-  siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["heading"];
+  siteDoc.draft().pages[home]?.blocks[hero]?.props["heading"];
 
 afterEach(async () => {
   await cleanup();
@@ -29,10 +36,9 @@ describe("editing text in place", () => {
     const { siteDoc, canvas } = await open();
     heroField(canvas(), "heading")?.focus();
     await userEvent.keyboard("{End}");
-    await userEvent.keyboard("x".repeat(70));
-    const shown =
-      canvas().querySelector("[data-pakshi-block='b_herocentered'] h1")?.textContent ?? "";
-    expect(shown).toHaveLength(80);
+    await userEvent.keyboard("x".repeat(80));
+    const shown = heroField(canvas(), "heading")?.textContent ?? "";
+    expect(shown).toHaveLength(90);
     await expect.poll(() => heroHeading(siteDoc)).toBe(shown);
   });
 
@@ -59,30 +65,30 @@ describe("undo", () => {
     const { siteDoc, canvas } = await open();
     const heading = heroField(canvas(), "heading");
     if (heading === null) throw new Error("The hero has no heading.");
-    const label = page.getByRole("textbox", { name: "Label", exact: true });
-    const savedLabel = () =>
-      siteDoc.draft().pages[home]?.blocks[BlockId.make("b_herocentered")]?.props["cta"];
+    // The second button's label: the hero's settings show a label for each button.
+    const label = page.getByRole("textbox", { name: "Label", exact: true }).nth(1);
+    const savedLabel = savedButton(siteDoc);
     heading.focus();
     canvas().getSelection()?.selectAllChildren(heading);
     canvas().getSelection()?.collapseToEnd();
     await userEvent.keyboard(" this July");
     await userEvent.click(label);
     await userEvent.keyboard("{End} now");
-    await expect.poll(() => heroHeading(siteDoc)).toBe("Summer school at the harbour this July");
+    await expect.poll(() => heroHeading(siteDoc)).toBe("Learn to build boats. this July");
     await expect.poll(savedLabel).toMatchObject({ label: "See the programme now" });
 
     await userEvent.click(page.getByRole("button", { name: "Undo" }));
     await expect.element(label).toHaveValue("See the programme");
-    expect(heading.textContent).toBe("Summer school at the harbour this July");
+    expect(heading.textContent).toBe("Learn to build boats. this July");
     await userEvent.click(page.getByRole("button", { name: "Undo" }));
-    await expect.poll(() => heading.textContent).toBe("Summer school at the harbour");
-    await expect.poll(() => heroHeading(siteDoc)).toBe("Summer school at the harbour");
+    await expect.poll(() => heading.textContent).toBe("Learn to build boats.");
+    await expect.poll(() => heroHeading(siteDoc)).toBe("Learn to build boats.");
     await expect.poll(savedLabel).toMatchObject({ label: "See the programme" });
   });
 
   test("in formatted text on the page leaves the text showing what the draft holds", async () => {
     const { siteDoc, canvas } = await open();
-    const block = BlockId.make("b_richtextnarrow");
+    const block = BlockId.make("b_richtextarticle");
     const paragraph = canvas().querySelector<HTMLElement>(
       `[data-pakshi-block='${block}'] [data-pakshi-field='body'] p`,
     );
@@ -114,41 +120,50 @@ describe("undo", () => {
 describe("the keyboard alone", () => {
   test("reaches every field on the page with Tab", async () => {
     const { canvas } = await open();
-    const fields = Array.from(canvas().querySelectorAll<HTMLElement>("[data-pakshi-field]"));
-    const reached = new Set<EventTarget | null>();
-    canvas().addEventListener("focusin", (event) => reached.add(event.target));
+    // A field may show twice, as a header's button does in its closed phone menu, and needs reaching once.
+    const keyOf = (element: Element) =>
+      `${element.closest("[data-pakshi-block]")?.getAttribute("data-pakshi-block")} ${element.getAttribute("data-pakshi-field")}`;
+    const fields = new Set(
+      Array.from(canvas().querySelectorAll("[data-pakshi-field]"), (field) => keyOf(field)),
+    );
+    const reached = new Set<string>();
+    const FrameElement = canvas().defaultView?.Element ?? Element;
+    canvas().addEventListener("focusin", (event) => {
+      if (event.target instanceof FrameElement && event.target.hasAttribute("data-pakshi-field"))
+        reached.add(keyOf(event.target));
+    });
     await userEvent.click(page.getByTitle(/^Canvas:/));
-    const missing = () => fields.filter((field) => !reached.has(field));
+    const missing = () => Array.from(fields).filter((field) => !reached.has(field));
     // Presses go in batches, because a keyboard call per press is slower than the test may take.
-    for (let pressed = 0; pressed < fields.length * 3 && missing().length > 0; pressed += 20)
-      await userEvent.keyboard("{Tab}".repeat(20));
-    expect(missing().map((field) => field.dataset["pakshiField"])).toEqual([]);
-  });
+    for (let pressed = 0; pressed < fields.size * 3 && missing().length > 0; pressed += 100)
+      await userEvent.keyboard("{Tab}".repeat(100));
+    expect(missing()).toEqual([]);
+  }, 120_000);
 
   test("edits a field from a selected block: arrows, Enter, typing and Escape", async () => {
     const { siteDoc, canvas } = await open();
-    const grid = canvas().querySelector<HTMLElement>(
-      "[data-pakshi-block='b_featuregridthreecolumns']",
-    );
+    const grid = canvas().querySelector<HTMLElement>("[data-pakshi-block='b_featuregridsplit']");
     grid?.focus();
-    // The page opens with feature grids, and the first grid's three items come before the next section.
+    // Arrows pass the grid's items and every section between it and the hero.
     await userEvent.keyboard("{Escape}");
     const order = Array.from(canvas().querySelectorAll("[data-pakshi-block]"), (block) =>
       block.getAttribute("data-pakshi-block"),
     );
     grid?.focus();
-    const steps = order.indexOf("b_herocentered") - order.indexOf("b_featuregridthreecolumns");
+    const steps = order.indexOf(hero) - order.indexOf("b_featuregridsplit");
     grid?.click();
     await userEvent.keyboard("{ArrowDown}".repeat(steps));
-    expect(canvas().activeElement?.getAttribute("data-pakshi-block")).toBe("b_herocentered");
+    expect(canvas().activeElement?.getAttribute("data-pakshi-block")).toBe(hero);
     await userEvent.keyboard("{Enter}");
-    expect(canvas().activeElement?.getAttribute("data-pakshi-field")).toBe("heading");
+    expect(canvas().activeElement?.getAttribute("data-pakshi-field")).toBe("badge");
     await userEvent.keyboard("{End} today{Escape}");
-    expect(canvas().activeElement?.getAttribute("data-pakshi-block")).toBe("b_herocentered");
-    expect(heroField(canvas(), "heading")?.textContent).toBe("Summer school at the harbour");
+    expect(canvas().activeElement?.getAttribute("data-pakshi-block")).toBe(hero);
+    expect(heroField(canvas(), "badge")?.textContent).toBe("Applications open for 2027");
     // Typing reaches SiteDoc within half a second, so by then any that Escape left would be saved.
     await new Promise((resolve) => setTimeout(resolve, 600));
-    expect(heroHeading(siteDoc)).toBe("Summer school at the harbour");
+    expect(siteDoc.draft().pages[home]?.blocks[hero]?.props["badge"]).toBe(
+      "Applications open for 2027",
+    );
   });
 
   test("opens an image's popover with Enter", async () => {
@@ -160,15 +175,15 @@ describe("the keyboard alone", () => {
 
   test("types a button's words on the page, where Escape puts back what it had", async () => {
     const { siteDoc, canvas } = await open();
-    const button = heroField(canvas(), "cta");
-    if (button === null) throw new Error("The hero has no button.");
-    button.focus();
-    canvas().getSelection()?.selectAllChildren(button);
+    const words = heroField(canvas(), button);
+    if (words === null) throw new Error("The hero has no button.");
+    words.focus();
+    canvas().getSelection()?.selectAllChildren(words);
     canvas().getSelection()?.collapseToEnd();
     await userEvent.keyboard(" now");
     await expect.poll(savedButton(siteDoc)).toMatchObject({ label: "See the programme now" });
     await userEvent.keyboard("{Enter} today{Escape}");
-    await expect.poll(() => button?.textContent).toBe("See the programme now");
+    await expect.poll(() => words.textContent).toBe("See the programme now");
     await new Promise((resolve) => setTimeout(resolve, 600));
     expect(savedButton(siteDoc)()).toMatchObject({ label: "See the programme now" });
   });
@@ -177,7 +192,7 @@ describe("the keyboard alone", () => {
 describe("choosing an image", () => {
   test("stores empty alt text for a library image with none suggested, marking it decorative", async () => {
     const { siteDoc, canvas } = await open();
-    const split = BlockId.make("b_splitimageleft");
+    const split = BlockId.make("b_splitstandard");
     canvas()
       .querySelector<HTMLElement>(`[data-pakshi-block='${split}'] [data-pakshi-field='image']`)
       ?.focus();
@@ -204,7 +219,7 @@ describe("uploading an image", () => {
         };
       },
     });
-    const split = BlockId.make("b_splitimageleft");
+    const split = BlockId.make("b_splitstandard");
     canvas()
       .querySelector<HTMLElement>(`[data-pakshi-block='${split}'] [data-pakshi-field='image']`)
       ?.focus();
@@ -225,7 +240,7 @@ describe("uploading an image", () => {
 describe("where a button goes", () => {
   test("is chosen under the button while it's selected: a page, or a web address typed without https://", async () => {
     const { siteDoc, canvas } = await open();
-    heroField(canvas(), "cta")?.focus();
+    heroField(canvas(), button)?.focus();
     const panel = page.getByRole("region", { name: "Where the button goes" });
     await userEvent.click(panel.getByRole("button", { name: "News" }));
     await expect
@@ -367,9 +382,9 @@ const largeDraft = (): Draft => {
     root.push(id);
     blocks[id] = {
       type: "feature-grid",
-      variant: "three-columns",
+      variant: "grid",
       surface: "default",
-      props: { heading: `Section ${section}` },
+      props: { heading: `Section ${section}`, actions: [] },
       slots: { items },
     };
     for (const item of items)
@@ -462,7 +477,6 @@ const emptyDraft = (): Draft => {
 /** The fixture draft with only its hero on the home page, under the header. */
 const heroOnly = (): Draft => {
   const base = fixtureDraft.pages[home];
-  const hero = BlockId.make("b_herocentered");
   const block = base?.blocks[hero];
   if (base === undefined || block === undefined) throw new Error("The fixture draft has no hero.");
   return {
@@ -581,9 +595,9 @@ describe("editing structure", () => {
       {
         op: "moveBlock",
         page: home,
-        block: "b_calltoactionbanner",
+        block: "b_calltoactioncentered",
         list: "root",
-        after: "b_calltoactioncentered",
+        after: "b_calltoactionimage",
       },
     ];
     /** The ops of the one batch an action in a freshly opened editor sends. */
@@ -597,14 +611,14 @@ describe("editing structure", () => {
     };
 
     const moveCommand = await opsOf(async () => {
-      outlineRow("b_calltoactionbanner")?.focus();
+      outlineRow("b_calltoactioncentered")?.focus();
       await userEvent.keyboard("{Alt>}{ArrowDown}{/Alt}");
     });
     expect(moveCommand).toEqual(movedDown);
 
     const outlineDrag = await opsOf(async () => {
-      const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
-      const target = outlineRow("b_calltoactioncentered")?.firstElementChild;
+      const source = outlineRow("b_calltoactioncentered")?.firstElementChild;
+      const target = outlineRow("b_calltoactionimage")?.firstElementChild;
       if (!(source instanceof HTMLElement) || !(target instanceof HTMLElement))
         throw new Error("The outline has no rows for the calls to action.");
       await userEvent.dragAndDrop(page.elementLocator(source), page.elementLocator(target), {
@@ -617,9 +631,10 @@ describe("editing structure", () => {
     const canvasDrag = await opsOf(async (canvas) => {
       const block = (id: string) =>
         canvas.querySelector<HTMLElement>(`[data-pakshi-block="${id}"]`);
-      const source = block("b_calltoactionbanner");
-      const target = block("b_calltoactioncentered");
+      const source = block("b_calltoactioncentered");
+      const target = block("b_calltoactionimage");
       if (source === null || target === null) throw new Error("The canvas has no calls to action.");
+      source.scrollIntoView({ block: "start" });
       const FramePointer = source.ownerDocument.defaultView?.PointerEvent ?? PointerEvent;
       source.dispatchEvent(new FramePointer("pointermove", { bubbles: true }));
       await expect.poll(() => canvas.querySelector(".pakshi-handle")).not.toBeNull();
@@ -633,8 +648,8 @@ describe("editing structure", () => {
 
   test("releasing a drag outside the canvas and the outline moves nothing", async () => {
     const { siteDoc } = await open();
-    const source = outlineRow("b_calltoactionbanner")?.firstElementChild;
-    const over = outlineRow("b_featuregridplaceholder")?.firstElementChild;
+    const source = outlineRow("b_calltoactioncentered")?.firstElementChild;
+    const over = outlineRow("b_calltoactionsplit")?.firstElementChild;
     const outside = document.querySelector("aside[aria-label='Settings']");
     if (!(source instanceof HTMLElement) || !(over instanceof HTMLElement) || outside === null)
       throw new Error("The editor is missing a row or the settings panel.");
@@ -646,14 +661,16 @@ describe("editing structure", () => {
 
   test("adding to an empty slot from the outline chooses the new item there", async () => {
     const { siteDoc } = await open();
-    const grid = BlockId.make("b_featuregridtwocolumns");
+    const grid = BlockId.make("b_featuregridplaceholder");
     const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
-    outlineRow("b_featuregridtwocolumnsitems0")?.focus();
-    await userEvent.keyboard("{Delete}");
-    // Focus moves to the next item once the removal has rendered.
-    await expect
-      .poll(() => document.activeElement === outlineRow("b_featuregridtwocolumnsitems1"))
-      .toBe(true);
+    outlineRow(`${grid}items0`)?.focus();
+    for (const next of [1, 2]) {
+      await userEvent.keyboard("{Delete}");
+      // Focus moves to the next item once the removal has rendered.
+      await expect
+        .poll(() => document.activeElement === outlineRow(`${grid}items${next}`))
+        .toBe(true);
+    }
     await userEvent.keyboard("{Delete}");
     await expect.poll(() => items().length).toBe(0);
     await expect.poll(() => document.activeElement === outlineRow(grid)).toBe(true);
@@ -672,15 +689,17 @@ describe("editing structure", () => {
 
   test("an item dragged in the canvas onto an empty section lands in its slot", async () => {
     const { siteDoc, canvas } = await open();
-    const grid = BlockId.make("b_featuregridtwocolumns");
-    const moving = BlockId.make("b_featuregridthreecolumnsitems0");
+    const grid = BlockId.make("b_featuregridplaceholder");
+    const moving = BlockId.make("b_featuregridlistitems3");
     const items = () => siteDoc.draft().pages[home]?.blocks[grid]?.slots?.["items"] ?? [];
-    outlineRow("b_featuregridtwocolumnsitems0")?.focus();
-    await userEvent.keyboard("{Delete}");
-    // Focus moves to the next item once the removal has rendered.
-    await expect
-      .poll(() => document.activeElement === outlineRow("b_featuregridtwocolumnsitems1"))
-      .toBe(true);
+    outlineRow(`${grid}items0`)?.focus();
+    for (const next of [1, 2]) {
+      await userEvent.keyboard("{Delete}");
+      // Focus moves to the next item once the removal has rendered.
+      await expect
+        .poll(() => document.activeElement === outlineRow(`${grid}items${next}`))
+        .toBe(true);
+    }
     await userEvent.keyboard("{Delete}");
     await expect.poll(() => items().length).toBe(0);
 
@@ -725,9 +744,9 @@ describe("editing structure", () => {
   test("the picker opens beside a point on the page and stays there, fitting a short window", async () => {
     const { canvas } = await open({ draft: heroOnly() });
     await page.viewport(1000, 450);
-    const hero = canvas().querySelector("[data-pakshi-block='b_herocentered']");
+    const shown = canvas().querySelector(`[data-pakshi-block='${hero}']`);
     const Pointer = canvas().defaultView?.PointerEvent ?? PointerEvent;
-    hero?.dispatchEvent(new Pointer("pointermove", { bubbles: true }));
+    shown?.dispatchEvent(new Pointer("pointermove", { bubbles: true }));
     await expect.poll(() => canvas().querySelector(".pakshi-insert")).not.toBeNull();
     const [point] = Array.from(canvas().querySelectorAll(".pakshi-insert")).toSorted(
       (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top,

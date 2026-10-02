@@ -1,4 +1,5 @@
 import { SqliteClient } from "@effect/sql-sqlite-node";
+import { latestLockfile } from "@repo/blocks";
 import { noIdentity } from "@repo/contracts/brand";
 import { BrandId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { DraftId, SnapshotId } from "@repo/contracts/ids";
@@ -48,16 +49,18 @@ export const home = Schema.decodeSync(PageDocument)({
   blocks: {
     b_hero: {
       type: "hero",
-      variant: "centered",
+      variant: "stacked",
       surface: "brand",
       props: {
         heading: "Learn by building",
+        actions: [],
+        points: [],
         image: { $ref: "media", id: "med_harbour", alt: "Boats in the harbour" },
       },
     },
     b_intro: {
       type: "rich-text",
-      variant: "narrow",
+      variant: "article",
       surface: "default",
       props: { heading: "About", body: paragraph("Five days of workshops.") },
     },
@@ -124,14 +127,14 @@ export const platform = Effect.fn("platform")(function* (
         header: "b_header",
         footer: "b_footer",
         blocks: {
-          b_header: { type: "header", variant: "simple", surface: "default", props: {} },
+          b_header: { type: "header", variant: "standard", surface: "default", props: {} },
           b_footer: { type: "footer", variant: "simple", surface: "muted", props: {} },
         },
         menus: { main: [], footer: [] },
       },
       forms: {},
       redirects: {},
-      lockfile: { hero: 1, "rich-text": 1, header: 1, footer: 1 },
+      lockfile: latestLockfile,
       brand: encodeBrand(harbourBrand),
       media: { med_harbour: { contentType: "image/jpeg", width: 1600, height: 1067 } },
       pages: [{ id: "pg_home", path: "/", type: "page", meta: home.meta, object: homeHash }],
