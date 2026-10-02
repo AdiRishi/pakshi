@@ -88,7 +88,7 @@ const TestimonialsBlock = ({
               name="items"
               as="ul"
               className={cx(
-                "grid",
+                "fill-row grid",
                 gridColumns[section.columns],
                 section.style === "cards" ? "gap-4" : "gap-x-10 gap-y-12",
                 styles[section.style],

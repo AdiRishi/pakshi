@@ -69,6 +69,22 @@
  * surface continues the same band of color, so it starts closer: two sections'
  * worth of space between them reads as a break that isn't there.
  */
+/*
+ * A grid of items set to more columns than it has items fills its one row on
+ * a wide screen: three features in a four-column grid take a third each.
+ */
+@utility fill-row {
+  @media (width >= 64rem) {
+    &:has(> :last-child:nth-child(2)) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &:has(> :last-child:nth-child(3)) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
 @utility section-space {
   padding-block: var(--theme-section-space);
 

@@ -59,7 +59,7 @@ const FeatureGrid = ({ props: grid, variant }: BlockComponentProps<typeof props,
             <Slot
               name="items"
               as="ul"
-              className={cx("grid", columns[grid.columns], styles[grid.style])}
+              className={cx("fill-row grid", columns[grid.columns], styles[grid.style])}
             />
           </div>
         </Section>
@@ -82,7 +82,7 @@ const FeatureGrid = ({ props: grid, variant }: BlockComponentProps<typeof props,
               name="items"
               as="ul"
               className={cx(
-                "grid [&>li]:flex-row [&>li]:items-start [&>li]:gap-5",
+                "fill-row grid [&>li]:flex-row [&>li]:items-start [&>li]:gap-5",
                 columns[grid.columns],
                 styles[grid.style],
               )}

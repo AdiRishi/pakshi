@@ -44,7 +44,7 @@ const EventCards = ({ props: events, variant }: BlockComponentProps<typeof props
         as="ul"
         className={
           variant === "grid"
-            ? cx("grid gap-x-6 gap-y-14", columns[events.columns])
+            ? cx("fill-row grid gap-x-6 gap-y-14", columns[events.columns])
             : "border-b border-border"
         }
       />

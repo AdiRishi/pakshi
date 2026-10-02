@@ -58,7 +58,7 @@ const CardsBlock = ({ props: section, variant }: BlockComponentProps<typeof prop
             name="cards"
             as="ul"
             className={cx(
-              "grid",
+              "fill-row grid",
               columns[section.columns],
               rows === "lines" && "gap-x-10 border-b border-border",
               rows === "tiles" && "gap-4",
