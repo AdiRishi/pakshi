@@ -1,12 +1,12 @@
 import type { BrandIdentity } from "@repo/contracts/brand";
-import { collectionKinds } from "@repo/contracts/collections";
+import { entriesOf } from "@repo/contracts/collections";
 import type { FormDefinition } from "@repo/contracts/form";
 import type { FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { Link } from "@repo/contracts/references";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { Menus } from "@repo/contracts/site";
 import type { PageListing } from "@repo/contracts/snapshot";
-import { Order, Predicate } from "effect";
+import { Predicate } from "effect";
 
 import type { ResolvedMedia, SiteCollection, SiteData } from "./components.tsx";
 import {
@@ -16,21 +16,16 @@ import {
   samplePosts,
 } from "./placeholders.ts";
 
-type Entry = Extract<PageListing, { readonly type: "entry" }>;
-
 /** The site's collections with their entries, and the placeholder collection with its samples. */
 const collectionsOf = (pages: ReadonlyArray<PageListing>) => {
-  const entries = Map.groupBy(
-    pages.filter((page): page is Entry => page.type === "entry"),
-    (entry) => entry.collection,
-  );
   const collections = new Map<PageId, SiteCollection>(
     pages.flatMap((page) => {
       if (page.type !== "collection") return [];
-      const order = Order.mapInput(collectionKinds[page.kind].order, (entry: Entry) => entry.meta);
-      const held = (entries.get(page.id) ?? [])
-        .toSorted(order)
-        .map((entry) => ({ id: entry.id, href: entry.path, meta: entry.meta }));
+      const held = entriesOf(pages, page).map((entry) => ({
+        id: entry.id,
+        href: entry.path,
+        meta: entry.meta,
+      }));
       return [[page.id, { id: page.id, href: page.path, title: page.meta.title, entries: held }]];
     }),
   );

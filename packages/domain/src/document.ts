@@ -2,7 +2,7 @@ import type { BlockContract } from "@repo/blocks/contract";
 import type { Field } from "@repo/blocks/fields";
 import { fieldParts, propsSchema } from "@repo/blocks/fields";
 import { placeholderCollection } from "@repo/blocks/placeholders";
-import { collectionKinds } from "@repo/contracts/collections";
+import { collectionKinds, entriesOf } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type {
@@ -584,12 +584,6 @@ const setSlug = (draft: Draft, op: SetSlug) => {
   };
 };
 
-/** The entries a collection holds. */
-const entriesOf = (draft: Draft, collection: PageId) =>
-  Object.values(draft.pages).filter(
-    (page) => page.type === "entry" && page.collection === collection,
-  );
-
 /**
  * Rejects two pages at one address, naming the op that last gave one of them
  * its address: the page's own, or for an entry, its collection's too.
@@ -675,12 +669,12 @@ const createPage = (draft: Draft, page: Draft["pages"][PageId], contracts: Block
 
 const deletePage = (draft: Draft, id: PageId) => {
   const page = pageOf(draft, id);
-  const held = page.type === "collection" ? entriesOf(draft, id).length : 0;
-  if (page.type === "collection" && held > 0) {
+  const held = page.type === "collection" ? entriesOf(Object.values(draft.pages), page) : [];
+  if (page.type === "collection" && held.length > 0) {
     const names = collectionKinds[page.kind].names;
     throw reject(
       "in-use",
-      `${pageName(page)} still holds ${held} ${held === 1 ? names.one : names.many}. Delete them first.`,
+      `${pageName(page)} still holds ${held.length} ${held.length === 1 ? names.one : names.many}. Delete them first.`,
     );
   }
   const { [id]: _, ...pages } = draft.pages;

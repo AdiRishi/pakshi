@@ -1,3 +1,4 @@
+import { entriesOf } from "@repo/contracts/collections";
 import type { PageId } from "@repo/contracts/ids";
 import { batchLimit, type Op } from "@repo/contracts/ops";
 import type { Menus } from "@repo/contracts/site";
@@ -5,18 +6,9 @@ import type { DraftPageSummary } from "@repo/contracts/studio";
 import { menusWithout } from "@repo/domain/document";
 import { Array as Arr } from "effect";
 
-type Entry = Extract<DraftPageSummary, { readonly type: "entry" }>;
-
-/** The entries a collection holds in the draft, or none for any other page. */
-export const entriesIn = (
-  page: DraftPageSummary,
-  pages: ReadonlyArray<DraftPageSummary>,
-): ReadonlyArray<Entry> =>
-  page.type === "collection"
-    ? pages.filter(
-        (entry): entry is Entry => entry.type === "entry" && entry.collection === page.id,
-      )
-    : [];
+/** The entries a collection holds in the draft, in its kind's order, or none for any other page. */
+export const entriesIn = (page: DraftPageSummary, pages: ReadonlyArray<DraftPageSummary>) =>
+  page.type === "collection" ? entriesOf(pages, page) : [];
 
 /**
  * The batches that unpublish or delete a page, a collection with its entries:

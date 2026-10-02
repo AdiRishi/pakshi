@@ -1,6 +1,6 @@
 import { richTextLines, RichTextDocument } from "@repo/blocks";
 import type { Fields } from "@repo/blocks/fields";
-import { collectionKinds } from "@repo/contracts/collections";
+import { collectionKinds, entriesOf } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
@@ -8,7 +8,7 @@ import { type BlockInstance, type PageDocument, pageName } from "@repo/contracts
 import { addressOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
 import type { Surface } from "@repo/tokens";
-import { Order, Schema } from "effect";
+import { Schema } from "effect";
 
 import { agentProps } from "./content.ts";
 import type { TypingIn } from "./workspace.ts";
@@ -19,7 +19,6 @@ import type { TypingIn } from "./workspace.ts";
  */
 
 type Collection = Extract<PageDocument, { readonly type: "collection" }>;
-type Entry = Extract<PageDocument, { readonly type: "entry" }>;
 
 /** How many of a blog's newest posts the outline names; get_page names them all. */
 const postsInOutline = 20;
@@ -52,12 +51,6 @@ const blockLine = (contracts: BlockContracts, id: BlockId, block: BlockInstance)
   return `${id} ${block.type} (${look})${text === "" ? "" : `: "${shorten(text, 60)}"`}`;
 };
 
-/** A collection's entries, in its kind's order. */
-const entriesOf = (draft: Draft, collection: Collection) =>
-  Object.values(draft.pages)
-    .filter((page): page is Entry => page.type === "entry" && page.collection === collection.id)
-    .toSorted(Order.mapInput(collectionKinds[collection.kind].order, (entry) => entry.meta));
-
 const status = (page: PageDocument) => (page.status === "unpublished" ? " (unpublished)" : "");
 
 /** What a collection's kind calls `count` of its entries, such as "posts". */
@@ -79,7 +72,7 @@ const pageLines = (draft: Draft, contracts: BlockContracts, page: PageDocument) 
     return [`  ${blockLine(contracts, id, block)}`, ...items];
   });
   if (page.type !== "collection") return [`${page.id} ${page.type} ${name}`, ...sections];
-  const entries = entriesOf(draft, page);
+  const entries = entriesOf(Object.values(draft.pages), page);
   const older = entries.length - postsInOutline;
   return [
     `${page.id} collection(${page.kind}) ${name} — ${entries.length} ${entryNoun(page, entries.length)}`,
@@ -213,7 +206,7 @@ export const pageView = (
       return {
         ...common,
         kind: page.kind,
-        entries: entriesOf(draft, page).map((entry) => ({
+        entries: entriesOf(Object.values(draft.pages), page).map((entry) => ({
           id: entry.id,
           path: addressOf(draft.pages, entry),
           title: pageName(entry),
