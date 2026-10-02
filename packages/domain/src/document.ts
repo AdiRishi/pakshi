@@ -767,22 +767,23 @@ const linksTo = (target: MenuItem["target"], page: PageId) =>
   !Predicate.isString(target) && target.id === page;
 
 /**
- * The ops that take every link to a page out of the draft's menus, with the
- * sub-items under a main menu item that goes. Unpublishing or deleting a
- * page sends them in the same batch.
+ * The ops that take every link to these pages out of the draft's menus, with
+ * the sub-items under a main menu item that goes. Unpublishing or deleting a
+ * page, or a collection with its entries, sends them in the same batch.
  */
-export const menusWithout = (menus: Menus, page: PageId): ReadonlyArray<Op> => {
+export const menusWithout = (menus: Menus, ...pages: ReadonlyArray<PageId>): ReadonlyArray<Op> => {
   const { main, footer } = menus;
+  const linksToAny = (target: MenuItem["target"]) => pages.some((page) => linksTo(target, page));
   const keptMain = main.flatMap((item) =>
-    linksTo(item.target, page)
+    linksToAny(item.target)
       ? []
       : [
           item.children === undefined
             ? item
-            : { ...item, children: item.children.filter((child) => !linksTo(child.target, page)) },
+            : { ...item, children: item.children.filter((child) => !linksToAny(child.target)) },
         ],
   );
-  const keptFooter = footer.filter((item) => !linksTo(item.target, page));
+  const keptFooter = footer.filter((item) => !linksToAny(item.target));
   const ops: Array<Op> = [];
   if (!Equal.equals(keptMain, main)) ops.push({ op: "setMenu", menu: "main", items: keptMain });
   if (keptFooter.length !== footer.length)

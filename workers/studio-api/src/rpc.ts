@@ -866,6 +866,7 @@ const handlers = (env: StudioApiEnv) =>
                   site: { id: found.id, name: found.name },
                   live: liveReleaseOf(live),
                   draft: view.summary,
+                  lockfile: view.draft.lockfile,
                   pages: pageSummaries(view.draft).map((page) => ({
                     ...page,
                     standing: view.standings[page.id] ?? "new",
