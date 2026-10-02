@@ -218,36 +218,39 @@ const HeaderBlock = ({ props: header, variant }: BlockComponentProps<typeof prop
         !floating && header.position !== "overlay" && "border-b border-border",
       )}
     >
-      <Announcement header={header} />
-      <div className={floating ? "page-width pt-4" : undefined}>
-        <div
-          className={cx(
-            "relative flex h-16 items-center justify-between gap-8",
-            floating
-              ? "rounded-xl border border-border bg-background/85 pr-3 pl-5 shadow-card backdrop-blur-md"
-              : "page-width",
-            variant === "centered-menu" && "md:grid md:grid-cols-[1fr_auto_1fr]",
-            variant === "centered-logo" && "md:grid md:grid-cols-[1fr_auto_1fr]",
-          )}
-        >
-          {variant === "centered-logo" ? (
-            <>
-              <Menu items={menu} />
-              <div className="md:justify-self-center">
-                <Brand />
-              </div>
-            </>
-          ) : (
-            <>
-              <Brand />
-              <div className={cx(variant !== "centered-menu" && "md:ml-auto")}>
+      {/* An overlaid header takes the surface of the section it sits over, from the theme's CSS. */}
+      <div data-overlay={header.position === "overlay" || undefined} className="text-foreground">
+        <Announcement header={header} />
+        <div className={floating ? "page-width pt-4" : undefined}>
+          <div
+            className={cx(
+              "relative flex h-16 items-center justify-between gap-8",
+              floating
+                ? "rounded-xl border border-border bg-background/85 pr-3 pl-5 shadow-card backdrop-blur-md"
+                : "page-width",
+              variant === "centered-menu" && "md:grid md:grid-cols-[1fr_auto_1fr]",
+              variant === "centered-logo" && "md:grid md:grid-cols-[1fr_auto_1fr]",
+            )}
+          >
+            {variant === "centered-logo" ? (
+              <>
                 <Menu items={menu} />
-              </div>
-            </>
-          )}
-          <div className="flex items-center justify-end gap-2">
-            <Buttons header={header} />
-            <MobileMenu items={menu} header={header} />
+                <div className="md:justify-self-center">
+                  <Brand />
+                </div>
+              </>
+            ) : (
+              <>
+                <Brand />
+                <div className={cx(variant !== "centered-menu" && "md:ml-auto")}>
+                  <Menu items={menu} />
+                </div>
+              </>
+            )}
+            <div className="flex items-center justify-end gap-2">
+              <Buttons header={header} />
+              <MobileMenu items={menu} header={header} />
+            </div>
           </div>
         </div>
       </div>

@@ -12,7 +12,7 @@ export const nonprofit: Scene = {
     main: menu("Our work", "Where we work", "Stories", "About"),
     footer: menu("Financials", "Contact", "Privacy"),
   },
-  header: block("header", "standard", "inverse", {
+  header: block("header", "standard", "default", {
     cta: link("Donate"),
     position: "overlay",
   }),

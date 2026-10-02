@@ -20,10 +20,17 @@ const resolved = resolveTheme(defaultTheme).theme;
 const following = { ...resolved, colorMode: "system" } as const;
 
 /** The declarations of the first CSS rule for `selector`. */
-const rule = (css: string, selector: string) => {
-  const start = css.indexOf(`${selector} {`);
-  return css.slice(start, css.indexOf("}", start));
-};
+/** The declarations of the first rule whose selector list holds `selector`. */
+const rule = (css: string, selector: string) =>
+  css
+    .split("}")
+    .map((block) => block.split("{"))
+    .find(([selectors]) =>
+      (selectors ?? "")
+        .split(",")
+        .map((part) => part.trim())
+        .some((part) => part === selector || part.endsWith(`\n${selector}`)),
+    )?.[1] ?? "";
 
 test("contrast follows WCAG 2's formula", () => {
   expect(contrast(hexToOklch("#000000"), hexToOklch("#ffffff"))).toBeCloseTo(21, 1);
@@ -118,6 +125,15 @@ test("each surface re-scopes the semantic colors for its section", () => {
   expect(rule(themeCss(resolved, "light"), '[data-surface="brand"]')).toContain(
     `--background: ${resolved.colors.light.brand.background};`,
   );
+});
+
+test("a header overlaid on the first section takes that section's colors", () => {
+  expect(
+    rule(
+      themeCss(resolved, "light"),
+      ':has(+ main > [data-surface="brand"]:first-child) > [data-overlay]',
+    ),
+  ).toContain(`--background: ${resolved.colors.light.brand.background};`);
 });
 
 test("a brand's logo for dark backgrounds shows only on dark surfaces", () => {

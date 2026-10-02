@@ -204,9 +204,18 @@ const surfaceDeclarations = (colors: SurfaceColors, cards: ResolvedTheme["cards"
   ]);
 };
 
-/** The selector of the elements a surface re-scopes, inside `root` unless that's the page. */
-const surfaceSelector = (root: string, surface: string) =>
-  root === ":root" ? `[data-surface="${surface}"]` : `${root} [data-surface="${surface}"]`;
+/**
+ * The selector of the elements a surface re-scopes, inside `root` unless
+ * that's the page: those set to it, and a header overlaid on a first section
+ * set to it, so the header reads on whatever it sits over.
+ */
+const surfaceSelector = (root: string, surface: string) => {
+  const scope = root === ":root" ? "" : `${root} `;
+  return [
+    `${scope}[data-surface="${surface}"]`,
+    `${scope}:has(+ main > [data-surface="${surface}"]:first-child) > [data-overlay]`,
+  ].join(", ");
+};
 
 const schemeRules = (
   scheme: SchemeColors,
