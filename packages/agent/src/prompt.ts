@@ -7,7 +7,7 @@ import type { Collaborator } from "@repo/contracts/live";
 import { pageName } from "@repo/contracts/page";
 import type { BlockContracts } from "@repo/domain/document";
 
-import { outline } from "./site-view.ts";
+import { outline, selectedBlock } from "./site-view.ts";
 import type { TypingIn } from "./workspace.ts";
 
 /*
@@ -117,9 +117,10 @@ export const turnContext = (options: {
     options.page === undefined
       ? ""
       : `${options.person.name} has the page ${options.page.id} "${pageName(options.page)}" open.`,
-    options.selected === null
-      ? "No block is selected."
-      : `Selected: ${options.selected.focus.block}, a ${options.selected.title} block${options.selected.focus.path === undefined ? "" : `, field ${options.selected.focus.path.join(".")}`}.`,
+    (options.selected === null
+      ? null
+      : selectedBlock(options.draft, options.contracts, options.selected.focus)) ??
+      "No block is selected.",
     options.typing.length === 0
       ? ""
       : `Typing now: ${options.typing.map((field) => `${field.person.name} in ${field.block} ${(field.path ?? []).join(".")}`).join("; ")}.`,
