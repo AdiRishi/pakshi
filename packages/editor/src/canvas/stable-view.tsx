@@ -22,9 +22,11 @@ const anchorIn = (document: Document): Anchor | null => {
   const focused = document.activeElement;
   if (focused !== null && focused !== document.body && onScreen(focused))
     return { element: focused, top: focused.getBoundingClientRect().top };
+  // An element that isn't displayed, such as a field in a closed menu, has no
+  // box and never moves, so it can't hold the view in place.
   const candidates = Array.from(
     document.querySelectorAll("[data-pakshi-block], [data-pakshi-field]"),
-  );
+  ).filter((candidate) => candidate.getClientRects().length > 0);
   const element =
     candidates.find((candidate) => {
       const { top } = candidate.getBoundingClientRect();
