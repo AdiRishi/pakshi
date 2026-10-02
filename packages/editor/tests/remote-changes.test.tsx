@@ -119,10 +119,11 @@ describe("other people's changes", () => {
     await openEditor({ siteDoc });
     const title = document.querySelector<HTMLInputElement>("aside[aria-label='Settings'] input");
     if (title === null) throw new Error("The settings panel shows no page title.");
+    const original = title.value;
     title.focus();
     title.setSelectionRange(2, 2);
-    siteDoc.commit(sam, [{ op: "setMeta", page: home, field: "title", value: "Our Home" }]);
-    await expect.poll(() => title.value).toBe("Our Home");
+    siteDoc.commit(sam, [{ op: "setMeta", page: home, field: "title", value: `Our ${original}` }]);
+    await expect.poll(() => title.value).toBe(`Our ${original}`);
     expect(document.activeElement).toBe(title);
     expect([title.selectionStart, title.selectionEnd]).toEqual([6, 6]);
   });
@@ -213,7 +214,7 @@ describe("other people's changes", () => {
     const title = document.querySelector<HTMLInputElement>("aside[aria-label='Settings'] input");
     title?.focus();
     await userEvent.keyboard("!");
-    await expect.poll(() => siteDoc.draft().pages[home]?.meta.title).toBe("Home!");
+    await expect.poll(() => siteDoc.draft().pages[home]?.meta.title).toBe("Harbour Summer School!");
     expect(view.scrollY).toBe(600);
   });
 
@@ -223,23 +224,25 @@ describe("other people's changes", () => {
     const title = document.querySelector<HTMLInputElement>("aside[aria-label='Settings'] input");
     if (title === null) throw new Error("The settings panel shows no page title.");
     title.focus();
-    title.setSelectionRange(4, 4);
+    title.setSelectionRange(title.value.length, title.value.length);
     title.dispatchEvent(new CompositionEvent("compositionstart", { bubbles: true }));
     // What an input method does as it composes: the text changes, and input fires.
     Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")?.set?.call(
       title,
-      "Home 夏",
+      "Harbour Summer School 夏",
     );
     title.dispatchEvent(new InputEvent("input", { bubbles: true, data: " 夏", isComposing: true }));
-    siteDoc.commit(sam, [{ op: "setMeta", page: home, field: "title", value: "Our Home" }]);
+    siteDoc.commit(sam, [
+      { op: "setMeta", page: home, field: "title", value: "Our Harbour Summer School" },
+    ]);
     await new Promise((resolve) => setTimeout(resolve, 100));
-    expect(title.value).toBe("Home 夏");
+    expect(title.value).toBe("Harbour Summer School 夏");
     expect(siteDoc.log().map((batch) => batch.actor.id)).toEqual([sam.id]);
     title.dispatchEvent(new CompositionEvent("compositionend", { bubbles: true, data: " 夏" }));
-    expect(title.value).toBe("Our Home 夏");
+    expect(title.value).toBe("Our Harbour Summer School 夏");
     await expect
       .poll(() => siteDoc.draft().pages[home]?.meta.title, { timeout: 3000 })
-      .toBe("Our Home 夏");
+      .toBe("Our Harbour Summer School 夏");
   });
 
   test("never enter the person's undo, in the editor or in a rich text field", async () => {

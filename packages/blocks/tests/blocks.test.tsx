@@ -12,6 +12,7 @@ import {
   fixturesSource,
   presentationsSource,
   registrySource,
+  samplesSource,
 } from "../scripts/generate-registry.ts";
 import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
@@ -64,6 +65,9 @@ test("the generated registry and lists match the block folders", async () => {
   );
   expect(await readFile(new URL("../src/presentation.gen.ts", import.meta.url), "utf8")).toBe(
     await presentationsSource(),
+  );
+  expect(await readFile(new URL("../src/samples.gen.ts", import.meta.url), "utf8")).toBe(
+    await samplesSource(),
   );
 });
 

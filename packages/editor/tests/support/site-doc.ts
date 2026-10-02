@@ -1,7 +1,6 @@
 import { loadBlocks, registeredVersions } from "@repo/blocks";
-import { blockFixtures, fixtureSite, fixtureTree, flattenTree } from "@repo/blocks/fixtures";
-import { noIdentity } from "@repo/contracts/brand";
-import { Draft } from "@repo/contracts/draft";
+import { blockFixtures, fixtureDraft as draftOf, fixtureTree } from "@repo/blocks/fixtures";
+import type { Draft } from "@repo/contracts/draft";
 import { BatchId, randomId, type TurnId } from "@repo/contracts/ids";
 import type {
   ClientMessage,
@@ -13,8 +12,6 @@ import type {
 } from "@repo/contracts/live";
 import type { Op } from "@repo/contracts/ops";
 import { commitBatch, type Writes } from "@repo/domain/commit";
-import { defaultTheme, resolveTheme } from "@repo/tokens";
-import { Schema } from "effect";
 
 import type { Connection } from "../../src/store.ts";
 
@@ -31,7 +28,6 @@ const placed = (placement: string) =>
       definitionsOf.get(entry.type)?.placement === placement,
   );
 
-const sections = placed("section").map(fixtureTree);
 const [header] = placed("header").map(fixtureTree);
 const [footer] = placed("footer").map(fixtureTree);
 if (header === undefined || footer === undefined)
@@ -41,37 +37,11 @@ if (header === undefined || footer === undefined)
  * A draft whose home page holds every section fixture of each block's first
  * version, under a header and footer from their fixtures.
  */
-export const fixtureDraft = Schema.decodeSync(Draft)({
-  id: "dr_fixtures",
-  site: "site_fixtures",
-  base: { release: "rel_fixtures", snapshot: "snap_fixtures" },
-  revision: 0,
-  parts: {
-    header: header.id,
-    footer: footer.id,
-    blocks: Object.fromEntries([header, footer].flatMap(flattenTree)),
-    menus: fixtureSite.menus,
-  },
-  forms: fixtureSite.forms,
-  redirects: {},
+export const fixtureDraft = draftOf({
   lockfile,
-  brand: {
-    brand: "brand_harbour",
-    number: 1,
-    theme: resolveTheme(defaultTheme).theme,
-    identity: noIdentity,
-  },
-  pages: {
-    pg_home: {
-      schema: "pakshi.page/1",
-      id: "pg_home",
-      type: "page",
-      path: "/",
-      meta: { title: "Home", description: "" },
-      root: sections.map((section) => section.id),
-      blocks: Object.fromEntries(sections.flatMap(flattenTree)),
-    },
-  },
+  header,
+  footer,
+  sections: placed("section").map(fixtureTree),
 });
 
 export const definitions = definitionsOf;
