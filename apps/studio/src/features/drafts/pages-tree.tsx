@@ -86,12 +86,7 @@ const branchesOf = (pages: ReadonlyArray<DraftPageSummary>): ReadonlyArray<Branc
     .toSorted((a, b) => (a.path < b.path ? -1 : 1))
     .map((page) => ({
       page,
-      entries:
-        page.type === "collection"
-          ? entriesIn(page, pages).toSorted((a, b) =>
-              collectionKinds[page.kind].order(a.meta, b.meta),
-            )
-          : [],
+      entries: entriesIn(page, pages),
     }));
 
 /** What a page is called in a sentence: "page", "blog" or "post". */

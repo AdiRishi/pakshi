@@ -1,5 +1,6 @@
 import { Order } from "effect";
 
+import type { PageId } from "./ids.ts";
 import type { CollectionKind, PostMeta } from "./page.ts";
 
 interface KindDefinition {
@@ -20,3 +21,20 @@ export const collectionKinds = {
     ),
   },
 } as const satisfies Record<CollectionKind, KindDefinition>;
+
+/** Any form of a page: a document, a listing, or a summary built on one. */
+type AnyPage =
+  | { readonly type: "page" | "collection" }
+  | { readonly type: "entry"; readonly collection: PageId; readonly meta: PostMeta };
+
+/** The entries `collection` holds among `pages`, in its kind's order. */
+export const entriesOf = <Page extends AnyPage>(
+  pages: Iterable<Page>,
+  collection: { readonly id: PageId; readonly kind: CollectionKind },
+) =>
+  Array.from(pages)
+    .filter(
+      (page): page is Extract<Page, { readonly type: "entry" }> =>
+        page.type === "entry" && page.collection === collection.id,
+    )
+    .toSorted(Order.mapInput(collectionKinds[collection.kind].order, (entry) => entry.meta));

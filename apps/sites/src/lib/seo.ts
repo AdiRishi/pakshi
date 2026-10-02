@@ -1,13 +1,8 @@
-import { collectionKinds } from "@repo/contracts/collections";
+import { entriesOf } from "@repo/contracts/collections";
 import { pageName, type PageDocument, type PagePath } from "@repo/contracts/page";
 import { MediaRef, type Link } from "@repo/contracts/references";
-import {
-  entryAddress,
-  type PageListing,
-  type SnapshotManifest,
-  type SnapshotPage,
-} from "@repo/contracts/snapshot";
-import { Order, Predicate, Schema } from "effect";
+import { entryAddress, type PageListing, type SnapshotManifest } from "@repo/contracts/snapshot";
+import { Predicate, Schema } from "effect";
 
 /*
  * What `sites` tells search engines, feed readers and link previews about a
@@ -16,7 +11,6 @@ import { Order, Predicate, Schema } from "effect";
  */
 
 type Collection = Extract<PageListing, { readonly type: "collection" }>;
-type Entry = Extract<SnapshotPage, { readonly type: "entry" }>;
 
 const isMediaRef = Schema.is(MediaRef);
 const isJsonObject = Schema.is(Schema.JsonObject);
@@ -139,14 +133,7 @@ export const collectionFeed = (
   collection: Collection,
   origin: string,
 ) => {
-  const order = Order.mapInput(
-    collectionKinds[collection.kind].order,
-    (entry: Entry) => entry.meta,
-  );
-  const entries = manifest.pages
-    .filter((page): page is Entry => page.type === "entry" && page.collection === collection.id)
-    .toSorted(order)
-    .slice(0, feedLength);
+  const entries = entriesOf(manifest.pages, collection).slice(0, feedLength);
   const name = pageName(collection);
   const site = manifest.settings.name;
   const title = name === site ? name : `${name} · ${site}`;
