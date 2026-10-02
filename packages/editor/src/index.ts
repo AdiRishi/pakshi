@@ -28,6 +28,7 @@ export {
   useToolbarCommands,
 } from "./editor.tsx";
 export { type CanvasColors, Frame as SiteFrame } from "./canvas/frame.tsx";
+export { BlockCustomizer } from "./customizer/customizer.tsx";
 export { ScaledBlockPreview, ScaledSiteFrame } from "./preview.tsx";
 export { Outline as EditorOutline } from "./outline.tsx";
 export { EditorParticipants } from "./participants.tsx";
