@@ -11,10 +11,13 @@ import { newsDraft } from "./support/draft.ts";
 import { type Reply, scriptedModel } from "./support/model.ts";
 import { desk } from "./support/workspace.ts";
 
-/** Runs a turn on the News draft on the morning of 2 October 2026, with the model replying from a script. */
+/**
+ * Runs a turn on the News draft on the morning of 2 October 2026 in Sydney,
+ * where the person is, with the model replying from a script.
+ */
 const writing = (script: ReadonlyArray<Reply>) =>
   Effect.gen(function* () {
-    yield* TestClock.setTime(Date.parse("2026-10-02T09:30:00Z"));
+    yield* TestClock.setTime(Date.parse("2026-10-01T22:30:00Z"));
     const { state, layer } = yield* Effect.promise(() => desk(newsDraft));
     const model = scriptedModel(script);
     yield* runTurn({
@@ -32,7 +35,7 @@ const createEntry = (params: typeof CreateEntry.parametersSchema.Encoded) => ({
 
 describe("creating a post", () => {
   it.effect(
-    "puts it in the blog at an address from its title, dated today, by the person the agent works for",
+    "puts it in the blog at an address from its title, dated today where the person is, by them",
     () =>
       Effect.gen(function* () {
         const { state } = yield* writing([

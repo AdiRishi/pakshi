@@ -1,8 +1,10 @@
 import type { BlockContract } from "@repo/blocks/contract";
 import { pageFromRecipe, type Recipe, recipeById } from "@repo/blocks/recipes";
+import { collectionKinds } from "@repo/contracts/collections";
 import { type BlockType, PageId, randomId } from "@repo/contracts/ids";
-import type { PageDocument, PagePath, Slug } from "@repo/contracts/page";
+import type { CollectionKind, PageDocument, PagePath, Slug } from "@repo/contracts/page";
 import type { PageListing } from "@repo/contracts/snapshot";
+import { DateTime } from "effect";
 
 const recipe = (id: string): Recipe => {
   const found = recipeById(id);
@@ -40,15 +42,17 @@ export const newBlog = (input: {
     },
   });
 
-/** A new post in `blog` from its recipe, dated `today`, by `author`. */
+/**
+ * A new post in `blog` from its recipe, by `author`, dated today where the
+ * person creating it is.
+ */
 export const newPost = (input: {
   readonly contracts: ReadonlyMap<BlockType, BlockContract>;
   readonly listings: ReadonlyArray<PageListing>;
-  readonly blog: PageId;
+  readonly blog: { readonly id: PageId; readonly kind: CollectionKind };
   readonly title: string;
   readonly slug: Slug;
   readonly author: string;
-  readonly today: string;
 }): PageDocument =>
   pageFromRecipe({
     recipe: recipe("post"),
@@ -56,15 +60,14 @@ export const newPost = (input: {
     listings: input.listings,
     page: {
       id: PageId.make(randomId("pg")),
-      collection: input.blog,
+      collection: input.blog.id,
       slug: input.slug,
-      meta: {
+      meta: collectionKinds[input.blog.kind].newMeta({
         title: input.title,
         description: "",
-        date: input.today,
         author: input.author,
-        tags: [],
-        excerpt: "",
-      },
+        now: DateTime.nowUnsafe(),
+        timeZone: DateTime.zoneMakeLocal(),
+      }),
     },
   });

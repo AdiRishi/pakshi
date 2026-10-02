@@ -22,7 +22,7 @@ import {
 } from "@repo/contracts/ids";
 import { previewBasePath } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
-import { Effect, Layer, Option, Schema } from "effect";
+import { type DateTime, Effect, Layer, Option, Schema } from "effect";
 import { SqlClient } from "effect/unstable/sql";
 import { getServerByName } from "partyserver";
 
@@ -72,6 +72,7 @@ export const turnServices = (
   who: AgentAuthorization,
   turn: {
     readonly id: TurnId;
+    readonly timeZone: DateTime.TimeZone;
     readonly page: PageId;
     readonly selected: Selected | null;
     readonly links: ReadonlySet<string>;
@@ -160,6 +161,7 @@ export const turnServices = (
   const current = Layer.succeed(Turn)({
     id: turn.id,
     person,
+    timeZone: turn.timeZone,
     page: turn.page,
     selected: turn.selected,
     links: turn.links,

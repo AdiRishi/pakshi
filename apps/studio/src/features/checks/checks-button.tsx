@@ -14,6 +14,7 @@ import {
 } from "@repo/editor";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
+import { DateTime } from "effect";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
@@ -129,7 +130,14 @@ export function ChecksButton(props: {
       pakshi={pakshi}
       onFixAll={(message) => {
         props.onShowPakshi();
-        props.conversation.send({ _tag: "Send", text: message, sources: [], page, selected: null });
+        props.conversation.send({
+          _tag: "Send",
+          text: message,
+          sources: [],
+          page,
+          selected: null,
+          timeZone: DateTime.zoneMakeLocal(),
+        });
       }}
     />
   );

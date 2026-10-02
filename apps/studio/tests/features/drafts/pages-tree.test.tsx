@@ -1,9 +1,7 @@
 import { PageId } from "@repo/contracts/ids";
 import type { DraftPageSummary } from "@repo/contracts/studio";
-import { expect, test } from "vitest";
+import { expect, onTestFinished, test, vi } from "vitest";
 import { page } from "vitest/browser";
-
-import { today } from "@/lib/dates";
 
 import { harbour, summariesOf } from "./draft";
 import { renderPages } from "./harness";
@@ -78,7 +76,13 @@ test("a blog with no posts says how to write the first", async () => {
   await expect.element(page.getByRole("dialog", { name: "New post in Stories" })).toBeVisible();
 });
 
-test("New post makes a post in the blog it was asked from, dated today and by the person", async () => {
+test("New post makes a post in the blog it was asked from, dated today where the person is, and by them", async () => {
+  // Just after midnight on 3 March where the person is, which east of UTC is 2 March in UTC.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2027, 2, 3, 0, 30));
+  onTestFinished(() => {
+    vi.useRealTimers();
+  });
   const { sent, opened } = await renderPages([...summariesOf(harbour), stories]);
   await page.getByRole("button", { name: "New post in Stories" }).click();
   const dialog = page.getByRole("dialog", { name: "New post in Stories" });
@@ -100,7 +104,7 @@ test("New post makes a post in the blog it was asked from, dated today and by th
       kind: "blog",
       collection: "pg_stories",
       slug: "regatta-day",
-      meta: { title: "Regatta day", date: today(), author: "Meera Kapoor" },
+      meta: { title: "Regatta day", date: "2027-03-03", author: "Meera Kapoor" },
     },
   });
 });

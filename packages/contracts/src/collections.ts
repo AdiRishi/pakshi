@@ -1,4 +1,4 @@
-import { Order } from "effect";
+import { DateTime, Order } from "effect";
 
 import type { PageId } from "./ids.ts";
 import type { CollectionKind, PostMeta } from "./page.ts";
@@ -8,6 +8,18 @@ interface KindDefinition {
   readonly names: { readonly kind: string; readonly one: string; readonly many: string };
   /** The order a collection's entries are listed in. */
   readonly order: Order.Order<PostMeta>;
+  /**
+   * A new entry's meta: its title and description, `author`, and the date it
+   * is `now` where the author is, in `timeZone`. A post written on a Sydney
+   * morning is dated that day, while in UTC it's still the day before.
+   */
+  readonly newMeta: (input: {
+    readonly title: string;
+    readonly description: string;
+    readonly author: string;
+    readonly now: DateTime.DateTime;
+    readonly timeZone: DateTime.TimeZone;
+  }) => PostMeta;
 }
 
 /** What each built-in kind of collection does. */
@@ -19,6 +31,14 @@ export const collectionKinds = {
       Order.flip(Order.mapInput(Order.String, (meta: PostMeta) => meta.date)),
       Order.mapInput(Order.String, (meta: PostMeta) => meta.title),
     ),
+    newMeta: ({ title, description, author, now, timeZone }) => ({
+      title,
+      description,
+      date: DateTime.formatIsoDate(DateTime.setZone(now, timeZone)),
+      author,
+      tags: [],
+      excerpt: "",
+    }),
   },
 } as const satisfies Record<CollectionKind, KindDefinition>;
 

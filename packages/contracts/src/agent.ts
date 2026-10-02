@@ -135,6 +135,9 @@ export const Turn = Schema.Struct({
 });
 export type Turn = typeof Turn.Type;
 
+/** Where the person is, by an IANA name such as "Australia/Sydney". It dates the posts a turn writes. */
+const TimeZone = Schema.TimeZoneNamedFromString;
+
 /** What the chat panel sends. */
 export const AgentClientMessage = Schema.TaggedUnion({
   /** Opens every connection; the agent answers with the conversation. */
@@ -145,11 +148,18 @@ export const AgentClientMessage = Schema.TaggedUnion({
     /** The page the person has open. */
     page: PageId,
     selected: Schema.NullOr(Selected),
+    timeZone: TimeZone,
   },
   /** Answers a question in a turn, which starts the next turn. */
-  Answer: { turn: TurnId, part: Schema.String, answer: Request.fields.text, page: PageId },
+  Answer: {
+    turn: TurnId,
+    part: Schema.String,
+    answer: Request.fields.text,
+    page: PageId,
+    timeZone: TimeZone,
+  },
   /** Builds a proposed plan, which starts the next turn. */
-  Build: { turn: TurnId, part: Schema.String, page: PageId },
+  Build: { turn: TurnId, part: Schema.String, page: PageId, timeZone: TimeZone },
   /** Stops the turn under way. What it committed stays. */
   Stop: {},
   /** Undoes everything a turn changed, except what someone has changed since. */
