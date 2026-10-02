@@ -12,8 +12,9 @@
  * - A change to how the browser suite takes screenshots re-shoots baselines
  *   without changing what sites show. A new entry in the re-shoots log that
  *   names the version lets its baselines change, but only to the same
- *   picture: as wide, at most a row taller or shorter, and identical inside
- *   their edge rows. Sites never see this log.
+ *   picture: as wide, at most a row taller or shorter, and inside their edge
+ *   rows a match for the earlier screenshot by the baseline test's own
+ *   comparison. Sites never see this log.
  *
  * Usage: node scripts/src/check-released-blocks.ts <base ref>
  */
@@ -137,7 +138,7 @@ export const releasedBlockProblems = (root: string, base: string) => {
       );
       if (difference !== null)
         problems.push(
-          `${path}: ${reshootLog} re-shoots ${type}@${version}, which may change no pixels, but ${difference}.`,
+          `${path}: ${reshootLog} re-shoots ${type}@${version}, so it must still match its earlier screenshot as the baseline test would, but ${difference}`,
         );
     }
   }
