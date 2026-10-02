@@ -9,6 +9,11 @@
  *   entry in the rendering changes log that names the version, because that
  *   changes what live sites show. They go without one when the version's
  *   whole folder goes.
+ * - A change to how the browser suite takes screenshots re-shoots baselines
+ *   without changing what sites show. A new entry in the re-shoots log that
+ *   names the version lets its baselines change, but only to the same
+ *   picture: as wide, at most a row taller or shorter, and identical inside
+ *   their edge rows. Sites never see this log.
  *
  * Usage: node scripts/src/check-released-blocks.ts <base ref>
  */
@@ -18,8 +23,11 @@ import { join } from "node:path";
 
 import { Schema } from "effect";
 
+import { reshootDifference } from "./reshot-baseline.ts";
+
 const blocksSource = "packages/blocks/src/";
 const renderingLog = "packages/blocks/src/rendering-changes.json";
+const reshootLog = "infra/tests/baseline-reshoots.json";
 const baselines = "infra/tests/blocks.integration.test.ts-snapshots/";
 
 const versionFolder = /^packages\/blocks\/src\/([a-z][a-z0-9-]*)\/v(\d+)\//;
@@ -40,13 +48,26 @@ const RenderingLog = Schema.fromJsonString(
   ),
 );
 
-const decodeLog = Schema.decodeSync(RenderingLog);
+/** The baseline re-shoots log. */
+const ReshootLog = Schema.fromJsonString(
+  Schema.Array(
+    Schema.Struct({
+      date: Schema.String,
+      versions: Schema.Array(Schema.String),
+      reason: Schema.String,
+    }),
+  ),
+);
 
 /** The versions named by entries in `now` that `before` doesn't have, as `hero@1`. */
-const newlyLoggedVersions = (before: string, now: string) => {
-  const earlier = new Set(decodeLog(before).map((entry) => JSON.stringify(entry)));
+const newlyLoggedVersions = (
+  decode: (text: string) => ReadonlyArray<{ readonly versions: ReadonlyArray<string> }>,
+  before: string,
+  now: string,
+) => {
+  const earlier = new Set(decode(before).map((entry) => JSON.stringify(entry)));
   return new Set(
-    decodeLog(now)
+    decode(now)
       .filter((entry) => !earlier.has(JSON.stringify(entry)))
       .flatMap((entry) => entry.versions),
   );
@@ -59,16 +80,28 @@ export const releasedBlockProblems = (root: string, base: string) => {
     .split("\n")
     .filter((path) => path.length > 0);
   const atBase = new Set(
-    git(root, ["ls-tree", "-r", "--name-only", mergeBase, "--", blocksSource, baselines])
+    git(root, [
+      "ls-tree",
+      "-r",
+      "--name-only",
+      mergeBase,
+      "--",
+      blocksSource,
+      baselines,
+      reshootLog,
+    ])
       .split("\n")
       .filter((path) => path.length > 0),
   );
   const released = (type: string, version: string) =>
     Array.from(atBase).some((path) => path.startsWith(`${blocksSource}${type}/v${version}/`));
-  const newlyLogged = newlyLoggedVersions(
-    atBase.has(renderingLog) ? git(root, ["show", `${mergeBase}:${renderingLog}`]) : "[]",
-    existsSync(join(root, renderingLog)) ? readFileSync(join(root, renderingLog), "utf8") : "[]",
-  );
+  const logged = (path: string) =>
+    [
+      atBase.has(path) ? git(root, ["show", `${mergeBase}:${path}`]) : "[]",
+      existsSync(join(root, path)) ? readFileSync(join(root, path), "utf8") : "[]",
+    ] as const;
+  const newlyLogged = newlyLoggedVersions(Schema.decodeSync(RenderingLog), ...logged(renderingLog));
+  const newlyReshot = newlyLoggedVersions(Schema.decodeSync(ReshootLog), ...logged(reshootLog));
 
   const removedWhole = (type: string, version: string) =>
     !existsSync(join(root, blocksSource, type, `v${version}`));
@@ -88,9 +121,23 @@ export const releasedBlockProblems = (root: string, base: string) => {
     if (baseline !== null && atBase.has(path)) {
       const [, type = "", version = ""] = baseline;
       const removedWithVersion = removedWhole(type, version) && !existsSync(join(root, path));
-      if (!removedWithVersion && !newlyLogged.has(`${type}@${version}`))
+      if (removedWithVersion || newlyLogged.has(`${type}@${version}`)) continue;
+      if (!newlyReshot.has(`${type}@${version}`) || !existsSync(join(root, path))) {
         problems.push(
           `${path}: ${type} v${version} is released, so its screenshots change only with an entry for ${type}@${version} in ${renderingLog}.`,
+        );
+        continue;
+      }
+      const difference = reshootDifference(
+        execFileSync("git", ["show", `${mergeBase}:${path}`], {
+          cwd: root,
+          maxBuffer: 64 * 1024 * 1024,
+        }),
+        readFileSync(join(root, path)),
+      );
+      if (difference !== null)
+        problems.push(
+          `${path}: ${reshootLog} re-shoots ${type}@${version}, which may change no pixels, but ${difference}.`,
         );
     }
   }
