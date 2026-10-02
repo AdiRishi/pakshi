@@ -36,8 +36,9 @@ export function AccountLayout(props: {
     <div className="flex min-h-screen bg-card">
       <section
         aria-label="About Pakshi"
-        className="hidden flex-col bg-linear-to-b from-primary/70 via-primary/40 to-accent px-14 pt-10 pb-32 lg:flex lg:w-1/2"
+        className="relative isolate hidden flex-col bg-linear-to-b from-primary/70 via-primary/40 to-accent px-14 pt-10 pb-32 lg:flex lg:w-1/2 dark:from-background dark:via-accent dark:to-primary/30"
       >
+        <div aria-hidden className="absolute inset-0 -z-10 hidden night-stars dark:block" />
         <Logo />
         <p className="mt-auto max-w-xl text-4xl leading-tight font-semibold tracking-tight">
           Pakshi is where {props.audience} build and update their websites.

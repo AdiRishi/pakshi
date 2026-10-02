@@ -75,9 +75,9 @@ export function Stage(props: {
         style={{ width: width * scale }}
       >
         <div aria-hidden className="flex h-7 items-center gap-1.5 border-b bg-muted px-3">
-          <span className="size-2 rounded-full bg-border" />
-          <span className="size-2 rounded-full bg-border" />
-          <span className="size-2 rounded-full bg-border" />
+          <span className="size-2 rounded-full bg-foreground/15" />
+          <span className="size-2 rounded-full bg-foreground/15" />
+          <span className="size-2 rounded-full bg-foreground/15" />
         </div>
         <div className="relative" style={{ height: height * scale }}>
           <Frame
