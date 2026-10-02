@@ -6,7 +6,7 @@ import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
-import { pageMeta, redirectFor, sitemap } from "../src/lib/seo.ts";
+import { collectionFeed, pageMeta, redirectFor, sitemap } from "../src/lib/seo.ts";
 
 const origin = "https://www.northbanklibraries.org";
 
@@ -16,6 +16,20 @@ const listing = (id: string, path: string, meta: Partial<typeof PageMeta.Encoded
   type: "page" as const,
   meta: { title: id, description: "", ...meta },
   object: "a".repeat(64),
+});
+
+const post = (id: string, path: string, blog: string, title: string, date: string) => ({
+  ...listing(id, path),
+  type: "entry" as const,
+  kind: "blog" as const,
+  collection: blog,
+  meta: { title, description: "", date, author: "Sam", tags: [], excerpt: `${title}.` },
+});
+
+const blog = (id: string, path: string, title: string) => ({
+  ...listing(id, path, { title, description: `${title} from Northbank Libraries.` }),
+  type: "collection" as const,
+  kind: "blog" as const,
 });
 
 const manifest = Schema.decodeSync(SnapshotManifest)({
@@ -39,6 +53,7 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
   redirects: {
     "/borrowing": { $ref: "page", id: "pg_borrow" },
     "/catalogue": "https://catalogue.northbanklibraries.org",
+    "/whats-on": { $ref: "page", id: "pg_events" },
   },
   lockfile: { header: 1, footer: 1, hero: 1 },
   brand: Schema.encodeSync(SnapshotManifest.fields.brand)({
@@ -55,21 +70,11 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
     listing("pg_home", "/"),
     listing("pg_borrow", "/borrow"),
     listing("pg_staff", "/staff", { noindex: true }),
-    { ...listing("pg_events", "/events"), type: "collection" as const, kind: "blog" as const },
-    {
-      ...listing("pg_talks", "/events/author-talks"),
-      type: "entry" as const,
-      kind: "blog" as const,
-      collection: "pg_events",
-      meta: {
-        title: "Author talks",
-        description: "",
-        date: "2027-06-01",
-        author: "Sam",
-        tags: [],
-        excerpt: "Three talks in July.",
-      },
-    },
+    blog("pg_events", "/events", "Events"),
+    post("pg_talks", "/events/author-talks", "pg_events", "Author talks", "2027-06-01"),
+    post("pg_fair", "/events/book-fair", "pg_events", "Book fair", "2027-08-14"),
+    blog("pg_news", "/news", "News"),
+    post("pg_hours", "/news/longer-hours", "pg_news", "Longer hours", "2027-07-01"),
   ],
   unpublished: [],
   gone: [],
@@ -91,6 +96,12 @@ const page = (props: Schema.JsonObject) =>
 const listed = (id: string) => {
   const found = manifest.pages.find((candidate) => candidate.id === id);
   if (found === undefined) throw new Error(`The manifest lists no ${id}.`);
+  return found;
+};
+
+const listedBlog = (id: string) => {
+  const found = listed(id);
+  if (found.type !== "collection") throw new Error(`${id} isn't a blog.`);
   return found;
 };
 
@@ -145,6 +156,24 @@ describe("redirects", () => {
     expect(redirectFor(manifest, "/borrowing")).toBe("/borrow");
     expect(redirectFor(manifest, "/catalogue")).toBe("https://catalogue.northbanklibraries.org");
     expect(redirectFor(manifest, "/elsewhere")).toBeNull();
+  });
+
+  test("from a blog's old address follow its posts to where the blog is now", () => {
+    expect(redirectFor(manifest, "/whats-on")).toBe("/events");
+    expect(redirectFor(manifest, "/whats-on/book-fair")).toBe("/events/book-fair");
+    expect(redirectFor(manifest, "/whats-on/longer-hours")).toBeNull();
+    expect(redirectFor(manifest, "/borrowing/book-fair")).toBeNull();
+  });
+});
+
+describe("a blog's feed", () => {
+  test("holds only that blog's posts, newest first, at their addresses", () => {
+    const feed = collectionFeed(manifest, listedBlog("pg_events"), origin);
+    expect(feed).toContain("<title>Events · Northbank Libraries</title>");
+    expect(feed).toContain(`<link>${origin}/events</link>`);
+    const links = Array.from(feed.matchAll(/<item>.*?<link>(.*?)<\/link>/g), ([, link]) => link);
+    expect(links).toEqual([`${origin}/events/book-fair`, `${origin}/events/author-talks`]);
+    expect(collectionFeed(manifest, listedBlog("pg_news"), origin)).not.toContain("/events/");
   });
 });
 
