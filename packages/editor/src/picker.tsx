@@ -1,4 +1,4 @@
-import { placeholderTree } from "@repo/blocks";
+import { placeholderTree, presentationOf } from "@repo/blocks";
 import type { BlockType } from "@repo/contracts/ids";
 import {
   Command,
@@ -102,7 +102,7 @@ export function BlockPicker(props: {
                   title={`Preview: ${activeContract.title}`}
                 />
                 <figcaption className="text-xs text-muted-foreground">
-                  {activeContract.agent.purpose}.
+                  {presentationOf(activeContract.type).summary}
                 </figcaption>
               </figure>
             )}

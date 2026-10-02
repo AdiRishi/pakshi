@@ -17,7 +17,6 @@ test.each(registeredVersions.map(({ type, version }) => [`${type}@${version}`, t
   async (key, type, version) => {
     const block = await loadBlock(type, { [type]: version });
     const contract = {
-      title: block.title,
       placement: block.placement,
       variants: block.variants,
       ...(block.placement === "section" && {

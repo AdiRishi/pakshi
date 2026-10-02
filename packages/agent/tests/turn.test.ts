@@ -66,7 +66,7 @@ describe("a turn", () => {
       expect(state.parts).toMatchObject([
         {
           _tag: "Activity",
-          label: "Changed heading in the Hero on Harbour Summer School",
+          label: "Changed heading in the Hero block on Harbour Summer School",
           status: "done",
           changed: true,
           at: { page: "pg_home", block: "b_hero" },

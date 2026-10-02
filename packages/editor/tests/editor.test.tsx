@@ -501,9 +501,9 @@ describe("editing structure", () => {
     await pressUntil("{ArrowDown}", (element) => element.textContent === "Add after");
     await userEvent.keyboard("{Enter}");
     await expect.element(page.getByPlaceholder("Search blocks")).toHaveFocus();
-    await userEvent.keyboard("Feature grid{Enter}");
+    await userEvent.keyboard("Features{Enter}");
     await expect.poll(types).toEqual(["hero", "feature-grid"]);
-    await expect.poll(announced).toBe("Added Feature grid, 2 of 2 on the page.");
+    await expect.poll(announced).toBe("Added Features, 2 of 2 on the page.");
 
     await userEvent.keyboard("{Alt>}{ArrowUp}{/Alt}");
     await expect.poll(types).toEqual(["feature-grid", "hero"]);

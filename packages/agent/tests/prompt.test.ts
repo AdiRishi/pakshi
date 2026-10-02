@@ -48,7 +48,9 @@ describe("what the agent is told with each message", () => {
       focus: { target: home, block: BlockId.make("b_hero"), path: ["heading"] },
       title: "Hero",
     };
-    expect(context({ selected, typing: [] })).toContain("Selected: b_hero, a Hero, field heading.");
+    expect(context({ selected, typing: [] })).toContain(
+      "Selected: b_hero, a Hero block, field heading.",
+    );
   });
 
   test("names the fields people are typing in", () => {

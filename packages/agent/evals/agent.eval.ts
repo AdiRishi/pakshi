@@ -58,7 +58,7 @@ const task = (name: string, run: Effect.Effect<true | string>): Task => ({ name,
 const selectedAbout = {
   page: home,
   focus: { target: home, block: about },
-  title: "Rich text",
+  title: "Text",
 } as const;
 
 const edits: ReadonlyArray<Task> = [

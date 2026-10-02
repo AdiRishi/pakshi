@@ -8,7 +8,11 @@ import type { Json } from "effect/Schema";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { fixturesSource, registrySource } from "../scripts/generate-registry.ts";
+import {
+  fixturesSource,
+  presentationsSource,
+  registrySource,
+} from "../scripts/generate-registry.ts";
 import type { BlockDefinition } from "../src/block.tsx";
 import { SiteDataProvider } from "../src/components.tsx";
 import { blockKey } from "../src/contract.ts";
@@ -51,12 +55,15 @@ const renderProps = (
   variant: string,
 ) => block.render({ id: BlockId.make("b_test"), props, variant, surface: undefined, slots: {} });
 
-test("the generated registry and fixture list match the block version folders", async () => {
+test("the generated registry and lists match the block folders", async () => {
   expect(await readFile(new URL("../src/registry.gen.ts", import.meta.url), "utf8")).toBe(
     await registrySource(),
   );
   expect(await readFile(new URL("../src/fixtures.gen.ts", import.meta.url), "utf8")).toBe(
     await fixturesSource(),
+  );
+  expect(await readFile(new URL("../src/presentation.gen.ts", import.meta.url), "utf8")).toBe(
+    await presentationsSource(),
   );
 });
 

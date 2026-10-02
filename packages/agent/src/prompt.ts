@@ -103,7 +103,7 @@ export const turnContext = (options: {
       : `${options.person.name} has the page ${options.page.id} "${pageName(options.page)}" open.`,
     options.selected === null
       ? "No block is selected."
-      : `Selected: ${options.selected.focus.block}, a ${options.selected.title}${options.selected.focus.path === undefined ? "" : `, field ${options.selected.focus.path.join(".")}`}.`,
+      : `Selected: ${options.selected.focus.block}, a ${options.selected.title} block${options.selected.focus.path === undefined ? "" : `, field ${options.selected.focus.path.join(".")}`}.`,
     options.typing.length === 0
       ? ""
       : `Typing now: ${options.typing.map((field) => `${field.person.name} in ${field.block} ${(field.path ?? []).join(".")}`).join("; ")}.`,
