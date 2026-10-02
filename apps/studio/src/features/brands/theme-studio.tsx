@@ -5,7 +5,6 @@ import {
   type ContrastIssue,
   fontCatalog,
   FontId,
-  HexColor,
   NeutralTone,
   resolveTheme,
   type ThemeValues,
@@ -20,25 +19,24 @@ import {
   CardTitle,
 } from "@repo/ui/components/card";
 import { Field, FieldGroup, FieldLabel } from "@repo/ui/components/field";
-import { Input } from "@repo/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { Switch } from "@repo/ui/components/switch";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
-import { Equal, Schema } from "effect";
+import { Equal } from "effect";
 import { CircleAlertIcon, CircleCheckIcon, InfoIcon, MoonIcon, SunIcon } from "lucide-react";
 import { type ReactNode, Suspense, useId, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
 
+import { BrandColor } from "./brand-color";
 import { BrandHeader } from "./brand-header";
 import { saveBrandLook } from "./functions";
 import { brandQuery } from "./queries";
+import { schemeTitles, surfaceTitles } from "./surfaces";
 import { ThemePreview, usePreviewSections } from "./theme-preview";
-
-const isHexColor = Schema.is(HexColor);
 
 /** A setting's options, each a value and what to call it. */
 type Options<Value extends string | number> = ReadonlyArray<readonly [Value, string]>;
@@ -81,14 +79,6 @@ const tones = [
   ["warm", "Warm"],
 ] as const satisfies Options<NeutralTone>;
 const fonts: Options<FontId> = FontId.literals.map((font) => [font, fontCatalog[font].family]);
-
-const schemeTitles = { light: "Light", dark: "Dark" } as const;
-const surfaceTitles = {
-  default: "page background",
-  muted: "shaded sections",
-  brand: "brand-colored sections",
-  inverse: "reversed sections",
-} as const;
 
 /** One contrast problem, in words someone choosing colors can act on. */
 const describeIssue = (issue: ContrastIssue) =>
@@ -183,52 +173,6 @@ function Section(props: {
       </div>
       {props.children}
     </section>
-  );
-}
-
-/** The brand color, as a picker and as text, which only takes a whole color. */
-export function BrandColor(props: {
-  readonly value: HexColor;
-  readonly disabled: boolean;
-  readonly onChange: (value: HexColor) => void;
-}) {
-  const id = useId();
-  const [text, setText] = useState(props.value);
-  const [shown, setShown] = useState(props.value);
-  // A color set from outside, such as by discarding changes, replaces what was typed.
-  if (props.value !== shown) {
-    setShown(props.value);
-    setText(props.value);
-  }
-  return (
-    <Field>
-      <FieldLabel htmlFor={id}>Brand color</FieldLabel>
-      <div className="flex gap-2">
-        <input
-          type="color"
-          aria-label="Pick the brand color"
-          value={props.value}
-          disabled={props.disabled}
-          className="h-9 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"
-          onChange={(event) => {
-            const value = event.target.value.toLowerCase();
-            setText(value);
-            if (isHexColor(value)) props.onChange(value);
-          }}
-        />
-        <Input
-          id={id}
-          value={text}
-          disabled={props.disabled}
-          spellCheck={false}
-          onChange={(event) => {
-            const value = event.target.value.trim().toLowerCase();
-            setText(value);
-            if (isHexColor(value)) props.onChange(value);
-          }}
-        />
-      </div>
-    </Field>
   );
 }
 

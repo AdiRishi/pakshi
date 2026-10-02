@@ -24,9 +24,9 @@ import { AppShell } from "@/components/app-shell";
 
 import { LibraryPicker } from "../media/library-picker";
 import { BrandHeader } from "./brand-header";
+import { brandMediaSrc } from "./brand-media";
 import { saveBrandLook, saveVoiceGuide } from "./functions";
 import { brandQuery } from "./queries";
-import { brandMediaSrc } from "./theme-preview";
 
 const slots = [
   { key: "logo", title: "Logo", description: "Shown in site headers on light backgrounds." },
@@ -237,7 +237,7 @@ function VoiceCard(props: { readonly view: BrandView }) {
     mutationFn: () => saveVoiceGuide({ data: { brand: view.brand.id, voice: guide } }),
     onSuccess: async () => {
       toast.success("Voice guide saved");
-      await queryClient.invalidateQueries({ queryKey: ["brands", view.brand.id] });
+      await queryClient.invalidateQueries({ queryKey: ["brands"] });
     },
     onError: (error) => toast.error(error.message),
   });

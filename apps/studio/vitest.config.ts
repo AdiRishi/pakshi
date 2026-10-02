@@ -1,3 +1,4 @@
+import { themeFonts } from "@repo/tokens/vite";
 import tailwindcss from "@tailwindcss/vite";
 import viteReact from "@vitejs/plugin-react";
 import { playwright } from "@vitest/browser-playwright";
@@ -7,7 +8,7 @@ export default defineConfig({
   resolve: {
     tsconfigPaths: true,
   },
-  plugins: [tailwindcss(), viteReact()],
+  plugins: [tailwindcss(), themeFonts(), viteReact()],
   test: {
     projects: [
       {

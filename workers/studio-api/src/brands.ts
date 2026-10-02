@@ -125,8 +125,9 @@ export const brandsFor = Effect.fn("StudioApi.brandsFor")(function* (person: Per
         {
           id: brand.id,
           name: brand.name,
-          brandColor: revision.theme.brandColor,
-          fonts: revision.theme.fonts,
+          theme: revision.resolved,
+          identity: revision.identity,
+          tone: brand.voice.tone,
           sites: sites
             .filter((site) => site.brand_id === brand.id)
             .map(({ id, name }) => ({ id, name })),
