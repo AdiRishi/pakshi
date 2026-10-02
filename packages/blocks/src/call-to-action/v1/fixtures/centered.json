@@ -1,8 +1,0 @@
-{
-  "variant": "centered",
-  "surface": "inverse",
-  "props": {
-    "heading": "See you at the harbour",
-    "primary": { "label": "Plan your visit", "link": { "$ref": "page", "id": "pg_visit" } }
-  }
-}

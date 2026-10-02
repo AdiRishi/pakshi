@@ -4,9 +4,6 @@ import bento1placeholder from "./bento/v1/fixtures/placeholder.json" with { type
 import bento1showcase from "./bento/v1/fixtures/showcase.json" with { type: "json" };
 import bentoTile1image from "./bento-tile/v1/fixtures/image.json" with { type: "json" };
 import bentoTile1placeholder from "./bento-tile/v1/fixtures/placeholder.json" with { type: "json" };
-import callToAction1banner from "./call-to-action/v1/fixtures/banner.json" with { type: "json" };
-import callToAction1centered from "./call-to-action/v1/fixtures/centered.json" with { type: "json" };
-import callToAction1placeholder from "./call-to-action/v1/fixtures/placeholder.json" with { type: "json" };
 import callToAction2centered from "./call-to-action/v2/fixtures/centered.json" with { type: "json" };
 import callToAction2image from "./call-to-action/v2/fixtures/image.json" with { type: "json" };
 import callToAction2panelWords from "./call-to-action/v2/fixtures/panel-words.json" with { type: "json" };
@@ -58,9 +55,6 @@ import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { typ
 import location1imageLeft from "./location/v1/fixtures/image-left.json" with { type: "json" };
 import location1imageRight from "./location/v1/fixtures/image-right.json" with { type: "json" };
 import location1placeholder from "./location/v1/fixtures/placeholder.json" with { type: "json" };
-import logoStrip1grid from "./logo-strip/v1/fixtures/grid.json" with { type: "json" };
-import logoStrip1placeholder from "./logo-strip/v1/fixtures/placeholder.json" with { type: "json" };
-import logoStrip1row from "./logo-strip/v1/fixtures/row.json" with { type: "json" };
 import logoStrip2grid from "./logo-strip/v2/fixtures/grid.json" with { type: "json" };
 import logoStrip2marquee from "./logo-strip/v2/fixtures/marquee.json" with { type: "json" };
 import logoStrip2placeholder from "./logo-strip/v2/fixtures/placeholder.json" with { type: "json" };
@@ -77,9 +71,6 @@ import quote1placeholder from "./quote/v1/fixtures/placeholder.json" with { type
 import quote1withPhoto from "./quote/v1/fixtures/with-photo.json" with { type: "json" };
 import richText1narrow from "./rich-text/v1/fixtures/narrow.json" with { type: "json" };
 import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with { type: "json" };
-import split1imageLeft from "./split/v1/fixtures/image-left.json" with { type: "json" };
-import split1imageRight from "./split/v1/fixtures/image-right.json" with { type: "json" };
-import split1placeholder from "./split/v1/fixtures/placeholder.json" with { type: "json" };
 import split2bleedInset from "./split/v2/fixtures/bleed-inset.json" with { type: "json" };
 import split2bleed from "./split/v2/fixtures/bleed.json" with { type: "json" };
 import split2placeholder from "./split/v2/fixtures/placeholder.json" with { type: "json" };
@@ -89,9 +80,6 @@ import statement1brand from "./statement/v1/fixtures/brand.json" with { type: "j
 import statement1center from "./statement/v1/fixtures/center.json" with { type: "json" };
 import statement1placeholder from "./statement/v1/fixtures/placeholder.json" with { type: "json" };
 import statement1start from "./statement/v1/fixtures/start.json" with { type: "json" };
-import stats1cards from "./stats/v1/fixtures/cards.json" with { type: "json" };
-import stats1placeholder from "./stats/v1/fixtures/placeholder.json" with { type: "json" };
-import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
 import stats2cards from "./stats/v2/fixtures/cards.json" with { type: "json" };
 import stats2placeholder from "./stats/v2/fixtures/placeholder.json" with { type: "json" };
 import stats2rowCentered from "./stats/v2/fixtures/row-centered.json" with { type: "json" };
@@ -112,9 +100,6 @@ export const fixtureFiles = [
   { type: "bento", version: 1, name: "showcase", fixture: bento1showcase },
   { type: "bento-tile", version: 1, name: "image", fixture: bentoTile1image },
   { type: "bento-tile", version: 1, name: "placeholder", fixture: bentoTile1placeholder },
-  { type: "call-to-action", version: 1, name: "banner", fixture: callToAction1banner },
-  { type: "call-to-action", version: 1, name: "centered", fixture: callToAction1centered },
-  { type: "call-to-action", version: 1, name: "placeholder", fixture: callToAction1placeholder },
   { type: "call-to-action", version: 2, name: "centered", fixture: callToAction2centered },
   { type: "call-to-action", version: 2, name: "image", fixture: callToAction2image },
   { type: "call-to-action", version: 2, name: "panel-words", fixture: callToAction2panelWords },
@@ -166,9 +151,6 @@ export const fixtureFiles = [
   { type: "location", version: 1, name: "image-left", fixture: location1imageLeft },
   { type: "location", version: 1, name: "image-right", fixture: location1imageRight },
   { type: "location", version: 1, name: "placeholder", fixture: location1placeholder },
-  { type: "logo-strip", version: 1, name: "grid", fixture: logoStrip1grid },
-  { type: "logo-strip", version: 1, name: "placeholder", fixture: logoStrip1placeholder },
-  { type: "logo-strip", version: 1, name: "row", fixture: logoStrip1row },
   { type: "logo-strip", version: 2, name: "grid", fixture: logoStrip2grid },
   { type: "logo-strip", version: 2, name: "marquee", fixture: logoStrip2marquee },
   { type: "logo-strip", version: 2, name: "placeholder", fixture: logoStrip2placeholder },
@@ -185,9 +167,6 @@ export const fixtureFiles = [
   { type: "quote", version: 1, name: "with-photo", fixture: quote1withPhoto },
   { type: "rich-text", version: 1, name: "narrow", fixture: richText1narrow },
   { type: "rich-text", version: 1, name: "placeholder", fixture: richText1placeholder },
-  { type: "split", version: 1, name: "image-left", fixture: split1imageLeft },
-  { type: "split", version: 1, name: "image-right", fixture: split1imageRight },
-  { type: "split", version: 1, name: "placeholder", fixture: split1placeholder },
   { type: "split", version: 2, name: "bleed-inset", fixture: split2bleedInset },
   { type: "split", version: 2, name: "bleed", fixture: split2bleed },
   { type: "split", version: 2, name: "placeholder", fixture: split2placeholder },
@@ -197,9 +176,6 @@ export const fixtureFiles = [
   { type: "statement", version: 1, name: "center", fixture: statement1center },
   { type: "statement", version: 1, name: "placeholder", fixture: statement1placeholder },
   { type: "statement", version: 1, name: "start", fixture: statement1start },
-  { type: "stats", version: 1, name: "cards", fixture: stats1cards },
-  { type: "stats", version: 1, name: "placeholder", fixture: stats1placeholder },
-  { type: "stats", version: 1, name: "row", fixture: stats1row },
   { type: "stats", version: 2, name: "cards", fixture: stats2cards },
   { type: "stats", version: 2, name: "placeholder", fixture: stats2placeholder },
   { type: "stats", version: 2, name: "row-centered", fixture: stats2rowCentered },
