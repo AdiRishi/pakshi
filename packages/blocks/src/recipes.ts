@@ -57,15 +57,21 @@ export const recipes: ReadonlyArray<Recipe> = [
     purpose: "A site's home page, or a page that sells one thing and asks for one action",
     sections: [
       section("hero", "What this is and the one thing to do next"),
+      section("logo-strip", "The organisations that use, fund or back it", false),
       section("feature-grid", "Three to six reasons to care, each a short point"),
+      section("bento", "The few things worth seeing, in tiles of different sizes", false),
       section("split", "One idea explained beside a photo that shows it", false),
-      section("gallery", "Photos that show the place, the people or the work", false),
+      section("stats", "Two to four numbers that prove it works", false),
+      section("testimonials", "What people who came or use it say", false),
+      section("faq", "The questions people ask before they act", false),
       section("call-to-action", "The same action as the hero, asked again at the end"),
     ],
     rules: [
       "Keep one primary action, the same in the hero and the closing call to action.",
       "Put the most important reason first in the feature grid.",
-      "Alternate the image side when splits follow each other.",
+      "Use the split's alternating image side when splits follow each other.",
+      "Vary the backgrounds: follow a plain section with a soft or tinted one, and keep brand-colored and reversed sections for one or two moments.",
+      "Use a statement between sections when the page needs a moment to say what it stands for.",
     ],
   },
   {
@@ -75,9 +81,13 @@ export const recipes: ReadonlyArray<Recipe> = [
     purpose: "One event, or a programme of them, with its dates, place and a way to sign up",
     sections: [
       section("hero", "The event's name, dates and place, with a button to register"),
-      section("rich-text", "What happens, who it's for and what it costs"),
-      section("feature-grid", "The programme or highlights, one point each", false),
+      section("rich-text", "What happens, who it's for and what it costs", false),
+      section("timeline", "The day's agenda, or the dates leading up to it", false),
+      section("team-grid", "Speakers, mentors or hosts", false),
+      section("pricing", "Ticket types and what each includes", false),
       section("gallery", "Photos from earlier events or of the venue", false),
+      section("location", "Where it is, opening hours and how to get there", false),
+      section("faq", "Practical questions: access, what to bring, refunds", false),
       section("form-section", "Registration, when people sign up on this site", false),
       section("call-to-action", "How to register when the form is elsewhere", false),
     ],
@@ -94,8 +104,11 @@ export const recipes: ReadonlyArray<Recipe> = [
     purpose: "Practical details such as visiting, opening hours, contact or policies",
     sections: [
       section("hero", "What the page answers, in a sentence"),
+      section("cards", "Links to the pages people look for most", false),
       section("rich-text", "The details, with subheadings people can scan"),
-      section("split", "A place or service shown beside its details", false),
+      section("location", "A place with its address, hours and directions", false),
+      section("contact-details", "How to get in touch", false),
+      section("faq", "Answers to the questions people ask most", false),
       section("form-section", "An enquiry form, when the page invites questions", false),
     ],
     rules: [
@@ -111,7 +124,7 @@ export const recipes: ReadonlyArray<Recipe> = [
     sections: [
       section("hero", "What the blog is about"),
       section("post-list", "This blog's posts, newest first, a page at a time"),
-      section("call-to-action", "A next step for readers, such as signing up", false),
+      section("form-section", "A sign-up for new posts", false),
     ],
     rules: [
       "Name it for what it holds, such as News or Stories.",
@@ -127,6 +140,7 @@ export const recipes: ReadonlyArray<Recipe> = [
     sections: [
       section("post-header", "The post's title, date, author and excerpt, from its settings"),
       section("rich-text", "The post itself"),
+      section("image-caption", "A photo the post talks about, with its caption", false),
       section("gallery", "Photos the post talks about", false),
       section("call-to-action", "What readers can do next", false),
     ],
