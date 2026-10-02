@@ -404,7 +404,12 @@ export function EditorCanvas(props: {
       {canvasDocument !== null && <CanvasOverlay document={canvasDocument} />}
       {canvasDocument !== null && <StableView document={canvasDocument} />}
       {container !== null && canvasDocument !== null && (
-        <CanvasChrome container={container} document={canvasDocument} clip />
+        <CanvasChrome
+          container={container}
+          document={canvasDocument}
+          clip
+          policy={selectionPolicy}
+        />
       )}
     </div>
   );

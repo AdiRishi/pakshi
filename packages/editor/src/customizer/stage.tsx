@@ -102,7 +102,7 @@ export function Stage(props: {
       </div>
       {box !== null && canvasDocument !== null && (
         <>
-          <CanvasChrome container={box} document={canvasDocument} clip={false} />
+          <CanvasChrome container={box} document={canvasDocument} clip={false} policy={policy} />
           <SiteContentMarks container={box} document={canvasDocument} block={props.block} />
         </>
       )}
