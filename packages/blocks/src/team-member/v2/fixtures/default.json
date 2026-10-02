@@ -1,0 +1,17 @@
+{
+  "variant": "default",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_sampleTom",
+      "alt": "Tom Penrose in the boatshed"
+    },
+    "name": "Tom Penrose",
+    "role": "Boatbuilder and lead mentor",
+    "bio": "Tom has built wooden boats on this harbour for twenty years. He runs the morning workshops.",
+    "link": {
+      "$ref": "page",
+      "id": "pg_programme"
+    }
+  }
+}

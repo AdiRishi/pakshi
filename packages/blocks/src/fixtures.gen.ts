@@ -10,14 +10,17 @@ import callToAction2panelWords from "./call-to-action/v2/fixtures/panel-words.js
 import callToAction2panel from "./call-to-action/v2/fixtures/panel.json" with { type: "json" };
 import callToAction2placeholder from "./call-to-action/v2/fixtures/placeholder.json" with { type: "json" };
 import callToAction2split from "./call-to-action/v2/fixtures/split.json" with { type: "json" };
-import contactDetails1columns from "./contact-details/v1/fixtures/columns.json" with { type: "json" };
-import contactDetails1placeholder from "./contact-details/v1/fixtures/placeholder.json" with { type: "json" };
-import contactDetails1stacked from "./contact-details/v1/fixtures/stacked.json" with { type: "json" };
-import eventCard1default from "./event-card/v1/fixtures/default.json" with { type: "json" };
-import eventCard1placeholder from "./event-card/v1/fixtures/placeholder.json" with { type: "json" };
-import eventCards1grid from "./event-cards/v1/fixtures/grid.json" with { type: "json" };
-import eventCards1list from "./event-cards/v1/fixtures/list.json" with { type: "json" };
-import eventCards1placeholder from "./event-cards/v1/fixtures/placeholder.json" with { type: "json" };
+import contactDetails2cards from "./contact-details/v2/fixtures/cards.json" with { type: "json" };
+import contactDetails2columns from "./contact-details/v2/fixtures/columns.json" with { type: "json" };
+import contactDetails2placeholder from "./contact-details/v2/fixtures/placeholder.json" with { type: "json" };
+import contactDetails2split from "./contact-details/v2/fixtures/split.json" with { type: "json" };
+import eventCard2default from "./event-card/v2/fixtures/default.json" with { type: "json" };
+import eventCard2noImage from "./event-card/v2/fixtures/no-image.json" with { type: "json" };
+import eventCard2placeholder from "./event-card/v2/fixtures/placeholder.json" with { type: "json" };
+import eventCards2gridTwo from "./event-cards/v2/fixtures/grid-two.json" with { type: "json" };
+import eventCards2grid from "./event-cards/v2/fixtures/grid.json" with { type: "json" };
+import eventCards2list from "./event-cards/v2/fixtures/list.json" with { type: "json" };
+import eventCards2placeholder from "./event-cards/v2/fixtures/placeholder.json" with { type: "json" };
 import faq2accordionStart from "./faq/v2/fixtures/accordion-start.json" with { type: "json" };
 import faq2accordion from "./faq/v2/fixtures/accordion.json" with { type: "json" };
 import faq2columns from "./faq/v2/fixtures/columns.json" with { type: "json" };
@@ -34,9 +37,11 @@ import footer2centered from "./footer/v2/fixtures/centered.json" with { type: "j
 import footer2columns from "./footer/v2/fixtures/columns.json" with { type: "json" };
 import footer2simple from "./footer/v2/fixtures/simple.json" with { type: "json" };
 import footer2wordmark from "./footer/v2/fixtures/wordmark.json" with { type: "json" };
-import formSection1card from "./form-section/v1/fixtures/card.json" with { type: "json" };
-import formSection1placeholder from "./form-section/v1/fixtures/placeholder.json" with { type: "json" };
-import formSection1plain from "./form-section/v1/fixtures/plain.json" with { type: "json" };
+import formSection2card from "./form-section/v2/fixtures/card.json" with { type: "json" };
+import formSection2inlineInset from "./form-section/v2/fixtures/inline-inset.json" with { type: "json" };
+import formSection2inline from "./form-section/v2/fixtures/inline.json" with { type: "json" };
+import formSection2placeholder from "./form-section/v2/fixtures/placeholder.json" with { type: "json" };
+import formSection2split from "./form-section/v2/fixtures/split.json" with { type: "json" };
 import gallery1grid from "./gallery/v1/fixtures/grid.json" with { type: "json" };
 import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { type: "json" };
 import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
@@ -54,9 +59,10 @@ import hero4stacked from "./hero/v4/fixtures/stacked.json" with { type: "json" }
 import imageCaption1narrow from "./image-caption/v1/fixtures/narrow.json" with { type: "json" };
 import imageCaption1placeholder from "./image-caption/v1/fixtures/placeholder.json" with { type: "json" };
 import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { type: "json" };
-import location1imageLeft from "./location/v1/fixtures/image-left.json" with { type: "json" };
-import location1imageRight from "./location/v1/fixtures/image-right.json" with { type: "json" };
-import location1placeholder from "./location/v1/fixtures/placeholder.json" with { type: "json" };
+import location2placeholder from "./location/v2/fixtures/placeholder.json" with { type: "json" };
+import location2splitStart from "./location/v2/fixtures/split-start.json" with { type: "json" };
+import location2split from "./location/v2/fixtures/split.json" with { type: "json" };
+import location2stacked from "./location/v2/fixtures/stacked.json" with { type: "json" };
 import logoStrip2grid from "./logo-strip/v2/fixtures/grid.json" with { type: "json" };
 import logoStrip2marquee from "./logo-strip/v2/fixtures/marquee.json" with { type: "json" };
 import logoStrip2placeholder from "./logo-strip/v2/fixtures/placeholder.json" with { type: "json" };
@@ -104,11 +110,13 @@ import steps1list from "./steps/v1/fixtures/list.json" with { type: "json" };
 import steps1placeholder from "./steps/v1/fixtures/placeholder.json" with { type: "json" };
 import steps1rowCenter from "./steps/v1/fixtures/row-center.json" with { type: "json" };
 import steps1row from "./steps/v1/fixtures/row.json" with { type: "json" };
-import teamGrid1fourColumns from "./team-grid/v1/fixtures/four-columns.json" with { type: "json" };
-import teamGrid1placeholder from "./team-grid/v1/fixtures/placeholder.json" with { type: "json" };
-import teamGrid1threeColumns from "./team-grid/v1/fixtures/three-columns.json" with { type: "json" };
-import teamMember1default from "./team-member/v1/fixtures/default.json" with { type: "json" };
-import teamMember1placeholder from "./team-member/v1/fixtures/placeholder.json" with { type: "json" };
+import teamGrid2gridCentered from "./team-grid/v2/fixtures/grid-centered.json" with { type: "json" };
+import teamGrid2grid from "./team-grid/v2/fixtures/grid.json" with { type: "json" };
+import teamGrid2list from "./team-grid/v2/fixtures/list.json" with { type: "json" };
+import teamGrid2overlay from "./team-grid/v2/fixtures/overlay.json" with { type: "json" };
+import teamGrid2placeholder from "./team-grid/v2/fixtures/placeholder.json" with { type: "json" };
+import teamMember2default from "./team-member/v2/fixtures/default.json" with { type: "json" };
+import teamMember2placeholder from "./team-member/v2/fixtures/placeholder.json" with { type: "json" };
 import testimonial1default from "./testimonial/v1/fixtures/default.json" with { type: "json" };
 import testimonial1logo from "./testimonial/v1/fixtures/logo.json" with { type: "json" };
 import testimonial1placeholder from "./testimonial/v1/fixtures/placeholder.json" with { type: "json" };
@@ -118,9 +126,10 @@ import testimonials1marquee from "./testimonials/v1/fixtures/marquee.json" with 
 import testimonials1masonry from "./testimonials/v1/fixtures/masonry.json" with { type: "json" };
 import testimonials1placeholder from "./testimonials/v1/fixtures/placeholder.json" with { type: "json" };
 import testimonials1scroller from "./testimonials/v1/fixtures/scroller.json" with { type: "json" };
-import timeline1agenda from "./timeline/v1/fixtures/agenda.json" with { type: "json" };
-import timeline1placeholder from "./timeline/v1/fixtures/placeholder.json" with { type: "json" };
-import timeline1vertical from "./timeline/v1/fixtures/vertical.json" with { type: "json" };
+import timeline2agenda from "./timeline/v2/fixtures/agenda.json" with { type: "json" };
+import timeline2horizontal from "./timeline/v2/fixtures/horizontal.json" with { type: "json" };
+import timeline2placeholder from "./timeline/v2/fixtures/placeholder.json" with { type: "json" };
+import timeline2vertical from "./timeline/v2/fixtures/vertical.json" with { type: "json" };
 
 export const fixtureFiles = [
   { type: "bento", version: 1, name: "grid", fixture: bento1grid },
@@ -134,14 +143,17 @@ export const fixtureFiles = [
   { type: "call-to-action", version: 2, name: "panel", fixture: callToAction2panel },
   { type: "call-to-action", version: 2, name: "placeholder", fixture: callToAction2placeholder },
   { type: "call-to-action", version: 2, name: "split", fixture: callToAction2split },
-  { type: "contact-details", version: 1, name: "columns", fixture: contactDetails1columns },
-  { type: "contact-details", version: 1, name: "placeholder", fixture: contactDetails1placeholder },
-  { type: "contact-details", version: 1, name: "stacked", fixture: contactDetails1stacked },
-  { type: "event-card", version: 1, name: "default", fixture: eventCard1default },
-  { type: "event-card", version: 1, name: "placeholder", fixture: eventCard1placeholder },
-  { type: "event-cards", version: 1, name: "grid", fixture: eventCards1grid },
-  { type: "event-cards", version: 1, name: "list", fixture: eventCards1list },
-  { type: "event-cards", version: 1, name: "placeholder", fixture: eventCards1placeholder },
+  { type: "contact-details", version: 2, name: "cards", fixture: contactDetails2cards },
+  { type: "contact-details", version: 2, name: "columns", fixture: contactDetails2columns },
+  { type: "contact-details", version: 2, name: "placeholder", fixture: contactDetails2placeholder },
+  { type: "contact-details", version: 2, name: "split", fixture: contactDetails2split },
+  { type: "event-card", version: 2, name: "default", fixture: eventCard2default },
+  { type: "event-card", version: 2, name: "no-image", fixture: eventCard2noImage },
+  { type: "event-card", version: 2, name: "placeholder", fixture: eventCard2placeholder },
+  { type: "event-cards", version: 2, name: "grid-two", fixture: eventCards2gridTwo },
+  { type: "event-cards", version: 2, name: "grid", fixture: eventCards2grid },
+  { type: "event-cards", version: 2, name: "list", fixture: eventCards2list },
+  { type: "event-cards", version: 2, name: "placeholder", fixture: eventCards2placeholder },
   { type: "faq", version: 2, name: "accordion-start", fixture: faq2accordionStart },
   { type: "faq", version: 2, name: "accordion", fixture: faq2accordion },
   { type: "faq", version: 2, name: "columns", fixture: faq2columns },
@@ -158,9 +170,11 @@ export const fixtureFiles = [
   { type: "footer", version: 2, name: "columns", fixture: footer2columns },
   { type: "footer", version: 2, name: "simple", fixture: footer2simple },
   { type: "footer", version: 2, name: "wordmark", fixture: footer2wordmark },
-  { type: "form-section", version: 1, name: "card", fixture: formSection1card },
-  { type: "form-section", version: 1, name: "placeholder", fixture: formSection1placeholder },
-  { type: "form-section", version: 1, name: "plain", fixture: formSection1plain },
+  { type: "form-section", version: 2, name: "card", fixture: formSection2card },
+  { type: "form-section", version: 2, name: "inline-inset", fixture: formSection2inlineInset },
+  { type: "form-section", version: 2, name: "inline", fixture: formSection2inline },
+  { type: "form-section", version: 2, name: "placeholder", fixture: formSection2placeholder },
+  { type: "form-section", version: 2, name: "split", fixture: formSection2split },
   { type: "gallery", version: 1, name: "grid", fixture: gallery1grid },
   { type: "gallery", version: 1, name: "placeholder", fixture: gallery1placeholder },
   { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
@@ -178,9 +192,10 @@ export const fixtureFiles = [
   { type: "image-caption", version: 1, name: "narrow", fixture: imageCaption1narrow },
   { type: "image-caption", version: 1, name: "placeholder", fixture: imageCaption1placeholder },
   { type: "image-caption", version: 1, name: "wide", fixture: imageCaption1wide },
-  { type: "location", version: 1, name: "image-left", fixture: location1imageLeft },
-  { type: "location", version: 1, name: "image-right", fixture: location1imageRight },
-  { type: "location", version: 1, name: "placeholder", fixture: location1placeholder },
+  { type: "location", version: 2, name: "placeholder", fixture: location2placeholder },
+  { type: "location", version: 2, name: "split-start", fixture: location2splitStart },
+  { type: "location", version: 2, name: "split", fixture: location2split },
+  { type: "location", version: 2, name: "stacked", fixture: location2stacked },
   { type: "logo-strip", version: 2, name: "grid", fixture: logoStrip2grid },
   { type: "logo-strip", version: 2, name: "marquee", fixture: logoStrip2marquee },
   { type: "logo-strip", version: 2, name: "placeholder", fixture: logoStrip2placeholder },
@@ -228,11 +243,13 @@ export const fixtureFiles = [
   { type: "steps", version: 1, name: "placeholder", fixture: steps1placeholder },
   { type: "steps", version: 1, name: "row-center", fixture: steps1rowCenter },
   { type: "steps", version: 1, name: "row", fixture: steps1row },
-  { type: "team-grid", version: 1, name: "four-columns", fixture: teamGrid1fourColumns },
-  { type: "team-grid", version: 1, name: "placeholder", fixture: teamGrid1placeholder },
-  { type: "team-grid", version: 1, name: "three-columns", fixture: teamGrid1threeColumns },
-  { type: "team-member", version: 1, name: "default", fixture: teamMember1default },
-  { type: "team-member", version: 1, name: "placeholder", fixture: teamMember1placeholder },
+  { type: "team-grid", version: 2, name: "grid-centered", fixture: teamGrid2gridCentered },
+  { type: "team-grid", version: 2, name: "grid", fixture: teamGrid2grid },
+  { type: "team-grid", version: 2, name: "list", fixture: teamGrid2list },
+  { type: "team-grid", version: 2, name: "overlay", fixture: teamGrid2overlay },
+  { type: "team-grid", version: 2, name: "placeholder", fixture: teamGrid2placeholder },
+  { type: "team-member", version: 2, name: "default", fixture: teamMember2default },
+  { type: "team-member", version: 2, name: "placeholder", fixture: teamMember2placeholder },
   { type: "testimonial", version: 1, name: "default", fixture: testimonial1default },
   { type: "testimonial", version: 1, name: "logo", fixture: testimonial1logo },
   { type: "testimonial", version: 1, name: "placeholder", fixture: testimonial1placeholder },
@@ -242,7 +259,8 @@ export const fixtureFiles = [
   { type: "testimonials", version: 1, name: "masonry", fixture: testimonials1masonry },
   { type: "testimonials", version: 1, name: "placeholder", fixture: testimonials1placeholder },
   { type: "testimonials", version: 1, name: "scroller", fixture: testimonials1scroller },
-  { type: "timeline", version: 1, name: "agenda", fixture: timeline1agenda },
-  { type: "timeline", version: 1, name: "placeholder", fixture: timeline1placeholder },
-  { type: "timeline", version: 1, name: "vertical", fixture: timeline1vertical },
+  { type: "timeline", version: 2, name: "agenda", fixture: timeline2agenda },
+  { type: "timeline", version: 2, name: "horizontal", fixture: timeline2horizontal },
+  { type: "timeline", version: 2, name: "placeholder", fixture: timeline2placeholder },
+  { type: "timeline", version: 2, name: "vertical", fixture: timeline2vertical },
 ] as const;

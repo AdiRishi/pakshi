@@ -1,0 +1,19 @@
+{
+  "variant": "default",
+  "props": {
+    "date": "Sat 14 June",
+    "time": "10am",
+    "place": "Where it happens",
+    "title": "Name the event",
+    "body": "A sentence or two on what happens and who it's for.",
+    "image": {
+      "$ref": "media",
+      "id": "med_pakshiArch",
+      "alt": ""
+    },
+    "link": {
+      "label": "Find out more",
+      "link": "https://example.com"
+    }
+  }
+}

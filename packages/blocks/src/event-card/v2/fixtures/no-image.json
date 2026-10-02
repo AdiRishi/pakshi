@@ -1,0 +1,14 @@
+{
+  "variant": "default",
+  "props": {
+    "date": "Sat 19 July",
+    "time": "7pm",
+    "place": "The Net Loft",
+    "title": "Harbour supper",
+    "body": "A shared supper to end the summer. Tickets include food and a drink.",
+    "link": {
+      "label": "Buy supper tickets",
+      "link": "https://example.org/supper"
+    }
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "variant": "horizontal",
+  "surface": "brand",
+  "props": {
+    "heading": "From application to first day",
+    "actions": [
+      {
+        "id": "it_apply",
+        "button": {
+          "label": "Apply now",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "entries": [
+      {
+        "id": "it_open",
+        "when": "1 March",
+        "title": "Applications open",
+        "detail": "Apply online. It takes about ten minutes."
+      },
+      {
+        "id": "it_bursary",
+        "when": "15 April",
+        "title": "Bursary decisions",
+        "detail": "We write to everyone who asked for help with fees."
+      },
+      {
+        "id": "it_places",
+        "when": "1 May",
+        "title": "Places confirmed",
+        "detail": "Pay your deposit to hold your place."
+      },
+      {
+        "id": "it_kit",
+        "when": "1 June",
+        "title": "Kit list sent",
+        "detail": "What to bring, and what we lend you."
+      },
+      {
+        "id": "it_first",
+        "when": "30 June",
+        "title": "First day",
+        "place": "The boatshed",
+        "icon": "anchor"
+      }
+    ]
+  }
+}

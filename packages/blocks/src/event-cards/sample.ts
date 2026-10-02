@@ -1,12 +1,20 @@
 import type { BlockSample } from "../presentation.ts";
-import type eventCards from "./v1/index.tsx";
+import type eventCards from "./v2/index.tsx";
 
 export default {
   variant: "grid",
   surface: "default",
   props: {
-    heading: "Summer events",
-    intro: "Everyone's welcome at these, not just students.",
+    kicker: "Open to everyone",
+    heading: "Summer events.",
+    headingRest: "Come and see the boats, even if you're not a student.",
+    actions: [
+      {
+        id: "it_all",
+        button: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
+      },
+    ],
+    columns: "3",
   },
   slots: {
     events: [
@@ -14,16 +22,32 @@ export default {
         type: "event-card",
         variant: "default",
         props: {
-          date: "Sat 5 July, 10am",
+          date: "Sat 5 July",
+          time: "10am to 4pm",
+          place: "The boatshed, North Quay",
           title: "Open workshop",
-          place: "The boat shed, North Quay",
-          summary: "See this year's boats half-built and have a go with a plane and a spokeshave.",
-          link: {
-            label: "See the programme",
-            link: {
-              $ref: "page",
-              id: "pg_programme",
-            },
+          body: "See this year's boats half-built and have a go with a plane and a spokeshave.",
+          image: {
+            $ref: "media",
+            id: "med_sampleHarbour",
+            alt: "Two sailing boats on the harbour at sunset",
+          },
+          link: { label: "Plan your visit", link: { $ref: "page", id: "pg_programme" } },
+        },
+      },
+      {
+        type: "event-card",
+        variant: "default",
+        props: {
+          date: "Fri 11 July",
+          time: "4pm",
+          place: "The slipway",
+          title: "Launch day",
+          body: "Students put their boats in the water for the first time. Come and cheer them on.",
+          image: {
+            $ref: "media",
+            id: "med_sampleMap",
+            alt: "A map of North Quay, with the slipway marked",
           },
         },
       },
@@ -31,21 +55,12 @@ export default {
         type: "event-card",
         variant: "default",
         props: {
-          date: "Fri 11 July, 4pm",
-          title: "Launch day",
-          place: "The slipway",
-          summary:
-            "Students put their boats in the water for the first time. Come and cheer them on.",
-        },
-      },
-      {
-        type: "event-card",
-        variant: "default",
-        props: {
-          date: "Sat 19 July, 7pm",
-          title: "Harbour supper",
+          date: "Sat 19 July",
+          time: "7pm",
           place: "The Net Loft",
-          summary: "A shared supper to end the summer. Tickets include food and a drink.",
+          title: "Harbour supper",
+          body: "A shared supper to end the summer. Tickets include food and a drink.",
+          link: { label: "Buy supper tickets", link: "https://example.org/supper" },
         },
       },
     ],

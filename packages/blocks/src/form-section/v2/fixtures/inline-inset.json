@@ -1,0 +1,15 @@
+{
+  "variant": "inline",
+  "surface": "inverse",
+  "props": {
+    "kicker": "Newsletter",
+    "heading": "Hear when booking opens.",
+    "headingRest": "Places for July go within a fortnight.",
+    "points": [],
+    "form": {
+      "$ref": "form",
+      "id": "frm_newsletter"
+    },
+    "background": "inset"
+  }
+}

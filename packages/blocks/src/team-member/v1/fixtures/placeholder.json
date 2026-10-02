@@ -1,9 +1,0 @@
-{
-  "variant": "default",
-  "props": {
-    "photo": { "$ref": "media", "id": "med_pakshiCircles", "alt": "" },
-    "name": "Alex Morgan",
-    "role": "What they do here",
-    "bio": "A sentence or two about who they are and what they look after."
-  }
-}

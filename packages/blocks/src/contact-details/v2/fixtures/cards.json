@@ -1,0 +1,23 @@
+{
+  "variant": "cards",
+  "surface": "inverse",
+  "props": {
+    "heading": "During the week.",
+    "headingRest": "Someone is always on the quay.",
+    "actions": [
+      {
+        "id": "it_faq",
+        "button": {
+          "label": "Read the questions parents ask",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "email": "week@example.org",
+    "phone": "07700 900123",
+    "hours": "From 8:30am to 5pm, Monday to Friday\nAfter hours, call the number and leave a message"
+  }
+}

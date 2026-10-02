@@ -1,0 +1,28 @@
+{
+  "variant": "split",
+  "surface": "muted",
+  "props": {
+    "heading": "Drop-off and pick-up",
+    "intro": "Students arrive and leave by the main gate, not the quay.",
+    "address": "Main gate\nHarbour Road\nPortlow PL12 3AB",
+    "hours": [
+      {
+        "id": "it_drop",
+        "days": "Drop-off",
+        "times": "8:45am to 9am"
+      },
+      {
+        "id": "it_pick",
+        "days": "Pick-up",
+        "times": "4pm to 4:15pm"
+      }
+    ],
+    "map": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "The jetty under the boatshed roof, seen from the main gate"
+    },
+    "actions": [],
+    "mediaSide": "start"
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "variant": "card",
+  "surface": "tint",
+  "props": {
+    "heading": "Ask a question",
+    "intro": "Tell us what you'd like to know about the week, and which week you're thinking of.",
+    "points": [],
+    "note": "We read every message and reply within two working days.",
+    "form": {
+      "$ref": "form",
+      "id": "frm_register"
+    },
+    "background": "full"
+  }
+}

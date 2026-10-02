@@ -1,0 +1,66 @@
+{
+  "variant": "overlay",
+  "surface": "inverse",
+  "props": {
+    "kicker": "Closing evening",
+    "heading": "Three talks on the quay.",
+    "headingRest": "Short talks from the people who taught you, then supper.",
+    "actions": [
+      {
+        "id": "it_tickets",
+        "button": {
+          "label": "Book supper",
+          "link": "https://example.org/supper"
+        }
+      }
+    ],
+    "columns": "3",
+    "align": "start"
+  },
+  "slots": {
+    "people": [
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleTom",
+            "alt": "Tom Penrose in the boatshed"
+          },
+          "name": "Tom Penrose",
+          "role": "Boatbuilder",
+          "bio": "Twenty years of wooden boats on this harbour, and the three he'd build again."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleMei",
+            "alt": "Mei Chen"
+          },
+          "name": "Mei Chen",
+          "role": "Sailmaker",
+          "bio": "How a sail is cut, and why the old ones still win races."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleDan",
+            "alt": "Dan Okafor"
+          },
+          "name": "Dan Okafor",
+          "role": "Sailing instructor",
+          "bio": "What the tide tables don't tell you, from a decade of teaching on the water."
+        }
+      }
+    ]
+  }
+}

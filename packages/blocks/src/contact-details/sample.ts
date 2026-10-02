@@ -1,15 +1,22 @@
 import type { BlockSample } from "../presentation.ts";
-import type contactDetails from "./v1/index.tsx";
+import type contactDetails from "./v2/index.tsx";
 
 export default {
   variant: "columns",
   surface: "default",
   props: {
-    heading: "Find us",
-    intro: "The boat shed is at the far end of North Quay, past the lifeboat station.",
-    address: "The Boat Shed\nNorth Quay\nWestbay\nWB3 4HQ",
-    phone: "01632 960431",
+    kicker: "Contact",
+    heading: "Find us, or drop us a line.",
+    intro: "The boatshed is at the far end of North Quay, past the lifeboat station.",
+    actions: [
+      {
+        id: "it_message",
+        button: { label: "Send us a message", link: { $ref: "page", id: "pg_programme" } },
+      },
+    ],
     email: "hello@example.org",
-    hours: "Monday to Friday, 9am to 4pm\nOpen every day during summer school",
+    phone: "01632 960431",
+    address: "The Boatshed\nNorth Quay\nWestbay WB3 4HQ",
+    hours: "Monday to Friday, 9am to 4pm\nEvery day during summer school",
   },
 } satisfies BlockSample<typeof contactDetails>;
