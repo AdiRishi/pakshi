@@ -40,4 +40,5 @@ export const registry: Readonly<
   "team-member@1": () => import("./team-member/v1/index.tsx"),
   "team-member@2": () => import("./team-member/v2/index.tsx"),
   "timeline@1": () => import("./timeline/v1/index.tsx"),
+  "timeline@2": () => import("./timeline/v2/index.tsx"),
 };

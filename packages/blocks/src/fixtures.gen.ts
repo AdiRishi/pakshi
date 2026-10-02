@@ -109,6 +109,10 @@ import teamMember2placeholder from "./team-member/v2/fixtures/placeholder.json" 
 import timeline1agenda from "./timeline/v1/fixtures/agenda.json" with { type: "json" };
 import timeline1placeholder from "./timeline/v1/fixtures/placeholder.json" with { type: "json" };
 import timeline1vertical from "./timeline/v1/fixtures/vertical.json" with { type: "json" };
+import timeline2agenda from "./timeline/v2/fixtures/agenda.json" with { type: "json" };
+import timeline2horizontal from "./timeline/v2/fixtures/horizontal.json" with { type: "json" };
+import timeline2placeholder from "./timeline/v2/fixtures/placeholder.json" with { type: "json" };
+import timeline2vertical from "./timeline/v2/fixtures/vertical.json" with { type: "json" };
 
 export const fixtureFiles = [
   { type: "call-to-action", version: 1, name: "banner", fixture: callToAction1banner },
@@ -221,4 +225,8 @@ export const fixtureFiles = [
   { type: "timeline", version: 1, name: "agenda", fixture: timeline1agenda },
   { type: "timeline", version: 1, name: "placeholder", fixture: timeline1placeholder },
   { type: "timeline", version: 1, name: "vertical", fixture: timeline1vertical },
+  { type: "timeline", version: 2, name: "agenda", fixture: timeline2agenda },
+  { type: "timeline", version: 2, name: "horizontal", fixture: timeline2horizontal },
+  { type: "timeline", version: 2, name: "placeholder", fixture: timeline2placeholder },
+  { type: "timeline", version: 2, name: "vertical", fixture: timeline2vertical },
 ] as const;
