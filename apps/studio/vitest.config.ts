@@ -27,6 +27,9 @@ export default defineConfig({
         test: {
           name: "components",
           include: ["tests/**/*.test.tsx"],
+          // Files share one browser page and its single keyboard focus, so a
+          // file's clicks and keys would land in another running beside it.
+          fileParallelism: false,
           setupFiles: ["./tests/setup.ts"],
           browser: {
             enabled: true,
