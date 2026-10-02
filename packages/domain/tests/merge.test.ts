@@ -430,6 +430,35 @@ describe("blogs and their posts", () => {
   ];
   const addressOf = (content: SiteContent, id: string) =>
     listingsOf(content.pages).find((page) => page.id === id)?.path;
+  const blog = (id: string, path: string, shows: string): WireOp => ({
+    op: "createPage",
+    page: {
+      schema: "pakshi.page/1",
+      id,
+      type: "collection",
+      kind: "blog",
+      path,
+      meta: { title: path, description: "" },
+      root: ["b_list"],
+      blocks: {
+        b_list: {
+          type: "post-list",
+          variant: "list",
+          surface: "default",
+          props: { heading: "Latest", collection: { $ref: "page", id: shows }, count: 6 },
+        },
+      },
+    },
+  });
+  const showing = (page: string, block: string, shows: string): WireOp => ({
+    op: "setProp",
+    target: page,
+    block,
+    path: ["collection"],
+    value: { $ref: "page", id: shows },
+  });
+  const shownBy = (content: SiteContent, page: string, block: string) =>
+    content.pages[PageId.make(page)]?.blocks[BlockId.make(block)]?.props["collection"];
 
   test("a blog one side removed goes quietly, with its posts, when the other side left them alone", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
@@ -438,6 +467,30 @@ describe("blogs and their posts", () => {
     expect(conflicts).toEqual([]);
     expect(Object.keys(content.pages).toSorted()).toEqual(["pg_about", "pg_home"]);
     expect(changes.filter((change) => change._tag === "PageRemoved")).toHaveLength(2);
+  });
+
+  test("a blog list the other side points at a blog it added shows that blog", () => {
+    const draft = edit(harbourDraft, [heading("Build a boat")]);
+    const live = edit(harbourDraft, [
+      blog("pg_stories", "/stories", "pg_stories"),
+      showing("pg_news", "b_posts", "pg_stories"),
+    ]);
+    const { content, conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(shownBy(content, "pg_news", "b_posts")).toEqual({ $ref: "page", id: "pg_stories" });
+  });
+
+  test("blogs the other side added can list each other", () => {
+    const draft = edit(harbourDraft, [heading("Build a boat")]);
+    const live = edit(harbourDraft, [
+      blog("pg_stories", "/stories", "pg_stories"),
+      blog("pg_events", "/events", "pg_stories"),
+      showing("pg_stories", "b_list", "pg_events"),
+    ]);
+    const { content, conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(shownBy(content, "pg_stories", "b_list")).toEqual({ $ref: "page", id: "pg_events" });
+    expect(shownBy(content, "pg_events", "b_list")).toEqual({ $ref: "page", id: "pg_stories" });
   });
 
   test("a blog removed on one side while the other adds a post is one conflict for the blog and its posts", () => {
