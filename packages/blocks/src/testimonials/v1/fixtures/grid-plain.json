@@ -1,0 +1,61 @@
+{
+  "variant": "grid",
+  "surface": "brand",
+  "props": {
+    "actions": [],
+    "columns": "2",
+    "style": "plain",
+    "align": "center",
+    "heading": "Why they come back"
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "I was nervous about the sailing. By Wednesday I was the one asking to stay out longer.\n\nThe instructors are endlessly patient, and the boat I helped build is still in the harbour fleet. I go and look at it most weekends.",
+          "name": "Leo Marsh",
+          "role": "Student, summer 2025"
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Every summer we send a few of our young members. They come back steadier in a boat and far more curious about how one is put together.",
+          "name": "Ellie Ward",
+          "role": "Junior captain, Westbay Rowing Club",
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleRowingClub",
+            "alt": "Westbay Rowing Club"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "We fund a lot of projects. This is the one people stop us in the street to talk about.",
+          "name": "Ruth Alder",
+          "role": "Programme lead, County Arts Council",
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleArtsCouncil",
+            "alt": "County Arts Council"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Five days, one boat, and a group of strangers who are now my closest friends.",
+          "name": "Jonah Reed",
+          "role": "Student, summer 2026"
+        }
+      }
+    ]
+  }
+}

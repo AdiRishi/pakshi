@@ -1,0 +1,58 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "actions": [],
+    "columns": "3",
+    "style": "cards",
+    "align": "start",
+    "heading": "What people say",
+    "intro": "A few people's own words about what it was like."
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "What someone said about you, in their own words. A sentence or two is plenty.",
+          "name": "Their name",
+          "role": "Who they are",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_pakshiCircles",
+            "alt": ""
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "What someone said about you, in their own words. A sentence or two is plenty.",
+          "name": "Their name",
+          "role": "Who they are",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_pakshiCircles",
+            "alt": ""
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "What someone said about you, in their own words. A sentence or two is plenty.",
+          "name": "Their name",
+          "role": "Who they are",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_pakshiCircles",
+            "alt": ""
+          }
+        }
+      }
+    ]
+  }
+}

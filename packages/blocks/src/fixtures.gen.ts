@@ -99,6 +99,15 @@ import teamGrid1placeholder from "./team-grid/v1/fixtures/placeholder.json" with
 import teamGrid1threeColumns from "./team-grid/v1/fixtures/three-columns.json" with { type: "json" };
 import teamMember1default from "./team-member/v1/fixtures/default.json" with { type: "json" };
 import teamMember1placeholder from "./team-member/v1/fixtures/placeholder.json" with { type: "json" };
+import testimonial1default from "./testimonial/v1/fixtures/default.json" with { type: "json" };
+import testimonial1logo from "./testimonial/v1/fixtures/logo.json" with { type: "json" };
+import testimonial1placeholder from "./testimonial/v1/fixtures/placeholder.json" with { type: "json" };
+import testimonials1gridPlain from "./testimonials/v1/fixtures/grid-plain.json" with { type: "json" };
+import testimonials1grid from "./testimonials/v1/fixtures/grid.json" with { type: "json" };
+import testimonials1marquee from "./testimonials/v1/fixtures/marquee.json" with { type: "json" };
+import testimonials1masonry from "./testimonials/v1/fixtures/masonry.json" with { type: "json" };
+import testimonials1placeholder from "./testimonials/v1/fixtures/placeholder.json" with { type: "json" };
+import testimonials1scroller from "./testimonials/v1/fixtures/scroller.json" with { type: "json" };
 import timeline1agenda from "./timeline/v1/fixtures/agenda.json" with { type: "json" };
 import timeline1placeholder from "./timeline/v1/fixtures/placeholder.json" with { type: "json" };
 import timeline1vertical from "./timeline/v1/fixtures/vertical.json" with { type: "json" };
@@ -204,6 +213,15 @@ export const fixtureFiles = [
   { type: "team-grid", version: 1, name: "three-columns", fixture: teamGrid1threeColumns },
   { type: "team-member", version: 1, name: "default", fixture: teamMember1default },
   { type: "team-member", version: 1, name: "placeholder", fixture: teamMember1placeholder },
+  { type: "testimonial", version: 1, name: "default", fixture: testimonial1default },
+  { type: "testimonial", version: 1, name: "logo", fixture: testimonial1logo },
+  { type: "testimonial", version: 1, name: "placeholder", fixture: testimonial1placeholder },
+  { type: "testimonials", version: 1, name: "grid-plain", fixture: testimonials1gridPlain },
+  { type: "testimonials", version: 1, name: "grid", fixture: testimonials1grid },
+  { type: "testimonials", version: 1, name: "marquee", fixture: testimonials1marquee },
+  { type: "testimonials", version: 1, name: "masonry", fixture: testimonials1masonry },
+  { type: "testimonials", version: 1, name: "placeholder", fixture: testimonials1placeholder },
+  { type: "testimonials", version: 1, name: "scroller", fixture: testimonials1scroller },
   { type: "timeline", version: 1, name: "agenda", fixture: timeline1agenda },
   { type: "timeline", version: 1, name: "placeholder", fixture: timeline1placeholder },
   { type: "timeline", version: 1, name: "vertical", fixture: timeline1vertical },

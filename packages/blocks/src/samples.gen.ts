@@ -22,6 +22,8 @@ import split from "./split/sample.ts";
 import stats from "./stats/sample.ts";
 import teamGrid from "./team-grid/sample.ts";
 import teamMember from "./team-member/sample.ts";
+import testimonial from "./testimonial/sample.ts";
+import testimonials from "./testimonials/sample.ts";
 import timeline from "./timeline/sample.ts";
 
 export const samples = {
@@ -48,5 +50,7 @@ export const samples = {
   "stats": stats,
   "team-grid": teamGrid,
   "team-member": teamMember,
+  "testimonial": testimonial,
+  "testimonials": testimonials,
   "timeline": timeline,
 };

@@ -22,6 +22,8 @@ import split from "./split/presentation.ts";
 import stats from "./stats/presentation.ts";
 import teamGrid from "./team-grid/presentation.ts";
 import teamMember from "./team-member/presentation.ts";
+import testimonial from "./testimonial/presentation.ts";
+import testimonials from "./testimonials/presentation.ts";
 import timeline from "./timeline/presentation.ts";
 
 export const presentations = {
@@ -48,5 +50,7 @@ export const presentations = {
   "stats": stats,
   "team-grid": teamGrid,
   "team-member": teamMember,
+  "testimonial": testimonial,
+  "testimonials": testimonials,
   "timeline": timeline,
 };
