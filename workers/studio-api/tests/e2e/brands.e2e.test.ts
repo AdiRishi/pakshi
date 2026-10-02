@@ -25,13 +25,13 @@ it.live(
       const other = yield* priya.createSite({ brand, name: "Library Events", address: "events" });
 
       const { look, revision } = yield* priya.brand({ brand });
-      const pale = { ...look, theme: { ...look.theme, changes: { brandColor: "#ffe14d" } } };
+      const pale = { ...look, theme: { ...look.theme, brandColor: "#ffe14d" } };
       const refused = yield* Effect.flip(
         priya.saveBrandLook({ brand, look: pale, seen: revision.number }),
       );
       expect(refused._tag).toBe("ThemeUnreadable");
 
-      const plum = { ...look, theme: { ...look.theme, changes: { brandColor: "#7a1f5c" } } };
+      const plum = { ...look, theme: { ...look.theme, brandColor: "#7a1f5c" } };
       const saved = yield* priya.saveBrandLook({ brand, look: plum, seen: revision.number });
       expect(saved.revision.number).toBe(2);
       expect(saved.sites.map(({ site, draft }) => [site.name, draft?.name])).toEqual(

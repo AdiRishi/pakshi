@@ -1,18 +1,14 @@
 import type { BrandId, BlockType } from "@repo/contracts/ids";
 import type { BrandView, Viewer } from "@repo/contracts/studio";
 import {
-  type BrandTheme,
   type ColorScheme,
   type ContrastIssue,
   fontCatalog,
   FontId,
   HexColor,
   NeutralTone,
-  PresetId,
-  presetTitles,
   resolveTheme,
   type ThemeValues,
-  themeValues,
 } from "@repo/tokens";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Button } from "@repo/ui/components/button";
@@ -45,13 +41,19 @@ import { ThemePreview, usePreviewSections } from "./theme-preview";
 const isHexColor = Schema.is(HexColor);
 
 /** A setting's options, each a value and what to call it. */
-type Options<Value extends string> = ReadonlyArray<readonly [Value, string]>;
+type Options<Value extends string | number> = ReadonlyArray<readonly [Value, string]>;
 
 const typeSizes = [
   ["small", "Small"],
   ["medium", "Medium"],
   ["large", "Large"],
 ] as const satisfies Options<ThemeValues["typeScale"]>;
+const headingWeights = [
+  [500, "Medium"],
+  [600, "Semibold"],
+  [700, "Bold"],
+  [800, "Heavy"],
+] as const satisfies Options<ThemeValues["headingWeight"]>;
 const radii = [
   ["none", "None"],
   ["small", "Small"],
@@ -93,7 +95,7 @@ const describeIssue = (issue: ContrastIssue) =>
   `${schemeTitles[issue.scheme]} mode, ${surfaceTitles[issue.surface]}: ${issue.what.toLowerCase()} have ${issue.ratio}:1 contrast, and need ${issue.required}:1.`;
 
 /** A setting chosen from a few named options, one at a time. */
-function Choice<Value extends string>(props: {
+function Choice<Value extends string | number>(props: {
   readonly label: string;
   readonly options: Options<Value>;
   readonly value: Value;
@@ -110,16 +112,16 @@ function Choice<Value extends string>(props: {
         variant="outline"
         size="sm"
         spacing={0}
-        value={[props.value]}
+        value={[String(props.value)]}
         disabled={props.disabled}
         onValueChange={(values) => {
           const [chosen] = values;
-          const option = options.find(([value]) => value === chosen);
+          const option = options.find(([value]) => String(value) === chosen);
           if (option !== undefined) props.onChange(option[0]);
         }}
       >
         {options.map(([value, title]) => (
-          <ToggleGroupItem key={value} value={value}>
+          <ToggleGroupItem key={value} value={String(value)}>
             {title}
           </ToggleGroupItem>
         ))}
@@ -192,6 +194,12 @@ export function BrandColor(props: {
 }) {
   const id = useId();
   const [text, setText] = useState(props.value);
+  const [shown, setShown] = useState(props.value);
+  // A color set from outside, such as by discarding changes, replaces what was typed.
+  if (props.value !== shown) {
+    setShown(props.value);
+    setText(props.value);
+  }
   return (
     <Field>
       <FieldLabel htmlFor={id}>Brand color</FieldLabel>
@@ -284,20 +292,6 @@ function ContrastCheck(props: { readonly issues: ReadonlyArray<ContrastIssue> })
   );
 }
 
-function PresetSwatch(props: { readonly preset: PresetId }) {
-  const { light } = useMemo(
-    () => resolveTheme({ preset: props.preset, changes: {} }).theme.colors,
-    [props.preset],
-  );
-  return (
-    <span aria-hidden className="flex h-4 overflow-hidden rounded-sm border">
-      {[light.brand.background, light.muted.background, light.default.foreground].map((color) => (
-        <span key={color} className="w-2" style={{ backgroundColor: color }} />
-      ))}
-    </span>
-  );
-}
-
 /** Theme Studio: a brand's theme, changed and previewed before it's saved as a new revision. */
 export function ThemeStudio(props: { readonly viewer: Viewer; readonly brand: BrandId }) {
   const { data } = useSuspenseQuery(brandQuery(props.brand));
@@ -307,15 +301,14 @@ export function ThemeStudio(props: { readonly viewer: Viewer; readonly brand: Br
 function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView }) {
   const { view } = props;
   const queryClient = useQueryClient();
-  const [theme, setTheme] = useState<BrandTheme>(view.look.theme);
+  const [theme, setTheme] = useState<ThemeValues>(view.look.theme);
   const [scheme, setScheme] = useState<ColorScheme>("light");
   const [only, setOnly] = useState<BlockType | null>(null);
-  const values = themeValues(theme);
   const resolved = useMemo(() => resolveTheme(theme), [theme]);
   const changed = !Equal.equals(theme, view.look.theme);
   const disabled = !view.can.edit;
   const set = <K extends keyof ThemeValues>(key: K, value: ThemeValues[K]) =>
-    setTheme((current) => ({ ...current, changes: { ...current.changes, [key]: value } }));
+    setTheme((current) => ({ ...current, [key]: value }));
 
   const save = useMutation({
     mutationFn: () =>
@@ -370,42 +363,19 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
       <div className="grid gap-6 px-10 py-8 lg:grid-cols-[24rem_1fr]">
         <Card className="h-fit gap-0 py-0">
           <Section
-            title="Start from a preset"
-            description="Your changes below are kept on top of the preset."
-          >
-            <ToggleGroup
-              aria-label="Preset"
-              variant="outline"
-              value={[theme.preset]}
-              disabled={disabled}
-              onValueChange={(chosen) => {
-                const preset = PresetId.literals.find((candidate) => candidate === chosen[0]);
-                if (preset !== undefined) setTheme((current) => ({ ...current, preset }));
-              }}
-            >
-              {PresetId.literals.map((preset) => (
-                <ToggleGroupItem key={preset} value={preset} className="gap-2">
-                  <PresetSwatch preset={preset} />
-                  {presetTitles[preset]}
-                </ToggleGroupItem>
-              ))}
-            </ToggleGroup>
-          </Section>
-          <Section
             title="Colors"
             description="Pakshi makes the light and dark palettes from one brand color."
           >
             <FieldGroup className="grid grid-cols-2 gap-4">
               <BrandColor
-                key={theme.preset}
-                value={values.brandColor}
+                value={theme.brandColor}
                 disabled={disabled}
                 onChange={(value) => set("brandColor", value)}
               />
               <Select
                 label="Neutral tone"
                 options={tones}
-                value={values.neutral}
+                value={theme.neutral}
                 disabled={disabled}
                 onChange={(value) => set("neutral", value)}
               />
@@ -418,38 +388,45 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
               <Select
                 label="Heading font"
                 options={fonts}
-                value={values.fonts.heading}
+                value={theme.fonts.heading}
                 disabled={disabled}
-                onChange={(heading) => set("fonts", { ...values.fonts, heading })}
+                onChange={(heading) => set("fonts", { ...theme.fonts, heading })}
               />
               <Select
                 label="Body font"
                 options={fonts}
-                value={values.fonts.body}
+                value={theme.fonts.body}
                 disabled={disabled}
-                onChange={(body) => set("fonts", { ...values.fonts, body })}
+                onChange={(body) => set("fonts", { ...theme.fonts, body })}
               />
               <Select
                 label="Type size"
                 options={typeSizes}
-                value={values.typeScale}
+                value={theme.typeScale}
                 disabled={disabled}
                 onChange={(value) => set("typeScale", value)}
               />
             </FieldGroup>
+            <Choice
+              label="Heading weight"
+              options={headingWeights}
+              value={theme.headingWeight}
+              disabled={disabled}
+              onChange={(value) => set("headingWeight", value)}
+            />
           </Section>
           <Section title="Shape and depth">
             <Choice
               label="Corners"
               options={radii}
-              value={values.radius}
+              value={theme.radius}
               disabled={disabled}
               onChange={(value) => set("radius", value)}
             />
             <Choice
               label="Shadows"
               options={shadows}
-              value={values.shadow}
+              value={theme.shadow}
               disabled={disabled}
               onChange={(value) => set("shadow", value)}
             />
@@ -458,7 +435,7 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
             <Choice
               label="Spacing"
               options={densities}
-              value={values.density}
+              value={theme.density}
               disabled={disabled}
               onChange={(value) => set("density", value)}
             />
@@ -467,7 +444,7 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
             <Choice
               label="Image corners"
               options={imageCorners}
-              value={values.imageCorners}
+              value={theme.imageCorners}
               disabled={disabled}
               onChange={(value) => set("imageCorners", value)}
             />
@@ -477,7 +454,7 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
             description="Visitors who ask their device for less motion never see it."
           >
             <Motion
-              checked={values.motion}
+              checked={theme.motion}
               disabled={disabled}
               onChange={(motion) => set("motion", motion)}
             />

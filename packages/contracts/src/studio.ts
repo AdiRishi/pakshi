@@ -1,4 +1,4 @@
-import { ContrastIssue, HexColor, PresetId } from "@repo/tokens";
+import { ContrastIssue, HexColor, ThemeValues } from "@repo/tokens";
 import { Context, Schema, SchemaGetter } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
@@ -791,8 +791,8 @@ export type ReviewPage = typeof ReviewPage.Type;
 export const BrandSummary = Schema.Struct({
   id: BrandId,
   name: Schema.String,
-  preset: PresetId,
   brandColor: HexColor,
+  fonts: ThemeValues.fields.fonts,
   sites: Schema.Array(SiteLabel),
 });
 export type BrandSummary = typeof BrandSummary.Type;
@@ -1151,7 +1151,7 @@ class SignedInRpcs extends RpcGroup.make(
     error: Schema.Union([StudioUnavailable, InvitationClosed]),
   }),
   Rpc.make("createBrand", {
-    payload: { name: BrandName, preset: PresetId, brandColor: HexColor },
+    payload: { name: BrandName, brandColor: HexColor },
     success: Schema.Struct({ id: BrandId }),
     error: Schema.Union([StudioUnavailable, NotPermitted, ThemeUnreadable]),
   }),

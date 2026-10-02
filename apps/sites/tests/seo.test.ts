@@ -2,7 +2,7 @@ import { noIdentity } from "@repo/contracts/brand";
 import { BrandId } from "@repo/contracts/ids";
 import { PageDocument, PageMeta } from "@repo/contracts/page";
 import { SnapshotManifest } from "@repo/contracts/snapshot";
-import { resolveTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
@@ -44,7 +44,7 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
   brand: Schema.encodeSync(SnapshotManifest.fields.brand)({
     brand: BrandId.make("brand_city"),
     number: 1,
-    theme: resolveTheme({ preset: "civic", changes: {} }).theme,
+    theme: resolveTheme(defaultTheme).theme,
     identity: noIdentity,
   }),
   media: {

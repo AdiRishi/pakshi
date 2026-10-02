@@ -1,4 +1,4 @@
-import { BrandTheme, ResolvedTheme } from "@repo/tokens";
+import { ResolvedTheme, ThemeValues } from "@repo/tokens";
 import { Schema } from "effect";
 
 import { BrandId, MediaId } from "./ids.ts";
@@ -48,5 +48,5 @@ export type VoiceGuide = typeof VoiceGuide.Type;
 export const emptyVoiceGuide: VoiceGuide = { tone: "", examples: [], wordsToAvoid: [] };
 
 /** A brand's theme and identity as its admins last saved them, which its newest revision holds. */
-export const BrandLook = Schema.Struct({ theme: BrandTheme, identity: BrandIdentity });
+export const BrandLook = Schema.Struct({ theme: ThemeValues, identity: BrandIdentity });
 export type BrandLook = typeof BrandLook.Type;

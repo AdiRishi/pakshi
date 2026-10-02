@@ -1,6 +1,6 @@
 import type { BrandId } from "@repo/contracts/ids";
-import type { Viewer } from "@repo/contracts/studio";
-import { presetTitles } from "@repo/tokens";
+import type { BrandSummary, Viewer } from "@repo/contracts/studio";
+import { fontCatalog } from "@repo/tokens";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -36,6 +36,12 @@ import { BrandHeader } from "./brand-header";
 import { deleteBrand } from "./functions";
 import { NewBrandDialog } from "./new-brand-dialog";
 import { brandQuery, brandsQuery } from "./queries";
+
+/** A theme's fonts by name, as one name when headings and text share a font. */
+const fontNames = (fonts: BrandSummary["fonts"]) =>
+  fonts.heading === fonts.body
+    ? fontCatalog[fonts.body].family
+    : `${fontCatalog[fonts.heading].family} headings, ${fontCatalog[fonts.body].family} text`;
 
 /** Every brand the person works on, with its look and sites. */
 export function BrandsPage(props: { readonly viewer: Viewer }) {
@@ -87,7 +93,7 @@ export function BrandsPage(props: { readonly viewer: Viewer }) {
                         </Link>
                       </h2>
                     </CardTitle>
-                    <CardDescription>{presetTitles[brand.preset]} preset</CardDescription>
+                    <CardDescription>{fontNames(brand.fonts)}</CardDescription>
                     <CardAction>
                       <span
                         title={`Brand color ${brand.brandColor}`}

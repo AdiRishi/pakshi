@@ -29,7 +29,6 @@ it.live("an invitation's link makes the account it was sent to, once", () =>
     const priyaStudio = yield* studio(yield* admin);
     yield* priyaStudio.createBrand({
       name: "City Libraries",
-      preset: "civic",
       brandColor: "#1f5c44",
     });
     const { brands } = yield* priyaStudio.newSiteOptions();

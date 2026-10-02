@@ -1,7 +1,7 @@
 import { BrandLook, VoiceGuide } from "@repo/contracts/brand";
 import { BrandId } from "@repo/contracts/ids";
 import { BrandName } from "@repo/contracts/studio";
-import { HexColor, PresetId } from "@repo/tokens";
+import { HexColor } from "@repo/tokens";
 import { createServerFn } from "@tanstack/react-start";
 import { Schema } from "effect";
 
@@ -28,13 +28,9 @@ export const saveVoiceGuide = createServerFn({ method: "POST" })
   .validator(Schema.toStandardSchemaV1(Schema.Struct({ brand: BrandId, voice: VoiceGuide })))
   .handler(({ data }) => studio((client) => client.saveVoiceGuide(data)));
 
-/** Makes a brand from a preset and a brand color. */
+/** Makes a brand from the default theme in its brand color. */
 export const createBrand = createServerFn({ method: "POST" })
-  .validator(
-    Schema.toStandardSchemaV1(
-      Schema.Struct({ name: BrandName, preset: PresetId, brandColor: HexColor }),
-    ),
-  )
+  .validator(Schema.toStandardSchemaV1(Schema.Struct({ name: BrandName, brandColor: HexColor })))
   .handler(({ data }) => studio((client) => client.createBrand(data)));
 
 /** Deletes a brand that has no sites. */

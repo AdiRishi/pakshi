@@ -1,6 +1,6 @@
 import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
-import { resolveTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 
 const paragraph = (text: string) => ({
@@ -43,7 +43,7 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
   brand: {
     brand: "brand_harbour",
     number: 1,
-    theme: resolveTheme({ preset: "editorial", changes: {} }).theme,
+    theme: resolveTheme(defaultTheme).theme,
     identity: noIdentity,
   },
   pages: {

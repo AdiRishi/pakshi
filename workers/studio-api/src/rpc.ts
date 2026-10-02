@@ -379,10 +379,8 @@ const handlers = (env: StudioApiEnv) =>
           ),
         acceptInvitation: ({ token }) =>
           SignedIn.use((person) => withCore("accept invitation")(acceptInvitation(person, token))),
-        createBrand: ({ name, preset, brandColor }) =>
-          SignedIn.use((person) =>
-            withCore("create brand")(createBrand(person, name, preset, brandColor)),
-          ),
+        createBrand: ({ name, brandColor }) =>
+          SignedIn.use((person) => withCore("create brand")(createBrand(person, name, brandColor))),
         newSiteOptions: () =>
           SignedIn.use((person) =>
             withCore("new site options")(

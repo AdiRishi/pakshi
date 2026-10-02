@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 
 import { BrandIdentity } from "@repo/contracts/brand";
 import { LiveRelease, objectKeys, routingKeys, SnapshotManifest } from "@repo/contracts/snapshot";
-import { BrandTheme, ResolvedTheme } from "@repo/tokens";
+import { ResolvedTheme, ThemeValues } from "@repo/tokens";
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Output from "alchemy/Output";
@@ -79,7 +79,7 @@ export const seedTestData = Effect.fn("Pakshi.SeedTestData")(function* (sites: {
             )
             .bind(
               sample.brand.id,
-              JSON.stringify(yield* Schema.encodeEffect(BrandTheme)(sample.brand.theme)),
+              JSON.stringify(yield* Schema.encodeEffect(ThemeValues)(sample.brand.theme)),
               JSON.stringify(yield* Schema.encodeEffect(ResolvedTheme)(sample.revision.theme)),
               JSON.stringify(yield* Schema.encodeEffect(BrandIdentity)(sample.revision.identity)),
               JSON.stringify({ id: "user_meera", name: "Meera Kapoor" }),
