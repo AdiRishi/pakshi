@@ -119,6 +119,8 @@ export interface EditorUi {
   readonly openLink: (field: FieldTarget, anchor: Element) => void;
   /** Opens the choice of a form, from the form on the page. */
   readonly openForm: (field: FieldTarget, anchor: Element) => void;
+  /** Opens the control of a setting the page doesn't draw, such as which blog a list shows, from a row naming it. */
+  readonly openSetting: (field: FieldTarget, anchor: Element) => void;
   readonly setActiveRichText: (active: ActiveRichText | null) => void;
   /** Moves focus to a field on the page. */
   readonly focusInCanvas: (field: FieldTarget) => void;

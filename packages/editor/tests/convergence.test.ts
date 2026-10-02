@@ -117,7 +117,7 @@ it.prop(
             next(),
           );
           if (type === undefined) return;
-          return run([insertOp(definitions, page, list, block ?? null, type)]);
+          return run([insertOp(definitions, view.pages, page, list, block ?? null, type)]);
         }
         case 4:
           return run(

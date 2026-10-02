@@ -20,12 +20,13 @@ import { definitions, fakeSiteDoc, fixtureDraft, meera } from "./support/site-do
 const page = PageId.make("pg_home");
 const id = (value: string) => BlockId.make(value);
 
-const open = () => {
+/** An editor of the fixture draft, on the home page or another. */
+const open = (at = page) => {
   const siteDoc = fakeSiteDoc();
   const store = new EditorStore({
     draft: fixtureDraft,
     live: fixtureDraft.base,
-    page,
+    page: at,
     contracts: definitions,
     person: meera,
     connection: siteDoc.connection(meera),
@@ -41,6 +42,7 @@ const open = () => {
     openMedia: () => undefined,
     openLink: () => undefined,
     openForm: () => undefined,
+    openSetting: () => undefined,
     setActiveRichText: () => undefined,
     focusInCanvas: () => undefined,
     revealControl: () => undefined,
@@ -49,8 +51,8 @@ const open = () => {
   const run = <Args>(command: Command<Args>, args: Args) =>
     runCommand({ store, ui }, command, args, "canvas");
   const home = () => {
-    const document = store.getState().view.pages[page];
-    if (document === undefined) throw new Error("The home page is gone.");
+    const document = store.getState().view.pages[at];
+    if (document === undefined) throw new Error(`${at} is gone.`);
     return document;
   };
   const slot = (section: string) => home().blocks[id(section)]?.slots?.["items"];
@@ -183,6 +185,22 @@ describe("adding", () => {
       false,
     );
     expect(home()).toBe(before);
+  });
+
+  test("a post header goes only on a post", () => {
+    const type = BlockType.make("post-header");
+    expect(open().run(insert, { list: "root", after: null, type })).toBe(false);
+    expect(open(PageId.make("pg_dates")).run(insert, { list: "root", after: null, type })).toBe(
+      true,
+    );
+  });
+
+  test("a new blog list on a blog lists that blog", () => {
+    const { run, home } = open(PageId.make("pg_news"));
+    run(insert, { list: "root", after: null, type: BlockType.make("post-list") });
+    const [added] = home().root;
+    if (added === undefined) throw new Error("Nothing was added.");
+    expect(home().blocks[added]?.props["collection"]).toEqual({ $ref: "page", id: "pg_news" });
   });
 
   test("adding after a block opens the picker for the spot right after it", () => {

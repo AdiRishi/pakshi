@@ -209,6 +209,7 @@ const usePick = () => {
   const { document } = useCanvasControls();
   return (field: FieldTarget, kind: Field["kind"], row: HTMLButtonElement) => {
     if (kind === "link") return ui.openLink(field, row);
+    if (kind === "collection" || kind === "number") return ui.openSetting(field, row);
     store.select({ kind: "field", ...field });
     // The part is on the page once the selection has rendered, as a newly added one is.
     requestAnimationFrame(() => {
@@ -492,6 +493,7 @@ function SlotRows(props: {
           onClick={() => {
             const op = insertOp(
               definitions,
+              draft.pages,
               props.page,
               { block: props.section, slot: props.slot },
               items.at(-1) ?? null,

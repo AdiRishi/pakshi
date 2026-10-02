@@ -368,7 +368,14 @@ describe("the connection", () => {
     const siteDoc = fakeSiteDoc({ auto: false });
     const { store } = open(siteDoc);
     siteDoc.deliver();
-    const insert = insertOp(definitions, page, "root", null, BlockType.make("rich-text"));
+    const insert = insertOp(
+      definitions,
+      fixtureDraft.pages,
+      page,
+      "root",
+      null,
+      BlockType.make("rich-text"),
+    );
     expect(store.run([insert])).toEqual([]);
     // SiteDoc commits it, but the confirmation is lost with the connection.
     siteDoc.step(0);

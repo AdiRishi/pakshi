@@ -388,7 +388,7 @@ export const insert: Command<{
     const contract = context.contracts.get(type);
     if (contract === undefined || document === undefined) return undefined;
     if (!allowedTypes(document, context.contracts, list).includes(type)) return undefined;
-    const op = insertOp(context.contracts, page, list, after, type);
+    const op = insertOp(context.contracts, context.state.view.pages, page, list, after, type);
     return {
       kind: "change",
       ops: [op],
