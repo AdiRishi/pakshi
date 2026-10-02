@@ -3,7 +3,6 @@
   "surface": "default",
   "props": {
     "heading": "A few things to know",
-    "intro": "A sentence or two that says what this writing is about.",
     "body": {
       "type": "doc",
       "content": [
