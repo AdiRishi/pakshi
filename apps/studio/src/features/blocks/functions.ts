@@ -8,9 +8,9 @@ import { Schema } from "effect";
 import { studio } from "@/server/studio";
 import { callStudio } from "@/server/studio-rpc";
 
-/** Every block in the library, with each version and how many sites have it live. */
-export const getBlockCatalog = createServerFn({ method: "GET" }).handler(() =>
-  studio((client) => client.blockCatalog()),
+/** For the platform team: the blocks sites show at an older version, and the versions that can be removed. */
+export const getBlockUpdates = createServerFn({ method: "GET" }).handler(() =>
+  studio((client) => client.blockUpdates()),
 );
 
 /** The person's sites whose live release shows a block. */
@@ -28,7 +28,7 @@ export const adoptUpgrade = createServerFn({ method: "POST" })
   .validator(Schema.toStandardSchemaV1(Schema.Struct({ site: SiteId, type: BlockType })))
   .handler(({ data }) => studio((client) => client.adoptUpgrade(data)));
 
-/** Upgrade drafts for a block on every site an older version is live on. */
+/** Upgrade drafts for a block on every site whose live release shows an older version. */
 export const upgradeEverywhere = createServerFn({ method: "POST" })
   .validator(Schema.toStandardSchemaV1(Schema.Struct({ type: BlockType })))
   // Each site's SiteDoc makes its own draft, so this waits on all of them.

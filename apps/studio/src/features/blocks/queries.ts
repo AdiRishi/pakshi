@@ -1,11 +1,11 @@
 import type { BlockType, SiteId } from "@repo/contracts/ids";
 import { queryOptions } from "@tanstack/react-query";
 
-import { getBlockCatalog, getBlockRequests, getBlockUsage, getSiteBlocks } from "./functions";
+import { getBlockRequests, getBlockUpdates, getBlockUsage, getSiteBlocks } from "./functions";
 
-export const blockCatalogQuery = queryOptions({
-  queryKey: ["blocks"],
-  queryFn: () => getBlockCatalog(),
+export const blockUpdatesQuery = queryOptions({
+  queryKey: ["blocks", "updates"],
+  queryFn: () => getBlockUpdates(),
 });
 
 export const blockUsageQuery = (type: BlockType) =>

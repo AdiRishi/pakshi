@@ -3,7 +3,7 @@ import { blockKey, latestLockfile } from "@repo/blocks";
 import { renderingChanges } from "@repo/blocks/rendering-changes";
 import type { Permission } from "@repo/contracts/access";
 import type { Draft } from "@repo/contracts/draft";
-import type { DraftId, MediaId, SiteId } from "@repo/contracts/ids";
+import type { BlockType, DraftId, MediaId, SiteId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import { liveReleaseOf, type Release } from "@repo/contracts/release";
 import { rpcWebHandler } from "@repo/contracts/rpc/server";
@@ -56,7 +56,7 @@ import { altTextSuggestion, mergeSuggestion } from "./agent/suggestions.ts";
 import { audit, auditFilters, auditLog, exportAudit } from "./audit.ts";
 import { authFor } from "./auth.ts";
 import { blockRequests, closeBlockRequest, requestBlock } from "./block-requests.ts";
-import { blockTitle, catalog, newerVersions, removableVersions, sitesBehind } from "./blocks.ts";
+import { blockTitle, newerVersions, removableVersions } from "./blocks.ts";
 import { offerRevision } from "./brand-updates.ts";
 import {
   brandsFor,
@@ -162,6 +162,33 @@ const sessions = (env: StudioApiEnv) =>
 /** The site's SiteDoc, once PartyServer has started it. */
 const siteDoc = (env: StudioApiEnv, site: SiteId) =>
   Effect.tryPromise(() => getServerByName(env.SITE_DOC, site));
+
+/**
+ * The blocks each site's live release shows. Its lockfile pins every block
+ * type, so the ones no live page, header or footer uses are left out.
+ */
+const shownBlocks = <Site extends { readonly id: SiteId }>(
+  env: StudioApiEnv,
+  sites: ReadonlyArray<Site>,
+) =>
+  Effect.forEach(
+    sites,
+    (site) =>
+      siteDoc(env, site.id).pipe(
+        Effect.flatMap((doc) =>
+          Effect.tryPromise(async (): Promise<ReadonlyArray<BlockInUse>> => doc.blocksInUse()),
+        ),
+        Effect.map((inUse) => ({
+          site,
+          blocks: inUse.filter((block) => block.pages > 0 || block.sitewide),
+        })),
+      ),
+    { concurrency: 10 },
+  );
+
+/** Whether a site shows a block at an older version than the registry's newest. */
+const isBehind = (block: BlockInUse) =>
+  block.version < (latestLockfile[block.type] ?? block.version);
 
 const isOutage = (error: {
   readonly _tag: string;
@@ -1139,16 +1166,27 @@ const handlers = (env: StudioApiEnv) =>
           ),
         saveVoiceGuide: ({ brand, voice }) =>
           SignedIn.use((person) => withCore("save voice guide")(saveVoice(person, brand, voice))),
-        blockCatalog: () =>
+        blockUpdates: () =>
           SignedIn.use((person) =>
-            withCore("block catalog")(
+            withCore("block updates")(
               Effect.gen(function* () {
                 const { access } = yield* loadAccess(person.id);
-                const platform = authorize(access, "blocks.upgrade", { kind: "organization" });
+                if (!authorize(access, "blocks.upgrade", { kind: "organization" }))
+                  return yield* new NotPermitted({ action: "see which blocks sites can update" });
+                const [shown, removable] = yield* Effect.all(
+                  [
+                    Effect.flatMap(sitesOf(person), (sites) => shownBlocks(env, sites)),
+                    removableVersions(),
+                  ],
+                  { concurrency: "unbounded" },
+                );
+                const behind = new Map<BlockType, number>();
+                for (const { blocks } of shown)
+                  for (const block of blocks.filter(isBehind))
+                    behind.set(block.type, (behind.get(block.type) ?? 0) + 1);
                 return {
-                  blocks: yield* catalog(),
-                  removable: platform ? yield* removableVersions() : null,
-                  can: { upgradeEverywhere: platform },
+                  behind: Array.from(behind, ([type, sites]) => ({ type, sites })),
+                  removable,
                 };
               }),
             ),
@@ -1156,32 +1194,20 @@ const handlers = (env: StudioApiEnv) =>
         blockUsage: ({ type }) =>
           SignedIn.use((person) =>
             withCore("block usage")(
-              Effect.gen(function* () {
-                const uses = yield* Effect.forEach(
-                  yield* sitesOf(person),
-                  (site) =>
-                    Effect.gen(function* () {
-                      const doc = yield* siteDoc(env, site.id);
-                      const inUse = yield* Effect.tryPromise(
-                        async (): Promise<ReadonlyArray<BlockInUse>> => doc.blocksInUse(),
-                      );
-                      return inUse.flatMap((block) =>
-                        block.type === type && (block.pages > 0 || block.sitewide)
-                          ? [
-                              {
-                                site,
-                                version: block.version,
-                                pages: block.pages,
-                                sitewide: block.sitewide,
-                              },
-                            ]
-                          : [],
-                      );
-                    }),
-                  { concurrency: 10 },
-                );
-                return uses.flat();
-              }),
+              Effect.map(
+                Effect.flatMap(sitesOf(person), (sites) => shownBlocks(env, sites)),
+                (shown) =>
+                  shown.flatMap(({ site, blocks }) =>
+                    blocks
+                      .filter((block) => block.type === type)
+                      .map((block) => ({
+                        site,
+                        version: block.version,
+                        pages: block.pages,
+                        sitewide: block.sitewide,
+                      })),
+                  ),
+              ),
             ),
           ),
         siteBlocks: ({ site }) =>
@@ -1263,14 +1289,17 @@ const handlers = (env: StudioApiEnv) =>
                   return yield* new NotPermitted({ action: "upgrade a block on every site" });
                 const latest = latestLockfile[type];
                 if (latest === undefined) return [];
-                const sites = yield* sitesBehind(type, latest);
+                const shown = yield* Effect.flatMap(sitesOf(person), (sites) =>
+                  shownBlocks(env, sites),
+                );
+                const sites = shown.flatMap(({ site, blocks }) =>
+                  blocks.some((block) => block.type === type && isBehind(block)) ? [site] : [],
+                );
                 const upgrades = yield* Effect.forEach(
                   sites,
-                  (id) =>
+                  (site) =>
                     Effect.gen(function* () {
-                      // The site's ID came from D1's copy of what its SiteDoc pins.
-                      const site = yield* findSite(id).pipe(Effect.orDie);
-                      const draft = yield* siteDoc(env, id).pipe(
+                      const draft = yield* siteDoc(env, site.id).pipe(
                         Effect.flatMap((doc) =>
                           Effect.tryPromise(async (): Promise<DraftSummary | null> =>
                             doc.adoptUpgrade(collaborator(person), type, latest),

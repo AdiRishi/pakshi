@@ -63,6 +63,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
         manageRoles: false,
         editWorkflow: false,
         readAudit: false,
+        upgradeBlocks: false,
       },
     }),
   );
@@ -132,7 +133,7 @@ const fakeStudioApi = (behaviour: Behaviour) => {
     brand: unused,
     saveBrandLook: unused,
     saveVoiceGuide: unused,
-    blockCatalog: unused,
+    blockUpdates: unused,
     blockUsage: unused,
     siteBlocks: unused,
     adoptUpgrade: unused,

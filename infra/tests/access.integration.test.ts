@@ -87,10 +87,10 @@ test("an org admin shapes who can do what, and every screen for it meets WCAG 2.
   await expect(priya.getByRole("heading", { name: "Time to launch" })).toBeVisible();
   expect(await violations(priya)).toEqual([]);
 
-  // Sam asks for a block from the catalog.
+  // Sam asks for a new block from the blocks page.
   await visit(sam, `${studioUrl}/blocks`);
-  const request = sam.getByRole("dialog", { name: "Request a new block" });
-  await clickWhenReady(sam.getByRole("button", { name: "Request a new block" }), request);
+  const request = sam.getByRole("dialog", { name: "Ask for a new block" });
+  await clickWhenReady(sam.getByRole("button", { name: "Ask for a new block" }), request);
   await request
     .getByLabel("What do you need?", { exact: true })
     .fill("A countdown to the reading challenge.");

@@ -139,6 +139,8 @@ export const Viewer = Schema.Struct({
     editWorkflow: Schema.Boolean,
     /** Read the audit log of anything. */
     readAudit: Schema.Boolean,
+    /** Upgrade blocks on every site and see which versions can be removed, as the platform team does. */
+    upgradeBlocks: Schema.Boolean,
   }),
 });
 export type Viewer = typeof Viewer.Type;
@@ -834,26 +836,13 @@ export const SavedLook = Schema.Struct({
 });
 export type SavedLook = typeof SavedLook.Type;
 
-/** One version of a block, as the catalog and upgrade banners describe it. */
+/** One version of a block, as upgrade banners describe it. */
 export const BlockVersionInfo = Schema.Struct({
   version: Schema.Int,
   /** What changed from the version before; null for a block's first version. */
   changes: Schema.NullOr(Schema.String),
-  /** How many sites have it live. */
-  sites: Schema.Int,
 });
 export type BlockVersionInfo = typeof BlockVersionInfo.Type;
-
-/** A block in the library, with every version the registry holds, newest first. */
-export const CatalogBlock = Schema.Struct({
-  type: BlockType,
-  title: Schema.String,
-  purpose: Schema.String,
-  placement: Schema.Literals(["section", "item", "header", "footer"]),
-  latest: Schema.Int,
-  versions: Schema.Array(BlockVersionInfo),
-});
-export type CatalogBlock = typeof CatalogBlock.Type;
 
 /** A block version no live release or open draft pins any more, and when it last did. */
 export const RemovableVersion = Schema.Struct({
@@ -900,13 +889,22 @@ export const BlockExample = Schema.Trim.check(
   Schema.isMaxLength(500, { message: "Use at most 500 characters" }),
 );
 
-export const BlockCatalog = Schema.Struct({
-  blocks: Schema.Array(CatalogBlock),
-  /** For the platform team: versions past the 3 months they're kept unused. */
-  removable: Schema.NullOr(Schema.Array(RemovableVersion)),
-  can: Schema.Struct({ upgradeEverywhere: Schema.Boolean }),
+/**
+ * What the platform team keeps up to date: each block some sites show at an
+ * older version than its newest, and the versions that can leave the registry.
+ */
+export const BlockUpdates = Schema.Struct({
+  behind: Schema.Array(
+    Schema.Struct({
+      type: BlockType,
+      /** The sites whose live release shows an older version, which an upgrade everywhere reaches. */
+      sites: Schema.Int,
+    }),
+  ),
+  /** Versions past the 3 months they're kept unused. */
+  removable: Schema.Array(RemovableVersion),
 });
-export type BlockCatalog = typeof BlockCatalog.Type;
+export type BlockUpdates = typeof BlockUpdates.Type;
 
 /** One of the person's sites whose live release shows a block, and how it shows it. */
 export const BlockUse = Schema.Struct({
@@ -1384,7 +1382,10 @@ class SignedInRpcs extends RpcGroup.make(
     success: VoiceGuide,
     error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
   }),
-  Rpc.make("blockCatalog", { success: BlockCatalog, error: StudioUnavailable }),
+  Rpc.make("blockUpdates", {
+    success: BlockUpdates,
+    error: Schema.Union([StudioUnavailable, NotPermitted]),
+  }),
   /** The sites the person works on whose live release shows a block, by name. */
   Rpc.make("blockUsage", {
     payload: { type: BlockType },
@@ -1409,7 +1410,7 @@ class SignedInRpcs extends RpcGroup.make(
     success: DraftSummary,
     error: Schema.Union([StudioUnavailable, SiteNotFound, NotPermitted, UpToDate]),
   }),
-  /** Upgrade drafts on every site an older version of a block is live on. */
+  /** Upgrade drafts on every site whose live release shows an older version of a block. */
   Rpc.make("upgradeEverywhere", {
     payload: { type: BlockType },
     success: Schema.Array(UpgradeResult),
