@@ -1,21 +1,9 @@
-import { type DraftId, MenuItemId, type PageId, randomId, type SiteId } from "@repo/contracts/ids";
-import type { BatchError, Op } from "@repo/contracts/ops";
+import { type DraftId, MenuItemId, randomId, type SiteId } from "@repo/contracts/ids";
+import type { Op } from "@repo/contracts/ops";
 import { pageName } from "@repo/contracts/page";
 import { ExternalUrl, type Link } from "@repo/contracts/references";
 import { MenuItem, type Menus } from "@repo/contracts/site";
-import type { DraftPageSummary, PageStanding } from "@repo/contracts/studio";
-import { menusWithout } from "@repo/domain/document";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@repo/ui/components/alert-dialog";
-import { Badge } from "@repo/ui/components/badge";
+import type { DraftPageSummary } from "@repo/contracts/studio";
 import { Button } from "@repo/ui/components/button";
 import {
   Card,
@@ -41,134 +29,11 @@ import { useId, useState } from "react";
 
 import { sendBatch } from "../sites/send-batch";
 
-const standings = {
-  new: { label: "New", variant: "default" },
-  changed: { label: "Changed", variant: "secondary" },
-  live: { label: "Live", variant: "outline" },
-  unpublished: { label: "Unpublished", variant: "warning" },
-} as const satisfies Record<
-  PageStanding,
-  { readonly label: string; readonly variant: "default" | "secondary" | "outline" | "warning" }
->;
-
-/** How a page in the draft stands against the live site. */
-export function StandingBadge(props: { readonly standing: PageStanding }) {
-  const { label, variant } = standings[props.standing];
-  return <Badge variant={variant}>{label}</Badge>;
-}
-
-const linksTo = (target: Link, page: PageId) => !Predicate.isString(target) && target.id === page;
-
-/** How many menu items link to a page, sub-items included. */
-const menuLinksTo = (menus: Menus, page: PageId) =>
-  [...menus.main.flatMap((item) => [item, ...(item.children ?? [])]), ...menus.footer].filter(
-    (item) => linksTo(item.target, page),
-  ).length;
-
 /** The ops that send a batch's errors to the person, or nothing when it went through. */
 const sent = async (site: SiteId, draft: DraftId, ops: ReadonlyArray<Op>) => {
   const outcome = await sendBatch(site, draft, ops);
   return outcome.status === "rejected" ? outcome.errors : [];
 };
-
-/**
- * Unpublishes or deletes a page: it leaves the live site and its menus when
- * the draft publishes, and its address can send visitors to another page.
- */
-export function RemovePageDialog(props: {
-  readonly site: SiteId;
-  readonly draft: { readonly id: DraftId; readonly name: string };
-  readonly page: DraftPageSummary;
-  readonly pages: ReadonlyArray<DraftPageSummary>;
-  readonly menus: Menus;
-  readonly action: "unpublish" | "delete";
-  readonly onClose: () => void;
-  readonly onDone: () => Promise<void>;
-}) {
-  const id = useId();
-  const { page } = props;
-  const title = pageName(page);
-  const [redirect, setRedirect] = useState("");
-  const [errors, setErrors] = useState<ReadonlyArray<BatchError>>([]);
-  const [working, setWorking] = useState(false);
-  const targets = props.pages.filter(
-    (candidate) => candidate.id !== page.id && candidate.standing !== "unpublished",
-  );
-  const linked = menuLinksTo(props.menus, page.id);
-  const remove = async () => {
-    const to = targets.find((candidate) => candidate.id === redirect);
-    const ops: Array<Op> = [...menusWithout(props.menus, page.id)];
-    if (to !== undefined)
-      ops.push({ op: "setRedirect", from: page.path, to: { $ref: "page", id: to.id } });
-    ops.push(
-      props.action === "unpublish"
-        ? { op: "setStatus", page: page.id, status: "unpublished" }
-        : { op: "deletePage", page: page.id },
-    );
-    setWorking(true);
-    const found = await sent(props.site, props.draft.id, ops);
-    setWorking(false);
-    setErrors(found);
-    if (found.length === 0) await props.onDone();
-  };
-  const verb = props.action === "unpublish" ? "Unpublish" : "Delete";
-  return (
-    <AlertDialog open onOpenChange={(open) => !open && props.onClose()}>
-      <AlertDialogContent>
-        <AlertDialogHeader>
-          <AlertDialogTitle>
-            {verb} "{title}"?
-          </AlertDialogTitle>
-          <AlertDialogDescription>
-            When {props.draft.name} publishes, {title} leaves the live site, the sitemap and the
-            menus. Anyone who visits {page.path} sees that the page has gone, unless you send them
-            to another page.
-          </AlertDialogDescription>
-        </AlertDialogHeader>
-        <Field>
-          <FieldLabel htmlFor={id}>Redirect {page.path} to</FieldLabel>
-          <NativeSelect
-            id={id}
-            className="w-full"
-            value={redirect}
-            onChange={(event) => setRedirect(event.target.value)}
-          >
-            <NativeSelectOption value="">No page: say it has gone</NativeSelectOption>
-            {targets.map((target) => (
-              <NativeSelectOption key={target.id} value={target.id}>
-                {pageName(target)} ({target.path})
-              </NativeSelectOption>
-            ))}
-          </NativeSelect>
-        </Field>
-        <ul className="flex list-disc flex-col gap-1 pl-5 text-sm text-muted-foreground">
-          {linked > 0 && (
-            <li>
-              {linked === 1 ? "Its menu item is" : `Its ${linked} menu items are`} removed in this
-              draft.
-            </li>
-          )}
-          <li>
-            {props.action === "unpublish"
-              ? "The page stays in this draft, so you can publish it again later. To remove it from the draft as well, delete it instead."
-              : "The page is removed from this draft too. Undo can bring it back while you're editing."}
-          </li>
-        </ul>
-        <FieldError errors={errors.map((error) => ({ message: error.message }))} />
-        <AlertDialogFooter>
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
-          <AlertDialogAction
-            variant={props.action === "delete" ? "destructive" : "default"}
-            disabled={working}
-            onClick={() => void remove()}
-          >
-            {verb}
-          </AlertDialogAction>
-        </AlertDialogFooter>
-      </AlertDialogContent>
-    </AlertDialog>
-  );
-}
 
 /** A menu item as the editor lists it: flat, with how deep it sits. */
 interface Row {
@@ -251,11 +116,18 @@ function MenuRow(props: {
                 props.onChange({ ...row, target: { $ref: "page", id: page.id } });
             }}
           >
-            {props.pages.map((page) => (
-              <NativeSelectOption key={page.id} value={page.id}>
-                {pageName(page)}
-              </NativeSelectOption>
-            ))}
+            {props.pages
+              // A post isn't offered, but an item that already links to one keeps showing it.
+              .filter(
+                (page) =>
+                  page.type !== "entry" ||
+                  (!Predicate.isString(row.target) && row.target.id === page.id),
+              )
+              .map((page) => (
+                <NativeSelectOption key={page.id} value={page.id}>
+                  {pageName(page)}
+                </NativeSelectOption>
+              ))}
             <NativeSelectOption value={anotherAddress}>Another address</NativeSelectOption>
           </NativeSelect>
         </Field>
@@ -360,7 +232,7 @@ function MenuEditor(props: {
     setRows(next);
     saving.mutate(next);
   };
-  const [first] = props.pages;
+  const first = props.pages.find((page) => page.type !== "entry");
   return (
     <div className="flex flex-col gap-3">
       {rows.length === 0 && <p className="text-sm text-muted-foreground">No items yet.</p>}

@@ -1,9 +1,9 @@
-import { latestLockfile, loadBlocks, presentationOf } from "@repo/blocks";
+import { latestLockfile, presentationOf } from "@repo/blocks";
 import type { BlockType } from "@repo/contracts/ids";
 import type { Viewer } from "@repo/contracts/studio";
 import { BlockCustomizer } from "@repo/editor";
 import { Button } from "@repo/ui/components/button";
-import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ChevronDownIcon, ChevronLeftIcon, RotateCcwIcon } from "lucide-react";
 import { useId, useState } from "react";
@@ -12,16 +12,13 @@ import { AppShell } from "@/components/app-shell";
 import { canvasColors } from "@/features/editor/canvas-colors";
 
 import { RequestBlockDialog } from "./block-requests";
+import { blocksQuery } from "./blocks-query";
 import { blockRequestsQuery, blockUsageQuery } from "./queries";
 
 import siteCss from "@repo/blocks/site.css?url";
 
 /** The newest version of every block, which a block's page shows. */
-export const newestBlocksQuery = queryOptions({
-  queryKey: ["blocks", latestLockfile],
-  queryFn: () => loadBlocks(latestLockfile),
-  staleTime: Number.POSITIVE_INFINITY,
-});
+export const newestBlocksQuery = blocksQuery(latestLockfile);
 
 /** Names in a sentence: "A", "A and B", "A, B and C". */
 const listed = (names: ReadonlyArray<string>) =>

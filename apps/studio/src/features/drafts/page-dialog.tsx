@@ -62,6 +62,8 @@ export function PageDialog(props: {
   readonly submitLabel: string;
   readonly initial: PageValues;
   readonly address: AddressMode;
+  /** What happens to the address later, under its field. */
+  readonly addressHint: string;
   readonly onSubmit: (values: PageValues) => Promise<ReadonlyArray<BatchError>>;
 }) {
   const { under } = props.address;
@@ -166,9 +168,7 @@ export function PageDialog(props: {
                   />
                 </InputGroup>
               )}
-              <FieldDescription>
-                Menu links follow the page when its address changes.
-              </FieldDescription>
+              <FieldDescription>{props.addressHint}</FieldDescription>
               <FieldError errors={pathErrors} />
             </Field>
             <FieldError errors={otherErrors} />
