@@ -9,6 +9,7 @@ export const registry: Readonly<
   "event-card@1": () => import("./event-card/v1/index.tsx"),
   "event-cards@1": () => import("./event-cards/v1/index.tsx"),
   "faq@1": () => import("./faq/v1/index.tsx"),
+  "faq@2": () => import("./faq/v2/index.tsx"),
   "feature-grid@1": () => import("./feature-grid/v1/index.tsx"),
   "feature-grid@2": () => import("./feature-grid/v2/index.tsx"),
   "feature-item@1": () => import("./feature-item/v1/index.tsx"),

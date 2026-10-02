@@ -13,6 +13,11 @@ import eventCards1placeholder from "./event-cards/v1/fixtures/placeholder.json" 
 import faq1list from "./faq/v1/fixtures/list.json" with { type: "json" };
 import faq1placeholder from "./faq/v1/fixtures/placeholder.json" with { type: "json" };
 import faq1twoColumns from "./faq/v1/fixtures/two-columns.json" with { type: "json" };
+import faq2accordionStart from "./faq/v2/fixtures/accordion-start.json" with { type: "json" };
+import faq2accordion from "./faq/v2/fixtures/accordion.json" with { type: "json" };
+import faq2columns from "./faq/v2/fixtures/columns.json" with { type: "json" };
+import faq2placeholder from "./faq/v2/fixtures/placeholder.json" with { type: "json" };
+import faq2split from "./faq/v2/fixtures/split.json" with { type: "json" };
 import featureGrid1placeholder from "./feature-grid/v1/fixtures/placeholder.json" with { type: "json" };
 import featureGrid1threeColumns from "./feature-grid/v1/fixtures/three-columns.json" with { type: "json" };
 import featureGrid1twoColumns from "./feature-grid/v1/fixtures/two-columns.json" with { type: "json" };
@@ -135,6 +140,11 @@ export const fixtureFiles = [
   { type: "faq", version: 1, name: "list", fixture: faq1list },
   { type: "faq", version: 1, name: "placeholder", fixture: faq1placeholder },
   { type: "faq", version: 1, name: "two-columns", fixture: faq1twoColumns },
+  { type: "faq", version: 2, name: "accordion-start", fixture: faq2accordionStart },
+  { type: "faq", version: 2, name: "accordion", fixture: faq2accordion },
+  { type: "faq", version: 2, name: "columns", fixture: faq2columns },
+  { type: "faq", version: 2, name: "placeholder", fixture: faq2placeholder },
+  { type: "faq", version: 2, name: "split", fixture: faq2split },
   { type: "feature-grid", version: 1, name: "placeholder", fixture: featureGrid1placeholder },
   { type: "feature-grid", version: 1, name: "three-columns", fixture: featureGrid1threeColumns },
   { type: "feature-grid", version: 1, name: "two-columns", fixture: featureGrid1twoColumns },
