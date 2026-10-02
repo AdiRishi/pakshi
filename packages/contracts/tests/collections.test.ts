@@ -1,7 +1,7 @@
 import { DateTime, Schema } from "effect";
-import { expect, test } from "vitest";
+import { describe, expect, test } from "vitest";
 
-import { collectionKinds, entriesOf } from "../src/collections.ts";
+import { collectionKinds, entriesOf, pageNumberOf } from "../src/collections.ts";
 import { PageListing } from "../src/snapshot.ts";
 
 const post = (id: string, collection: string, title: string, date: string) => ({
@@ -64,5 +64,29 @@ test("a new post is dated the day it is where its author is, with nothing else f
     author: "Meera Kapoor",
     tags: [],
     excerpt: "",
+  });
+});
+
+const at = (address: string) => new URL(address, "https://www.northbanklibraries.org");
+
+describe("the page a blog list shows", () => {
+  test("is the number asked for, from 2 to 1000", () => {
+    expect(pageNumberOf(at("/news?page=2"))).toBe(2);
+    expect(pageNumberOf(at("/news?page=1000"))).toBe(1000);
+  });
+
+  test("is the first for anything else", () => {
+    for (const asked of [
+      "",
+      "?page=",
+      "?page=0",
+      "?page=1",
+      "?page=1001",
+      "?page=-3",
+      "?page=2.5",
+      "?page=02",
+      "?page=two",
+    ])
+      expect(pageNumberOf(at(`/news${asked}`))).toBe(1);
   });
 });

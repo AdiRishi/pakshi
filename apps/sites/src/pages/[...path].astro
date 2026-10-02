@@ -1,12 +1,12 @@
 ---
 import "@repo/blocks/site.css";
 import { renderPage, siteData, SitePage } from "@repo/blocks";
+import { pageNumberOf } from "@repo/contracts/collections";
 import { FormId } from "@repo/contracts/ids";
 import { pageName } from "@repo/contracts/page";
 import { themeCss } from "@repo/tokens";
 import { Option, Schema } from "effect";
 
-import { pageNumberOf } from "../lib/page-cache.ts";
 import { responsiveImage } from "../lib/responsive.ts";
 import { styleHash } from "../lib/security.ts";
 import { feedAddress, pageMeta, redirectFor } from "../lib/seo.ts";
