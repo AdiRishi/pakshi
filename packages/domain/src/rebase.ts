@@ -82,9 +82,12 @@ const longestIncreasing = (values: ReadonlyArray<number>): ReadonlySet<number> =
 
 /**
  * The ops that take a draft to `content` on a new base: a rebase first, then
- * forms, menus, redirects, the header and footer, pages, blocks, fields and
- * addresses, and last the forms `content` doesn't have, once no block uses
- * them. `contracts` are the block versions `content` pins.
+ * forms, menus and redirects, then pages: those `content` doesn't have
+ * removed, the new ones created empty and every page given its address, so
+ * that each page a block may show exists before any block changes. Then the
+ * header and footer, each page's status, blocks, fields and meta, and last
+ * the forms `content` doesn't have, once no block uses them. `contracts` are
+ * the block versions `content` pins.
  */
 export const rebaseOps = (
   draft: Draft,
@@ -93,19 +96,17 @@ export const rebaseOps = (
   contracts: BlockContracts,
 ): ReadonlyArray<Op> => {
   const ops: Array<Op> = [];
-  // Ops that give pages their addresses come last, and apply together, so
-  // pages can swap addresses.
-  const addresses: Array<Op> = [];
   let working = draft;
-  const emit = (op: Op) => {
-    const applied = applyOps(working, [op], contracts);
+  const emitTogether = (batch: ReadonlyArray<Op>) => {
+    const applied = applyOps(working, batch, contracts);
     if (!applied.ok)
       throw new Error(
         `A rebase op doesn't apply: ${applied.errors.map((error) => error.message).join(" ")}`,
       );
     working = applied.draft;
-    ops.push(op);
+    ops.push(...batch);
   };
+  const emit = (op: Op) => emitTogether([op]);
 
   emit({ op: "rebase", base, lockfile: content.lockfile, brand: content.brand });
   for (const form of Object.values(content.forms))
@@ -122,24 +123,38 @@ export const rebaseOps = (
     if (!same(current, to))
       emit(to === undefined ? { op: "setRedirect", from } : { op: "setRedirect", from, to });
   }
+
+  // A collection goes after its entries, and comes before them.
+  const entriesFirst = (a: PageDocument, b: PageDocument) =>
+    Number(b.type === "entry") - Number(a.type === "entry");
+  const targets = Object.values(content.pages).toSorted((a, b) => entriesFirst(b, a));
+  for (const page of Object.values(working.pages).toSorted(entriesFirst))
+    if (!(page.id in content.pages)) emit({ op: "deletePage", page: page.id });
+  // Addresses apply together, so pages can swap them.
+  emitTogether(
+    targets.flatMap((target): ReadonlyArray<Op> => {
+      const current = working.pages[target.id];
+      if (current === undefined)
+        return [{ op: "createPage", page: { ...target, root: [], blocks: {} } }];
+      if (current.type === "entry" && target.type === "entry")
+        return current.slug === target.slug
+          ? []
+          : [{ op: "setSlug", page: target.id, slug: target.slug }];
+      if (current.type !== "entry" && target.type !== "entry" && current.path !== target.path)
+        return [{ op: "setPath", page: target.id, path: target.path }];
+      return [];
+    }),
+  );
+
   for (const id of [content.parts.header, content.parts.footer]) {
     const [from, to] = [working.parts.blocks[id], content.parts.blocks[id]];
     if (from === undefined || to === undefined)
       throw new Error(`The header and footer keep their blocks, but ${id} is missing.`);
     contentOps("site", id, from, to).forEach(emit);
   }
-
-  // A collection goes after its entries, and comes before them.
-  const entriesFirst = (a: PageDocument, b: PageDocument) =>
-    Number(b.type === "entry") - Number(a.type === "entry");
-  for (const page of Object.values(working.pages).toSorted(entriesFirst))
-    if (!(page.id in content.pages)) emit({ op: "deletePage", page: page.id });
-  for (const target of Object.values(content.pages).toSorted((a, b) => entriesFirst(b, a))) {
+  for (const target of targets) {
     const current = working.pages[target.id];
-    if (current === undefined) {
-      addresses.push({ op: "createPage", page: target });
-      continue;
-    }
+    if (current === undefined) throw new Error(`Page ${target.id} wasn't created.`);
     if (current.status !== target.status)
       emit({ op: "setStatus", page: target.id, status: target.status ?? "published" });
     pageOps(target, () => working.pages[target.id] ?? current, emit);
@@ -152,16 +167,10 @@ export const rebaseOps = (
           : { op: "setMeta", page: target.id, field, value: to },
       );
     }
-    if (current.type === "entry" && target.type === "entry") {
-      if (current.slug !== target.slug)
-        addresses.push({ op: "setSlug", page: target.id, slug: target.slug });
-    } else if (current.type !== "entry" && target.type !== "entry" && current.path !== target.path)
-      addresses.push({ op: "setPath", page: target.id, path: target.path });
   }
-  const removedForms: ReadonlyArray<Op> = Object.keys(working.forms)
-    .filter((id) => !(id in content.forms))
-    .map((id) => ({ op: "removeForm", form: FormId.make(id) }));
-  return [...ops, ...addresses, ...removedForms];
+  for (const id of Object.keys(working.forms))
+    if (!(id in content.forms)) emit({ op: "removeForm", form: FormId.make(id) });
+  return ops;
 };
 
 const metaOf = (page: PageDocument): Readonly<Record<string, SetProp["value"]>> => page.meta;
