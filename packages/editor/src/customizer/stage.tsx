@@ -66,7 +66,8 @@ export function Stage(props: {
   return (
     <div
       ref={setBox}
-      className="relative flex min-h-80 w-full items-center justify-center"
+      // Its width comes from the page around it, never from the window it scales to fit.
+      className="relative flex min-h-80 w-full items-center justify-center [contain:inline-size]"
       data-pakshi-canvas-area
     >
       <div
