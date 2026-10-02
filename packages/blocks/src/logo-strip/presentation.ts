@@ -4,10 +4,10 @@ import type logoStrip from "./v1/index.tsx";
 export default {
   name: "Logos",
   summary: "Logos of partners or sponsors.",
-  hint: "Use each organisation's own logo, and describe it with the organisation's name.",
+  hint: "Use each organization's own logo, and describe it with the organization's name.",
   order: 110,
   variants: {
-    row: { label: "In a row", description: "Logos side by side, centred." },
+    row: { label: "In a row", description: "Logos side by side, centered." },
     grid: { label: "In a grid", description: "Logos in an even grid." },
   },
   lists: {

@@ -12,7 +12,7 @@ export default {
       description: "Logo on the left, with the menu and button on the right.",
     },
     centered: {
-      label: "Everything centred",
+      label: "Everything centered",
       description: "Logo in the middle, with the menu underneath.",
     },
   },
