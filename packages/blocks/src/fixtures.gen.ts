@@ -76,6 +76,11 @@ import location1placeholder from "./location/v1/fixtures/placeholder.json" with 
 import logoStrip1grid from "./logo-strip/v1/fixtures/grid.json" with { type: "json" };
 import logoStrip1placeholder from "./logo-strip/v1/fixtures/placeholder.json" with { type: "json" };
 import logoStrip1row from "./logo-strip/v1/fixtures/row.json" with { type: "json" };
+import logoStrip2grid from "./logo-strip/v2/fixtures/grid.json" with { type: "json" };
+import logoStrip2marquee from "./logo-strip/v2/fixtures/marquee.json" with { type: "json" };
+import logoStrip2placeholder from "./logo-strip/v2/fixtures/placeholder.json" with { type: "json" };
+import logoStrip2row from "./logo-strip/v2/fixtures/row.json" with { type: "json" };
+import logoStrip2split from "./logo-strip/v2/fixtures/split.json" with { type: "json" };
 import postHeader1cover from "./post-header/v1/fixtures/cover.json" with { type: "json" };
 import postHeader1placeholder from "./post-header/v1/fixtures/placeholder.json" with { type: "json" };
 import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { type: "json" };
@@ -190,6 +195,11 @@ export const fixtureFiles = [
   { type: "logo-strip", version: 1, name: "grid", fixture: logoStrip1grid },
   { type: "logo-strip", version: 1, name: "placeholder", fixture: logoStrip1placeholder },
   { type: "logo-strip", version: 1, name: "row", fixture: logoStrip1row },
+  { type: "logo-strip", version: 2, name: "grid", fixture: logoStrip2grid },
+  { type: "logo-strip", version: 2, name: "marquee", fixture: logoStrip2marquee },
+  { type: "logo-strip", version: 2, name: "placeholder", fixture: logoStrip2placeholder },
+  { type: "logo-strip", version: 2, name: "row", fixture: logoStrip2row },
+  { type: "logo-strip", version: 2, name: "split", fixture: logoStrip2split },
   { type: "post-header", version: 1, name: "cover", fixture: postHeader1cover },
   { type: "post-header", version: 1, name: "placeholder", fixture: postHeader1placeholder },
   { type: "post-header", version: 1, name: "simple", fixture: postHeader1simple },
