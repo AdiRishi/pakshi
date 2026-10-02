@@ -51,11 +51,15 @@ const colorDeclarations = (colors: SurfaceColors) => {
   ]);
 };
 
-const schemeRules = (scheme: SchemeColors, colorScheme: ColorScheme) =>
+/** The selector of the elements a surface re-scopes, inside `root` unless that's the page. */
+const surfaceSelector = (root: string, surface: string) =>
+  root === ":root" ? `[data-surface="${surface}"]` : `${root} [data-surface="${surface}"]`;
+
+const schemeRules = (scheme: SchemeColors, colorScheme: ColorScheme, root: string) =>
   [
-    `:root {\n  color-scheme: ${colorScheme};\n${colorDeclarations(scheme.default)}\n}`,
+    `${root} {\n  color-scheme: ${colorScheme};\n${colorDeclarations(scheme.default)}\n}`,
     ...(["default", "muted", "brand", "inverse"] as const).map(
-      (surface) => `[data-surface="${surface}"] {\n${colorDeclarations(scheme[surface])}\n}`,
+      (surface) => `${surfaceSelector(root, surface)} {\n${colorDeclarations(scheme[surface])}\n}`,
     ),
   ].join("\n");
 
@@ -63,15 +67,8 @@ const schemeRules = (scheme: SchemeColors, colorScheme: ColorScheme) =>
 export const themeFontFaces = (theme: ResolvedTheme) =>
   Array.from(new Set([theme.fonts.heading, theme.fonts.body]), fontFaces).join("\n");
 
-/**
- * The CSS variables a site's pages read for one resolved theme. Every site
- * shares one Tailwind build that maps these variables to utilities, so sites
- * differ only in these and their fonts.
- *
- * Pages follow the visitor's color scheme. Pass `scheme` to fix one instead,
- * as the editor's canvas does when someone switches between light and dark.
- */
-export const themeVariables = (theme: ResolvedTheme, scheme?: ColorScheme) => {
+/** The rules that set a theme's variables on `root` and the surfaces inside it. */
+const variableRules = (theme: ResolvedTheme, scheme: ColorScheme | undefined, root: string) => {
   const ratio = typeRatios[theme.typeScale];
   const density = densities[theme.density];
   const shared = declarations([
@@ -95,13 +92,33 @@ export const themeVariables = (theme: ResolvedTheme, scheme?: ColorScheme) => {
   const colors =
     scheme === undefined
       ? [
-          schemeRules(theme.colors.light, "light"),
-          `@media (prefers-color-scheme: dark) {\n${schemeRules(theme.colors.dark, "dark")}\n}`,
+          schemeRules(theme.colors.light, "light", root),
+          `@media (prefers-color-scheme: dark) {\n${schemeRules(theme.colors.dark, "dark", root)}\n}`,
         ]
-      : [schemeRules(theme.colors[scheme], scheme)];
-  return [`:root {\n${shared}\n}`, ...colors].join("\n");
+      : [schemeRules(theme.colors[scheme], scheme, root)];
+  return [`${root} {\n${shared}\n}`, ...colors].join("\n");
 };
+
+/**
+ * The CSS variables a site's pages read for one resolved theme. Every site
+ * shares one Tailwind build that maps these variables to utilities, so sites
+ * differ only in these and their fonts.
+ *
+ * Pages follow the visitor's color scheme. Pass `scheme` to fix one instead,
+ * as the editor's canvas does when someone switches between light and dark.
+ */
+export const themeVariables = (theme: ResolvedTheme, scheme?: ColorScheme) =>
+  variableRules(theme, scheme, ":root");
 
 /** A theme's whole CSS, as a page loads it: its fonts' faces and its variables. */
 export const themeCss = (theme: ResolvedTheme, scheme?: ColorScheme) =>
   `${themeFontFaces(theme)}\n${themeVariables(theme, scheme)}`;
+
+/**
+ * A theme's variables in one color scheme, set only inside the elements
+ * `scope` matches, so a page can show several themes side by side. Its
+ * surfaces are elements inside the scope with a `data-surface` attribute,
+ * as on a site's pages.
+ */
+export const scopedThemeVariables = (theme: ResolvedTheme, scheme: ColorScheme, scope: string) =>
+  variableRules(theme, scheme, scope);
