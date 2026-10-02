@@ -7,7 +7,7 @@ import type {
   PostMeta,
   Slug,
 } from "@repo/contracts/page";
-import { listingsOf } from "@repo/contracts/snapshot";
+import { listingOf, type PageListing } from "@repo/contracts/snapshot";
 
 import type { BlockContract } from "./contract.ts";
 import { collectionFor, placeholderTree, withCollections } from "./placeholders.ts";
@@ -171,13 +171,13 @@ const emptyPage = (recipe: Recipe, page: NewPage): PageDocument => {
 /**
  * A new page that a recipe makes, with `sections` or else the recipe's
  * required ones, each with its placeholder content. A listing among them
- * shows the collection `collectionFor` picks once the page is among
- * `pages`, so a new collection lists itself.
+ * shows the collection `collectionFor` picks once the page is among the
+ * site's `listings`, so a new collection lists itself.
  */
 export const pageFromRecipe = (input: {
   readonly recipe: Recipe;
   readonly contracts: ReadonlyMap<BlockType, BlockContract>;
-  readonly pages: Readonly<Record<PageId, PageDocument>>;
+  readonly listings: ReadonlyArray<PageListing>;
   readonly page: NewPage;
   readonly sections?: ReadonlyArray<BlockType>;
 }): PageDocument => {
@@ -186,7 +186,9 @@ export const pageFromRecipe = (input: {
     input.sections ??
     recipe.sections.filter((section) => section.required).map((section) => section.type);
   const empty = emptyPage(recipe, page);
-  const listings = listingsOf({ ...input.pages, [page.id]: empty });
+  // An entry is never the collection a listing shows, and its address needs its collection's.
+  const listings =
+    empty.type === "entry" ? input.listings : [...input.listings, listingOf({}, empty)];
   const sections = types.map((type) =>
     withCollections(placeholderTree(input.contracts, type), input.contracts, (kind) =>
       collectionFor(listings, page.id, kind),
