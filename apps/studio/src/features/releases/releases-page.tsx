@@ -32,7 +32,7 @@ import { formatDay, formatTime } from "@/lib/dates";
 
 import { DraftNameDialog } from "../drafts/draft-name-dialog";
 import { restoreRelease, rollBack } from "../sites/functions";
-import { siteDraftsQuery, siteReleasesQuery } from "../sites/queries";
+import { siteDraftsQuery, siteOverviewQuery, siteReleasesQuery } from "../sites/queries";
 import { SiteHeader } from "../sites/site-header";
 import { releaseNamed, releaseTitle } from "./describe";
 
@@ -78,6 +78,7 @@ export function ReleasesPage(props: { readonly viewer: Viewer; readonly site: Si
       await Promise.all([
         queryClient.invalidateQueries({ queryKey: siteReleasesQuery(props.site).queryKey }),
         queryClient.invalidateQueries({ queryKey: siteDraftsQuery(props.site).queryKey }),
+        queryClient.invalidateQueries({ queryKey: siteOverviewQuery(props.site).queryKey }),
       ]);
     },
     onError: (error) => toast.error(error.message),
@@ -85,12 +86,13 @@ export function ReleasesPage(props: { readonly viewer: Viewer; readonly site: Si
 
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={data.site}
-        section="releases"
-        description="Every publish is kept here. Roll back undoes the latest publish, and the release before it is live again within about a minute. To bring back an older release, restore it as a draft."
-      />
-      <div className="px-10 py-8">
+      <SiteHeader site={props.site} section="releases" />
+      <div className="flex flex-col gap-6 px-10 py-8">
+        <p className="max-w-prose text-secondary-foreground">
+          Every publish is kept here. Roll back undoes the latest publish, and the release before it
+          is live again within about a minute. To bring back an older release, restore it as a
+          draft.
+        </p>
         <Card className="gap-0 py-0">
           <CardContent className="px-0">
             <Table>

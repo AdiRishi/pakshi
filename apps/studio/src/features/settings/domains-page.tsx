@@ -52,6 +52,7 @@ import { toast } from "sonner";
 import { formatMoment } from "@/lib/dates";
 
 import { addDomain, checkDomains, getSiteDomains, removeDomain } from "../sites/functions";
+import { siteOverviewQuery } from "../sites/queries";
 import { SettingsShell } from "./settings-shell";
 
 export const siteDomainsQuery = (site: SiteId) =>
@@ -62,10 +63,16 @@ export const siteDomainsQuery = (site: SiteId) =>
 
 const decodeHostname = Schema.decodeOption(Hostname);
 
-/** Keeps a domains view the server sent, so the page shows it without asking again. */
+/**
+ * Keeps a domains view the server sent, so the page shows it without asking
+ * again, and has the overview above it look again for the site's address.
+ */
 const useSaved = (site: SiteId) => {
   const queryClient = useQueryClient();
-  return (view: SiteDomainsView) => queryClient.setQueryData(siteDomainsQuery(site).queryKey, view);
+  return (view: SiteDomainsView) => {
+    queryClient.setQueryData(siteDomainsQuery(site).queryKey, view);
+    return queryClient.invalidateQueries({ queryKey: siteOverviewQuery(site).queryKey });
+  };
 };
 
 function AddDomainDialog(props: { readonly site: SiteId }) {
@@ -78,10 +85,10 @@ function AddDomainDialog(props: { readonly site: SiteId }) {
   const add = useMutation({
     mutationFn: (hostname: Hostname) => addDomain({ data: { site: props.site, hostname } }),
     onSuccess: (view) => {
-      saved(view);
       setOpen(false);
       setTyped("");
       setTried(false);
+      return saved(view);
     },
   });
   return (
@@ -163,13 +170,13 @@ function FinishConnecting(props: {
   const check = useMutation({
     mutationFn: () => checkDomains({ data: { site: props.site } }),
     onSuccess: (view) => {
-      saved(view);
       const now = view.domains.find((domain) => domain.hostname === props.domain.hostname);
       if (now?.status === "active") toast.success(`${props.domain.hostname} is connected`);
       else
         toast.info("Not yet", {
           description: "The records aren't there yet. DNS can take a while.",
         });
+      return saved(view);
     },
     onError: (error) => toast.error(error.message),
   });
@@ -235,8 +242,8 @@ export function DomainsPage(props: { readonly viewer: Viewer; readonly site: Sit
   const remove = useMutation({
     mutationFn: (hostname: string) => removeDomain({ data: { site: props.site, hostname } }),
     onSuccess: (view) => {
-      saved(view);
       setRemoving(null);
+      return saved(view);
     },
     onError: (error) => toast.error(error.message),
   });

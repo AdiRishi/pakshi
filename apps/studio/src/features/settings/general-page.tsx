@@ -27,7 +27,7 @@ import { toast } from "sonner";
 import { siteMediaSrc } from "../media/addresses";
 import { LibraryPicker } from "../media/library-picker";
 import { saveSiteSettings } from "../sites/functions";
-import { siteSettingsQuery } from "../sites/queries";
+import { siteOverviewQuery, siteSettingsQuery } from "../sites/queries";
 import { DeleteSiteCard } from "./delete-site";
 import { SettingsShell } from "./settings-shell";
 
@@ -57,6 +57,7 @@ function GeneralSettings(props: { readonly viewer: Viewer; readonly view: SiteSe
       toast.success("Settings saved", {
         description: "They reach the live site with its next publish.",
       });
+      return queryClient.invalidateQueries({ queryKey: siteOverviewQuery(view.site.id).queryKey });
     },
     onError: (error) => toast.error(error.message),
   });

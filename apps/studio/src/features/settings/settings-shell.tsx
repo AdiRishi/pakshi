@@ -28,11 +28,7 @@ export function SettingsShell(props: {
 }) {
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={props.site}
-        section="settings"
-        description="How the site runs, apart from what's in its drafts."
-      />
+      <SiteHeader site={props.site.id} section="settings" />
       <div className="grid gap-8 px-10 py-8 lg:grid-cols-[12rem_1fr]">
         <nav aria-label="Settings" className="flex flex-col gap-1">
           {pages.map((page) => (

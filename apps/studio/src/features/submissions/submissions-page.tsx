@@ -79,17 +79,10 @@ const answersOf = (entry: FormEntry) =>
     .join(" · ");
 
 /** Who may see a site's form entries, for someone who may not. */
-export function NoSubmissionsAccess(props: {
-  readonly viewer: Viewer;
-  readonly site: { readonly id: SiteId; readonly name: string };
-}) {
+export function NoSubmissionsAccess(props: { readonly viewer: Viewer; readonly site: SiteId }) {
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={props.site}
-        section="submissions"
-        description="What visitors send with the site's forms."
-      />
+      <SiteHeader site={props.site} section="submissions" />
       <Empty className="px-10 py-16">
         <EmptyHeader>
           <EmptyTitle>You can't see this site's form entries</EmptyTitle>
@@ -112,11 +105,7 @@ export function SubmissionsPage(props: {
   const form = data.forms.find((candidate) => candidate.id === props.place.form) ?? data.forms[0];
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={data.site}
-        section="submissions"
-        description="What visitors send with the site's forms. Pakshi's agent never reads them."
-      />
+      <SiteHeader site={props.site} section="submissions" />
       {form === undefined ? (
         <Empty className="px-10 py-16">
           <EmptyHeader>
@@ -127,40 +116,45 @@ export function SubmissionsPage(props: {
           </EmptyHeader>
         </Empty>
       ) : (
-        <div className="grid gap-8 px-10 py-8 lg:grid-cols-[16rem_1fr]">
-          <nav aria-label="Forms" className="flex flex-col gap-1">
-            {data.forms.map((candidate) => (
-              <Link
-                key={candidate.id}
-                to="/sites/$siteId/submissions"
-                params={{ siteId: props.site }}
-                search={{ form: candidate.id }}
-                aria-current={candidate.id === form.id ? "page" : undefined}
-                className={buttonVariants({
-                  variant: "ghost",
-                  className:
-                    "h-auto flex-col items-start gap-0.5 py-2 aria-[current=page]:bg-accent",
-                })}
-              >
-                <span className="font-medium">{candidate.name}</span>
-                <span className="text-xs font-normal text-muted-foreground">
-                  {countOf(candidate)}
-                </span>
-              </Link>
-            ))}
-            <p className="mt-4 text-xs text-muted-foreground">
-              Forms are edited in drafts. Where new entries are emailed is set in the site's{" "}
-              <Link
-                to="/sites/$siteId/settings/forms"
-                params={{ siteId: props.site }}
-                className="underline underline-offset-4"
-              >
-                settings
-              </Link>
-              .
-            </p>
-          </nav>
-          <FormEntries view={data} form={form} place={props.place} />
+        <div className="flex flex-col gap-6 px-10 py-8">
+          <p className="max-w-prose text-secondary-foreground">
+            What visitors send with the site's forms. Pakshi's agent never reads them.
+          </p>
+          <div className="grid gap-8 lg:grid-cols-[16rem_1fr]">
+            <nav aria-label="Forms" className="flex flex-col gap-1">
+              {data.forms.map((candidate) => (
+                <Link
+                  key={candidate.id}
+                  to="/sites/$siteId/submissions"
+                  params={{ siteId: props.site }}
+                  search={{ form: candidate.id }}
+                  aria-current={candidate.id === form.id ? "page" : undefined}
+                  className={buttonVariants({
+                    variant: "ghost",
+                    className:
+                      "h-auto flex-col items-start gap-0.5 py-2 aria-[current=page]:bg-accent",
+                  })}
+                >
+                  <span className="font-medium">{candidate.name}</span>
+                  <span className="text-xs font-normal text-muted-foreground">
+                    {countOf(candidate)}
+                  </span>
+                </Link>
+              ))}
+              <p className="mt-4 text-xs text-muted-foreground">
+                Forms are edited in drafts. Where new entries are emailed is set in the site's{" "}
+                <Link
+                  to="/sites/$siteId/settings/forms"
+                  params={{ siteId: props.site }}
+                  className="underline underline-offset-4"
+                >
+                  settings
+                </Link>
+                .
+              </p>
+            </nav>
+            <FormEntries view={data} form={form} place={props.place} />
+          </div>
         </div>
       )}
       {props.place.entry !== null && (

@@ -8,16 +8,18 @@ import {
   BreadcrumbSeparator,
 } from "@repo/ui/components/breadcrumb";
 import { buttonVariants } from "@repo/ui/components/button";
+import { useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import type { ReactNode } from "react";
 
-/** A site's name, what it's showing, and links to the site's sections. */
+import { siteOverviewQuery } from "./queries";
+import { SiteOverviewPanel } from "./site-overview";
+
+/** The top of every site page: where the site is and what's live, over links to its tabs. */
 export function SiteHeader(props: {
-  readonly site: { readonly id: SiteId; readonly name: string };
+  readonly site: SiteId;
   readonly section: "drafts" | "releases" | "submissions" | "media" | "blocks" | "settings";
-  readonly description: string;
-  readonly actions?: ReactNode;
 }) {
+  const { data } = useSuspenseQuery(siteOverviewQuery(props.site));
   const sections = [
     { key: "drafts", label: "Drafts", to: "/sites/$siteId" },
     { key: "releases", label: "Releases", to: "/sites/$siteId/releases" },
@@ -27,7 +29,7 @@ export function SiteHeader(props: {
     { key: "settings", label: "Settings", to: "/sites/$siteId/settings" },
   ] as const;
   return (
-    <header className="flex flex-col gap-3 bg-accent px-10 pt-6">
+    <header className="flex flex-col gap-6 bg-accent px-10 pt-6">
       <Breadcrumb>
         <BreadcrumbList>
           <BreadcrumbItem>
@@ -35,21 +37,17 @@ export function SiteHeader(props: {
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage>{props.site.name}</BreadcrumbPage>
+            <BreadcrumbPage>{data.site.name}</BreadcrumbPage>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
-      <div className="flex flex-wrap items-center gap-4">
-        <h1 className="text-3xl font-semibold tracking-tight">{props.site.name}</h1>
-        <div className="ml-auto flex items-center gap-2">{props.actions}</div>
-      </div>
-      <p className="text-secondary-foreground">{props.description}</p>
-      <nav aria-label="Site sections" className="flex gap-1">
+      <SiteOverviewPanel overview={data} />
+      <nav aria-label="Site sections" className="flex flex-wrap gap-1">
         {sections.map((section) => (
           <Link
             key={section.key}
             to={section.to}
-            params={{ siteId: props.site.id }}
+            params={{ siteId: props.site }}
             // Link marks every link to a page above this one current too.
             activeOptions={{ exact: true }}
             aria-current={section.key === props.section ? "page" : undefined}

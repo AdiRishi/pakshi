@@ -122,12 +122,11 @@ export function SiteBlocksPage(props: { readonly viewer: Viewer; readonly site: 
   const upgrades = data.blocks.filter(behind);
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={data.site}
-        section="blocks"
-        description="This site stays on these block versions until an upgrade draft publishes."
-      />
+      <SiteHeader site={props.site} section="blocks" />
       <div className="flex flex-col gap-6 px-10 py-8">
+        <p className="max-w-prose text-secondary-foreground">
+          This site stays on these block versions until an upgrade draft publishes.
+        </p>
         {upgrades.map((block) => (
           <Alert key={block.type}>
             <SparklesIcon />

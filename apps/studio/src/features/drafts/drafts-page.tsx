@@ -48,7 +48,7 @@ import { previewPath } from "@/features/preview/address";
 import { formatDay, formatMoment } from "@/lib/dates";
 
 import { closeDraft, createDraft, renameDraft } from "../sites/functions";
-import { siteDraftsQuery } from "../sites/queries";
+import { siteDraftsQuery, siteOverviewQuery } from "../sites/queries";
 import { SiteHeader } from "../sites/site-header";
 import { DraftNameDialog } from "./draft-name-dialog";
 
@@ -236,7 +236,10 @@ export function DraftsPage(props: { readonly viewer: Viewer; readonly site: Site
   const open = data.drafts.filter((draft) => draft.status === "open");
   const closed = data.drafts.filter((draft) => draft.status !== "open");
   const refresh = () =>
-    queryClient.invalidateQueries({ queryKey: siteDraftsQuery(props.site).queryKey });
+    Promise.all([
+      queryClient.invalidateQueries({ queryKey: siteDraftsQuery(props.site).queryKey }),
+      queryClient.invalidateQueries({ queryKey: siteOverviewQuery(props.site).queryKey }),
+    ]);
 
   const close = useMutation({
     mutationFn: (draft: DraftId) => closeDraft({ data: { site: props.site, draft } }),
@@ -244,25 +247,25 @@ export function DraftsPage(props: { readonly viewer: Viewer; readonly site: Site
     onError: (error) => toast.error(error.message),
   });
 
-  const newDraft = (
-    <Button onClick={() => setCreating(true)}>
-      <PlusIcon />
-      New draft
-    </Button>
-  );
-
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={data.site}
-        section="drafts"
-        description="Each draft is a separate set of changes. When one goes live, the others update to include it."
-        actions={newDraft}
-      />
+      <SiteHeader site={props.site} section="drafts" />
       <div className="flex flex-col gap-6 px-10 py-8">
-        <h2 className="text-xl font-semibold">
-          {open.length === 1 ? "1 open draft" : `${open.length} open drafts`}
-        </h2>
+        <div className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-xl font-semibold">
+              {open.length === 1 ? "1 open draft" : `${open.length} open drafts`}
+            </h2>
+            <p className="text-secondary-foreground">
+              Each draft is a separate set of changes. When one goes live, the others update to
+              include it.
+            </p>
+          </div>
+          <Button onClick={() => setCreating(true)}>
+            <PlusIcon />
+            New draft
+          </Button>
+        </div>
         <Card className="gap-0 py-0">
           <CardContent className="px-0">
             {open.length === 0 ? (

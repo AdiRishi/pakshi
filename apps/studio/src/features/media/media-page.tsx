@@ -198,12 +198,11 @@ export function MediaPage(props: { readonly viewer: Viewer; readonly site: SiteI
     void queryClient.invalidateQueries({ queryKey: mediaLibraryQuery(props.site).queryKey });
   return (
     <AppShell viewer={props.viewer}>
-      <SiteHeader
-        site={data.site}
-        section="media"
-        description="Images this site's pages can show, from its own library and its brand's."
-      />
+      <SiteHeader site={props.site} section="media" />
       <div className="flex flex-col gap-6 px-10 py-8">
+        <p className="max-w-prose text-secondary-foreground">
+          Images this site's pages can show, from its own library and its brand's.
+        </p>
         <div className="flex flex-wrap items-center gap-4">
           <ToggleGroup
             aria-label="Library"

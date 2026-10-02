@@ -14,7 +14,7 @@ export const Route = createFileRoute("/_authed/sites/$siteId/submissions/")({
     const { siteId } = Route.useParams();
     const search = Route.useSearch();
     const { forbidden } = Route.useLoaderData();
-    if (forbidden !== null) return <NoSubmissionsAccess viewer={viewer} site={forbidden} />;
+    if (forbidden) return <NoSubmissionsAccess viewer={viewer} site={siteId} />;
     return (
       <SubmissionsPage
         viewer={viewer}
