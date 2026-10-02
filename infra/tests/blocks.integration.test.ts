@@ -249,6 +249,13 @@ for (const scheme of ["light", "dark"] as const) {
             : index === site.fixtures.length - 1
               ? page.locator("body > footer")
               : sections.nth(index - 1);
+        // Where a part's edges fall between pixels sets its screenshot's size, so each part
+        // is shown alone at the top of the page, where the fixtures above it can't move it.
+        await part.evaluate((shown) => {
+          for (const element of document.querySelectorAll<HTMLElement>("body > *, body > main > *"))
+            if (element.contains(shown)) element.style.removeProperty("display");
+            else element.style.setProperty("display", "none");
+        });
         await expect(item ? part.locator("li").first() : part).toHaveScreenshot(`${name}.png`, {
           animations: "disabled",
         });
