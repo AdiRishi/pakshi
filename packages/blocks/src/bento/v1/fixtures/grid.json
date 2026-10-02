@@ -1,0 +1,102 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "actions": [
+      {
+        "id": "it_programme",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "align": "start",
+    "background": "full",
+    "kicker": "The summer school",
+    "heading": "Everything in one week.",
+    "headingRest": "Workshops, mentors, lunch and time on the water."
+  },
+  "slots": {
+    "tiles": [
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "large",
+          "media": "cover",
+          "tone": "inverse",
+          "kicker": "The week",
+          "title": "Five days, one boat, and the tide to launch it on.",
+          "body": "Build a clinker dinghy from the keel up, then sail it on Friday.",
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "Two sailing boats on a calm harbour at sunset"
+          }
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "small",
+          "media": "bottom",
+          "tone": "brand",
+          "icon": "users",
+          "title": "One mentor for every six students"
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "small",
+          "media": "bottom",
+          "tone": "default",
+          "icon": "utensils",
+          "title": "Lunch on the quay",
+          "body": "Hot food every day, with vegetarian and vegan options."
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "wide",
+          "media": "bottom",
+          "tone": "muted",
+          "title": "Find us at North Quay",
+          "body": "Ten minutes on foot from the station, with parking by the slipway.",
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleMap",
+            "alt": "A map of North Quay, with the boatshed marked"
+          },
+          "link": {
+            "label": "Directions",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          }
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "small",
+          "media": "bottom",
+          "tone": "tint",
+          "icon": "award",
+          "title": "A certificate to keep",
+          "body": "Proof of the skills you learned."
+        }
+      }
+    ]
+  }
+}

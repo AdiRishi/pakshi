@@ -4,6 +4,8 @@ import type { BlockDefinition } from "./block.tsx";
 export const registry: Readonly<
   Record<string, () => Promise<{ readonly default: BlockDefinition }>>
 > = {
+  "bento@1": () => import("./bento/v1/index.tsx"),
+  "bento-tile@1": () => import("./bento-tile/v1/index.tsx"),
   "call-to-action@1": () => import("./call-to-action/v1/index.tsx"),
   "call-to-action@2": () => import("./call-to-action/v2/index.tsx"),
   "contact-details@1": () => import("./contact-details/v1/index.tsx"),
