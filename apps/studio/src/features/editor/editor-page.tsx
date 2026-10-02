@@ -15,7 +15,9 @@ import {
   useDraftClosure,
   useEditorStatus,
   useOutdated,
+  usePage,
   usePageTitle,
+  useShowBlock,
   useToolbarCommands,
 } from "@repo/editor";
 import {
@@ -42,7 +44,6 @@ import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@repo/ui/components/tooltip";
 import { queryOptions, useSuspenseQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { cn } from "cn";
 import {
   CircleAlertIcon,
   CircleCheckIcon,
@@ -55,14 +56,15 @@ import {
   SunIcon,
   TabletIcon,
 } from "lucide-react";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
 import { ChatPanel } from "@/features/agent/chat-panel";
+import { Conversation } from "@/features/agent/conversation";
 import { standing } from "@/features/approvals/describe";
 import { ChecksButton } from "@/features/checks/checks-button";
-import { ChecksPanel } from "@/features/checks/checks-panel";
+import type { ShownBlock } from "@/features/checks/issues";
 import { DraftActions } from "@/features/drafts/draft-actions";
 import { uploadImage } from "@/features/media/upload";
 import { draftImage } from "@/features/preview/address";
@@ -109,7 +111,7 @@ interface DraftContext {
 
 type OpenedReady = Extract<OpenedDraft, { _tag: "Ready" }>;
 
-function Header(props: DraftContext) {
+function Header(props: DraftContext & { readonly checks: ReactNode }) {
   const status = useEditorStatus();
   const title = usePageTitle();
   const behind = useBehind();
@@ -170,7 +172,7 @@ function Header(props: DraftContext) {
       )}
       <div className="ml-auto flex items-center gap-3">
         <EditorParticipants />
-        <ChecksButton site={props.site.id} draft={props.draft.id} />
+        {props.checks}
         <DraftActions
           site={props.site.id}
           draft={props.draft}
@@ -340,6 +342,24 @@ function CanvasToolbar(props: {
   );
 }
 
+/**
+ * Selects the block or field the editor was opened to show, such as an issue
+ * the checks found on this page, then lets the address forget it.
+ */
+function ShowOnOpen(props: { readonly show: ShownBlock | null; readonly onShown: () => void }) {
+  const page = usePage();
+  const showBlock = useShowBlock();
+  const shown = useRef<ShownBlock | null>(null);
+  const { show, onShown } = props;
+  useEffect(() => {
+    if (show === null || shown.current === show) return;
+    shown.current = show;
+    showBlock(page, show.block, show.path);
+    onShown();
+  }, [show, page, showBlock, onShown]);
+  return null;
+}
+
 /** Studio's editor screen: the page in the canvas and the settings panel beside it. */
 export function EditorPage(props: {
   readonly site: SiteId;
@@ -347,8 +367,9 @@ export function EditorPage(props: {
   readonly page: PageId;
   readonly person: Collaborator;
   readonly opened: OpenedReady;
-  /** The issue the checks panel is on, "" when it's open on none, or null when it's closed. */
-  readonly checks: string | null;
+  /** The block or field to select once the page opens, or null for none. */
+  readonly show: ShownBlock | null;
+  readonly onShown: () => void;
 }) {
   const data = props.opened;
   const { data: definitions } = useSuspenseQuery(blocksQuery(data.draft.lockfile));
@@ -358,6 +379,16 @@ export function EditorPage(props: {
   const [connection] = useState(() => liveConnection(props.site, props.draft));
   const [mediaSrc] = useState(() => draftImage(props.site, props.draft));
   const [submitting, setSubmitting] = useState(false);
+  const [conversation] = useState(
+    () =>
+      new Conversation({
+        site: props.site,
+        draft: props.draft,
+        onNotice: (message) => toast.info(message),
+      }),
+  );
+  useEffect(() => conversation.connect(), [conversation]);
+  const [beside, setBeside] = useState<"agent" | "outline">("agent");
   const context: DraftContext = {
     person: props.person,
     submitting,
@@ -389,28 +420,30 @@ export function EditorPage(props: {
       onNotice={showNotice}
     >
       <div className="flex h-screen flex-col">
-        <Header {...context} />
+        <Header
+          {...context}
+          checks={
+            <ChecksButton
+              site={props.site}
+              draft={props.draft}
+              contracts={definitions}
+              conversation={conversation}
+              onShowPakshi={() => setBeside("agent")}
+            />
+          }
+        />
         <DraftStanding {...context} />
+        <ShowOnOpen show={props.show} onShown={props.onShown} />
         <div className="flex min-h-0 flex-1">
-          {props.checks !== null && (
-            <aside aria-label="Checks" className="flex w-80 shrink-0 flex-col border-r bg-card">
-              <ChecksPanel
-                site={props.site}
-                draft={context.draft}
-                current={props.checks}
-                onSubmit={() => setSubmitting(true)}
-              />
-            </aside>
-          )}
           <aside
             aria-label="Assistant and outline"
-            // Hidden rather than gone, so the conversation keeps its place.
-            className={cn(
-              "w-80 shrink-0 flex-col border-r bg-card",
-              props.checks === null ? "flex" : "hidden",
-            )}
+            className="flex w-80 shrink-0 flex-col border-r bg-card"
           >
-            <Tabs defaultValue="agent" className="min-h-0 flex-1 gap-0">
+            <Tabs
+              value={beside}
+              onValueChange={(value: "agent" | "outline") => setBeside(value)}
+              className="min-h-0 flex-1 gap-0"
+            >
               <TabsList variant="line" className="w-full shrink-0 justify-start border-b px-3">
                 <TabsTrigger value="agent" className="flex-none">
                   <SparklesIcon />
@@ -429,6 +462,7 @@ export function EditorPage(props: {
                 <ChatPanel
                   site={props.site}
                   draft={context.draft}
+                  conversation={conversation}
                   onSubmit={() => setSubmitting(true)}
                 />
               </TabsContent>

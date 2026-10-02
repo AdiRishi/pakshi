@@ -245,6 +245,7 @@ stateDiagram-v2
 - If another draft publishes during review, the submission is updated automatically. A clean merge keeps its approvals. A merge with conflicts sends the submission back to its draft, and submitting again restarts the workflow.
 - A submission publishes only if it's based on the current live release, so a final approval can never overwrite a release that went live during review.
 - A draft must pass its checks before it is submitted: no placeholders left, every required field filled and at its minimum length, alt text on every meaningful image, page title and description set, no broken internal links, form notification address set.
+- The editor's top bar lists what the checks find, and each issue goes to where it's fixed. The agent can be asked to fix them all. It fixes what it can and says what's left: choosing an image, alt text and where form entries go are always the person's.
 - A publish is live worldwide within about a minute. Every release is kept.
 - Rollback without approval undoes only the most recent publish, and takes about a minute. An older release comes back only as a draft, through the site's workflow, and only while its block versions and media are still kept.
 

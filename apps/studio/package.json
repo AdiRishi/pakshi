@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit && tsc --noEmit -p tests"
   },
   "dependencies": {
+    "@repo/agent": "workspace:*",
     "@repo/blocks": "workspace:*",
     "@repo/brand": "workspace:*",
     "@repo/contracts": "workspace:*",

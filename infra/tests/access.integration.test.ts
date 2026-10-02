@@ -98,9 +98,9 @@ test("an org admin shapes who can do what, and every screen for it meets WCAG 2.
   await request.getByRole("button", { name: "Send request" }).click();
   await expect(sam.getByText("A countdown to the reading challenge.")).toBeVisible();
 
-  // The new page's checks, beside the canvas.
+  // The new page's checks, from the editor's top bar.
   await openHome(sam, draft);
-  await sam.getByRole("link", { name: /to fix|Checks pass/ }).click();
-  await expect(sam.getByRole("complementary", { name: "Checks" })).toBeVisible();
+  await sam.getByRole("button", { name: /to fix|Checks pass/ }).click();
+  await expect(sam.getByRole("dialog", { name: /to fix|passes its checks/ })).toBeVisible();
   expect(await violations(sam)).toEqual([]);
 });

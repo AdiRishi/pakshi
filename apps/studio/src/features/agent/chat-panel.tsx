@@ -36,7 +36,7 @@ import {
 import { useEffect, useId, useRef, useState, useSyncExternalStore } from "react";
 import { toast } from "sonner";
 
-import { Conversation } from "./conversation";
+import { type Conversation, isWorking } from "./conversation";
 import { TurnView } from "./turn-view";
 
 /** The file types Pakshi reads, for the file picker. */
@@ -49,18 +49,11 @@ const accepted = ".pdf,.docx,.txt,.md,.csv,.html";
 export function ChatPanel(props: {
   readonly site: SiteId;
   readonly draft: { readonly id: DraftId; readonly name: string };
+  readonly conversation: Conversation;
   /** Opens the submit dialog, which a person uses to submit. */
   readonly onSubmit: () => void;
 }) {
-  const [conversation] = useState(
-    () =>
-      new Conversation({
-        site: props.site,
-        draft: props.draft.id,
-        onNotice: (message) => toast.info(message),
-      }),
-  );
-  useEffect(() => conversation.connect(), [conversation]);
+  const { conversation } = props;
   const state = useSyncExternalStore(conversation.subscribe, conversation.getState);
   const page = usePage();
   const selected = useSelected();
@@ -73,7 +66,7 @@ export function ChatPanel(props: {
   const fileInput = useRef<HTMLInputElement>(null);
   const end = useRef<HTMLDivElement>(null);
   const inputId = useId();
-  const working = state.turns.some((turn) => turn.status === "working");
+  const working = isWorking(state);
   const last = state.turns.at(-1);
 
   // Keep the newest of the conversation in view as it streams.
