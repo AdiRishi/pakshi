@@ -21,4 +21,5 @@ export const defaultTheme: ThemeValues = {
   width: "regular",
   imageCorners: "rounded",
   motion: true,
+  lines: false,
 };

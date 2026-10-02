@@ -179,6 +179,7 @@ test("a theme saved in the first schema reads in the current one, looking as it 
     width: "regular",
     imageCorners: "square",
     motion: false,
+    lines: false,
   });
 });
 

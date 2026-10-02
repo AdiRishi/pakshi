@@ -458,6 +458,14 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
               onChange={(value) => set("width", value)}
             />
           </Section>
+          <Section title="Lines">
+            <Toggle
+              label="Rule the page: thin lines down its sides and between sections"
+              checked={theme.lines}
+              disabled={disabled}
+              onChange={(lines) => set("lines", lines)}
+            />
+          </Section>
           <Section title="Imagery">
             <Choice
               label="Image corners"
@@ -471,7 +479,8 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
             title="Motion"
             description="Visitors who ask their device for less motion never see it."
           >
-            <Motion
+            <Toggle
+              label="Fade sections in as visitors scroll"
               checked={theme.motion}
               disabled={disabled}
               onChange={(motion) => set("motion", motion)}
@@ -574,7 +583,9 @@ function AccentColor(props: {
   );
 }
 
-function Motion(props: {
+/** A setting that's on or off. */
+function Toggle(props: {
+  readonly label: string;
   readonly checked: boolean;
   readonly disabled: boolean;
   readonly onChange: (checked: boolean) => void;
@@ -582,7 +593,7 @@ function Motion(props: {
   const id = useId();
   return (
     <Field orientation="horizontal" className="justify-between">
-      <FieldLabel htmlFor={id}>Fade sections in as visitors scroll</FieldLabel>
+      <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
       <Switch
         id={id}
         checked={props.checked}

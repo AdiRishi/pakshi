@@ -101,6 +101,8 @@ const styleFields = {
   width: Schema.Literals(["narrow", "regular", "wide"]),
   imageCorners: Schema.Literals(["square", "rounded", "extra-rounded"]),
   motion: Schema.Boolean,
+  /** Thin lines down the content's sides and between sections, like a ruled sheet. */
+  lines: Schema.Boolean,
 };
 
 /**
@@ -142,6 +144,7 @@ export const upgradeStyle = ({ shadow, ...style }: FirstStyle) => ({
   buttons: "rounded" as const,
   cards: shadow === "flat" ? ("outline" as const) : ("raised" as const),
   width: "regular" as const,
+  lines: false,
 });
 
 const FirstThemeValues = Schema.Struct({

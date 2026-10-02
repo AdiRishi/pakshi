@@ -19,6 +19,7 @@ export const themes = {
     width: "wide",
     imageCorners: "rounded",
     motion: true,
+    lines: false,
   },
   luxury: {
     brandColor: "#5b4636",
@@ -37,6 +38,7 @@ export const themes = {
     width: "regular",
     imageCorners: "square",
     motion: true,
+    lines: false,
   },
   museum: {
     brandColor: "#6b1f1f",
@@ -55,6 +57,7 @@ export const themes = {
     width: "regular",
     imageCorners: "square",
     motion: false,
+    lines: false,
   },
   friendly: {
     brandColor: "#0061ef",
@@ -73,6 +76,7 @@ export const themes = {
     width: "wide",
     imageCorners: "extra-rounded",
     motion: true,
+    lines: false,
   },
   nonprofit: {
     brandColor: "#1d4ed8",
@@ -91,6 +95,7 @@ export const themes = {
     width: "regular",
     imageCorners: "rounded",
     motion: true,
+    lines: false,
   },
   editorial: {
     brandColor: "#111111",
@@ -109,5 +114,6 @@ export const themes = {
     width: "wide",
     imageCorners: "rounded",
     motion: true,
+    lines: true,
   },
 } as const satisfies Record<string, ThemeValues>;

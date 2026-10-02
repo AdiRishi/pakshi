@@ -42,6 +42,10 @@
   --text-display: var(--theme-text-display);
   --text-display--line-height: 1.02;
   --text-display--letter-spacing: var(--theme-tracking-display);
+  /* Display type in half a page's width, where the largest scales would crowd it. */
+  --text-display-half: min(var(--theme-text-display), 4.5rem);
+  --text-display-half--line-height: 1.04;
+  --text-display-half--letter-spacing: var(--theme-tracking-display);
   --text-jumbo: var(--theme-text-jumbo);
   --text-jumbo--line-height: 0.95;
   --text-jumbo--letter-spacing: var(--theme-tracking-display);

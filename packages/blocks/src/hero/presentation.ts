@@ -28,23 +28,10 @@ export default {
       description: "A photo fills one half, and your words sit on a block of color in the other.",
     },
   },
-  retiredVariants: {
-    centered: {
-      label: "Text in the middle",
-      description: "Your words in the middle, with a photo underneath if you want one.",
-    },
-    "split-image": {
-      label: "Text beside a photo",
-      description: "Your words on one side and a photo on the other.",
-    },
-    "full-bleed": {
-      label: "Text over a photo",
-      description: "Your words sit in a box on top of a big photo.",
-    },
-  },
   lists: {
     actions: { singular: "button", plural: "buttons", titleField: "button" },
     points: { singular: "point", plural: "points", titleField: "point" },
+    proofImages: { singular: "photo", plural: "photos", titleField: "photo" },
   },
   choices: {
     align: {
@@ -60,11 +47,19 @@ export default {
       layouts: ["cover", "panel"],
     },
     frame: {
-      options: { plain: "Plain", framed: "Framed" },
+      options: { plain: "Plain", framed: "On a tray", browser: "Browser window", phone: "Phone" },
       layouts: ["stacked", "split", "editorial"],
     },
     backdrop: {
-      options: { none: "None", glow: "Glow", grid: "Grid", dots: "Dots" },
+      options: {
+        none: "None",
+        glow: "Glow",
+        arc: "Rising glow",
+        grid: "Grid",
+        dots: "Dots",
+        stripes: "Stripes",
+        noise: "Grain",
+      },
       layouts: ["stacked", "split", "editorial"],
     },
   },
@@ -82,6 +77,12 @@ export default {
     },
     body: { hint: "A sentence or two" },
     "points.point": { hint: "Like No experience needed" },
+    signup: {
+      label: "Sign-up form",
+      hint: "Shown in one row in place of the buttons, for an email sign-up",
+    },
+    proof: { hint: "Like Loved by 2,000 sailors since 2019" },
+    "proofImages.photo": { hint: "A face of someone who came" },
     image: { label: "Photo" },
   },
   needs: {

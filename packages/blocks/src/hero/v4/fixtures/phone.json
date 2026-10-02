@@ -1,0 +1,74 @@
+{
+  "variant": "split",
+  "surface": "default",
+  "props": {
+    "badge": "New: the 2027 programme",
+    "heading": "The school in your pocket.",
+    "headingRest": "One app for the week.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Check the day's plan, book a boat for the afternoon and message your mentor from the harbour."
+            }
+          ]
+        }
+      ]
+    },
+    "actions": [],
+    "points": [],
+    "signup": {
+      "$ref": "form",
+      "id": "frm_newsletter"
+    },
+    "proof": "Joined by 2,000 students since 2019",
+    "proofImages": [
+      {
+        "id": "it_tom",
+        "photo": {
+          "$ref": "media",
+          "id": "med_sampleTom",
+          "alt": "Tom"
+        }
+      },
+      {
+        "id": "it_mei",
+        "photo": {
+          "$ref": "media",
+          "id": "med_sampleMei",
+          "alt": "Mei"
+        }
+      },
+      {
+        "id": "it_dan",
+        "photo": {
+          "$ref": "media",
+          "id": "med_sampleDan",
+          "alt": "Dan"
+        }
+      },
+      {
+        "id": "it_asha",
+        "photo": {
+          "$ref": "media",
+          "id": "med_sampleAsha",
+          "alt": "Asha"
+        }
+      }
+    ],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "The school's app showing today's timetable"
+    },
+    "align": "start",
+    "mediaSide": "end",
+    "height": "auto",
+    "frame": "phone",
+    "backdrop": "arc"
+  }
+}

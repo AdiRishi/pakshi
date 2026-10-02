@@ -14,6 +14,7 @@ export interface IntroContent {
 const headingSizes = {
   jumbo: "text-jumbo",
   display: "text-display",
+  "display-half": "text-display-half",
   title: "text-title",
   heading: "text-heading",
 } as const;

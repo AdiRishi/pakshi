@@ -252,6 +252,7 @@ const variableRules = (theme: ResolvedTheme, scheme: ColorScheme | undefined, ro
     ["theme-width", widths[theme.width]],
     ["theme-motion-duration", theme.motion ? "180ms" : "0ms"],
     ["theme-animation", theme.motion ? "running" : "paused"],
+    ["theme-lines", theme.lines ? "1px" : "0px"],
     ["theme-section-entrance", theme.motion ? "pakshi-section-entrance" : "none"],
   ]);
   const fixed = fixedScheme(theme) ?? scheme;

@@ -1,9 +1,10 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Media, RichText, Text, useHref } from "../../components.tsx";
-import { choice, cta, link, list, media, optional, richText, text } from "../../fields.ts";
+import { FormView, Media, RichText, Text, useHref } from "../../components.tsx";
+import { choice, cta, form, link, list, media, optional, richText, text } from "../../fields.ts";
 import { Actions } from "../../kit/actions.tsx";
+import { Frame, frameImageClass } from "../../kit/frame.tsx";
 import { Icon } from "../../kit/icon.tsx";
 import { Heading } from "../../kit/intro.tsx";
 import { Section } from "../../kit/section.tsx";
@@ -23,12 +24,20 @@ const props = {
     min: 0,
     max: 4,
   }),
+  signup: optional(form({ title: "Sign-up form" })),
+  proof: optional(text({ title: "Proof line", max: 80 })),
+  proofImages: optional(
+    list({ title: "Proof photos", item: { photo: media({ title: "Photo" }) }, min: 0, max: 5 }),
+  ),
   image: optional(media({ title: "Image" })),
   align: choice({ title: "Alignment", options: ["center", "start"] }),
   mediaSide: choice({ title: "Image side", options: ["end", "start"] }),
   height: choice({ title: "Height", options: ["auto", "tall", "screen"] }),
-  frame: choice({ title: "Image style", options: ["plain", "framed"] }),
-  backdrop: choice({ title: "Backdrop", options: ["none", "glow", "grid", "dots"] }),
+  frame: choice({ title: "Image style", options: ["plain", "framed", "browser", "phone"] }),
+  backdrop: choice({
+    title: "Backdrop",
+    options: ["none", "glow", "arc", "grid", "dots", "stripes", "noise"],
+  }),
 };
 
 type Variant = "stacked" | "split" | "cover" | "editorial" | "panel";
@@ -79,14 +88,39 @@ const Points = ({ hero, center }: { readonly hero: Hero; readonly center: boolea
     </ul>
   );
 
+/** A line of proof, such as how many people use it, beside a few of their faces. */
+const Proof = ({ hero, center }: { readonly hero: Hero; readonly center: boolean }) =>
+  hero.proof === undefined ? null : (
+    <div className={cx("flex items-center gap-3", center && "justify-center")}>
+      {hero.proofImages !== undefined && hero.proofImages.length > 0 && (
+        <ul className="flex -space-x-2.5">
+          {hero.proofImages.map((item) => (
+            <li key={item.id}>
+              <Media
+                field={["proofImages", item.id, "photo"]}
+                value={item.photo}
+                sizes="2.25rem"
+                className="size-9 rounded-full object-cover ring-2 ring-background"
+              />
+            </li>
+          ))}
+        </ul>
+      )}
+      <Text field="proof" as="p" value={hero.proof} className="text-small text-muted-foreground" />
+    </div>
+  );
+
 /** The hero's words and buttons, centred or set to the start. */
 const Copy = ({
   hero,
   center,
+  half = false,
   className,
 }: {
   readonly hero: Hero;
   readonly center: boolean;
+  /** Whether the words share the width with a picture. */
+  readonly half?: boolean;
   readonly className?: string;
 }) => (
   <div
@@ -101,7 +135,12 @@ const Copy = ({
       {hero.kicker && (
         <Text field="kicker" as="p" value={hero.kicker} className="kicker text-primary" />
       )}
-      <Heading as="h1" heading={hero.heading} headingRest={hero.headingRest} size="display" />
+      <Heading
+        as="h1"
+        heading={hero.heading}
+        headingRest={hero.headingRest}
+        size={half ? "display-half" : "display"}
+      />
     </div>
     {hero.body && (
       <RichText
@@ -113,17 +152,27 @@ const Copy = ({
         )}
       />
     )}
-    <Actions
-      actions={hero.actions}
-      size="lg"
-      align={center ? "center" : "start"}
-      className="mt-2"
-    />
+    {hero.signup === undefined ? (
+      <Actions
+        actions={hero.actions}
+        size="lg"
+        align={center ? "center" : "start"}
+        className="mt-2"
+      />
+    ) : (
+      <FormView
+        field="signup"
+        value={hero.signup}
+        layout="inline"
+        className={cx("mt-2 w-full max-w-md", center && "mx-auto")}
+      />
+    )}
     <Points hero={hero} center={center} />
+    <Proof hero={hero} center={center} />
   </div>
 );
 
-/** The hero's image, plain or in a frame like a window onto a screen. */
+/** The hero's image, plain, on a tray, in a browser window or on a phone. */
 const Picture = ({
   hero,
   className,
@@ -132,28 +181,18 @@ const Picture = ({
   readonly hero: Hero;
   readonly className: string;
   readonly sizes: string;
-}) => {
-  if (hero.image === undefined) return null;
-  return hero.frame === "framed" ? (
-    <div className="rounded-xl border border-foreground/10 bg-foreground/4 p-2 shadow-card">
+}) =>
+  hero.image === undefined ? null : (
+    <Frame style={hero.frame}>
       <Media
         field="image"
         value={hero.image}
         priority
-        sizes={sizes}
-        className={cx("w-full rounded-lg object-cover", className)}
+        sizes={hero.frame === "phone" ? "19rem" : sizes}
+        className={cx(frameImageClass(hero.frame), hero.frame !== "phone" && className)}
       />
-    </div>
-  ) : (
-    <Media
-      field="image"
-      value={hero.image}
-      priority
-      sizes={sizes}
-      className={cx("w-full rounded-image object-cover", className)}
-    />
+    </Frame>
   );
-};
 
 const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Variant>) => {
   const center = hero.align === "center";
@@ -171,7 +210,7 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
       return (
         <Section backdrop={hero.backdrop}>
           <div className="page-width grid items-center gap-12 md:grid-cols-2 lg:gap-20">
-            <Copy hero={hero} center={false} />
+            <Copy hero={hero} center={false} half />
             <div className={hero.mediaSide === "start" ? "md:order-first" : undefined}>
               <Picture
                 hero={hero}
@@ -272,7 +311,7 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
               heights[hero.height],
             )}
           >
-            <Copy hero={hero} center={false} />
+            <Copy hero={hero} center={false} half />
           </div>
         </Section>
       );
@@ -298,18 +337,6 @@ export default defineBlock({
       "a heading longer than a short sentence; put the rest in the rest of the heading or the text",
     ],
   },
-  changes:
-    "Adds editorial and half-and-half layouts, an announcement pill, a softer second half to the heading, short points under the buttons, and choices for alignment, image side, height, an image frame and a backdrop.",
-  migrate: (previous) => ({
-    ...previous,
-    points: [],
-    align: "center",
-    mediaSide: "end",
-    height: "auto",
-    frame: "plain",
-    backdrop: "none",
-  }),
-  renamedVariants: { centered: "stacked", "split-image": "split", "full-bleed": "cover" },
   placeholder,
   component: Hero,
 });

@@ -21,6 +21,12 @@ export default {
       { id: "it_lunch", point: "Lunch every day" },
       { id: "it_tools", point: "Tools provided" },
     ],
+    proof: "Loved by 2,000 sailors since 2019",
+    proofImages: [
+      { id: "it_tom", photo: { $ref: "media", id: "med_sampleTom", alt: "Tom" } },
+      { id: "it_mei", photo: { $ref: "media", id: "med_sampleMei", alt: "Mei" } },
+      { id: "it_dan", photo: { $ref: "media", id: "med_sampleDan", alt: "Dan" } },
+    ],
     image: {
       $ref: "media",
       id: "med_sampleHarbour",
@@ -29,7 +35,7 @@ export default {
     align: "center",
     mediaSide: "end",
     height: "auto",
-    frame: "framed",
+    frame: "browser",
     backdrop: "glow",
   },
 } satisfies BlockSample<typeof hero>;

@@ -3,14 +3,17 @@ import type { ReactNode } from "react";
 
 import { Root } from "../components.tsx";
 
-/** What sits behind a section's content: nothing, or a soft glow, grid or dots. */
-export type Backdrop = "none" | "glow" | "grid" | "dots";
+/** What sits behind a section's content: nothing, or a glow, a pattern or grain. */
+export type Backdrop = "none" | "glow" | "arc" | "grid" | "dots" | "stripes" | "noise";
 
 const backdrops = {
   none: "",
   glow: "decor-glow",
+  arc: "decor-arc",
   grid: "decor-grid",
   dots: "decor-dots",
+  stripes: "decor-stripes",
+  noise: "decor-noise",
 } as const satisfies Record<Backdrop, string>;
 
 /**
