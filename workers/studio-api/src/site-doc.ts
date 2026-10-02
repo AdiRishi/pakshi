@@ -384,6 +384,10 @@ export class SiteDoc extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#run((site) => site.live);
   }
 
+  liveHome() {
+    return this.#run((site) => site.liveHome);
+  }
+
   releases() {
     return this.#run((site) => site.releases);
   }

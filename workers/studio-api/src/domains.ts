@@ -40,6 +40,10 @@ export const routedHost = (hostname: string, sitesHost: string) => {
   return port === undefined ? hostname : `${hostname}:${port}`;
 };
 
+/** The address a host serves a site at: over HTTPS in production, and HTTP on a local stack. */
+export const siteAddress = (host: string, environment: string) =>
+  `${environment === "production" ? "https" : "http"}://${host}`;
+
 /** Whether a domain's ownership is proven. */
 const proven = (hostname: string) => hostname.endsWith(".localhost");
 

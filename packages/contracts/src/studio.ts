@@ -964,6 +964,43 @@ export const SiteReleases = Schema.Struct({
 });
 export type SiteReleases = typeof SiteReleases.Type;
 
+/** How many days back a site's overview counts new form entries. */
+export const newEntriesDays = 7;
+
+/**
+ * The top of every site page: where visitors find the site, what's live, and
+ * what waits in the tabs the person may open.
+ */
+export const SiteOverview = Schema.Struct({
+  site: SiteLabel,
+  /**
+   * The addresses that open the site: its first connected domain of its own,
+   * and its Pakshi address, which seeded sites don't have.
+   */
+  addresses: Schema.Struct({
+    own: Schema.NullOr(Schema.String),
+    pakshi: Schema.NullOr(Schema.String),
+  }),
+  live: Release,
+  /** The live home page, or null while the live site has none, as before its first publish. */
+  home: Schema.NullOr(Schema.Struct({ ...SiteView.fields, page: PageDocument })),
+  /** What waits in the Drafts and Blocks tabs, for someone who may edit the site. */
+  editing: Schema.NullOr(
+    Schema.Struct({
+      openDrafts: Schema.Int,
+      /** Open drafts whose submission waits for approval. */
+      waitingDrafts: Schema.Int,
+      /** Blocks the live site shows at an older version than the newest. */
+      blockUpdates: Schema.Int,
+      /** The open draft that brings the brand's newest look to the site. */
+      brandUpdate: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
+    }),
+  ),
+  /** Form entries from the last `newEntriesDays` days, for someone who may read them. */
+  newEntries: Schema.NullOr(Schema.Int),
+});
+export type SiteOverview = typeof SiteOverview.Type;
+
 /** The site has no submission with this ID. */
 export class SubmissionNotFound extends Schema.TaggedError<SubmissionNotFound>()(
   "SubmissionNotFound",
@@ -1341,6 +1378,7 @@ class SignedInRpcs extends RpcGroup.make(
     success: SubmitOutcome,
     error: Schema.Union([StudioUnavailable, SiteNotFound, DraftNotFound, NotPermitted]),
   }),
+  Rpc.make("siteOverview", { payload: { site: SiteId }, success: SiteOverview, error: siteError }),
   Rpc.make("siteReleases", { payload: { site: SiteId }, success: SiteReleases, error: siteError }),
   Rpc.make("rollBack", {
     payload: { site: SiteId },

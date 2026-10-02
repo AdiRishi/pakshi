@@ -1,7 +1,8 @@
 import { SqliteClient } from "@effect/sql-sqlite-node";
 import { describe, expect, it } from "@effect/vitest";
 import { NewEntry } from "@repo/contracts/entries";
-import { FormFieldId, SiteId } from "@repo/contracts/ids";
+import { FormFieldId, FormId, SiteId } from "@repo/contracts/ids";
+import { now, Timestamp } from "@repo/contracts/release";
 import { LiveSettings } from "@repo/contracts/settings";
 import { Effect, Layer, Schema } from "effect";
 import * as Migrator from "effect/unstable/sql/Migrator";
@@ -24,6 +25,8 @@ const booking = Schema.decodeSync(NewEntry)({
   email: "ama@example.org",
   fields: [{ id: "ff_name", label: "Your name", value: "Ama Mensah" }],
 });
+
+const contact = FormId.make("frm_contact");
 
 const emailingRooms = Schema.decodeSync(LiveSettings)({
   formEmails: { frm_booking: ["rooms@riverton.test"] },
@@ -117,6 +120,21 @@ describe("listing a form's entries", () => {
           limit: 10,
         });
         expect(found.map((entry) => entry.fields[0]?.value)).toEqual(["Kofi Boateng"]);
+      }),
+    ),
+  );
+});
+
+describe("counting new entries", () => {
+  it.effect("counts what came at or after a moment, on every form", () =>
+    withEntries((entries) =>
+      Effect.gen(function* () {
+        const before = now();
+        yield* entries.receive(site, booking);
+        yield* entries.receive(site, { ...booking, form: contact, formName: "Contact us" });
+        expect(yield* entries.receivedSince(before)).toBe(2);
+        const later = Timestamp.make(new Date(Date.now() + 60_000).toISOString());
+        expect(yield* entries.receivedSince(later)).toBe(0);
       }),
     ),
   );
