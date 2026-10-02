@@ -16,6 +16,7 @@ import { valueAt } from "../settings/controls.tsx";
 import type { EditorState, ItemKey, Pointed } from "../store.ts";
 import { listOf, removeOp } from "../structure.ts";
 import { type Rect, rectIn } from "./anchor.tsx";
+import type { GhostPolicy } from "./ghost.tsx";
 import { blockElement, fieldElement, itemAt, itemElement, itemOf, partsOf } from "./regions.ts";
 
 /*
@@ -197,6 +198,7 @@ const measureMarks = (
   state: EditorState,
   contracts: ReadonlyMap<string, BlockContract>,
   forms: Draft["forms"],
+  policy: GhostPolicy,
 ): Marks => {
   const rect = (element: Element | null | undefined) =>
     element === null || element === undefined ? null : rectIn(element, container);
@@ -359,11 +361,12 @@ const measureMarks = (
     }
   }
 
-  // Each link with no element of its own, on the part it belongs to.
+  // Each link with no element of its own, on the part it belongs to, where the block shows what it lacks.
   for (const root of Array.from(document.querySelectorAll("[data-pakshi-block]"))) {
     const block = Option.getOrUndefined(decodeBlockId(root.getAttribute("data-pakshi-block")));
     if (block === undefined) continue;
     const target = targetOf(state, block);
+    if (policy.ghosting(state, target, block) === null) continue;
     const found = placed(state, contracts, target, block);
     if (found === undefined) continue;
     for (const [name, field] of Object.entries(found.contract.fields)) {
@@ -465,6 +468,8 @@ export function CanvasMarks(props: {
   readonly document: Document;
   readonly container: HTMLElement;
   readonly clip: boolean;
+  /** Which blocks show the marks of what they lack, as they show their missing parts. */
+  readonly policy: GhostPolicy;
 }) {
   const store = useStore();
   const ui = useEditorUi();
@@ -495,8 +500,17 @@ export function CanvasMarks(props: {
   // Measured once the page has rendered, so the marks sit on the parts as they are now.
   useLayoutEffect(() => {
     // oxlint-disable-next-line react/set-state-in-effect -- measuring layout before the browser paints, then drawing from it, is what layout effects are for
-    setMarks(measureMarks(props.document, props.container, state, definitions, state.view.forms));
-  }, [props.document, props.container, state, definitions, moved]);
+    setMarks(
+      measureMarks(
+        props.document,
+        props.container,
+        state,
+        definitions,
+        state.view.forms,
+        props.policy,
+      ),
+    );
+  }, [props.document, props.container, state, definitions, moved, props.policy]);
 
   const run = (op: Op | undefined, message: string) => {
     if (op === undefined || store.run([op]).length > 0) return;

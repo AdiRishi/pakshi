@@ -5,6 +5,7 @@ import { type ActiveRichText, type FieldTarget, useEditorState, useServices } fr
 import { isSelectedField } from "./fields.tsx";
 import { FormPopover } from "./form-popover.tsx";
 import { FormattingToolbar } from "./formatting.tsx";
+import type { GhostPolicy } from "./ghost.tsx";
 import { CanvasMarks } from "./marks.tsx";
 import { MediaPopover } from "./media-popover.tsx";
 import { blockElement, fieldElement } from "./regions.ts";
@@ -66,6 +67,8 @@ export function CanvasChrome(props: {
   readonly document: Document;
   /** Whether marks are cut off at the container's edges, as they are where the page scrolls inside it. */
   readonly clip: boolean;
+  /** Which blocks show their missing parts, and so the marks of what they lack. */
+  readonly policy: GhostPolicy;
 }) {
   const controls = useCanvasControls();
   const selection = useEditorState((state) => state.selection);
@@ -73,7 +76,12 @@ export function CanvasChrome(props: {
   const popover = controls.popover;
   return (
     <>
-      <CanvasMarks document={props.document} container={props.container} clip={props.clip} />
+      <CanvasMarks
+        document={props.document}
+        container={props.container}
+        clip={props.clip}
+        policy={props.policy}
+      />
       {popover?.kind === "media" && (
         <MediaPopover
           field={popover.field}

@@ -242,6 +242,20 @@ describe("where a button goes", () => {
   });
 });
 
+describe("a link with no element of its own", () => {
+  test("shows its mark only on the selected block, so the page looks as it will on the site", async () => {
+    const { canvas } = await open();
+    const marks = () => document.querySelectorAll("button[title='Where it goes']").length;
+    const logos = canvas().querySelector<HTMLElement>("[data-pakshi-block='b_logostripgrid']");
+    if (logos === null) throw new Error("The page has no logo strip.");
+    expect(logos.querySelector("a[href] img")).not.toBeNull();
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    expect(marks()).toBe(0);
+    logos.click();
+    await expect.poll(marks).toBeGreaterThan(0);
+  });
+});
+
 describe("a form's settings", () => {
   test("start a new form for a block, then rename it and change its questions", async () => {
     const { siteDoc, canvas } = await open();
