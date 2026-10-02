@@ -88,6 +88,32 @@ const artsCouncil = wordmark(
     `<text x="112" y="90" ${serif} font-size="28" font-style="italic" fill="#33302F">Council</text>`,
 );
 
+/**
+ * A harbour at sunset in full colour, for samples that show a photo large.
+ * The placeholder sea is drawn soft so a new block's photo sits quietly
+ * under any brand, which reads as washed out where the photo is the point.
+ */
+const harbour = inlineSvg(
+  1600,
+  1067,
+  `<defs><linearGradient id="sky" x2="0" y2="1"><stop offset="0" stop-color="#F5D9AE"/>` +
+    `<stop offset=".45" stop-color="#CCD3C9"/><stop offset="1" stop-color="#9FC9E6"/></linearGradient>` +
+    `<linearGradient id="water" x2="0" y2="1"><stop offset="0" stop-color="#2A6491"/>` +
+    `<stop offset="1" stop-color="#14385A"/></linearGradient></defs>` +
+    `<rect width="1600" height="640" fill="url(#sky)"/>` +
+    `<circle cx="1280" cy="250" r="80" fill="#FCF1D3"/>` +
+    `<rect y="640" width="1600" height="427" fill="url(#water)"/>` +
+    `<path d="M0 700L260 600L520 680L780 590L1040 660L1300 610L1600 690V760H0Z" fill="#0F2D49"/>` +
+    `<path d="M0 763H1600" stroke="#8FB4CF" stroke-width="4" opacity=".6"/>` +
+    `<path d="M200 822H900M700 962H1500" stroke="#4E7EA6" stroke-width="4" stroke-linecap="round"/>` +
+    `<path d="M450 852L552 660V852Z" fill="#F3EEE6"/><path d="M558 640L662 852H558Z" fill="#BE3A2B"/>` +
+    `<rect x="548" y="630" width="8" height="232" fill="#3B2A20"/>` +
+    `<path d="M420 860H700L660 910H460Z" fill="#F3EEE6"/>` +
+    `<path d="M1040 892L1124 715V892Z" fill="#F3EEE6"/><path d="M1129 700L1216 892H1129Z" fill="#E4AF4D"/>` +
+    `<rect x="1121" y="690" width="7" height="212" fill="#3B2A20"/>` +
+    `<path d="M1020 900H1240L1210 940H1050Z" fill="#F3EEE6"/>`,
+);
+
 const image = (id: string, alt: string, media: ResolvedMedia) =>
   [MediaId.make(id), { ...media, alt }] as const;
 
@@ -99,7 +125,7 @@ const placeholder = (id: string, alt: string) => {
 
 /**
  * Every image a sample can show, with the alt text it suggests: the
- * placeholder images, and the people, map and logos drawn for samples.
+ * placeholder images, and the harbour, people, map and logos drawn for samples.
  */
 export const sampleMedia: ReadonlyMap<MediaId, ResolvedMedia & { readonly alt: string }> = new Map([
   placeholder("med_pakshiHills", "Hills above the harbour at sunset"),
@@ -161,6 +187,7 @@ export const sampleMedia: ReadonlyMap<MediaId, ResolvedMedia & { readonly alt: s
       long: true,
     }),
   ),
+  image("med_sampleHarbour", "Two sailing boats on the harbour at sunset", harbour),
   image("med_sampleMap", "A map of North Quay, with the boatshed marked", map),
   image("med_sampleHarbourTrust", "Westbay Harbour Trust", harbourTrust),
   image("med_sampleRowingClub", "Westbay Rowing Club", rowingClub),
