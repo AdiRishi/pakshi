@@ -1659,8 +1659,7 @@ export class Site extends Context.Service<
               };
               if (isLive) known.live = true;
               for (const page of Object.values(content.pages))
-                if (formsUsedBy(page.blocks).has(form.id))
-                  known.pages.add(pageName(page));
+                if (formsUsedBy(page.blocks).has(form.id)) known.pages.add(pageName(page));
               found.set(form.id, known);
             }
           return Array.from(found, ([id, form]) => ({

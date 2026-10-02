@@ -1,6 +1,6 @@
+import { collectionKinds } from "@repo/contracts/collections";
 import { isBehind } from "@repo/contracts/draft";
 import { type DraftId, PageId, randomId, type SiteId } from "@repo/contracts/ids";
-import { collectionKinds } from "@repo/contracts/collections";
 import { type PageDocument, pageName } from "@repo/contracts/page";
 import { entryAddress } from "@repo/contracts/snapshot";
 import type { DraftPageSummary, Viewer } from "@repo/contracts/studio";
@@ -74,13 +74,12 @@ const kindOf = (page: DraftPageSummary) => {
 };
 
 /** How a page's address is renamed: its whole address, or an entry's slug below its collection's. */
-const renamedAddress = (
-  page: DraftPageSummary,
-  pages: ReadonlyArray<DraftPageSummary>,
-) => {
-  if (page.type !== "entry") return { mode: { under: null, followsTitle: false }, current: page.path };
+const renamedAddress = (page: DraftPageSummary, pages: ReadonlyArray<DraftPageSummary>) => {
+  if (page.type !== "entry")
+    return { mode: { under: null, followsTitle: false }, current: page.path };
   const collection = pages.find((candidate) => candidate.id === page.collection);
-  if (collection === undefined) throw new Error(`${page.collection} isn't among the draft's pages.`);
+  if (collection === undefined)
+    throw new Error(`${page.collection} isn't among the draft's pages.`);
   return {
     mode: { under: collection.path, followsTitle: false },
     current: page.path.slice(entryAddress(collection.path, "").length),
@@ -268,8 +267,8 @@ export function DraftPage(props: {
           </div>
         </div>
         <p className="text-secondary-foreground">
-          Pages in this draft. Edits save to the draft as you make them, and nothing goes
-          live until it's published.
+          Pages in this draft. Edits save to the draft as you make them, and nothing goes live until
+          it's published.
         </p>
         {review?.status._tag === "ChangesRequested" && (
           <Alert>
