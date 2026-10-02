@@ -32,10 +32,13 @@
   --success: #e3f4ea;
   --success-foreground: #1b6b43;
   --border: #dce6ee;
-  --input: #dce6ee;
+  /* Darker than --border, so a field's edge stands out from every surface. */
+  --input: #748b9d;
   --ring: #1c74b8;
   /* Text links, dark enough to read on every surface, unlike --primary. */
-  --link: #1c74b8;
+  --link: #1a6eb0;
+  /* What dims the page behind a dialog or sheet. */
+  --overlay: #0d24364d;
   --radius: 0.75rem;
   --sidebar: #ffffff;
   --sidebar-foreground: #3e5363;
@@ -88,9 +91,10 @@
   --success: #113323;
   --success-foreground: #8de4b2;
   --border: #21384b;
-  --input: #597c99;
+  --input: #5f819e;
   --ring: #48b0f0;
   --link: #79c8fa;
+  --overlay: #020b1299;
   --sidebar: #0d2436;
   --sidebar-foreground: #c1d0db;
   --sidebar-primary: #48b0f0;
@@ -178,6 +182,17 @@
     radial-gradient(circle at 95% 60%, var(--star-dim) 0 1px, transparent 1.5px),
     radial-gradient(circle at 70% 63%, var(--star-dim) 0 1px, transparent 1.5px);
   mask-image: linear-gradient(to bottom, black 35%, transparent 80%);
+}
+
+/*
+ * The generated dialog, alert dialog and sheet dim the page with a fixed
+ * 10% black, which barely shows on Studio's navy. Outside any layer, this
+ * wins over that utility.
+ */
+[data-slot="dialog-overlay"],
+[data-slot="alert-dialog-overlay"],
+[data-slot="sheet-overlay"] {
+  background-color: var(--overlay);
 }
 
 @layer base {

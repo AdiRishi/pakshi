@@ -74,7 +74,7 @@ export function LiveThumbnail(props: {
       tabIndex={-1}
       aria-hidden
       className={cn(
-        "block rounded-lg transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-lg motion-reduce:transition-none motion-reduce:hover:translate-y-0",
+        "block rounded-lg transition-[box-shadow,translate] duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:ring-1 hover:ring-ring/40 motion-reduce:transition-none motion-reduce:hover:translate-y-0",
         props.className,
       )}
     >
