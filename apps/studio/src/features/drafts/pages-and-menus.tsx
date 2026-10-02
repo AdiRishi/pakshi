@@ -1,7 +1,7 @@
 import { type DraftId, MenuItemId, type PageId, randomId, type SiteId } from "@repo/contracts/ids";
 import type { BatchError, Op } from "@repo/contracts/ops";
-import { ExternalUrl, type Link } from "@repo/contracts/references";
 import { pageName } from "@repo/contracts/page";
+import { ExternalUrl, type Link } from "@repo/contracts/references";
 import { MenuItem, type Menus } from "@repo/contracts/site";
 import type { DraftPageSummary, PageStanding } from "@repo/contracts/studio";
 import { menusWithout } from "@repo/domain/document";

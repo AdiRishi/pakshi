@@ -64,9 +64,7 @@ const placement = (draft: Draft, contractTitle: (type: string) => string, block:
   const heading = instance.props["heading"];
   return [
     `a ${contractTitle(instance.type)} section`,
-    page === undefined
-      ? "in the site's header or footer"
-      : `on the page "${pageName(page)}"`,
+    page === undefined ? "in the site's header or footer" : `on the page "${pageName(page)}"`,
     isString(heading) && heading !== "" ? `headed "${heading}"` : "",
   ]
     .filter((part) => part !== "")
