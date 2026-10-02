@@ -47,14 +47,25 @@ describe("what the agent is told with each message", () => {
       ...options,
     });
 
-  test("names the block the person has selected, so 'this' means it", () => {
+  test("names the selected block and each of its fields by path, beside the names people see", () => {
     const selected = {
       page: home,
-      focus: { target: home, block: BlockId.make("b_hero"), path: ["heading"] },
-      title: "Hero",
+      focus: { target: home, block: BlockId.make("b_about"), path: ["body"] },
+      title: "Text",
     };
     expect(context({ selected, typing: [] })).toContain(
-      "Selected: b_hero, a Hero block, field heading.",
+      [
+        "Selected: b_about, a Text block (rich-text). Its fields by path, with the names people see:",
+        '  heading "Heading": "About"',
+        '  body "Text": "We build boats."',
+        "Their cursor is in body.",
+      ].join("\n"),
+    );
+  });
+
+  test("names the field each section's text in the outline comes from", () => {
+    expect(context({ selected: null, typing: [] })).toContain(
+      '  b_about rich-text (narrow, default): heading "About"',
     );
   });
 

@@ -1,8 +1,9 @@
 import { richTextLines, RichTextDocument } from "@repo/blocks";
-import type { Fields } from "@repo/blocks/fields";
+import type { Field, Fields } from "@repo/blocks/fields";
 import { collectionKinds, entriesOf } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, PageId } from "@repo/contracts/ids";
+import type { Focus } from "@repo/contracts/live";
 import type { Target } from "@repo/contracts/ops";
 import { type BlockInstance, type PageDocument, pageName } from "@repo/contracts/page";
 import { addressOf } from "@repo/contracts/snapshot";
@@ -28,27 +29,66 @@ type Json = Schema.Json;
 const isRichText = Schema.is(RichTextDocument);
 const isString = Schema.is(Schema.String);
 
-/** A block's first line of text, to recognise it by. */
-const firstText = (fields: Fields, props: Readonly<Record<string, Json>>) => {
-  for (const [name, field] of Object.entries(fields)) {
-    const value = props[name];
-    if (field.kind === "text" && isString(value) && value.trim() !== "") return value;
-    if (field.kind === "richText" && isRichText(value)) {
-      const [line] = richTextLines(value).filter((text) => text.trim() !== "");
-      if (line !== undefined) return line;
-    }
-  }
+/** The words in a text or rich text field. */
+const fieldText = (field: Field, value: Json | undefined) => {
+  if (field.kind === "text" && isString(value)) return value.trim();
+  if (field.kind === "richText" && isRichText(value))
+    return richTextLines(value)
+      .map((line) => line.trim())
+      .filter((line) => line !== "")
+      .join(" ");
   return "";
 };
 
 const shorten = (text: string, length: number) =>
   text.length > length ? `${text.slice(0, length - 1)}…` : text;
 
+/** A block's first field with words, by its path, to recognise the block by. */
+const firstText = (fields: Fields, props: Readonly<Record<string, Json>>) => {
+  for (const [name, field] of Object.entries(fields)) {
+    const text = fieldText(field, props[name]);
+    if (text !== "") return `${name} "${shorten(text, 60)}"`;
+  }
+  return "";
+};
+
 const blockLine = (contracts: BlockContracts, id: BlockId, block: BlockInstance) => {
   const contract = contracts.get(block.type);
   const look = [block.variant, block.surface].filter((part) => part !== undefined).join(", ");
   const text = contract === undefined ? "" : firstText(contract.fields, block.props);
-  return `${id} ${block.type} (${look})${text === "" ? "" : `: "${shorten(text, 60)}"`}`;
+  return `${id} ${block.type} (${look})${text === "" ? "" : `: ${text}`}`;
+};
+
+/** A field's value in brief, as the agent reads it. */
+const fieldSummary = (field: Field, value: Json | undefined) => {
+  if (value === undefined) return "empty";
+  if (field.kind === "list" && Array.isArray(value))
+    return value.length === 1 ? "1 item" : `${value.length} items`;
+  if (field.kind === "text" || field.kind === "richText") {
+    const text = fieldText(field, value);
+    return text === "" ? "empty" : `"${shorten(text, 80)}"`;
+  }
+  return shorten(JSON.stringify(value), 80);
+};
+
+/**
+ * The block a person has selected, with each of its fields by path beside the
+ * name people see in Studio, since a block and its field can share a name, as
+ * the Text block and its Text field do. Null when the block is gone from the
+ * draft.
+ */
+export const selectedBlock = (draft: Draft, contracts: BlockContracts, focus: Focus) => {
+  const holder = focus.target === "site" ? draft.parts : draft.pages[focus.target];
+  const block = holder?.blocks[focus.block];
+  const contract = block === undefined ? undefined : contracts.get(block.type);
+  if (block === undefined || contract === undefined) return null;
+  return [
+    `Selected: ${focus.block}, a ${contract.title} block (${block.type}). Its fields by path, with the names people see:`,
+    ...Object.entries(contract.fields).map(
+      ([name, field]) => `  ${name} "${field.title}": ${fieldSummary(field, block.props[name])}`,
+    ),
+    ...(focus.path === undefined ? [] : [`Their cursor is in ${focus.path.join(".")}.`]),
+  ].join("\n");
 };
 
 const status = (page: PageDocument) => (page.status === "unpublished" ? " (unpublished)" : "");
