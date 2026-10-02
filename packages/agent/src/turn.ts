@@ -41,6 +41,7 @@ const toolWords = new Map<string, readonly [running: string, failed: string]>([
   ["fetch_url", ["Reading a web page", "Couldn't read the web page"]],
   ["ask_user", ["Asking you", "Couldn't ask"]],
   ["propose_plan", ["Planning the site", "Couldn't show the plan"]],
+  ["check_draft", ["Checking the draft", "Couldn't check the draft"]],
   ["prepare_submission", ["Checking the draft", "Couldn't check the draft"]],
   ["request_block", ["Requesting a block", "Couldn't request the block"]],
 ]);

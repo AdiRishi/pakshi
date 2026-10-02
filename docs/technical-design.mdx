@@ -362,24 +362,27 @@ The agent is a constrained editor. Its only way to change a site is the same val
 
 **Tools** (every input and output has an Effect schema):
 
-| Tool                 | Does                                                                         |
-| -------------------- | ---------------------------------------------------------------------------- |
-| `get_site_outline`   | Pages and the sections on each, one line per section                         |
-| `get_page`           | Full content of a page, or of chosen sections                                |
-| `get_block_contract` | A block's schema, variants, limits and examples at the site's pinned version |
-| `get_recipe`         | Composition rules for a page type                                            |
-| `read_source`        | An uploaded source document, as Markdown                                     |
-| `apply_ops`          | Validated edit operations on a page                                          |
-| `insert_section`     | Adds a block after a given section (simpler than raw ops for common edits)   |
-| `create_page`        | New page or post from a recipe, with placeholders                            |
-| `get_preview_link`   | The draft's preview link                                                     |
-| `fetch_url`          | A web page the user linked to, as Markdown                                   |
-| `ask_user`           | A question with choices, shown as buttons in chat                            |
-| `propose_plan`       | A site plan, shown in chat for the person to build or change                 |
-| `prepare_submission` | Runs the checks and opens the submit dialog; a person clicks Submit          |
-| `request_block`      | Files a block request in Pakshi when nothing in the catalog fits             |
+| Tool                 | Does                                                                                                       |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| `get_site_outline`   | Pages and the sections on each, one line per section                                                       |
+| `get_page`           | Full content of a page, or of chosen sections, or of the site's header, footer, menus, redirects and forms |
+| `get_block_contract` | A block's schema, variants, limits and examples at the site's pinned version                               |
+| `get_recipe`         | Composition rules for a page type                                                                          |
+| `read_source`        | An uploaded source document, as Markdown                                                                   |
+| `apply_ops`          | Validated edit operations on a page, and on the site's menus, redirects and forms                          |
+| `insert_section`     | Adds a block after a given section (simpler than raw ops for common edits)                                 |
+| `create_page`        | New page or post from a recipe, with placeholders                                                          |
+| `get_preview_link`   | The draft's preview link                                                                                   |
+| `fetch_url`          | A web page the user linked to, as Markdown                                                                 |
+| `ask_user`           | A question with choices, shown as buttons in chat                                                          |
+| `propose_plan`       | A site plan, shown in chat for the person to build or change                                               |
+| `check_draft`        | What the checks find, each with its IDs and how to fix it, or that only a person can                       |
+| `prepare_submission` | Runs the checks and opens the submit dialog; a person clicks Submit                                        |
+| `request_block`      | Files a block request in Pakshi when nothing in the catalog fits                                           |
 
-There are no tools for submitting, publishing, approving, site settings, domains or form submissions.
+There are no tools for submitting, publishing, approving, site settings, domains or form submissions. Publishing an unpublished page again with `setStatus` only marks it to go live with the draft, and the agent asks before it does.
+
+**Fixing what the checks find:** `check_draft` describes each issue with the IDs the agent edits by, and says which ones only a person can fix: choosing an image, writing or accepting alt text, and setting where a form's entries go, a site setting. The agent fixes the rest, leaves placeholders where it lacks the facts, and says what's left.
 
 **Context:** a short, cacheable prefix is generated from the block registry, filtered to the draft's pinned versions. This is json-render's catalog-to-prompt idea applied to whole blocks. The prefix holds a one-line index of blocks and recipes, the brand's voice guide, the site outline and the agent's working brief. Full block contracts and page content are fetched only when needed. If the user has a section selected on the canvas, its ID is included, so "make this shorter" works. Fields someone is typing in are marked, and the agent leaves them alone.
 

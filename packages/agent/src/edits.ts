@@ -96,7 +96,7 @@ export const toOps = (
   const ops: Array<Op> = [];
   const structural = (index: number) => {
     problems.push(
-      `op ${index + 1}: the header and footer can only have their fields, variant and surface changed.`,
+      `op ${index + 1}: the header and footer can only have their fields, variant and surface changed. Name a page for it.`,
     );
   };
   edits.forEach((edit, index) => {
@@ -168,6 +168,15 @@ export const toOps = (
       case "setPath":
         if (target === "site") return structural(index);
         ops.push({ op: "setPath", page: target, path: edit.path });
+        return;
+      case "setStatus":
+        if (target === "site") return structural(index);
+        ops.push({ op: "setStatus", page: target, status: edit.status });
+        return;
+      case "setMenu":
+      case "setRedirect":
+      case "setForm":
+        ops.push(edit);
         return;
     }
   });
@@ -264,6 +273,15 @@ const blockTitle = (draft: Draft, contracts: BlockContracts, target: Target, blo
   return type === undefined ? "section" : `${contracts.get(type)?.title ?? type} block`;
 };
 
+/** Ops whose line says where they changed: a new or republished page, or a part of the whole site. */
+const namesItsPlace: ReadonlySet<Op["op"]> = new Set([
+  "createPage",
+  "setStatus",
+  "setMenu",
+  "setRedirect",
+  "setForm",
+]);
+
 /** What ops did, in a line for the chat panel. `before` is the draft they applied to. */
 export const describeOps = (
   before: Draft,
@@ -304,15 +322,25 @@ export const describeOps = (
         return `Changed the address to ${first.path}`;
       case "createPage":
         return `Created the ${pageName(first.page)} page`;
+      case "setStatus":
+        return `Published ${where} again in the draft`;
+      case "setMenu":
+        return `Changed the ${first.menu} menu`;
+      case "setRedirect":
+        return first.to === undefined
+          ? `Removed the redirect from ${first.from}`
+          : `Redirected ${first.from}`;
+      case "setForm":
+        return `${before.forms[first.form.id] === undefined ? "Added" : "Changed"} the ${first.form.name} form`;
       case "deletePage":
+      case "removeForm":
       case "rebase":
         return "Changed the draft";
     }
   })();
   const more =
     ops.length > 1 ? `, and ${ops.length - 1} more change${ops.length > 2 ? "s" : ""}` : "";
-  // A new page is where the change is, so it isn't named twice.
-  return first.op === "createPage" ? `${line}${more}` : `${line} on ${where}${more}`;
+  return namesItsPlace.has(first.op) ? `${line}${more}` : `${line} on ${where}${more}`;
 };
 
 /** The block an op puts the agent at, for presence and the chat panel's "show on page". */

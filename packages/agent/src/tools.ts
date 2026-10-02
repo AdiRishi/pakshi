@@ -1,7 +1,9 @@
 import { SitePlan } from "@repo/contracts/agent";
+import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, PageId, SourceId } from "@repo/contracts/ids";
-import { MetaField } from "@repo/contracts/ops";
+import { MetaField, SetRedirect } from "@repo/contracts/ops";
 import { PagePath } from "@repo/contracts/page";
+import { MenuItem, Menus } from "@repo/contracts/site";
 import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
 import { Tool, Toolkit } from "effect/unstable/ai";
@@ -12,7 +14,8 @@ import { BlockRequests, Sources, Turn, Web, Workspace } from "./workspace.ts";
  * The agent's tools. Every input and output is an Effect schema, which the
  * model sees as JSON Schema. There are no tools for submitting, publishing,
  * approving, settings, domains or form submissions: the agent can't do any
- * of them.
+ * of them. Publishing a page again with setStatus only marks it, in the
+ * draft, to go live when the draft does.
  */
 
 const Json = Schema.Json;
@@ -89,7 +92,11 @@ export const NewBlock = Schema.Struct({
 });
 export type NewBlock = typeof NewBlock.Type;
 
-/** An edit, in the vocabulary people's edits use, addressed to the page the call names. */
+/**
+ * An edit, in the vocabulary people's edits use, addressed to the page the
+ * call names. Menus, redirects and forms belong to the whole site, so their
+ * ops apply whichever page the call names.
+ */
 export const AgentOp = Schema.Union([
   Schema.Struct({
     op: Schema.Literal("setProp"),
@@ -116,6 +123,37 @@ export const AgentOp = Schema.Union([
   Schema.Struct({ op: Schema.Literal("removeBlock"), block: BlockId }),
   Schema.Struct({ op: Schema.Literal("setMeta"), field: MetaField, value: Json }),
   Schema.Struct({ op: Schema.Literal("setPath"), path: PagePath }),
+  Schema.Struct({
+    op: Schema.Literal("setStatus"),
+    status: Schema.Literal("published").annotate({
+      description:
+        "Publishes again a page that's unpublished in the draft, so it goes live with the draft. Ask the person first",
+    }),
+  }),
+  Schema.Struct({
+    op: Schema.Literal("setMenu"),
+    menu: Schema.Literal("main"),
+    items: objectOrJson(Schema.Array(MenuItem)).annotate({
+      description: "The whole menu. New items need an ID of their own, such as mi_contact",
+    }),
+  }),
+  Schema.Struct({
+    op: Schema.Literal("setMenu"),
+    menu: Schema.Literal("footer"),
+    items: objectOrJson(Menus.fields.footer).annotate({
+      description: "The whole menu, without children. New items need an ID of their own",
+    }),
+  }),
+  SetRedirect.annotate({
+    description: "Sends an old address on to a page or another site. Leave out to to remove it",
+  }),
+  Schema.Struct({
+    op: Schema.Literal("setForm"),
+    form: objectOrJson(FormDefinition).annotate({
+      description:
+        "The whole form, replacing the one with its ID. New fields need an ID of their own, such as ff_consent",
+    }),
+  }),
 ]);
 export type AgentOp = typeof AgentOp.Type;
 
@@ -127,7 +165,7 @@ export const GetSiteOutline = Tool.make("get_site_outline", {
 
 export const GetPage = Tool.make("get_page", {
   description:
-    "A page's address, meta and the full content of its sections, or of the ones chosen. Rich text is Markdown",
+    'A page\'s address, meta and the full content of its sections, or of the ones chosen. Rich text is Markdown. "site" gives the header and footer, the menus, the redirects and the forms',
   parameters: Schema.Struct({
     page: Target,
     blocks: Schema.optionalKey(
@@ -171,7 +209,7 @@ export const ReadSource = Tool.make("read_source", {
 
 export const ApplyOps = Tool.make("apply_ops", {
   description:
-    "Edits one page, or the header and footer, with ops that all apply or none do. Returns the IDs of new blocks",
+    "Edits one page, or the header and footer, and the site's menus, redirects and forms, with ops that all apply or none do. Returns the IDs of new blocks",
   parameters: Schema.Struct({
     page: Target,
     ops: Schema.Array(AgentOp).check(Schema.isMinLength(1), Schema.isMaxLength(50)),
@@ -260,6 +298,13 @@ export const ProposePlan = Tool.make("propose_plan", {
   dependencies: [Workspace, Turn],
 });
 
+export const CheckDraft = Tool.make("check_draft", {
+  description:
+    "What the checks find in the draft now: each issue with its IDs and how to fix it, or that only a person can",
+  success: Schema.Struct({ issues: Schema.Array(Schema.String) }),
+  dependencies: [Workspace, Turn],
+});
+
 export const PrepareSubmission = Tool.make("prepare_submission", {
   description:
     "Runs the checks a draft must pass before it's submitted, and offers the person the submit dialog. Only a person submits",
@@ -297,6 +342,7 @@ export const AgentTools = Toolkit.make(
   FetchUrl,
   AskUser,
   ProposePlan,
+  CheckDraft,
   PrepareSubmission,
   RequestBlock,
 );

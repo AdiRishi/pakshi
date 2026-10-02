@@ -4,7 +4,6 @@ import type { Draft } from "@repo/contracts/draft";
 import { type BlockId, type BlockType, PageId, randomId } from "@repo/contracts/ids";
 import type { Op, Target } from "@repo/contracts/ops";
 import type { PageDocument } from "@repo/contracts/page";
-import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
 import { Effect, Option, Result } from "effect";
 
@@ -18,6 +17,7 @@ import {
   typedOver,
   unknownMedia,
 } from "./edits.ts";
+import { issueForAgent } from "./issues.ts";
 import { outline, pageName, pageView } from "./site-view.ts";
 import { AgentTools } from "./tools.ts";
 import { BlockRequests, Sources, Turn, Web, Workspace } from "./workspace.ts";
@@ -95,29 +95,6 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
     }),
   );
 });
-
-const describeIssue = (issue: CheckIssue) => {
-  switch (issue._tag) {
-    case "Incomplete":
-      return `${issue.place.title}, ${issue.block.title} (${issue.block.id}) ${issue.field}: ${issue.message}`;
-    case "Placeholder":
-      return `${issue.place.title}, ${issue.block.title} (${issue.block.id}) ${issue.field}: still placeholder content`;
-    case "MissingMeta":
-      return `${issue.place.title}: no ${issue.field}`;
-    case "BrokenLink":
-      return `${issue.place.title}, ${issue.field}: links to ${issue.page}, which isn't served`;
-    case "LinkWithoutText":
-      return issue.block === null
-        ? `${issue.place.title}: an item has no label. A person edits menus; you can't.`
-        : `${issue.place.title}, ${issue.block.title} (${issue.block.id}) ${issue.field}: a link has no text. Give it words that say where it goes`;
-    case "UnlabelledField":
-      return `Form ${issue.name} (${issue.form}): field ${issue.field} has no label`;
-    case "NoFormEmails":
-      return `Form ${issue.name} (${issue.form}): no one is set to receive its entries. A person adds addresses in the site's settings; you can't.`;
-    case "MissingConsent":
-      return `Form ${issue.name} (${issue.form}): asks for an email or phone number, so it needs a required checkbox field linking to the privacy policy`;
-  }
-};
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -338,9 +315,27 @@ export const agentHandlers = AgentTools.toLayer({
       return "The plan is shown. Stop here and wait for the person to build it or ask for changes.";
     }),
 
+  check_draft: (_, { toolCallId }) =>
+    Effect.gen(function* () {
+      const workspace = yield* Workspace;
+      const { issues } = yield* workspace.check;
+      const draft = yield* workspace.draft;
+      const contracts = yield* workspace.contracts;
+      yield* activity(
+        toolCallId,
+        issues.length === 0
+          ? "Checked the draft: nothing to fix"
+          : `Checked the draft: ${issues.length === 1 ? "1 thing" : `${issues.length} things`} to fix`,
+      );
+      return { issues: issues.map((issue) => issueForAgent(issue, draft, contracts)) };
+    }),
+
   prepare_submission: (_, { toolCallId }) =>
     Effect.gen(function* () {
-      const { issues, behind } = yield* (yield* Workspace).check;
+      const workspace = yield* Workspace;
+      const { issues, behind } = yield* workspace.check;
+      const draft = yield* workspace.draft;
+      const contracts = yield* workspace.contracts;
       yield* show(toolCallId, {
         _tag: "Submission",
         id: toolCallId ?? "",
@@ -350,7 +345,7 @@ export const agentHandlers = AgentTools.toLayer({
       return {
         ready: issues.length === 0 && !behind,
         behind,
-        issues: issues.map(describeIssue),
+        issues: issues.map((issue) => issueForAgent(issue, draft, contracts)),
         next: "A person reviews and submits the draft from the dialog. You can't submit it.",
       };
     }),

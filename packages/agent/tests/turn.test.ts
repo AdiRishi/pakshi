@@ -318,6 +318,7 @@ it("the agent has only the tools the design gives it, none of which submits or p
   expect(Object.keys(AgentTools.tools).toSorted()).toEqual([
     "apply_ops",
     "ask_user",
+    "check_draft",
     "create_page",
     "fetch_url",
     "get_block_contract",
