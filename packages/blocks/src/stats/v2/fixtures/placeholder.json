@@ -1,0 +1,28 @@
+{
+  "variant": "row",
+  "surface": "muted",
+  "props": {
+    "align": "start",
+    "background": "full",
+    "heading": "A few numbers that matter.",
+    "headingRest": "Pick ones you can stand behind.",
+    "stats": [
+      {
+        "id": "it_first",
+        "value": "12",
+        "label": "Years running",
+        "detail": "Say where the number comes from"
+      },
+      {
+        "id": "it_second",
+        "value": "1,500",
+        "label": "People who came last time"
+      },
+      {
+        "id": "it_third",
+        "value": "9 in 10",
+        "label": "Would tell a friend about it"
+      }
+    ]
+  }
+}

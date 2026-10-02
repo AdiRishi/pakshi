@@ -98,6 +98,11 @@ import split2standard from "./split/v2/fixtures/standard.json" with { type: "jso
 import stats1cards from "./stats/v1/fixtures/cards.json" with { type: "json" };
 import stats1placeholder from "./stats/v1/fixtures/placeholder.json" with { type: "json" };
 import stats1row from "./stats/v1/fixtures/row.json" with { type: "json" };
+import stats2cards from "./stats/v2/fixtures/cards.json" with { type: "json" };
+import stats2placeholder from "./stats/v2/fixtures/placeholder.json" with { type: "json" };
+import stats2rowCentered from "./stats/v2/fixtures/row-centered.json" with { type: "json" };
+import stats2row from "./stats/v2/fixtures/row.json" with { type: "json" };
+import stats2split from "./stats/v2/fixtures/split.json" with { type: "json" };
 import teamGrid1fourColumns from "./team-grid/v1/fixtures/four-columns.json" with { type: "json" };
 import teamGrid1placeholder from "./team-grid/v1/fixtures/placeholder.json" with { type: "json" };
 import teamGrid1threeColumns from "./team-grid/v1/fixtures/three-columns.json" with { type: "json" };
@@ -207,6 +212,11 @@ export const fixtureFiles = [
   { type: "stats", version: 1, name: "cards", fixture: stats1cards },
   { type: "stats", version: 1, name: "placeholder", fixture: stats1placeholder },
   { type: "stats", version: 1, name: "row", fixture: stats1row },
+  { type: "stats", version: 2, name: "cards", fixture: stats2cards },
+  { type: "stats", version: 2, name: "placeholder", fixture: stats2placeholder },
+  { type: "stats", version: 2, name: "row-centered", fixture: stats2rowCentered },
+  { type: "stats", version: 2, name: "row", fixture: stats2row },
+  { type: "stats", version: 2, name: "split", fixture: stats2split },
   { type: "team-grid", version: 1, name: "four-columns", fixture: teamGrid1fourColumns },
   { type: "team-grid", version: 1, name: "placeholder", fixture: teamGrid1placeholder },
   { type: "team-grid", version: 1, name: "three-columns", fixture: teamGrid1threeColumns },

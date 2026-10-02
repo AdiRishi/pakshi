@@ -1,0 +1,28 @@
+{
+  "variant": "cards",
+  "surface": "inverse",
+  "props": {
+    "align": "start",
+    "background": "full",
+    "stats": [
+      {
+        "id": "it_days",
+        "value": "5 days",
+        "label": "Monday to Friday",
+        "detail": "9:00 to 16:00, with an hour for lunch"
+      },
+      {
+        "id": "it_ratio",
+        "value": "1 to 6",
+        "label": "Mentors to students",
+        "detail": "So nobody waits long for help"
+      },
+      {
+        "id": "it_workshops",
+        "value": "2",
+        "label": "Workshops every day",
+        "detail": "Joinery in the morning, sailing after lunch"
+      }
+    ]
+  }
+}
