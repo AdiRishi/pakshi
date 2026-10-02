@@ -8,6 +8,7 @@ import {
   oklchToHex,
   ResolvedTheme,
   resolveTheme,
+  scopedThemeVariables,
   themeCss,
 } from "../src/index.ts";
 
@@ -112,6 +113,16 @@ test("a brand's logo for dark backgrounds shows only on dark surfaces", () => {
   expect(rule(light, '[data-surface="inverse"]')).toContain("--theme-on-light: none;");
   expect(rule(themeCss(resolved, "dark"), '[data-surface="default"]')).toContain(
     "--theme-on-dark: inline-block;",
+  );
+});
+
+test("a scoped theme sets its colors only inside its scope, surfaces included", () => {
+  const css = scopedThemeVariables(resolved, "dark", '[data-brand="a"]');
+  expect(css).not.toContain(":root");
+  expect(css).not.toMatch(/^\[data-surface/m);
+  expect(rule(css, '[data-brand="a"]')).toContain("--theme-font-heading: 'Literata',");
+  expect(rule(css, '[data-brand="a"] [data-surface="brand"]')).toContain(
+    `--background: ${resolved.colors.dark.brand.background};`,
   );
 });
 
