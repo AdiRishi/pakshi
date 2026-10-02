@@ -1,14 +1,20 @@
 import type { Timestamp } from "@repo/contracts/release";
 
-const dayFormat = new Intl.DateTimeFormat("en-GB", {
-  day: "numeric",
-  month: "short",
-  year: "numeric",
-});
+const dayOptions = { day: "numeric", month: "short", year: "numeric" } as const;
+const dayFormat = new Intl.DateTimeFormat("en-GB", dayOptions);
+// A date without a time names the same day everywhere, which local time would shift.
+const dateFormat = new Intl.DateTimeFormat("en-GB", { ...dayOptions, timeZone: "UTC" });
+const isDate = (at: string) => /^\d{4}-\d{2}-\d{2}$/.test(at);
 const timeFormat = new Intl.DateTimeFormat("en-GB", { hour: "numeric", minute: "2-digit" });
 
 /** A day, such as "25 Sep 2026", from a moment or an ISO 8601 date. */
-export const formatDay = (at: string) => dayFormat.format(new Date(at));
+export const formatDay = (at: string) => (isDate(at) ? dateFormat : dayFormat).format(new Date(at));
+
+const twoDigits = (number: number) => String(number).padStart(2, "0");
+
+/** Today's date where the person is, such as "2026-10-02". */
+export const today = (now = new Date()) =>
+  `${now.getFullYear()}-${twoDigits(now.getMonth() + 1)}-${twoDigits(now.getDate())}`;
 
 /** A time of day, such as "2:14 pm". */
 export const formatTime = (at: Timestamp) => timeFormat.format(new Date(at));
