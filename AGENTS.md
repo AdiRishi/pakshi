@@ -60,6 +60,10 @@ update only the new version's file. The integration suite keeps a baseline
 screenshot of every block fixture (`infra/tests/blocks.integration.test.ts`).
 Accepting changed baselines of a released version needs an entry naming it in
 `packages/blocks/src/rendering-changes.json`, which the sites using it see.
+When only the way the suite takes screenshots changes, record a re-shoot in
+`infra/tests/baseline-reshoots.json` instead. The check then accepts each
+re-shot baseline only if its pixels are unchanged apart from its top and bottom
+rows.
 
 Tests come in three kinds, set out in
 `docs/adr/0003-three-kinds-of-tests.mdx`: unit tests for most behaviour, E2E
