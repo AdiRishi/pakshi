@@ -13,7 +13,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@repo/ui/components/radio-group";
 import { useEffect, useId, useMemo, useState } from "react";
 
-import { useEditorState, useServices, useStore } from "../context.tsx";
+import { useEditorState, useScheme, useServices, useStore } from "../context.tsx";
 import { chooseLayout } from "../layouts.ts";
 import { surfaceNames } from "../naming.ts";
 import { BlockPreview } from "../preview.tsx";
@@ -68,7 +68,8 @@ export function Appearance(props: {
   readonly contract: BlockDefinition;
 }) {
   const store = useStore();
-  const { scheme, examples } = useServices();
+  const { examples } = useServices();
+  const scheme = useScheme();
   const colors = useEditorState((state) => state.view.brand.theme.colors[scheme]);
   const tree = useSettled(useTree(props.target, props.block, props.instance));
   const { variants } = props.contract;

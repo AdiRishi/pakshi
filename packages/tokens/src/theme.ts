@@ -1,8 +1,12 @@
-import { Schema } from "effect";
+import { Schema, SchemaGetter } from "effect";
 
 import { FontId } from "./fonts.ts";
 
-export const Surface = Schema.Literals(["default", "muted", "brand", "inverse"]);
+/**
+ * A section's background. `tint` is a pale wash of the brand color and
+ * `accent` the brand's second color, or a light shade of its first.
+ */
+export const Surface = Schema.Literals(["default", "muted", "tint", "brand", "accent", "inverse"]);
 export type Surface = typeof Surface.Type;
 
 export const ColorScheme = Schema.Literals(["light", "dark"]);
@@ -42,7 +46,9 @@ export type SurfaceColors = typeof SurfaceColors.Type;
 export const SchemeColors = Schema.Struct({
   default: SurfaceColors,
   muted: SurfaceColors,
+  tint: SurfaceColors,
   brand: SurfaceColors,
+  accent: SurfaceColors,
   inverse: SurfaceColors,
 });
 export type SchemeColors = typeof SchemeColors.Type;
@@ -71,36 +77,114 @@ export type HexColor = typeof HexColor.Type;
 export const NeutralTone = Schema.Literals(["cool", "neutral", "warm"]);
 export type NeutralTone = typeof NeutralTone.Type;
 
+/** How a theme's cards are set apart from what's behind them. */
+export const CardStyle = Schema.Literals(["outline", "filled", "raised"]);
+export type CardStyle = typeof CardStyle.Type;
+
 /** The tokens a theme shares between both color schemes, as they're chosen and as pages read them. */
 const styleFields = {
+  /** Whether pages are always light, always dark, or follow the visitor's setting. */
+  colorMode: Schema.Literals(["light", "dark", "system"]),
   fonts: Schema.Struct({ heading: FontId, body: FontId }),
-  typeScale: Schema.Literals(["small", "medium", "large"]),
-  headingWeight: Schema.Literals([500, 600, 700, 800]),
+  typeScale: Schema.Literals(["x-small", "small", "medium", "large", "x-large"]),
+  headingWeight: Schema.Literals([300, 400, 500, 600, 700, 800]),
+  /** Headings set close together, as written, or in widely spaced capitals. */
+  headingStyle: Schema.Literals(["tight", "normal", "uppercase"]),
+  /** The short lines above headings and on badges. */
+  labelStyle: Schema.Literals(["plain", "uppercase", "pill", "mono"]),
   radius: Schema.Literals(["none", "small", "medium", "large"]),
-  shadow: Schema.Literals(["flat", "soft", "raised"]),
+  /** Buttons with the theme's corners, or fully round ends. */
+  buttons: Schema.Literals(["rounded", "pill"]),
+  cards: CardStyle,
   density: Schema.Literals(["compact", "comfortable", "spacious"]),
+  /** How wide a page's content runs on a large screen. */
+  width: Schema.Literals(["narrow", "regular", "wide"]),
   imageCorners: Schema.Literals(["square", "rounded", "extra-rounded"]),
   motion: Schema.Boolean,
 };
 
 /**
- * A brand's theme as its admins set it: one brand color, the tone of its
- * grays, and the rest of its tokens.
+ * A brand's theme as its admins set it: a brand color, an optional second
+ * color, the tone of its grays, and the rest of its tokens.
  */
-export const ThemeValues = Schema.Struct({
+const CurrentThemeValues = Schema.Struct({
   brandColor: HexColor,
+  accentColor: Schema.NullOr(HexColor),
   neutral: NeutralTone,
   ...styleFields,
 });
-export type ThemeValues = typeof ThemeValues.Type;
 
-/**
- * A theme with its palette generated: what snapshots carry and pages render
- * with. Every value is one `themeCss` can write into a declaration.
+/*
+ * The first theme schema, which brand revisions, drafts and snapshots made
+ * before the second still hold. It reads as the second, with the look it
+ * always had: its shadow becomes the style of its cards.
  */
-export const ResolvedTheme = Schema.Struct({
-  schema: Schema.Literal("pakshi.theme/1"),
+
+const firstStyleFields = {
+  fonts: styleFields.fonts,
+  typeScale: Schema.Literals(["small", "medium", "large"]),
+  headingWeight: Schema.Literals([500, 600, 700, 800]),
+  radius: styleFields.radius,
+  shadow: Schema.Literals(["flat", "soft", "raised"]),
+  density: styleFields.density,
+  imageCorners: styleFields.imageCorners,
+  motion: Schema.Boolean,
+};
+
+type FirstStyle = Schema.Struct.Type<typeof firstStyleFields>;
+
+/** A first-schema theme's style in the current schema, with the look it always had. */
+export const upgradeStyle = ({ shadow, ...style }: FirstStyle) => ({
+  ...style,
+  colorMode: "system" as const,
+  headingStyle: "normal" as const,
+  labelStyle: "uppercase" as const,
+  buttons: "rounded" as const,
+  cards: shadow === "flat" ? ("outline" as const) : ("raised" as const),
+  width: "regular" as const,
+});
+
+const FirstThemeValues = Schema.Struct({
+  brandColor: HexColor,
+  neutral: NeutralTone,
+  ...firstStyleFields,
+});
+
+export const ThemeValues = Schema.Union([
+  CurrentThemeValues,
+  FirstThemeValues.pipe(
+    Schema.decodeTo(CurrentThemeValues, {
+      decode: SchemaGetter.transform(({ brandColor, neutral, ...style }) => ({
+        brandColor,
+        accentColor: null,
+        neutral,
+        ...upgradeStyle(style),
+      })),
+      encode: SchemaGetter.forbidden(() => "Themes are written in the current schema"),
+    }),
+  ),
+]);
+export type ThemeValues = typeof CurrentThemeValues.Type;
+
+/** A resolved theme in the current schema. `ResolvedTheme` also reads older ones. */
+export const CurrentResolvedTheme = Schema.Struct({
+  schema: Schema.Literal("pakshi.theme/2"),
   colors: Schema.Struct({ light: SchemeColors, dark: SchemeColors }),
   ...styleFields,
 });
-export type ResolvedTheme = typeof ResolvedTheme.Type;
+
+const FirstSchemeColors = Schema.Struct({
+  default: SurfaceColors,
+  muted: SurfaceColors,
+  brand: SurfaceColors,
+  inverse: SurfaceColors,
+});
+
+/** A resolved theme of the first schema, as older revisions, drafts and snapshots hold it. */
+export const FirstResolvedTheme = Schema.Struct({
+  schema: Schema.Literal("pakshi.theme/1"),
+  colors: Schema.Struct({ light: FirstSchemeColors, dark: FirstSchemeColors }),
+  ...firstStyleFields,
+});
+export type FirstResolvedTheme = typeof FirstResolvedTheme.Type;
+export type ResolvedTheme = typeof CurrentResolvedTheme.Type;

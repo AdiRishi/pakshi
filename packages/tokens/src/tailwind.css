@@ -24,6 +24,7 @@
 
   --font-heading: var(--theme-font-heading);
   --font-body: var(--theme-font-body);
+  --font-label: var(--theme-label-font);
   --font-weight-heading: var(--theme-heading-weight);
 
   --text-small: var(--theme-text-small);
@@ -34,20 +35,31 @@
   --text-lead--line-height: 1.5;
   --text-heading: var(--theme-text-heading);
   --text-heading--line-height: 1.25;
+  --text-heading--letter-spacing: var(--theme-tracking-heading);
   --text-title: var(--theme-text-title);
-  --text-title--line-height: 1.15;
+  --text-title--line-height: 1.1;
+  --text-title--letter-spacing: var(--theme-tracking-title);
   --text-display: var(--theme-text-display);
-  --text-display--line-height: 1.05;
+  --text-display--line-height: 1.02;
+  --text-display--letter-spacing: var(--theme-tracking-display);
+  --text-jumbo: var(--theme-text-jumbo);
+  --text-jumbo--line-height: 0.95;
+  --text-jumbo--letter-spacing: var(--theme-tracking-display);
 
   --radius-sm: calc(var(--theme-radius) * 0.5);
   --radius-md: var(--theme-radius);
   --radius-lg: calc(var(--theme-radius) * 1.5);
+  --radius-xl: calc(var(--theme-radius) * 2);
   --radius-image: var(--theme-image-radius);
+  --radius-button: var(--theme-button-radius);
 
   --shadow-card: var(--theme-shadow);
 
   --spacing: var(--theme-spacing);
   --spacing-section: var(--theme-section-space);
+  --spacing-gutter: var(--theme-gutter);
+
+  --container-page: var(--theme-width);
 
   --default-transition-duration: var(--theme-motion-duration);
 }
@@ -62,4 +74,37 @@
 
 @utility on-dark-only {
   display: var(--theme-on-dark);
+}
+
+/** The width a page's content runs to, inside the page's side margins. */
+@utility page-width {
+  width: min(100% - 2 * var(--theme-gutter), var(--theme-width));
+  margin-inline: auto;
+}
+
+/** A short line above a heading, or a badge, in the theme's label style. */
+@utility kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5em;
+  width: fit-content;
+  font-family: var(--theme-label-font);
+  font-size: var(--theme-text-small);
+  line-height: 1.5;
+  font-weight: var(--theme-label-weight);
+  letter-spacing: var(--theme-label-tracking);
+  text-transform: var(--theme-label-transform);
+  padding-block: calc(var(--theme-label-padding) / 3);
+  padding-inline: var(--theme-label-padding);
+  border: var(--theme-label-border) solid var(--border);
+  border-radius: 999px;
+}
+
+/** A card in the theme's card style, on whatever surface it's on. */
+@utility card {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border: 1px solid var(--theme-card-border);
+  box-shadow: var(--theme-shadow);
+  border-radius: var(--radius-lg);
 }

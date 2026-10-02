@@ -10,33 +10,127 @@ import { Schema } from "effect";
 interface FontSpec {
   /** The family name pages declare it as. */
   readonly family: string;
-  readonly category: "serif" | "sans-serif";
+  readonly category: "serif" | "sans-serif" | "monospace";
   /** The lightest and heaviest weights the variable font covers. */
   readonly weights: readonly [number, number];
   readonly italic: boolean;
 }
 
 export const FontId = Schema.Literals([
+  "archivo",
+  "bodoni-moda",
   "bricolage-grotesque",
+  "cormorant-garamond",
+  "dm-sans",
+  "eb-garamond",
+  "figtree",
   "fraunces",
+  "geist",
+  "geist-mono",
+  "ibm-plex-sans",
+  "instrument-sans",
+  "inter",
+  "jetbrains-mono",
   "literata",
+  "lora",
+  "manrope",
+  "newsreader",
   "onest",
+  "playfair-display",
+  "plus-jakarta-sans",
+  "schibsted-grotesk",
   "source-sans-3",
   "source-serif-4",
+  "space-grotesk",
+  "syne",
+  "unbounded",
   "work-sans",
 ]);
 export type FontId = typeof FontId.Type;
 
 export const fontCatalog = {
+  archivo: { family: "Archivo", category: "sans-serif", weights: [100, 900], italic: true },
+  "bodoni-moda": {
+    family: "Bodoni Moda",
+    category: "serif",
+    weights: [400, 900],
+    italic: true,
+  },
   "bricolage-grotesque": {
     family: "Bricolage Grotesque",
     category: "sans-serif",
     weights: [200, 800],
     italic: false,
   },
+  "cormorant-garamond": {
+    family: "Cormorant Garamond",
+    category: "serif",
+    weights: [300, 700],
+    italic: true,
+  },
+  "dm-sans": {
+    family: "DM Sans",
+    category: "sans-serif",
+    weights: [100, 1000],
+    italic: true,
+  },
+  "eb-garamond": {
+    family: "EB Garamond",
+    category: "serif",
+    weights: [400, 800],
+    italic: true,
+  },
+  figtree: { family: "Figtree", category: "sans-serif", weights: [300, 900], italic: true },
   fraunces: { family: "Fraunces", category: "serif", weights: [100, 900], italic: true },
+  geist: { family: "Geist", category: "sans-serif", weights: [100, 900], italic: true },
+  "geist-mono": {
+    family: "Geist Mono",
+    category: "monospace",
+    weights: [100, 900],
+    italic: true,
+  },
+  "ibm-plex-sans": {
+    family: "IBM Plex Sans",
+    category: "sans-serif",
+    weights: [100, 700],
+    italic: true,
+  },
+  "instrument-sans": {
+    family: "Instrument Sans",
+    category: "sans-serif",
+    weights: [400, 700],
+    italic: true,
+  },
+  inter: { family: "Inter", category: "sans-serif", weights: [100, 900], italic: true },
+  "jetbrains-mono": {
+    family: "JetBrains Mono",
+    category: "monospace",
+    weights: [100, 800],
+    italic: true,
+  },
   literata: { family: "Literata", category: "serif", weights: [200, 900], italic: true },
+  lora: { family: "Lora", category: "serif", weights: [400, 700], italic: true },
+  manrope: { family: "Manrope", category: "sans-serif", weights: [200, 800], italic: false },
+  newsreader: { family: "Newsreader", category: "serif", weights: [200, 800], italic: true },
   onest: { family: "Onest", category: "sans-serif", weights: [100, 900], italic: false },
+  "playfair-display": {
+    family: "Playfair Display",
+    category: "serif",
+    weights: [400, 900],
+    italic: true,
+  },
+  "plus-jakarta-sans": {
+    family: "Plus Jakarta Sans",
+    category: "sans-serif",
+    weights: [200, 800],
+    italic: true,
+  },
+  "schibsted-grotesk": {
+    family: "Schibsted Grotesk",
+    category: "sans-serif",
+    weights: [400, 900],
+    italic: true,
+  },
   "source-sans-3": {
     family: "Source Sans 3",
     category: "sans-serif",
@@ -49,7 +143,20 @@ export const fontCatalog = {
     weights: [200, 900],
     italic: true,
   },
-  "work-sans": { family: "Work Sans", category: "sans-serif", weights: [100, 900], italic: true },
+  "space-grotesk": {
+    family: "Space Grotesk",
+    category: "sans-serif",
+    weights: [300, 700],
+    italic: false,
+  },
+  syne: { family: "Syne", category: "sans-serif", weights: [400, 800], italic: false },
+  unbounded: { family: "Unbounded", category: "sans-serif", weights: [200, 900], italic: false },
+  "work-sans": {
+    family: "Work Sans",
+    category: "sans-serif",
+    weights: [100, 900],
+    italic: true,
+  },
 } as const satisfies Record<FontId, FontSpec>;
 
 /** The URL path every app serves font files under. */
@@ -93,6 +200,7 @@ export const allFontFiles = () => FontId.literals.flatMap(fontFiles);
 const fallbacks = {
   serif: "Georgia, 'Times New Roman', serif",
   "sans-serif": "system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif",
+  monospace: "ui-monospace, 'SF Mono', Menlo, Consolas, monospace",
 } as const satisfies Record<FontSpec["category"], string>;
 
 /** The `font-family` value for a font, with fallbacks of its kind while it loads. */

@@ -4,6 +4,7 @@ import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
 import type { BlockList, PropPath, Target } from "@repo/contracts/ops";
 import type { PublishedSettings } from "@repo/contracts/settings";
 import type { MediaSummary } from "@repo/contracts/studio";
+import { themeSchemes } from "@repo/tokens";
 import type { Editor } from "@tiptap/core";
 import { createContext, useContext, useRef, useSyncExternalStore } from "react";
 
@@ -72,6 +73,16 @@ export const useEditorState = <T,>(
     return kept;
   };
   return useSyncExternalStore(store.subscribe, select, select);
+};
+
+/**
+ * The color scheme the draft's theme shows in: the one asked for, unless the
+ * theme is always light or always dark.
+ */
+export const useScheme = () => {
+  const { scheme } = useServices();
+  const schemes = useEditorState((state) => themeSchemes(state.view.brand.theme));
+  return schemes.includes(scheme) ? scheme : (schemes[0] ?? scheme);
 };
 
 /** Which part of the draft a block belongs to: a page, or the site-level header and footer. */

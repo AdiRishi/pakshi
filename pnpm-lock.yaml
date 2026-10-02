@@ -194,22 +194,85 @@ catalogs:
     '@effect/tsgo':
       specifier: 0.46.1
       version: 0.46.1
+    '@fontsource-variable/archivo':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/bodoni-moda':
+      specifier: 5.3.0
+      version: 5.3.0
     '@fontsource-variable/bricolage-grotesque':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/cormorant-garamond':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/dm-sans':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/eb-garamond':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/figtree':
       specifier: 5.3.0
       version: 5.3.0
     '@fontsource-variable/fraunces':
       specifier: 5.3.0
       version: 5.3.0
+    '@fontsource-variable/geist':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/geist-mono':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/ibm-plex-sans':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/instrument-sans':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/inter':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/jetbrains-mono':
+      specifier: 5.3.0
+      version: 5.3.0
     '@fontsource-variable/literata':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/lora':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/manrope':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/newsreader':
       specifier: 5.3.0
       version: 5.3.0
     '@fontsource-variable/onest':
       specifier: 5.3.1
       version: 5.3.1
+    '@fontsource-variable/playfair-display':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/plus-jakarta-sans':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/schibsted-grotesk':
+      specifier: 5.3.0
+      version: 5.3.0
     '@fontsource-variable/source-sans-3':
       specifier: 5.3.0
       version: 5.3.0
     '@fontsource-variable/source-serif-4':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/space-grotesk':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/syne':
+      specifier: 5.3.0
+      version: 5.3.0
+    '@fontsource-variable/unbounded':
       specifier: 5.3.0
       version: 5.3.0
     '@fontsource-variable/work-sans':
@@ -772,9 +835,15 @@ importers:
       '@tiptap/static-renderer':
         specifier: 'catalog:'
         version: 3.31.3(@tiptap/core@3.31.3(@tiptap/pm@3.31.3))(@tiptap/pm@3.31.3)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      class-variance-authority:
+        specifier: 'catalog:'
+        version: 0.7.1
       effect:
         specifier: 4.0.0-rc.117
         version: 4.0.0-rc.117
+      lucide-react:
+        specifier: 'catalog:'
+        version: 1.48.0(react@19.3.0)
       marked:
         specifier: 'catalog:'
         version: 17.0.6
@@ -788,6 +857,9 @@ importers:
       '@repo/tsconfig':
         specifier: workspace:*
         version: link:../../tooling/tsconfig
+      '@tailwindcss/vite':
+        specifier: 'catalog:'
+        version: 4.3.3(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.3
@@ -797,12 +869,18 @@ importers:
       '@types/react-dom':
         specifier: 'catalog:'
         version: 19.3.0(@types/react@19.3.0)
+      '@vitejs/plugin-react':
+        specifier: 'catalog:'
+        version: 6.1.1(babel-plugin-react-compiler@1.0.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
       react-dom:
         specifier: 'catalog:'
         version: 19.3.0(react@19.3.0)
       typescript:
         specifier: 'catalog:'
         version: 7.0.2
+      vite:
+        specifier: 'catalog:'
+        version: 8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1)
       vitest:
         specifier: 'catalog:'
         version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
@@ -949,22 +1027,85 @@ importers:
 
   packages/tokens:
     dependencies:
+      '@fontsource-variable/archivo':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/bodoni-moda':
+        specifier: 'catalog:'
+        version: 5.3.0
       '@fontsource-variable/bricolage-grotesque':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/cormorant-garamond':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/dm-sans':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/eb-garamond':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/figtree':
         specifier: 'catalog:'
         version: 5.3.0
       '@fontsource-variable/fraunces':
         specifier: 'catalog:'
         version: 5.3.0
+      '@fontsource-variable/geist':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/geist-mono':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/ibm-plex-sans':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/instrument-sans':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/inter':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/jetbrains-mono':
+        specifier: 'catalog:'
+        version: 5.3.0
       '@fontsource-variable/literata':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/lora':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/manrope':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/newsreader':
         specifier: 'catalog:'
         version: 5.3.0
       '@fontsource-variable/onest':
         specifier: 'catalog:'
         version: 5.3.1
+      '@fontsource-variable/playfair-display':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/plus-jakarta-sans':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/schibsted-grotesk':
+        specifier: 'catalog:'
+        version: 5.3.0
       '@fontsource-variable/source-sans-3':
         specifier: 'catalog:'
         version: 5.3.0
       '@fontsource-variable/source-serif-4':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/space-grotesk':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/syne':
+        specifier: 'catalog:'
+        version: 5.3.0
+      '@fontsource-variable/unbounded':
         specifier: 'catalog:'
         version: 5.3.0
       '@fontsource-variable/work-sans':
@@ -2477,23 +2618,86 @@ packages:
   '@floating-ui/utils@0.2.12':
     resolution: {integrity: sha512-HpCo8tmWzLVad5s2d19EhAz5zqrrQ6s69qd6moPMQvkOuSwDT1YgRfWSVuc4ennqrgv3OHppiOGMQ7oC13yIww==}
 
+  '@fontsource-variable/archivo@5.3.0':
+    resolution: {integrity: sha512-HogK8FJelrD1o7TlZlkIVtHgc20bO5PZRWE7mUeUTdMN055alznQV6/00J00IBeu8FQAH4s3zW9UJNvKExXf+g==}
+
+  '@fontsource-variable/bodoni-moda@5.3.0':
+    resolution: {integrity: sha512-yTDXk4+/J8I20KjtkHBbXDQNeE5PR3BZa0gv/YRza+kyxsz+mmg0la/n/hsr6+WvSfVP7Lc8lRTjHGIYwBW43A==}
+
   '@fontsource-variable/bricolage-grotesque@5.3.0':
     resolution: {integrity: sha512-TLi9Q4hJjS2UvoTMRSS2nHu6c4R56lAw60NR9QYtVRCHn0XtsFpiEhNffZ8Glsoxu6wEEwLKBP8lb94J52PNBA==}
+
+  '@fontsource-variable/cormorant-garamond@5.3.0':
+    resolution: {integrity: sha512-rgZJ/5w3hi60swAPnrOXpZf5wEH6NTrvm4H8D9Y4b1QIFUqlX14eM3QTMU/eAznjfh0eXpO1QUqsFhiy58aoMg==}
+
+  '@fontsource-variable/dm-sans@5.3.0':
+    resolution: {integrity: sha512-BpUG5bqePiDFMBM4ZtLSlPdAIOM990uB1dlXzIf4aw21yQR7BmykedLXXXMqGWsR18aMLOsbWccwJNh3ztTQaA==}
+
+  '@fontsource-variable/eb-garamond@5.3.0':
+    resolution: {integrity: sha512-656OJsA9Vv24yhqRZFEzXnzS2AYgKdEILLgHJYLzzXndgcWFKfSXFqzbRI5/6Yk1Yt7UfWrUeppE5nRQPQMwlQ==}
+
+  '@fontsource-variable/figtree@5.3.0':
+    resolution: {integrity: sha512-VRVodD7OiG7apQwE8/2fMjaqpY/a0qRJqL5HtYj8CKIVps+9amaFcdfKmDIf7iqYQx6iPLlArVXAfKeIZmVcNQ==}
 
   '@fontsource-variable/fraunces@5.3.0':
     resolution: {integrity: sha512-9BYGySn4AHEJdgp9Z28tQ3X+laJMEOITXkQarZXeloWQZDq5oOvXJ3kDA8c7MGIfpogIaZfjrQBqmda8POOCKA==}
 
+  '@fontsource-variable/geist-mono@5.3.0':
+    resolution: {integrity: sha512-vBbuwDEo9AkrqADMXOrlAR3DFcJi4/JxeuU43FoiQERnNwsfXNnvxvReZG02cQKmyk4DZkZdBZX3oTDvy2zBAw==}
+
+  '@fontsource-variable/geist@5.3.0':
+    resolution: {integrity: sha512-j0m+vLQuG5XAYoHtGCVu0spvlGreR3EzpECUVzkFmI1mTVnAO38l/NEPDCFgZ177JxzYJCLSmTQibIiYPilGrA==}
+
+  '@fontsource-variable/ibm-plex-sans@5.3.0':
+    resolution: {integrity: sha512-agG8tXFEo0hD9+J7npa4vbbWult52eMLVaQ6WQRlhs/iCAojrMAoejru85W9HTVXHfyUj96KM7gp/KGAS87XaQ==}
+
+  '@fontsource-variable/instrument-sans@5.3.0':
+    resolution: {integrity: sha512-u4gKbDBTNFGkg997tfQn3eHOhHuquWUFTRT/rwzuKtrxX5P2ekfs2x+LgBPP4P32+cC+vUwF1Cr+IdRoPQbrGw==}
+
+  '@fontsource-variable/inter@5.3.0':
+    resolution: {integrity: sha512-OupL48va4JNofb97w6NYeF9S7W/kHNKM0Er8Dem5nqi4jeOLrVJDoE8tZEpnMJmtkvNbB1EIPPwHcdkF6b1oUA==}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0':
+    resolution: {integrity: sha512-F32xpS2NsGYoQi2ADSkKTgpJj7ozajsGgDJ8woTnqjmIB+dxDIqImjl4pXZVEExu8UFZ2ndhmX18EBS/hdz3Lw==}
+
   '@fontsource-variable/literata@5.3.0':
     resolution: {integrity: sha512-1Jw7xvOcoGyB83lxB2nG4bfNbqtX2/TTbdh9sHAOmU064SvmSdulDtA5RBu5JYWf64fdaKX7xU+z3GO1T2bCHA==}
 
+  '@fontsource-variable/lora@5.3.0':
+    resolution: {integrity: sha512-2ph8KiZ8Bn141hWuC3ErtpJ+Ui8p2MJQn8TJNRSRmLmnCIOCtHfiBM9R7WLRPeUG/q6hXyHOxWQ8DvRSX+ixvQ==}
+
+  '@fontsource-variable/manrope@5.3.0':
+    resolution: {integrity: sha512-6D5dgokHsWDDMtmXHznKa0hK229NN+1a4BLPmUCLqcO1Pw5EEhWY5RFt0AcXnVRAljFFPfRtLkJePQj6LSsV6g==}
+
+  '@fontsource-variable/newsreader@5.3.0':
+    resolution: {integrity: sha512-rrzYi43qMpbzwuFtf9OkWH8sxAPVPcQQQEwXpPtwaKYeJ8yVg5aLs5kawmo1f2Q1t1M38TLmEKCkGVDsYwgdFw==}
+
   '@fontsource-variable/onest@5.3.1':
     resolution: {integrity: sha512-xaaw6G4HDB2/RczsWLD/2bnib4ykmQlTlBUN3GOEOiyErilZukQWVJG95h9zwAy0i8KY+QzDa+COPfqhI72Acw==}
+
+  '@fontsource-variable/playfair-display@5.3.0':
+    resolution: {integrity: sha512-IHdzTvE8eGIXHteZql7KXoqdc3Gfm+Zs1u4XlSC3MeplkwviT3sx/P6gI0tLwg/xIYLF4ZJYveZ5V+bl9cnDwA==}
+
+  '@fontsource-variable/plus-jakarta-sans@5.3.0':
+    resolution: {integrity: sha512-/l/4r0yyWK9JzAlmA0LiYgGgmJe/Gswt4jTJEzr5QhJfwMbvJZDmYWyW0M4X7yCK69BajMVlV/Lx8g7WDc1+sw==}
+
+  '@fontsource-variable/schibsted-grotesk@5.3.0':
+    resolution: {integrity: sha512-ndS6H/KICWANchlHF3q4UdZD+xrZ3Ji0rUobIuXlgvDUzDfqZDsVuXPXZb636nJZMHE9zZ9Fmwgqazm8hMB50Q==}
 
   '@fontsource-variable/source-sans-3@5.3.0':
     resolution: {integrity: sha512-dpi0GZk7EQe2tYpg6Q0Fx0OmUgnuGu+0rHPgtXqtKhglYmJuP7jZ12Mu1uN+NfRaJRY1Emn8AQJEWzmoZ4wa9g==}
 
   '@fontsource-variable/source-serif-4@5.3.0':
     resolution: {integrity: sha512-9vch9WqxjaaA+1o9Ur8pOgIGbCYLjRReOUel23A6lOpD1syptgjtkORevvNmldJ5kGXQL29onQUqI5Ltz0s3bQ==}
+
+  '@fontsource-variable/space-grotesk@5.3.0':
+    resolution: {integrity: sha512-2IxmvfB08i9vnGB3Ym/AXvhRE+8XOjWMXIyDum03c+tPwH0FUoMNQfGpU8NXPxjbws0Vvss3AH0Zqt4oJBBAdw==}
+
+  '@fontsource-variable/syne@5.3.0':
+    resolution: {integrity: sha512-GUNH65fUfWHQcX7bO0BGgScE465gawpTId45aDfhHcVj/upbb6b+2d++5keKP128vK8+LtE4dvLkKTsxoh7TwA==}
+
+  '@fontsource-variable/unbounded@5.3.0':
+    resolution: {integrity: sha512-ea565Ncn4r7gPdBEHcmaF31V11hDfkL7b/JCklLobQbMfbu2ZZQrVWNgdeEFWFLqNh36yhieZWOgxdAnMTzrLg==}
 
   '@fontsource-variable/work-sans@5.3.0':
     resolution: {integrity: sha512-le8h/OIIuhm5Z7TdvuMw0yKg2gaCZUiMec8zaumsVVjzeJRBPEF0bQI/MkaZDHCVzZDvZoP/O2LiGOSfDLSbaw==}
@@ -10322,17 +10526,59 @@ snapshots:
 
   '@floating-ui/utils@0.2.12': {}
 
+  '@fontsource-variable/archivo@5.3.0': {}
+
+  '@fontsource-variable/bodoni-moda@5.3.0': {}
+
   '@fontsource-variable/bricolage-grotesque@5.3.0': {}
+
+  '@fontsource-variable/cormorant-garamond@5.3.0': {}
+
+  '@fontsource-variable/dm-sans@5.3.0': {}
+
+  '@fontsource-variable/eb-garamond@5.3.0': {}
+
+  '@fontsource-variable/figtree@5.3.0': {}
 
   '@fontsource-variable/fraunces@5.3.0': {}
 
+  '@fontsource-variable/geist-mono@5.3.0': {}
+
+  '@fontsource-variable/geist@5.3.0': {}
+
+  '@fontsource-variable/ibm-plex-sans@5.3.0': {}
+
+  '@fontsource-variable/instrument-sans@5.3.0': {}
+
+  '@fontsource-variable/inter@5.3.0': {}
+
+  '@fontsource-variable/jetbrains-mono@5.3.0': {}
+
   '@fontsource-variable/literata@5.3.0': {}
 
+  '@fontsource-variable/lora@5.3.0': {}
+
+  '@fontsource-variable/manrope@5.3.0': {}
+
+  '@fontsource-variable/newsreader@5.3.0': {}
+
   '@fontsource-variable/onest@5.3.1': {}
+
+  '@fontsource-variable/playfair-display@5.3.0': {}
+
+  '@fontsource-variable/plus-jakarta-sans@5.3.0': {}
+
+  '@fontsource-variable/schibsted-grotesk@5.3.0': {}
 
   '@fontsource-variable/source-sans-3@5.3.0': {}
 
   '@fontsource-variable/source-serif-4@5.3.0': {}
+
+  '@fontsource-variable/space-grotesk@5.3.0': {}
+
+  '@fontsource-variable/syne@5.3.0': {}
+
+  '@fontsource-variable/unbounded@5.3.0': {}
 
   '@fontsource-variable/work-sans@5.3.0': {}
 

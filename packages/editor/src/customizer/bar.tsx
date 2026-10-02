@@ -10,7 +10,7 @@ import { MonitorIcon, SmartphoneIcon } from "lucide-react";
 import { type ReactNode, useMemo } from "react";
 
 import { useDraftSiteData } from "../canvas/page-view.tsx";
-import { useEditorState, useServices, useStore } from "../context.tsx";
+import { useEditorState, useScheme, useServices, useStore } from "../context.tsx";
 import { chooseLayout } from "../layouts.ts";
 import { surfaceNames } from "../naming.ts";
 import { ScaledBlockPreview } from "../preview.tsx";
@@ -131,7 +131,7 @@ function Backgrounds(props: {
   readonly contract: BlockDefinition;
 }) {
   const store = useStore();
-  const { scheme } = useServices();
+  const scheme = useScheme();
   const colors = useEditorState((state) => state.view.brand.theme.colors[scheme]);
   if (props.contract.placement === "item") return null;
   const current = props.instance.surface ?? "default";
