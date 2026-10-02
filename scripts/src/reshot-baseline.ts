@@ -1,12 +1,19 @@
 /*
  * Whether a re-shot baseline screenshot shows the same picture as before. A
  * re-shoot changes how the browser suite takes screenshots, never what a
- * block renders, so the two must match pixel for pixel. Only their edge rows
- * may differ: a block's top and bottom edges fall between pixels, so the row
- * each one crosses, and whether the screenshot includes it, depends on where
- * the block sat on the page.
+ * block renders, so the two must match as the baseline test itself matches a
+ * screenshot to its baseline, with Playwright's comparator and the suite's
+ * tolerance. Their edge rows are left out: a block's top and bottom edges fall
+ * between pixels, so the row each one crosses, and whether the screenshot
+ * includes it, depends on where the block sat on the page.
  */
-import { inflateSync } from "node:zlib";
+import { crc32, deflateSync, inflateSync } from "node:zlib";
+
+import coreBundle from "playwright-core/lib/coreBundle";
+
+import { screenshotTolerance } from "../../infra/tests/support/screenshot-tolerance.ts";
+
+const compare = coreBundle.utils.getComparator("image/png");
 
 /** A PNG's pixels, each row as RGBA, or why they can't be read. */
 type Decoded =
@@ -84,13 +91,37 @@ const decode = (file: Buffer): Decoded => {
   return { _tag: "Pixels", width, rows };
 };
 
-const sameRow = (a: Uint8Array | undefined, b: Uint8Array | undefined) =>
-  a !== undefined && b !== undefined && Buffer.from(a).equals(Buffer.from(b));
+const chunk = (type: string, data: Buffer) => {
+  const body = Buffer.concat([Buffer.from(type, "latin1"), data]);
+  const framed = Buffer.alloc(body.length + 8);
+  framed.writeUInt32BE(data.length, 0);
+  body.copy(framed, 4);
+  framed.writeUInt32BE(crc32(body), body.length + 4);
+  return framed;
+};
+
+/** An RGBA PNG of `rows`, for Playwright's comparator, which reads only PNGs. */
+const encode = (width: number, rows: ReadonlyArray<Uint8Array>) => {
+  const header = Buffer.alloc(13);
+  header.writeUInt32BE(width, 0);
+  header.writeUInt32BE(rows.length, 4);
+  header.set([8, 6], 8);
+  const unfiltered = Buffer.concat(rows.flatMap((row) => [Buffer.from([0]), row]));
+  return Buffer.concat([
+    signature,
+    chunk("IHDR", header),
+    chunk("IDAT", deflateSync(unfiltered)),
+    chunk("IEND", Buffer.alloc(0)),
+  ]);
+};
+
+const sameRow = (a: Uint8Array, b: Uint8Array | undefined) =>
+  b !== undefined && Buffer.from(a).equals(Buffer.from(b));
 
 /**
  * Why a re-shot screenshot isn't the same picture as the one it replaces, or
- * null when it is: as wide, at most a row taller or shorter, and identical,
- * pixel for pixel, in every row but each screenshot's first and last.
+ * null when it is: as wide, at most a row taller or shorter, and, in every row
+ * but each screenshot's first and last, a match for the baseline test.
  */
 export const reshootDifference = (before: Buffer, after: Buffer): string | null => {
   const [old, now] = [decode(before), decode(after)];
@@ -100,12 +131,19 @@ export const reshootDifference = (before: Buffer, after: Buffer): string | null 
   if (Math.abs(old.rows.length - now.rows.length) > 1)
     return `it's ${now.rows.length}px tall, where it was ${old.rows.length}px`;
   // Row y of the new screenshot shows row y + shift of the old one.
-  const matches = [-1, 0, 1].some((shift) => {
+  const overlaps = [0, 1, -1].map((shift) => {
     const first = Math.max(1, 1 - shift);
     const last = Math.min(now.rows.length - 2, old.rows.length - 2 - shift);
-    for (let y = first; y <= last; y += 1)
-      if (!sameRow(now.rows[y], old.rows[y + shift])) return false;
-    return true;
+    return {
+      now: now.rows.slice(first, last + 1),
+      old: old.rows.slice(first + shift, last + shift + 1),
+    };
   });
-  return matches ? null : "its pixels changed inside its edge rows";
+  if (overlaps.some((overlap) => overlap.now.every((row, y) => sameRow(row, overlap.old[y]))))
+    return null;
+  const mismatches = overlaps.map((overlap) =>
+    compare(encode(now.width, overlap.now), encode(old.width, overlap.old), screenshotTolerance),
+  );
+  if (mismatches.includes(null)) return null;
+  return `inside its edge rows, ${mismatches[0]?.errorMessage.trim()}`;
 };

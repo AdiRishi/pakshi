@@ -116,9 +116,15 @@ await test("each later screenshot change of a version needs an entry of its own"
 /** A picture as rows of grey levels, one per pixel. */
 type Picture = ReadonlyArray<ReadonlyArray<number>>;
 
-/** Eight rows of four pixels, no two rows alike. */
-const picture: Picture = Array.from({ length: 8 }, (_, y) =>
-  Array.from({ length: 4 }, (_, x) => 20 * y + 3 * x),
+/** Draws `level` over the pixels of `picture` that `where` picks. */
+const paint = (picture: Picture, level: number, where: (x: number, y: number) => boolean) =>
+  picture.map((row, y) => row.map((old, x) => (where(x, y) ? level : old)));
+
+/** A dark bar across a light block, 40 pixels by 30. */
+const picture: Picture = paint(
+  Array.from({ length: 30 }, () => Array.from({ length: 40 }, () => 230)),
+  40,
+  (x, y) => x >= 5 && x < 35 && y >= 10 && y < 14,
 );
 
 /**
@@ -159,49 +165,49 @@ const reshootOfHero = JSON.stringify([
   { date: "2026-10-02", versions: ["hero@1"], reason: "Each fixture alone on the page" },
 ]);
 
-await test("a re-shoot lets a released screenshot change only in its edge rows", (context) => {
+/** The problems with a re-shoot of hero v1 that replaces `picture` with `reshot`. */
+const reshootProblems = (context: TestContext, reshot: Buffer) => {
   const root = repository(context, png(picture));
-  // A row lost at the top, and a bottom row the block's edge now crosses elsewhere.
-  write(root, baseline, png([...picture.slice(1, -1), [0, 0, 0, 0]]));
+  write(root, baseline, reshot);
   write(root, reshoots, reshootOfHero);
   commit(root);
-  assert.deepEqual(releasedBlockProblems(root, "main"), []);
+  return releasedBlockProblems(root, "main");
+};
+
+await test("a re-shoot lets a released screenshot change in its edge rows", (context) => {
+  // A row lost at the top, and a bottom row the block's edge now crosses elsewhere.
+  const reshot = [...picture.slice(1, -1), Array.from({ length: 40 }, () => 0)];
+  assert.deepEqual(reshootProblems(context, png(reshot)), []);
 });
 
 await test("a re-shoot compares pixels, not how the file stores them", (context) => {
-  const root = repository(context, png(picture));
-  write(root, baseline, png(picture, 1));
-  write(root, reshoots, reshootOfHero);
-  commit(root);
-  assert.deepEqual(releasedBlockProblems(root, "main"), []);
-  write(root, baseline, png(picture, 2));
-  commit(root);
-  assert.deepEqual(releasedBlockProblems(root, "main"), []);
+  assert.deepEqual(reshootProblems(context, png(picture, 1)), []);
+  assert.deepEqual(reshootProblems(context, png(picture, 2)), []);
 });
 
-await test("a re-shot screenshot with any pixel changed inside its edge rows is refused", (context) => {
-  const root = repository(context, png(picture));
-  write(
-    root,
-    baseline,
-    png(
-      picture.map((row, y) => (y === 4 ? row.map((level, x) => level + (x === 2 ? 1 : 0)) : row)),
-      1,
-    ),
+await test("a re-shoot accepts the noise the baseline test tolerates", (context) => {
+  // Text drawn at another sub-pixel offset: faint shading everywhere, and a few stronger pixels.
+  const shaded = paint(
+    picture.map((row) => row.map((level) => level - 6)),
+    120,
+    (x, y) => y === 14 && x >= 5 && x < 10,
   );
-  write(root, reshoots, reshootOfHero);
-  commit(root);
-  const problems = releasedBlockProblems(root, "main");
+  assert.deepEqual(reshootProblems(context, png(shaded)), []);
+});
+
+await test("a re-shoot refuses a change inside the edges the baseline test would fail", (context) => {
+  // A second bar, 60 of the 1,120 pixels inside the edge rows.
+  const problems = reshootProblems(
+    context,
+    png(paint(picture, 40, (x, y) => x >= 5 && x < 35 && y >= 20 && y < 22)),
+  );
   assert.equal(problems.length, 1);
-  assert.match(problems[0] ?? "", /hero-v1-centered-light-darwin\.png: .*pixels changed/);
+  assert.match(problems[0] ?? "", /hero-v1-centered-light-darwin\.png: .*60 pixels .* different/);
 });
 
 await test("a re-shot screenshot two rows shorter is refused", (context) => {
-  const root = repository(context, png(picture));
-  write(root, baseline, png(picture.slice(1, -1)));
-  write(root, reshoots, reshootOfHero);
-  commit(root);
-  assert.match(releasedBlockProblems(root, "main")[0] ?? "", /6px tall, where it was 8px/);
+  const problems = reshootProblems(context, png(picture.slice(1, -1)));
+  assert.match(problems[0] ?? "", /28px tall, where it was 30px/);
 });
 
 await test("a re-shoot record covers only the change that adds it", (context) => {

@@ -1,5 +1,7 @@
 import { defineConfig } from "@playwright/test";
 
+import { screenshotTolerance } from "./tests/support/screenshot-tolerance.ts";
+
 const studioUrl = process.env.STUDIO_URL;
 const sitesUrl = process.env.SITES_URL;
 if (!studioUrl || !sitesUrl) {
@@ -17,7 +19,7 @@ export default defineConfig({
   snapshotPathTemplate: "{testDir}/{testFilePath}-snapshots/{arg}-{platform}{ext}",
   workers: 1,
   timeout: 180_000,
-  expect: { timeout: 60_000, toHaveScreenshot: { maxDiffPixelRatio: 0.01 } },
+  expect: { timeout: 60_000, toHaveScreenshot: screenshotTolerance },
   reporter: "list",
   use: {
     browserName: "chromium",
