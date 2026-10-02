@@ -1,11 +1,13 @@
 import { galleryBlocks, latestLockfile, loadBlocks, renderTree, siteData } from "@repo/blocks";
 import { blockFixtures, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
 import type { BrandIdentity } from "@repo/contracts/brand";
-import type { BlockType, BrandId, MediaId } from "@repo/contracts/ids";
-import { brandMediaBasePath, type MediaSummary } from "@repo/contracts/studio";
+import type { BlockType, BrandId } from "@repo/contracts/ids";
+import type { MediaSummary } from "@repo/contracts/studio";
 import { ScaledSiteFrame } from "@repo/editor";
 import type { ColorScheme, ResolvedTheme } from "@repo/tokens";
 import { use, useMemo } from "react";
+
+import { brandMediaSrc } from "./brand-media";
 
 import siteCss from "@repo/blocks/site.css?url";
 
@@ -34,10 +36,6 @@ const usePreviewBlocks = () => {
 /** The section blocks a preview can show alone. */
 export const usePreviewSections = () =>
   usePreviewBlocks().flatMap(({ type, title, section }) => (section ? [{ type, title }] : []));
-
-/** The address of an image in a brand's library. */
-export const brandMediaSrc = (brand: BrandId, media: MediaId) =>
-  `${brandMediaBasePath}/${brand}/${media}`;
 
 /** Labels sized for a page scaled to about half its width. */
 const labelCss = `

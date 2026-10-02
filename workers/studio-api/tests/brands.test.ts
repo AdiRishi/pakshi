@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import { BrandId, MediaId } from "@repo/contracts/ids";
-import { defaultTheme } from "@repo/tokens";
+import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Effect } from "effect";
 
 import {
@@ -79,6 +79,30 @@ it.effect("someone who holds nothing on a brand doesn't see it, or change its lo
   }).pipe(Effect.provide(core)),
 );
 
+it.effect("the brands list shows each brand's newest look, its tone and its sites", () =>
+  Effect.gen(function* () {
+    const look = { ...plum, identity: { ...noIdentity, logo: MediaId.make("med_logo") } };
+    yield* saveLook(person("user_brand"), libraries, look, 1);
+    yield* saveVoice(person("user_brand"), libraries, {
+      tone: "Plain and warm.",
+      examples: [],
+      wordsToAvoid: [],
+    });
+    const [listed] = yield* brandsFor(person("user_brand"));
+    expect(listed).toEqual({
+      id: libraries,
+      name: "City Libraries",
+      theme: resolveTheme(plum.theme).theme,
+      identity: look.identity,
+      tone: "Plain and warm.",
+      sites: [
+        { id: "site_a2", name: "Library Events" },
+        { id: "site_a1", name: "Northbank Libraries" },
+      ],
+    });
+  }).pipe(Effect.provide(core)),
+);
+
 it.effect("a brand's voice guide is what its admin last saved", () =>
   Effect.gen(function* () {
     const voice = { tone: "Plain and warm.", examples: [], wordsToAvoid: ["patrons"] };
@@ -97,8 +121,13 @@ it.effect("only org admins make brands, each starting at its first revision", ()
     const view = yield* brandView(person("user_org"), id);
     expect(view).toMatchObject({ brand: { name: "City Museums" }, revision: { number: 1 } });
     expect(view.look.theme).toEqual({ ...defaultTheme, brandColor: "#1f5c44" });
-    expect(yield* brandsFor(person("user_org"))).toContainEqual(
-      expect.objectContaining({ id, brandColor: "#1f5c44", fonts: defaultTheme.fonts }),
-    );
+    expect(yield* brandsFor(person("user_org"))).toContainEqual({
+      id,
+      name: "City Museums",
+      theme: resolveTheme({ ...defaultTheme, brandColor: "#1f5c44" }).theme,
+      identity: noIdentity,
+      tone: "",
+      sites: [],
+    });
   }).pipe(Effect.provide(core)),
 );

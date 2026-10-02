@@ -1,4 +1,4 @@
-import { ContrastIssue, HexColor, ThemeValues } from "@repo/tokens";
+import { ContrastIssue, HexColor, ResolvedTheme } from "@repo/tokens";
 import { Context, Schema, SchemaGetter } from "effect";
 import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
 
@@ -20,7 +20,7 @@ import {
   PendingInvitation,
 } from "./accounts.ts";
 import { AuditCursor, AuditFilters, AuditPage, AuditQuery } from "./audit.ts";
-import { BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
+import { BrandIdentity, BrandLook, BrandRevision, VoiceGuide } from "./brand.ts";
 import { Draft, DraftName } from "./draft.ts";
 import { EmailAddress } from "./email.ts";
 import { FormEntry, FormSummary } from "./entries.ts";
@@ -789,12 +789,15 @@ export const ReviewPage = Schema.TaggedUnion({
 });
 export type ReviewPage = typeof ReviewPage.Type;
 
-/** A brand as the brands list shows it. */
+/** A brand as the brands list shows it: its newest look, how it sounds, and its sites. */
 export const BrandSummary = Schema.Struct({
   id: BrandId,
   name: Schema.String,
-  brandColor: HexColor,
-  fonts: ThemeValues.fields.fonts,
+  /** The theme of the brand's newest revision, as its sites render it. */
+  theme: ResolvedTheme,
+  identity: BrandIdentity,
+  /** The tone its voice guide sets, or empty while the guide sets none. */
+  tone: VoiceGuide.fields.tone,
   sites: Schema.Array(SiteLabel),
 });
 export type BrandSummary = typeof BrandSummary.Type;
