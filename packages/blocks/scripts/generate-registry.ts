@@ -92,6 +92,9 @@ const perTypeSource = async (file: string, name: string) => {
 /** Builds the list of every block type's presentation, from `src/<type>/presentation.ts`. */
 export const presentationsSource = () => perTypeSource("presentation.ts", "presentations");
 
+/** Builds the list of every block type's showcase sample, from `src/<type>/sample.ts`. */
+export const samplesSource = () => perTypeSource("sample.ts", "samples");
+
 const write = async (file: string, next: string) => {
   const target = new URL(file, source);
   const current = await readFile(target, "utf8").catch(() => "");
@@ -102,4 +105,5 @@ if (import.meta.main) {
   await write("registry.gen.ts", await registrySource());
   await write("fixtures.gen.ts", await fixturesSource());
   await write("presentation.gen.ts", await presentationsSource());
+  await write("samples.gen.ts", await samplesSource());
 }

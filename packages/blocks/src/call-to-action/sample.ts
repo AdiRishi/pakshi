@@ -1,0 +1,19 @@
+import type { BlockSample } from "../presentation.ts";
+import type callToAction from "./v1/index.tsx";
+
+export default {
+  variant: "banner",
+  surface: "muted",
+  props: {
+    heading: "Places are limited",
+    body: "Registration closes on 30 November.",
+    primary: {
+      label: "Register now",
+      link: "https://example.org/register",
+    },
+    secondary: {
+      label: "Ask a question",
+      link: "mailto:hello@example.org",
+    },
+  },
+} satisfies BlockSample<typeof callToAction>;

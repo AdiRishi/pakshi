@@ -27,7 +27,8 @@ import type { Field, Fields } from "./fields.ts";
  * and tests without an asset pipeline.
  */
 
-const svg = (width: number, height: number, body: string): ResolvedMedia => ({
+/** An image drawn inline as SVG, so it needs no file to load from. */
+export const inlineSvg = (width: number, height: number, body: string): ResolvedMedia => ({
   src: `data:image/svg+xml,${encodeURIComponent(
     `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${body}</svg>`,
   )}`,
@@ -41,7 +42,7 @@ const birds = (color: string, x: number, y: number) =>
   `<path d="M${x + 130} ${y - 50}q16 -13 32 0q16 -13 32 0"/>` +
   `<path d="M${x + 60} ${y - 110}q12 -10 24 0q12 -10 24 0"/></g>`;
 
-const hills = svg(
+const hills = inlineSvg(
   1600,
   1067,
   `<defs><linearGradient id="s" x2="0" y2="1"><stop offset="0" stop-color="#F3E3CF"/>` +
@@ -55,7 +56,7 @@ const hills = svg(
     birds("#5E4B48", 420, 330),
 );
 
-const circles = svg(
+const circles = inlineSvg(
   1200,
   1200,
   `<rect width="1200" height="1200" fill="#EAE3D6"/>` +
@@ -66,7 +67,7 @@ const circles = svg(
     `<circle cx="330" cy="300" r="72" fill="#E0B25E"/>`,
 );
 
-const arch = svg(
+const arch = inlineSvg(
   1200,
   1500,
   `<defs><linearGradient id="k" x2="0" y2="1"><stop offset="0" stop-color="#C9D8D3"/>` +
@@ -81,7 +82,7 @@ const arch = svg(
     birds("#7FA6A7", 470, 820),
 );
 
-const sea = svg(
+const sea = inlineSvg(
   1600,
   900,
   `<defs><linearGradient id="h" x2="0" y2="1"><stop offset="0" stop-color="#DCE6E4"/>` +
@@ -127,16 +128,16 @@ const isItemId = Schema.is(ItemId);
 const valueAt = (value: Json | undefined, key: string): Json | undefined =>
   isJsonObject(value) ? value[key] : undefined;
 
-/** A list field's items with new IDs, so a copy of placeholder content never repeats one. */
+/** A list item with a new ID, so a copy of example content never repeats one. */
+export const withFreshId = (item: Json): Json =>
+  isJsonObject(item) ? Object.assign({}, item, { id: randomId("it") }) : item;
+
+/** A list field's items with new IDs. */
 const withFreshItems = (fields: Fields, props: Props): Props =>
   Object.fromEntries(
     Object.entries(props).map(([name, value]) => [
       name,
-      fields[name]?.kind === "list" && isJsonArray(value)
-        ? value.map((item) =>
-            isJsonObject(item) ? Object.assign({}, item, { id: randomId("it") }) : item,
-          )
-        : value,
+      fields[name]?.kind === "list" && isJsonArray(value) ? value.map(withFreshId) : value,
     ]),
   );
 
