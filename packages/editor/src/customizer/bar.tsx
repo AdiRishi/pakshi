@@ -3,6 +3,7 @@ import type { Draft } from "@repo/contracts/draft";
 import type { BlockId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
 import type { BlockInstance } from "@repo/contracts/page";
+import { Skeleton } from "@repo/ui/components/skeleton";
 import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { cn } from "cn";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
@@ -102,6 +103,7 @@ function Layouts(props: {
                   tree={trees.get(variant) ?? tree}
                   width={previewWidth}
                   maxHeight={previewHeight}
+                  loading={<Skeleton className="absolute inset-0 rounded-none" />}
                 />
               </span>
               <span

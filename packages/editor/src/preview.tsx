@@ -30,6 +30,8 @@ interface PreviewProps {
   /** The most of the page's height to show, in its own pixels. Below that it's cut off. */
   readonly maxHeight?: number;
   readonly className?: string;
+  /** What shows over it until the page in it has rendered, which waits for the theme's fonts. */
+  readonly loading?: ReactNode;
 }
 
 /**
@@ -103,6 +105,7 @@ export function ScaledSiteFrame(
           <SiteDataProvider value={props.data}>{props.children}</SiteDataProvider>
         </Frame>
       )}
+      {frameDocument === null && props.loading}
     </div>
   );
 }
