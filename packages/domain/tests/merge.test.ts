@@ -469,6 +469,21 @@ describe("blogs and their posts", () => {
     expect(changes.filter((change) => change._tag === "PageRemoved")).toHaveLength(2);
   });
 
+  test("a blog removed on one side while the other deleted one of its posts is a conflict", () => {
+    const draft = edit(harbourDraft, [{ op: "deletePage", page: "pg_dates" }]);
+    const live = edit(harbourDraft, deleteNews);
+    const { conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        _tag: "Removed",
+        place: { target: "pg_news", title: "News" },
+        removedOn: "live",
+      }),
+    ]);
+    const kept = merge({ draft, live }, choosing(conflicts, "draft")).content.pages;
+    expect(Object.keys(kept).toSorted()).toEqual(["pg_about", "pg_home", "pg_news"]);
+  });
+
   test("a blog list the other side points at a blog it added shows that blog", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
     const live = edit(harbourDraft, [
