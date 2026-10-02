@@ -13,6 +13,8 @@ import { HeadContent, Link, Scripts, createRootRouteWithContext } from "@tanstac
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools";
 import { useEffect } from "react";
 
+import { themeScript, useTheme } from "@/lib/theme";
+
 import appCss from "@repo/ui/globals.css?url";
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
@@ -30,6 +32,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
     ],
+    scripts: [{ children: themeScript }],
   }),
   shellComponent: RootDocument,
   notFoundComponent: function NotFound() {
@@ -55,14 +58,16 @@ function RootDocument({ children }: { readonly children: React.ReactNode }) {
   useEffect(() => {
     document.documentElement.dataset["hydrated"] = "";
   }, []);
+  const { resolved } = useTheme();
   return (
-    <html lang="en">
+    // The theme script sets the html element's class before React hydrates it.
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
       </head>
       <body>
         {children}
-        <Toaster />
+        <Toaster theme={resolved} />
         <TanStackDevtools
           config={{ position: "bottom-right" }}
           plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
