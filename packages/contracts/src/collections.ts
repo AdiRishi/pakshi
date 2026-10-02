@@ -58,3 +58,18 @@ export const entriesOf = <Page extends AnyPage>(
         page.type === "entry" && page.collection === collection.id,
     )
     .toSorted(Order.mapInput(collectionKinds[collection.kind].order, (entry) => entry.meta));
+
+const lastPage = 1000;
+
+/**
+ * Which page of a collection's entries a request asks for, from `?page=N`.
+ * Anything but a whole number from 2 to 1000 reads as the first page, so a
+ * site's page cache holds at most a thousand copies of an address however
+ * it's asked for.
+ */
+export const pageNumberOf = (url: URL) => {
+  const asked = url.searchParams.get("page");
+  if (asked === null || !/^[1-9][0-9]{0,3}$/.test(asked)) return 1;
+  const number = Number(asked);
+  return number <= lastPage ? number : 1;
+};

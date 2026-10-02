@@ -1,18 +1,5 @@
+import { pageNumberOf } from "@repo/contracts/collections";
 import type { ReleaseId } from "@repo/contracts/ids";
-
-const lastPage = 1000;
-
-/**
- * Which page of a blog list a request asks for, from `?page=N`. Anything but
- * a whole number from 2 to 1000 reads as the first page, so the page cache
- * holds at most a thousand copies of an address however it's asked for.
- */
-export const pageNumberOf = (url: URL) => {
-  const asked = url.searchParams.get("page");
-  if (asked === null || !/^[1-9][0-9]{0,3}$/.test(asked)) return 1;
-  const number = Number(asked);
-  return number <= lastPage ? number : 1;
-};
 
 /**
  * The Workers cache key for a page: the host, the site's release, this
