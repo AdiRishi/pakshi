@@ -37,8 +37,9 @@ site answers at `{address}.localhost:1339`.
 Test stages also seed the "Block fixtures N" sites at `fixtures-N.<sites host>`.
 Each shows block fixtures on its home page, so the browser suite can check that
 the editor canvas renders every fixture exactly as `sites` does
-(`infra/src/fixture-sites.ts`). The first holds every section and item fixture;
-the others exist because a site shows only one header and one footer fixture.
+(`infra/src/fixture-sites.ts`). The section and item fixtures are spread over
+the first sites, forty to a page; further sites exist because a site shows only
+one header and one footer fixture.
 
 The agent calls Workers AI through the stage's AI Gateway even under
 `pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and

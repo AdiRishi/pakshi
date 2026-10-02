@@ -19,6 +19,13 @@ export const fixturesPath = "/";
 
 const alphanumeric = (value: string) => value.replace(/[^A-Za-z0-9]/g, "");
 
+/*
+ * How many section fixtures one site's page shows. The canvas check makes its
+ * window as tall as the page, and Chromium stops painting a window tens of
+ * thousands of pixels down.
+ */
+const fixturesPerSite = 40;
+
 /** The block version each type has `generation` versions before its newest, or its oldest. */
 const generationLockfile = (generation: number): Lockfile =>
   Object.fromEntries(
@@ -46,10 +53,10 @@ const generationFixtures = (generation: number) => {
  * canvas renders exactly as sites does. A lockfile pins one version of each
  * block, so the sites come in generations: the first pins every block's
  * newest version, the next the version before for each block that has one,
- * and so on. The first site of each generation shows that generation's
- * section fixtures, and each item fixture in a section that accepts it. A
- * site has one header and one footer, so each further header and footer
- * fixture gets a site of its own.
+ * and so on. A generation's first sites show its section fixtures, and each
+ * item fixture in a section that accepts it, a few dozen to a site. A site
+ * has one header and one footer, so each further header and footer fixture
+ * gets a site of its own.
  */
 export const fixtureSites = async () => {
   const sample = await sampleSite();
@@ -127,7 +134,12 @@ export const fixtureSites = async () => {
         sections: [...sections, ...items],
         headers,
         footers,
-        count: Math.max(headers.length, footers.length, 1),
+        count: Math.max(
+          headers.length,
+          footers.length,
+          Math.ceil((sections.length + items.length) / fixturesPerSite),
+          1,
+        ),
       };
     }),
   );
@@ -136,7 +148,7 @@ export const fixtureSites = async () => {
       lockfile: plan.lockfile,
       header: plan.headers[index % plan.headers.length],
       footer: plan.footers[index % plan.footers.length],
-      shown: index === 0 ? plan.sections : [],
+      shown: plan.sections.slice(index * fixturesPerSite, (index + 1) * fixturesPerSite),
     })),
   );
 
