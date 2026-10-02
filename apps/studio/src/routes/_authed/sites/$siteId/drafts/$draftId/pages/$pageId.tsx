@@ -1,6 +1,7 @@
 import { createFileRoute, notFound, redirect } from "@tanstack/react-router";
 import { Schema } from "effect";
 
+import { ShownBlock } from "@/features/checks/issues";
 import { EditorPage } from "@/features/editor/editor-page";
 import { openDraft } from "@/features/sites/functions";
 import { draftParams, loadSite, pageParams, siteParams } from "@/features/sites/site-route";
@@ -18,10 +19,8 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
       ...pageParams.stringify(params),
     }),
   },
-  // With `checks`, the checks panel is open, on the issue it names, if any.
-  validateSearch: Schema.toStandardSchemaV1(
-    Schema.Struct({ checks: Schema.optional(Schema.String) }),
-  ),
+  // With `show`, the editor selects that block or field once the page opens.
+  validateSearch: Schema.toStandardSchemaV1(Schema.Struct({ show: Schema.optional(ShownBlock) })),
   // The editor renders on the client only.
   ssr: false,
   // Opening a draft brings it up to date with the live site, or sends it to its update.
@@ -40,7 +39,8 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
   component: function EditPage() {
     const { siteId, draftId, pageId } = Route.useParams();
     const opened = Route.useLoaderData();
-    const { checks } = Route.useSearch();
+    const { show } = Route.useSearch();
+    const navigate = Route.useNavigate();
     const { user } = Route.useRouteContext().viewer;
     // Each page opens in an editor of its own.
     return (
@@ -51,7 +51,10 @@ export const Route = createFileRoute("/_authed/sites/$siteId/drafts/$draftId/pag
         page={pageId}
         person={{ id: user.id, name: user.name }}
         opened={opened}
-        checks={checks ?? null}
+        show={show ?? null}
+        onShown={() => {
+          navigate({ search: {}, replace: true }).catch(() => undefined);
+        }}
       />
     );
   },

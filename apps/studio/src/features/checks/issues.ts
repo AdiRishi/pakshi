@@ -1,8 +1,11 @@
 import type { Draft } from "@repo/contracts/draft";
 import { BlockId, type FormId, type PageId } from "@repo/contracts/ids";
-import type { PropPath, Target } from "@repo/contracts/ops";
+import { PropPath, type Target } from "@repo/contracts/ops";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import { formsUsedBy } from "@repo/domain/document";
+import { Schema } from "effect";
+
+import { describeIssue } from "@/features/approvals/describe";
 
 /**
  * Where a person fixes an issue: a block or one of its fields on a page of
@@ -21,25 +24,6 @@ export type FixPlace =
   | { readonly kind: "page"; readonly page: PageId }
   | { readonly kind: "pages" }
   | { readonly kind: "forms" };
-
-/** An issue's key, the same each time the checks find it, so it can be named in an address. */
-export const issueKey = (issue: CheckIssue) => {
-  switch (issue._tag) {
-    case "NoFormEmails":
-    case "MissingConsent":
-      return `${issue._tag}:${issue.form}`;
-    case "UnlabelledField":
-      return `${issue._tag}:${issue.form}:${issue.field}`;
-    case "MissingMeta":
-      return `${issue._tag}:${issue.place.target}:${issue.field}`;
-    case "BrokenLink":
-      return `${issue._tag}:${issue.place.target}:${issue.block?.id ?? issue.field}:${issue.page}`;
-    case "Incomplete":
-    case "Placeholder":
-    case "LinkWithoutText":
-      return `${issue._tag}:${issue.place.target}:${issue.block?.id ?? ""}:${issue.path.join("/")}`;
-  }
-};
 
 /** The first block in the draft showing a form, served pages first, then the header and footer. */
 const formBlock = (draft: Draft, form: FormId) => {
@@ -93,26 +77,49 @@ export const fixPlaceOf = (issue: CheckIssue, draft: Draft): FixPlace | null => 
   }
 };
 
-/** What to do about an issue, as the checks panel says it beside the issue. */
-export const hintFor = (issue: CheckIssue) => {
+/** A block, or one of its fields, that the editor selects once its page opens. */
+export const ShownBlock = Schema.Struct({ block: BlockId, path: Schema.optionalKey(PropPath) });
+export type ShownBlock = typeof ShownBlock.Type;
+
+/**
+ * The page an issue is fixed on, with the block or field to select there,
+ * for a link from outside the editor. Null when no one page has it: it's in
+ * the header, footer or menus, or in a form.
+ */
+export const issuePage = (
+  issue: CheckIssue,
+): { readonly page: PageId; readonly show?: ShownBlock } | null => {
   switch (issue._tag) {
-    case "Incomplete":
-      return `Fill in ${issue.field}. ${issue.message}.`;
-    case "Placeholder":
-      return `Replace the placeholder content in ${issue.field} with your own.`;
-    case "MissingMeta":
-      return `Give the page a ${issue.field} in its settings, beside the page.`;
-    case "BrokenLink":
-      return "Point the link at a published page, or publish the page it links to.";
-    case "LinkWithoutText":
-      return issue.block === null
-        ? `Give every item in the ${issue.place.title.toLowerCase()} a label, under Pages and menus.`
-        : "Give the link words that say where it goes, such as the page's name.";
-    case "UnlabelledField":
-      return `Give every field in ${issue.name} a label, in the form's settings beside the page.`;
     case "NoFormEmails":
-      return `Add an address for ${issue.name}'s entries in Settings, under Forms and email.`;
     case "MissingConsent":
-      return `Add a required consent checkbox to ${issue.name}, linking to your privacy policy.`;
+    case "UnlabelledField":
+      return null;
+    case "MissingMeta":
+      return issue.place.target === "site" ? null : { page: issue.place.target };
+    case "BrokenLink":
+    case "LinkWithoutText":
+    case "Incomplete":
+    case "Placeholder": {
+      const { target } = issue.place;
+      if (target === "site" || issue.block === null) return null;
+      return {
+        page: target,
+        show:
+          issue._tag === "BrokenLink"
+            ? { block: issue.block.id }
+            : { block: issue.block.id, path: issue.path },
+      };
+    }
   }
 };
+
+/** How many issues "Fix all" names in its message. Pakshi reads every one with check_draft. */
+const named = 8;
+
+/** What "Fix all" sends Pakshi on the person's behalf: the issues it can fix, as the checks word them. */
+export const fixAllMessage = (issues: ReadonlyArray<CheckIssue>) =>
+  [
+    "Fix everything the checks found that you can:",
+    ...issues.slice(0, named).map((issue) => `- ${describeIssue(issue).text}`),
+    ...(issues.length > named ? [`- And ${issues.length - named} more`] : []),
+  ].join("\n");

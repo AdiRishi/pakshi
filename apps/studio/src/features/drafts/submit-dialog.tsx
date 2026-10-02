@@ -17,12 +17,13 @@ import { Skeleton } from "@repo/ui/components/skeleton";
 import { Textarea } from "@repo/ui/components/textarea";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { CircleAlertIcon, CircleCheckIcon, LoaderIcon } from "lucide-react";
+import { LoaderIcon } from "lucide-react";
 import { useId, useState } from "react";
 
-import { approversOf, describeIssue, neededOf, checkGroups } from "@/features/approvals/describe";
+import { approversOf, describeIssue, neededOf } from "@/features/approvals/describe";
 
-import { issueKey } from "../checks/issues";
+import { CheckList } from "../checks/check-list";
+import { issuePage } from "../checks/issues";
 import { checkQuery } from "../checks/queries";
 import { submitDraft } from "../sites/functions";
 
@@ -32,68 +33,41 @@ const workflowSource = {
   organization: "the organization's",
 };
 
-/** The checks, each passed or with what's left to fix and a link to its page. */
+/** The checks, each passed or with what's left to fix and a link to the page it's on. */
 function Checks(props: {
   readonly site: SiteId;
   readonly draft: DraftId;
   readonly issues: ReadonlyArray<CheckIssue>;
+  /** Going to an issue closes the dialog, so the page is in view to fix it. */
+  readonly onGo: () => void;
 }) {
   return (
     <section aria-labelledby="checks-title" className="flex flex-col gap-3">
       <h3 id="checks-title" className="font-semibold">
         Checks before submitting
       </h3>
-      <ul className="flex flex-col gap-3">
-        {checkGroups.map((check) => {
-          const found = props.issues.filter((issue) =>
-            check.tags.some((tag) => tag === issue._tag),
-          );
+      <CheckList
+        issues={props.issues}
+        renderIssue={(issue, index) => {
+          const on = issuePage(issue);
           return (
-            <li key={check.title} className="flex gap-3 text-sm">
-              {found.length === 0 ? (
-                <CircleCheckIcon
-                  className="mt-0.5 size-4 shrink-0 text-success-foreground"
-                  aria-hidden
-                />
-              ) : (
-                <CircleAlertIcon className="mt-0.5 size-4 shrink-0 text-destructive" aria-hidden />
+            <li key={index}>
+              {describeIssue(issue).text}.{" "}
+              {on !== null && (
+                <Link
+                  to="/sites/$siteId/drafts/$draftId/pages/$pageId"
+                  params={{ siteId: props.site, draftId: props.draft, pageId: on.page }}
+                  search={on.show === undefined ? {} : { show: on.show }}
+                  onClick={props.onGo}
+                  className="text-foreground underline underline-offset-4"
+                >
+                  Go to it
+                </Link>
               )}
-              <div className="flex flex-col gap-1">
-                <span className="font-medium">
-                  {check.title}
-                  <span className="sr-only">
-                    {found.length === 0 ? ": passed" : ": needs fixing"}
-                  </span>
-                </span>
-                {found.length === 0 ? (
-                  <span className="text-muted-foreground">{check.passed}</span>
-                ) : (
-                  <ul className="flex flex-col gap-1 text-muted-foreground">
-                    {found.map((issue, index) => {
-                      const { page, text } = describeIssue(issue);
-                      return (
-                        <li key={index}>
-                          {text}.{" "}
-                          {page !== null && (
-                            <Link
-                              to="/sites/$siteId/drafts/$draftId/pages/$pageId"
-                              params={{ siteId: props.site, draftId: props.draft, pageId: page }}
-                              search={{ checks: issueKey(issue) }}
-                              className="text-foreground underline underline-offset-4"
-                            >
-                              Go to it
-                            </Link>
-                          )}
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
-              </div>
             </li>
           );
-        })}
-      </ul>
+        }}
+      />
     </section>
   );
 }
@@ -212,7 +186,7 @@ export function SubmitDialog(props: {
           </div>
         ) : (
           <div className="flex flex-col gap-6">
-            <Checks site={props.site} draft={props.draft.id} issues={data.issues} />
+            <Checks site={props.site} draft={props.draft.id} issues={data.issues} onGo={close} />
             {data.behind && (
               <p className="text-sm text-muted-foreground">
                 The live site changed since this draft started. Submitting brings those changes in

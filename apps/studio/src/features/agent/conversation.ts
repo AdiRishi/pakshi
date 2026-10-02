@@ -24,6 +24,10 @@ export interface ConversationState {
   readonly sources: ReadonlyArray<Source>;
 }
 
+/** Whether Pakshi is working on a turn, and so takes no new message until it's done or stopped. */
+export const isWorking = (state: ConversationState) =>
+  state.turns.some((turn) => turn.status === "working");
+
 /** Adds a turn, or replaces the one with its ID. */
 const withTurn = (turns: ReadonlyArray<Turn>, turn: Turn) => {
   const index = turns.findIndex((found) => found.id === turn.id);

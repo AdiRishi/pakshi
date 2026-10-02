@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 089 | The checks open from the top bar, and Pakshi fixes what it can of them             | 2026-10-02 | Accepted            |
 | 088 | Blocks are named and shown from files beside their released versions               | 2026-10-02 | Accepted            |
 | 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
 | 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
@@ -18,7 +19,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 082 | The audit log is written by whatever makes each change                             | 2026-10-01 | Accepted            |
 | 081 | Custom roles are rows in D1, held to the delegation rule                           | 2026-10-01 | Accepted            |
 | 080 | SiteDoc keeps each person's permissions, for live and agent batches alike          | 2026-10-01 | Accepted            |
-| 079 | Pre-flight becomes the checks, with no heading rules, and a panel to fix them      | 2026-10-01 | Accepted            |
+| 079 | Pre-flight becomes the checks, with no heading rules, and a panel to fix them      | 2026-10-01 | Amended by 089      |
 | 078 | Site settings leave out a default description and the email sender, for now        | 2026-10-01 | Accepted            |
 | 077 | Deleted sites are kept for 30 days, then purged by the daily job                   | 2026-10-01 | Accepted            |
 | 076 | In the dev stack, only `.localhost` domains are proven                             | 2026-10-01 | Accepted            |
@@ -97,6 +98,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 089 — The checks open from the top bar, and Pakshi fixes what it can of them [#decision-089]
+
+**Context.** In user testing, clicking the top bar's count of things to fix seemed to do nothing, and people expected the agent to fix the issues for them. The agent couldn't edit menus, redirects or forms, and it read the issues without the IDs it edits by.
+
+**Decision.** The count opens a popover with the same list the submit dialog shows: every check, passed or with its issues. Choosing an issue goes to it: its block or field, on its page if that's another one, a page's own settings, Pages and menus, or the site's forms settings. A block to select is part of the editor's address only until the page has opened. "Fix all with Pakshi" shows the chat and sends Pakshi a message listing the issues, as if the person had typed it. It's disabled, with the reason, while Pakshi is working on another request, can't be reached, or the draft no longer takes the person's changes. The agent edits menus, redirects and forms, publishes an unpublished page again after asking, and reads the issues with `check_draft`. Three kinds of issue only a person fixes: choosing an image, writing or accepting alt text, and setting where a form's entries go. One rule in `@repo/agent/issues` names them, so the popover marks them "Needs you" and leaves them out of the message, and the agent leaves them alone.
+
+**Rejected.** Letting the agent write alt text with the vision model, which would skip the person confirming it; letting it choose images from the library, which it can't see.
+
+**Consequences.** The panel that stepped through issues one at a time is gone. A new check needs an issue kind, its description, where it's fixed, and whether only a person can fix it.
 
 ## 088 — Blocks are named and shown from files beside their released versions [#decision-088]
 

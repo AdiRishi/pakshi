@@ -511,6 +511,9 @@ importers:
 
   apps/studio:
     dependencies:
+      '@repo/agent':
+        specifier: workspace:*
+        version: link:../../packages/agent
       '@repo/blocks':
         specifier: workspace:*
         version: link:../../packages/blocks
