@@ -120,7 +120,7 @@ function InsertPoint(props: {
       aria-hidden
       className={props.label === undefined ? "pakshi-insert pakshi-insert-round" : "pakshi-insert"}
       style={{ top: props.y, left: props.x }}
-      onClick={(event) => ui.openPicker(props.spot, event.currentTarget)}
+      onClick={(event) => ui.openPicker(props.spot, "canvas", event.currentTarget)}
     >
       <PlusIcon width={14} height={14} />
       {props.label}

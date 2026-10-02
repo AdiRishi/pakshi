@@ -110,8 +110,8 @@ export interface InsertSpot {
 export interface EditorUi {
   /** Tells a screen reader what just changed. */
   readonly announce: (message: string) => void;
-  /** Opens the block picker for a spot, beside an element or the block it follows. */
-  readonly openPicker: (spot: InsertSpot, anchor: Element | Origin) => void;
+  /** Opens the block picker for a spot, beside the element it's opened from or the block it follows. */
+  readonly openPicker: (spot: InsertSpot, origin: Origin, element?: Element) => void;
   /** Moves focus to the selected block or field, where a command started. */
   readonly focusSelection: (origin: Origin) => void;
   readonly openMedia: (field: FieldTarget, anchor: Element) => void;

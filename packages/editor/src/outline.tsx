@@ -373,7 +373,7 @@ export function Outline() {
         : (sections
             .find((section) => section.id === list.block)
             ?.slots.find((slot) => slot.slot === list.slot)?.items ?? []);
-    ui.openPicker({ list, after: ids.at(-1) ?? null }, anchor);
+    ui.openPicker({ list, after: ids.at(-1) ?? null }, "outline", anchor);
   };
 
   return (

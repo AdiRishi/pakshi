@@ -447,6 +447,18 @@ const emptyDraft = (): Draft => {
   return { ...fixtureDraft, pages: { [home]: { ...base, root: [], blocks: {} } } };
 };
 
+/** The fixture draft with only its hero on the home page, under the header. */
+const heroOnly = (): Draft => {
+  const base = fixtureDraft.pages[home];
+  const hero = BlockId.make("b_herocentered");
+  const block = base?.blocks[hero];
+  if (base === undefined || block === undefined) throw new Error("The fixture draft has no hero.");
+  return {
+    ...fixtureDraft,
+    pages: { [home]: { ...base, root: [hero], blocks: { [hero]: block } } },
+  };
+};
+
 /** What the editor last told a screen reader. */
 const announced = () => document.querySelector(".sr-only[aria-live]")?.textContent ?? "";
 
@@ -696,5 +708,43 @@ describe("editing structure", () => {
     expect(sections).toContain("Hero");
     for (const excluded of ["Feature", "Header", "Footer"])
       expect(sections).not.toContain(excluded);
+  });
+
+  test("the picker opens beside a point on the page and stays there, fitting a short window", async () => {
+    const { canvas } = await open({ draft: heroOnly() });
+    await page.viewport(1000, 450);
+    const hero = canvas().querySelector("[data-pakshi-block='b_herocentered']");
+    const Pointer = canvas().defaultView?.PointerEvent ?? PointerEvent;
+    hero?.dispatchEvent(new Pointer("pointermove", { bubbles: true }));
+    await expect.poll(() => canvas().querySelector(".pakshi-insert")).not.toBeNull();
+    const [point] = Array.from(canvas().querySelectorAll(".pakshi-insert")).toSorted(
+      (a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top,
+    );
+    if (point === undefined) throw new Error("The hero shows no insert point.");
+    const frame = document.querySelector("iframe")?.getBoundingClientRect();
+    const drawn = point.getBoundingClientRect();
+    const top = (frame?.top ?? 0) + drawn.top;
+    const bottom = top + drawn.height;
+    await userEvent.click(page.getByTitle(/^Canvas:/), { position: center(point) });
+
+    const search = page.getByPlaceholder("Search blocks");
+    const onScreen = (rect: DOMRect) => rect.top >= 0 && rect.bottom <= window.innerHeight;
+    const placement = () => {
+      const box = page.getByRole("dialog").element().getBoundingClientRect();
+      const gap = Math.min(Math.abs(box.top - bottom), Math.abs(top - box.bottom));
+      return {
+        onScreen: onScreen(box) && onScreen(search.element().getBoundingClientRect()),
+        besidePoint: gap <= 8,
+      };
+    };
+    await expect.element(search).toBeVisible();
+    await expect.poll(placement).toEqual({ onScreen: true, besidePoint: true });
+
+    // Moving onto the picker hides the point, and searching resizes the picker.
+    await userEvent.hover(search);
+    await expect.poll(() => point.isConnected).toBe(false);
+    await userEvent.keyboard("Her");
+    await expect.element(page.getByRole("option")).toHaveLength(1);
+    await expect.poll(placement).toEqual({ onScreen: true, besidePoint: true });
   });
 });
