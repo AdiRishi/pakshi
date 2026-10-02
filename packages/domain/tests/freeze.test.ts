@@ -225,7 +225,7 @@ describe("freezing", () => {
         op: "setProp",
         target: "pg_home",
         block: "b_hero",
-        path: ["cta", "link"],
+        path: ["actions", "it_register", "button", "link"],
         value: { $ref: "page", id: "pg_missing" },
       },
     ]);
@@ -251,7 +251,7 @@ describe("freezing", () => {
         _tag: "BrokenLink",
         place: { target: "pg_home", title: "Harbour Summer School" },
         block: { id: "b_hero", title: "Hero" },
-        field: "Button",
+        field: "Buttons",
         page: "pg_missing",
       },
       {
@@ -277,7 +277,7 @@ describe("freezing", () => {
           type: "form-section",
           variant: "card",
           surface: "default",
-          props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+          props: { heading: "Plan a visit", points: [], form: { $ref: "form", id: "frm_visit" } },
         },
       },
     ]);
@@ -352,7 +352,7 @@ describe("freezing", () => {
           type: "form-section",
           variant: "card",
           surface: "default",
-          props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+          props: { heading: "Plan a visit", points: [], form: { $ref: "form", id: "frm_visit" } },
         },
       },
       {

@@ -13,19 +13,27 @@ const page = {
   blocks: {
     b_hero1: {
       type: "hero",
-      variant: "split-image",
+      variant: "split",
       surface: "brand",
       props: { heading: "Learn by building", image: { $ref: "media", id: "med_7X4P" } },
     },
     b_feat1: {
       type: "feature-grid",
-      variant: "icons-3up",
+      variant: "grid",
       surface: "default",
-      props: { heading: "What you'll do" },
+      props: { heading: "What you'll do", actions: [] },
       slots: { items: ["b_fi1", "b_fi2"] },
     },
-    b_fi1: { type: "feature-item", variant: "default", props: { title: "Workshops" } },
-    b_fi2: { type: "feature-item", variant: "default", props: { title: "Mentors" } },
+    b_fi1: {
+      type: "feature-item",
+      variant: "default",
+      props: { title: "Workshops", body: "Two a day." },
+    },
+    b_fi2: {
+      type: "feature-item",
+      variant: "default",
+      props: { title: "Mentors", body: "One for every six students." },
+    },
   },
 };
 
