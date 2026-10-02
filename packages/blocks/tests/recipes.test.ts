@@ -1,5 +1,6 @@
 import { BlockType, PageId } from "@repo/contracts/ids";
 import type { PageDocument } from "@repo/contracts/page";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { expect, test } from "vitest";
 
 import { fixtureSite } from "../src/fixtures.ts";
@@ -32,7 +33,7 @@ test("a new blog lists its own posts", () => {
   const blog = pageFromRecipe({
     recipe: recipe("blog"),
     contracts,
-    pages: fixtureSite.pages,
+    listings: listingsOf(fixtureSite.pages),
     page: { id: PageId.make("pg_stories"), path: "/stories", meta },
   });
   expect(blog).toMatchObject({ type: "collection", kind: "blog", recipe: "blog" });
@@ -45,7 +46,7 @@ test("a new page's blog list shows the site's only blog, and waits for a choice 
   const withOne = pageFromRecipe({
     recipe: recipe("landing"),
     contracts,
-    pages: fixtureSite.pages,
+    listings: listingsOf(fixtureSite.pages),
     page,
     sections,
   });
@@ -53,13 +54,13 @@ test("a new page's blog list shows the site's only blog, and waits for a choice 
   const stories = pageFromRecipe({
     recipe: recipe("blog"),
     contracts,
-    pages: fixtureSite.pages,
+    listings: listingsOf(fixtureSite.pages),
     page: { id: PageId.make("pg_stories"), path: "/stories", meta },
   });
   const withTwo = pageFromRecipe({
     recipe: recipe("landing"),
     contracts,
-    pages: { ...fixtureSite.pages, [stories.id]: stories },
+    listings: listingsOf({ ...fixtureSite.pages, [stories.id]: stories }),
     page,
     sections,
   });
@@ -70,7 +71,7 @@ test("a new post goes in its blog and starts with its header", () => {
   const post = pageFromRecipe({
     recipe: recipe("post"),
     contracts,
-    pages: fixtureSite.pages,
+    listings: listingsOf(fixtureSite.pages),
     page: {
       id: PageId.make("pg_regatta"),
       collection: PageId.make("pg_news"),
