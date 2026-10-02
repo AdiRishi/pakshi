@@ -10,6 +10,7 @@ import { PlusIcon, SearchIcon } from "lucide-react";
 import { type ReactNode, useId, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
+import { BrowserFrame } from "@/components/browser-frame";
 
 import { GalleryPreview } from "./gallery-preview";
 
@@ -52,18 +53,13 @@ function BlockCard(props: { readonly block: BlockPresentation }) {
           </h2>
           <p className="text-sm text-muted-foreground">{props.block.summary}</p>
         </div>
-        <div className="overflow-hidden rounded-lg ring-1 ring-foreground/10">
-          <div aria-hidden className="flex h-5 items-center gap-1.5 border-b bg-muted px-2.5">
-            <span className="size-1.5 rounded-full bg-foreground/15" />
-            <span className="size-1.5 rounded-full bg-foreground/15" />
-            <span className="size-1.5 rounded-full bg-foreground/15" />
-          </div>
+        <BrowserFrame>
           <GalleryPreview
             type={props.block.type}
             name={props.block.name}
             active={pointing || focused}
           />
-        </div>
+        </BrowserFrame>
       </Card>
     </Link>
   );

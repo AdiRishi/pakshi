@@ -1,5 +1,5 @@
-import { PreviewBar, renderPage, SitePage, siteData } from "@repo/blocks";
-import type { BlockId, MediaId } from "@repo/contracts/ids";
+import { PreviewBar, renderPage, SitePage } from "@repo/blocks";
+import type { BlockId } from "@repo/contracts/ids";
 import { mediaSegment, type SiteView } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
 import { buttonVariants } from "@repo/ui/components/button";
@@ -11,6 +11,8 @@ import {
   EmptyTitle,
 } from "@repo/ui/components/empty";
 import { renderToStaticMarkup } from "react-dom/server";
+
+import { viewData } from "./view-data";
 
 import siteCss from "@repo/blocks/site.css?url";
 import appCss from "@repo/ui/globals.css?url";
@@ -55,23 +57,7 @@ export const siteDocument = async (
   },
 ) => {
   const data = {
-    ...siteData({
-      settings: view.settings,
-      identity: view.brand.identity,
-      menus: view.parts.menus,
-      pages: view.pages,
-      forms: view.forms,
-      media: (id: MediaId) => {
-        const file = view.media[id];
-        return file === undefined
-          ? undefined
-          : {
-              src: `${options.base}/${mediaSegment}/${id}`,
-              width: file.width,
-              height: file.height,
-            };
-      },
-    }),
+    ...viewData(view, (id) => `${options.base}/${mediaSegment}/${id}`),
     preview: { changed: new Set(options.changed) },
   };
   const page = view.page;

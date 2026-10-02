@@ -1,7 +1,10 @@
 import { AppRequestError } from "@repo/contracts/app";
 import { BrandId, DraftId, PageId, SiteId, SubmissionId } from "@repo/contracts/ids";
+import type { QueryClient } from "@tanstack/react-query";
 import { notFound } from "@tanstack/react-router";
 import { Option, Schema } from "effect";
+
+import { siteOverviewQuery } from "./queries";
 
 const decodeOrNotFound = <S extends Schema.Decoder<unknown>>(
   schema: S,
@@ -59,3 +62,10 @@ export const loadSite = async <A>(load: () => Promise<A>) => {
     throw error;
   }
 };
+
+/** Loads one of a site's tabs with the overview above every tab, as `loadSite` does. */
+export const loadSiteTab = <A>(queryClient: QueryClient, site: SiteId, load: () => Promise<A>) =>
+  loadSite(async () => {
+    const [loaded] = await Promise.all([load(), queryClient.query(siteOverviewQuery(site))]);
+    return loaded;
+  });
