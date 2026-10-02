@@ -106,6 +106,7 @@ import {
   siteFor,
   siteMedia,
   siteOf,
+  sitesOf,
   standingOn,
 } from "./sites.ts";
 import { describeViewer } from "./viewer.ts";
@@ -1149,6 +1150,37 @@ const handlers = (env: StudioApiEnv) =>
                   removable: platform ? yield* removableVersions() : null,
                   can: { upgradeEverywhere: platform },
                 };
+              }),
+            ),
+          ),
+        blockUsage: ({ type }) =>
+          SignedIn.use((person) =>
+            withCore("block usage")(
+              Effect.gen(function* () {
+                const uses = yield* Effect.forEach(
+                  yield* sitesOf(person),
+                  (site) =>
+                    Effect.gen(function* () {
+                      const doc = yield* siteDoc(env, site.id);
+                      const inUse = yield* Effect.tryPromise(
+                        async (): Promise<ReadonlyArray<BlockInUse>> => doc.blocksInUse(),
+                      );
+                      return inUse.flatMap((block) =>
+                        block.type === type && (block.pages > 0 || block.sitewide)
+                          ? [
+                              {
+                                site,
+                                version: block.version,
+                                pages: block.pages,
+                                sitewide: block.sitewide,
+                              },
+                            ]
+                          : [],
+                      );
+                    }),
+                  { concurrency: 10 },
+                );
+                return uses.flat();
               }),
             ),
           ),

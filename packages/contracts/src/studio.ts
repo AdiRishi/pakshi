@@ -908,6 +908,17 @@ export const BlockCatalog = Schema.Struct({
 });
 export type BlockCatalog = typeof BlockCatalog.Type;
 
+/** One of the person's sites whose live release shows a block, and how it shows it. */
+export const BlockUse = Schema.Struct({
+  site: Schema.Struct({ id: SiteId, name: Schema.String }),
+  version: Schema.Int,
+  /** The live pages and posts with the block on them. */
+  pages: Schema.Int,
+  /** Whether the site's header or footer is this block. */
+  sitewide: Schema.Boolean,
+});
+export type BlockUse = typeof BlockUse.Type;
+
 /** A block the live site pins, how it's used, and the newer versions it could adopt. */
 export const SiteBlock = Schema.Struct({
   type: BlockType,
@@ -1374,6 +1385,12 @@ class SignedInRpcs extends RpcGroup.make(
     error: Schema.Union([StudioUnavailable, ScopeNotFound, NotPermitted]),
   }),
   Rpc.make("blockCatalog", { success: BlockCatalog, error: StudioUnavailable }),
+  /** The sites the person works on whose live release shows a block, by name. */
+  Rpc.make("blockUsage", {
+    payload: { type: BlockType },
+    success: Schema.Array(BlockUse),
+    error: StudioUnavailable,
+  }),
   Rpc.make("blockRequests", { success: BlockRequests, error: StudioUnavailable }),
   /** Asks the platform team for a block, for one site or, with null, for any. */
   Rpc.make("requestBlock", {
