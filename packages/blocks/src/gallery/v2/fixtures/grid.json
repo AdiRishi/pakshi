@@ -1,0 +1,67 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "kicker": "Last summer",
+    "heading": "A week on the harbour.",
+    "headingRest": "Sixty students, six boats and a lot of sawdust.",
+    "images": [
+      {
+        "id": "it_evening",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Two sailing boats on a calm harbour at sunset"
+        },
+        "caption": "The harbour on the last evening"
+      },
+      {
+        "id": "it_mei",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMei",
+          "alt": "Mei Chen in the boatshed"
+        },
+        "caption": "Mei leads the planking workshop"
+      },
+      {
+        "id": "it_launch",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleHarbour",
+          "alt": "Two dinghies sailing past the harbour wall"
+        },
+        "caption": "Launch day, Friday afternoon"
+      },
+      {
+        "id": "it_tom",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleTom",
+          "alt": "Tom Penrose on the slipway"
+        },
+        "caption": "Tom, one of this year's mentors"
+      },
+      {
+        "id": "it_map",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMap",
+          "alt": "A map of North Quay, with the boatshed marked"
+        },
+        "caption": "Where to find us on North Quay"
+      },
+      {
+        "id": "it_asha",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleAsha",
+          "alt": "Asha Patel at the workbench"
+        },
+        "caption": "Asha fitting a frame"
+      }
+    ],
+    "columns": "3",
+    "crop": "landscape"
+  }
+}

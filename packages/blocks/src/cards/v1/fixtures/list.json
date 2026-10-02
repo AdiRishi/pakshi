@@ -1,0 +1,98 @@
+{
+  "variant": "list",
+  "surface": "muted",
+  "props": {
+    "heading": "For parents",
+    "intro": "What to know before your child joins us for the week.",
+    "actions": [],
+    "columns": "2",
+    "crop": "landscape",
+    "rows": "lines"
+  },
+  "slots": {
+    "cards": [
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "shield-check",
+          "title": "Safety on the water",
+          "text": "Instructors, safety boats and buoyancy aids.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "utensils",
+          "title": "Food and allergies",
+          "text": "A hot lunch every day, cooked on site.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "clock",
+          "title": "Drop-off and pick-up",
+          "text": "From half past eight, until five.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "piggy-bank",
+          "title": "Bursaries",
+          "text": "Free places for families who need them.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "accessibility",
+          "title": "Access",
+          "text": "Step-free boatshed and an adapted dinghy.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleMap",
+            "alt": "A map of North Quay, with the boatshed marked"
+          },
+          "title": "Getting here",
+          "text": "Ten minutes' walk from the station.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ]
+  }
+}

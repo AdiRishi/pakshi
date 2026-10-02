@@ -10,6 +10,16 @@ import callToAction2panelWords from "./call-to-action/v2/fixtures/panel-words.js
 import callToAction2panel from "./call-to-action/v2/fixtures/panel.json" with { type: "json" };
 import callToAction2placeholder from "./call-to-action/v2/fixtures/placeholder.json" with { type: "json" };
 import callToAction2split from "./call-to-action/v2/fixtures/split.json" with { type: "json" };
+import card1default from "./card/v1/fixtures/default.json" with { type: "json" };
+import card1icon from "./card/v1/fixtures/icon.json" with { type: "json" };
+import card1placeholder from "./card/v1/fixtures/placeholder.json" with { type: "json" };
+import cards1grid from "./cards/v1/fixtures/grid.json" with { type: "json" };
+import cards1listTiles from "./cards/v1/fixtures/list-tiles.json" with { type: "json" };
+import cards1list from "./cards/v1/fixtures/list.json" with { type: "json" };
+import cards1overlayLandscape from "./cards/v1/fixtures/overlay-landscape.json" with { type: "json" };
+import cards1overlay from "./cards/v1/fixtures/overlay.json" with { type: "json" };
+import cards1placeholder from "./cards/v1/fixtures/placeholder.json" with { type: "json" };
+import cards1tiles from "./cards/v1/fixtures/tiles.json" with { type: "json" };
 import contactDetails2cards from "./contact-details/v2/fixtures/cards.json" with { type: "json" };
 import contactDetails2columns from "./contact-details/v2/fixtures/columns.json" with { type: "json" };
 import contactDetails2placeholder from "./contact-details/v2/fixtures/placeholder.json" with { type: "json" };
@@ -42,9 +52,12 @@ import formSection2inlineInset from "./form-section/v2/fixtures/inline-inset.jso
 import formSection2inline from "./form-section/v2/fixtures/inline.json" with { type: "json" };
 import formSection2placeholder from "./form-section/v2/fixtures/placeholder.json" with { type: "json" };
 import formSection2split from "./form-section/v2/fixtures/split.json" with { type: "json" };
-import gallery1grid from "./gallery/v1/fixtures/grid.json" with { type: "json" };
-import gallery1placeholder from "./gallery/v1/fixtures/placeholder.json" with { type: "json" };
-import gallery1wide from "./gallery/v1/fixtures/wide.json" with { type: "json" };
+import gallery2gridFour from "./gallery/v2/fixtures/grid-four.json" with { type: "json" };
+import gallery2grid from "./gallery/v2/fixtures/grid.json" with { type: "json" };
+import gallery2masonry from "./gallery/v2/fixtures/masonry.json" with { type: "json" };
+import gallery2mosaic from "./gallery/v2/fixtures/mosaic.json" with { type: "json" };
+import gallery2placeholder from "./gallery/v2/fixtures/placeholder.json" with { type: "json" };
+import gallery2scroller from "./gallery/v2/fixtures/scroller.json" with { type: "json" };
 import header3centeredLogo from "./header/v3/fixtures/centered-logo.json" with { type: "json" };
 import header3centeredMenu from "./header/v3/fixtures/centered-menu.json" with { type: "json" };
 import header3floating from "./header/v3/fixtures/floating.json" with { type: "json" };
@@ -56,9 +69,11 @@ import hero4phone from "./hero/v4/fixtures/phone.json" with { type: "json" };
 import hero4placeholder from "./hero/v4/fixtures/placeholder.json" with { type: "json" };
 import hero4split from "./hero/v4/fixtures/split.json" with { type: "json" };
 import hero4stacked from "./hero/v4/fixtures/stacked.json" with { type: "json" };
-import imageCaption1narrow from "./image-caption/v1/fixtures/narrow.json" with { type: "json" };
-import imageCaption1placeholder from "./image-caption/v1/fixtures/placeholder.json" with { type: "json" };
-import imageCaption1wide from "./image-caption/v1/fixtures/wide.json" with { type: "json" };
+import imageCaption2full from "./image-caption/v2/fixtures/full.json" with { type: "json" };
+import imageCaption2placeholder from "./image-caption/v2/fixtures/placeholder.json" with { type: "json" };
+import imageCaption2textSquare from "./image-caption/v2/fixtures/text-square.json" with { type: "json" };
+import imageCaption2text from "./image-caption/v2/fixtures/text.json" with { type: "json" };
+import imageCaption2wide from "./image-caption/v2/fixtures/wide.json" with { type: "json" };
 import location2placeholder from "./location/v2/fixtures/placeholder.json" with { type: "json" };
 import location2splitStart from "./location/v2/fixtures/split-start.json" with { type: "json" };
 import location2split from "./location/v2/fixtures/split.json" with { type: "json" };
@@ -68,12 +83,17 @@ import logoStrip2marquee from "./logo-strip/v2/fixtures/marquee.json" with { typ
 import logoStrip2placeholder from "./logo-strip/v2/fixtures/placeholder.json" with { type: "json" };
 import logoStrip2row from "./logo-strip/v2/fixtures/row.json" with { type: "json" };
 import logoStrip2split from "./logo-strip/v2/fixtures/split.json" with { type: "json" };
-import postHeader1cover from "./post-header/v1/fixtures/cover.json" with { type: "json" };
-import postHeader1placeholder from "./post-header/v1/fixtures/placeholder.json" with { type: "json" };
-import postHeader1simple from "./post-header/v1/fixtures/simple.json" with { type: "json" };
-import postList2cards from "./post-list/v2/fixtures/cards.json" with { type: "json" };
-import postList2list from "./post-list/v2/fixtures/list.json" with { type: "json" };
-import postList2placeholder from "./post-list/v2/fixtures/placeholder.json" with { type: "json" };
+import postHeader2centered from "./post-header/v2/fixtures/centered.json" with { type: "json" };
+import postHeader2cover from "./post-header/v2/fixtures/cover.json" with { type: "json" };
+import postHeader2placeholder from "./post-header/v2/fixtures/placeholder.json" with { type: "json" };
+import postHeader2simple from "./post-header/v2/fixtures/simple.json" with { type: "json" };
+import postHeader2splitTint from "./post-header/v2/fixtures/split-tint.json" with { type: "json" };
+import postHeader2split from "./post-header/v2/fixtures/split.json" with { type: "json" };
+import postList3cards from "./post-list/v3/fixtures/cards.json" with { type: "json" };
+import postList3featured from "./post-list/v3/fixtures/featured.json" with { type: "json" };
+import postList3list from "./post-list/v3/fixtures/list.json" with { type: "json" };
+import postList3placeholder from "./post-list/v3/fixtures/placeholder.json" with { type: "json" };
+import postList3text from "./post-list/v3/fixtures/text.json" with { type: "json" };
 import pricing1cardsFour from "./pricing/v1/fixtures/cards-four.json" with { type: "json" };
 import pricing1cardsTwo from "./pricing/v1/fixtures/cards-two.json" with { type: "json" };
 import pricing1cards from "./pricing/v1/fixtures/cards.json" with { type: "json" };
@@ -89,8 +109,11 @@ import quote2panel from "./quote/v2/fixtures/panel.json" with { type: "json" };
 import quote2placeholder from "./quote/v2/fixtures/placeholder.json" with { type: "json" };
 import quote2splitEnd from "./quote/v2/fixtures/split-end.json" with { type: "json" };
 import quote2split from "./quote/v2/fixtures/split.json" with { type: "json" };
-import richText1narrow from "./rich-text/v1/fixtures/narrow.json" with { type: "json" };
-import richText1placeholder from "./rich-text/v1/fixtures/placeholder.json" with { type: "json" };
+import richText2articlePlain from "./rich-text/v2/fixtures/article-plain.json" with { type: "json" };
+import richText2article from "./rich-text/v2/fixtures/article.json" with { type: "json" };
+import richText2placeholder from "./rich-text/v2/fixtures/placeholder.json" with { type: "json" };
+import richText2sidebarTint from "./rich-text/v2/fixtures/sidebar-tint.json" with { type: "json" };
+import richText2sidebar from "./rich-text/v2/fixtures/sidebar.json" with { type: "json" };
 import split2bleedInset from "./split/v2/fixtures/bleed-inset.json" with { type: "json" };
 import split2bleed from "./split/v2/fixtures/bleed.json" with { type: "json" };
 import split2placeholder from "./split/v2/fixtures/placeholder.json" with { type: "json" };
@@ -143,6 +166,16 @@ export const fixtureFiles = [
   { type: "call-to-action", version: 2, name: "panel", fixture: callToAction2panel },
   { type: "call-to-action", version: 2, name: "placeholder", fixture: callToAction2placeholder },
   { type: "call-to-action", version: 2, name: "split", fixture: callToAction2split },
+  { type: "card", version: 1, name: "default", fixture: card1default },
+  { type: "card", version: 1, name: "icon", fixture: card1icon },
+  { type: "card", version: 1, name: "placeholder", fixture: card1placeholder },
+  { type: "cards", version: 1, name: "grid", fixture: cards1grid },
+  { type: "cards", version: 1, name: "list-tiles", fixture: cards1listTiles },
+  { type: "cards", version: 1, name: "list", fixture: cards1list },
+  { type: "cards", version: 1, name: "overlay-landscape", fixture: cards1overlayLandscape },
+  { type: "cards", version: 1, name: "overlay", fixture: cards1overlay },
+  { type: "cards", version: 1, name: "placeholder", fixture: cards1placeholder },
+  { type: "cards", version: 1, name: "tiles", fixture: cards1tiles },
   { type: "contact-details", version: 2, name: "cards", fixture: contactDetails2cards },
   { type: "contact-details", version: 2, name: "columns", fixture: contactDetails2columns },
   { type: "contact-details", version: 2, name: "placeholder", fixture: contactDetails2placeholder },
@@ -175,9 +208,12 @@ export const fixtureFiles = [
   { type: "form-section", version: 2, name: "inline", fixture: formSection2inline },
   { type: "form-section", version: 2, name: "placeholder", fixture: formSection2placeholder },
   { type: "form-section", version: 2, name: "split", fixture: formSection2split },
-  { type: "gallery", version: 1, name: "grid", fixture: gallery1grid },
-  { type: "gallery", version: 1, name: "placeholder", fixture: gallery1placeholder },
-  { type: "gallery", version: 1, name: "wide", fixture: gallery1wide },
+  { type: "gallery", version: 2, name: "grid-four", fixture: gallery2gridFour },
+  { type: "gallery", version: 2, name: "grid", fixture: gallery2grid },
+  { type: "gallery", version: 2, name: "masonry", fixture: gallery2masonry },
+  { type: "gallery", version: 2, name: "mosaic", fixture: gallery2mosaic },
+  { type: "gallery", version: 2, name: "placeholder", fixture: gallery2placeholder },
+  { type: "gallery", version: 2, name: "scroller", fixture: gallery2scroller },
   { type: "header", version: 3, name: "centered-logo", fixture: header3centeredLogo },
   { type: "header", version: 3, name: "centered-menu", fixture: header3centeredMenu },
   { type: "header", version: 3, name: "floating", fixture: header3floating },
@@ -189,9 +225,11 @@ export const fixtureFiles = [
   { type: "hero", version: 4, name: "placeholder", fixture: hero4placeholder },
   { type: "hero", version: 4, name: "split", fixture: hero4split },
   { type: "hero", version: 4, name: "stacked", fixture: hero4stacked },
-  { type: "image-caption", version: 1, name: "narrow", fixture: imageCaption1narrow },
-  { type: "image-caption", version: 1, name: "placeholder", fixture: imageCaption1placeholder },
-  { type: "image-caption", version: 1, name: "wide", fixture: imageCaption1wide },
+  { type: "image-caption", version: 2, name: "full", fixture: imageCaption2full },
+  { type: "image-caption", version: 2, name: "placeholder", fixture: imageCaption2placeholder },
+  { type: "image-caption", version: 2, name: "text-square", fixture: imageCaption2textSquare },
+  { type: "image-caption", version: 2, name: "text", fixture: imageCaption2text },
+  { type: "image-caption", version: 2, name: "wide", fixture: imageCaption2wide },
   { type: "location", version: 2, name: "placeholder", fixture: location2placeholder },
   { type: "location", version: 2, name: "split-start", fixture: location2splitStart },
   { type: "location", version: 2, name: "split", fixture: location2split },
@@ -201,12 +239,17 @@ export const fixtureFiles = [
   { type: "logo-strip", version: 2, name: "placeholder", fixture: logoStrip2placeholder },
   { type: "logo-strip", version: 2, name: "row", fixture: logoStrip2row },
   { type: "logo-strip", version: 2, name: "split", fixture: logoStrip2split },
-  { type: "post-header", version: 1, name: "cover", fixture: postHeader1cover },
-  { type: "post-header", version: 1, name: "placeholder", fixture: postHeader1placeholder },
-  { type: "post-header", version: 1, name: "simple", fixture: postHeader1simple },
-  { type: "post-list", version: 2, name: "cards", fixture: postList2cards },
-  { type: "post-list", version: 2, name: "list", fixture: postList2list },
-  { type: "post-list", version: 2, name: "placeholder", fixture: postList2placeholder },
+  { type: "post-header", version: 2, name: "centered", fixture: postHeader2centered },
+  { type: "post-header", version: 2, name: "cover", fixture: postHeader2cover },
+  { type: "post-header", version: 2, name: "placeholder", fixture: postHeader2placeholder },
+  { type: "post-header", version: 2, name: "simple", fixture: postHeader2simple },
+  { type: "post-header", version: 2, name: "split-tint", fixture: postHeader2splitTint },
+  { type: "post-header", version: 2, name: "split", fixture: postHeader2split },
+  { type: "post-list", version: 3, name: "cards", fixture: postList3cards },
+  { type: "post-list", version: 3, name: "featured", fixture: postList3featured },
+  { type: "post-list", version: 3, name: "list", fixture: postList3list },
+  { type: "post-list", version: 3, name: "placeholder", fixture: postList3placeholder },
+  { type: "post-list", version: 3, name: "text", fixture: postList3text },
   { type: "pricing", version: 1, name: "cards-four", fixture: pricing1cardsFour },
   { type: "pricing", version: 1, name: "cards-two", fixture: pricing1cardsTwo },
   { type: "pricing", version: 1, name: "cards", fixture: pricing1cards },
@@ -222,8 +265,11 @@ export const fixtureFiles = [
   { type: "quote", version: 2, name: "placeholder", fixture: quote2placeholder },
   { type: "quote", version: 2, name: "split-end", fixture: quote2splitEnd },
   { type: "quote", version: 2, name: "split", fixture: quote2split },
-  { type: "rich-text", version: 1, name: "narrow", fixture: richText1narrow },
-  { type: "rich-text", version: 1, name: "placeholder", fixture: richText1placeholder },
+  { type: "rich-text", version: 2, name: "article-plain", fixture: richText2articlePlain },
+  { type: "rich-text", version: 2, name: "article", fixture: richText2article },
+  { type: "rich-text", version: 2, name: "placeholder", fixture: richText2placeholder },
+  { type: "rich-text", version: 2, name: "sidebar-tint", fixture: richText2sidebarTint },
+  { type: "rich-text", version: 2, name: "sidebar", fixture: richText2sidebar },
   { type: "split", version: 2, name: "bleed-inset", fixture: split2bleedInset },
   { type: "split", version: 2, name: "bleed", fixture: split2bleed },
   { type: "split", version: 2, name: "placeholder", fixture: split2placeholder },

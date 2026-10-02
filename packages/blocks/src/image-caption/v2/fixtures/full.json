@@ -1,0 +1,14 @@
+{
+  "variant": "full",
+  "surface": "inverse",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Boats moored close to the quay at dusk"
+    },
+    "caption": "North Quay at dusk, from the end of the harbour wall.",
+    "credit": "Photo: Ana Moreno",
+    "crop": "original"
+  }
+}

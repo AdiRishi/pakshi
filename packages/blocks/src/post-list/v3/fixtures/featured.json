@@ -1,0 +1,14 @@
+{
+  "variant": "featured",
+  "surface": "default",
+  "props": {
+    "heading": "News from the harbour.",
+    "headingRest": "Dates, mentors and what we're building next.",
+    "collection": {
+      "$ref": "page",
+      "id": "pg_news"
+    },
+    "count": 7,
+    "columns": "3"
+  }
+}

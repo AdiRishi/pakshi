@@ -1,5 +1,5 @@
 import type { Presentation } from "../presentation.ts";
-import type imageCaption from "./v1/index.tsx";
+import type imageCaption from "./v2/index.tsx";
 
 export default {
   name: "Image",
@@ -7,8 +7,21 @@ export default {
   hint: "Use it for one photo worth a section of its own. For several, use a Gallery.",
   order: 60,
   variants: {
-    wide: { label: "Wide", description: "The photo fills most of the page's width." },
-    narrow: { label: "Narrow", description: "A smaller photo, as wide as a column of text." },
+    text: {
+      label: "As wide as text",
+      description: "The photo lines up with a column of writing, for the middle of an article.",
+    },
+    wide: { label: "Wide", description: "The photo runs the width of the page's content." },
+    full: {
+      label: "Edge to edge",
+      description: "The photo runs from one side of the screen to the other.",
+    },
+  },
+  choices: {
+    crop: {
+      options: { original: "As taken", landscape: "Landscape", square: "Square" },
+      layouts: ["text", "wide"],
+    },
   },
   fields: {
     image: { label: "Photo" },

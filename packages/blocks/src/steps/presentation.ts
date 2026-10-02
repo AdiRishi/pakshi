@@ -5,7 +5,7 @@ export default {
   name: "Steps",
   summary: "How something works, as numbered steps.",
   hint: "Use two to six steps in the order people take them, each a short title and a sentence or two.",
-  order: 55,
+  order: 58,
   variants: {
     row: {
       label: "Steps across",

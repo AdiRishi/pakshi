@@ -1,0 +1,57 @@
+{
+  "variant": "scroller",
+  "surface": "tint",
+  "props": {
+    "heading": "The mentors at work",
+    "intro": "Twelve boat builders from around the region teach at the summer school.",
+    "images": [
+      {
+        "id": "it_mei",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMei",
+          "alt": "Mei Chen in the boatshed"
+        },
+        "caption": "Mei Chen, planking"
+      },
+      {
+        "id": "it_tom",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleTom",
+          "alt": "Tom Penrose on the slipway"
+        },
+        "caption": "Tom Penrose, rigging"
+      },
+      {
+        "id": "it_dan",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleDan",
+          "alt": "Dan Okafor holding a mooring line"
+        },
+        "caption": "Dan Okafor, seamanship"
+      },
+      {
+        "id": "it_asha",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleAsha",
+          "alt": "Asha Patel at the workbench"
+        },
+        "caption": "Asha Patel, frames"
+      },
+      {
+        "id": "it_priya",
+        "image": {
+          "$ref": "media",
+          "id": "med_samplePriya",
+          "alt": "Priya Shah on the pontoon"
+        },
+        "caption": "Priya Shah, sailing"
+      }
+    ],
+    "columns": "3",
+    "crop": "portrait"
+  }
+}

@@ -2,6 +2,8 @@
 import bento from "./bento/presentation.ts";
 import bentoTile from "./bento-tile/presentation.ts";
 import callToAction from "./call-to-action/presentation.ts";
+import card from "./card/presentation.ts";
+import cards from "./cards/presentation.ts";
 import contactDetails from "./contact-details/presentation.ts";
 import eventCard from "./event-card/presentation.ts";
 import eventCards from "./event-cards/presentation.ts";
@@ -36,6 +38,8 @@ export const presentations = {
   "bento": bento,
   "bento-tile": bentoTile,
   "call-to-action": callToAction,
+  "card": card,
+  "cards": cards,
   "contact-details": contactDetails,
   "event-card": eventCard,
   "event-cards": eventCards,

@@ -1,5 +1,5 @@
 import type { Presentation } from "../presentation.ts";
-import type postHeader from "./v1/index.tsx";
+import type postHeader from "./v2/index.tsx";
 
 export default {
   name: "Post header",
@@ -7,10 +7,21 @@ export default {
   hint: "Use one at the top of each post. Its words and photo come from the post's settings.",
   order: 25,
   variants: {
-    simple: { label: "Words only", description: "The title, date, author and excerpt." },
+    simple: {
+      label: "Words only",
+      description: "The title, summary, date and author, lined up with the post's text.",
+    },
+    centered: {
+      label: "Centered",
+      description: "The title, summary, date and author in the middle of the page.",
+    },
     cover: {
-      label: "With cover photo",
-      description: "The same words, with the post's cover photo underneath.",
+      label: "Cover photo below",
+      description: "The words first, with the post's cover photo wide underneath.",
+    },
+    split: {
+      label: "Cover photo beside",
+      description: "The words on one side and the post's cover photo on the other.",
     },
   },
 } satisfies Presentation<typeof postHeader>;

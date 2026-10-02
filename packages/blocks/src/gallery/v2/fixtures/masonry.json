@@ -1,0 +1,73 @@
+{
+  "variant": "masonry",
+  "surface": "muted",
+  "props": {
+    "kicker": "From the boatshed",
+    "heading": "Work in progress",
+    "images": [
+      {
+        "id": "it_evening",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Two sailing boats on a calm harbour at sunset"
+        },
+        "caption": "The finished boats, Friday evening"
+      },
+      {
+        "id": "it_mei",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMei",
+          "alt": "Mei Chen in the boatshed"
+        }
+      },
+      {
+        "id": "it_map",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMap",
+          "alt": "A map of North Quay, with the boatshed marked"
+        },
+        "caption": "The boatshed sits at the end of the quay"
+      },
+      {
+        "id": "it_tom",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleTom",
+          "alt": "Tom Penrose on the slipway"
+        },
+        "caption": "Tom checks the planking"
+      },
+      {
+        "id": "it_launch",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleHarbour",
+          "alt": "Two dinghies sailing past the harbour wall"
+        }
+      },
+      {
+        "id": "it_asha",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleAsha",
+          "alt": "Asha Patel at the workbench"
+        },
+        "caption": "Asha's team on day three"
+      },
+      {
+        "id": "it_dan",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleDan",
+          "alt": "Dan Okafor holding a mooring line"
+        },
+        "caption": "Dan teaches knots before lunch"
+      }
+    ],
+    "columns": "3",
+    "crop": "landscape"
+  }
+}

@@ -1,0 +1,56 @@
+{
+  "variant": "mosaic",
+  "surface": "inverse",
+  "props": {
+    "heading": "Launch day",
+    "intro": "Every boat built during the week goes into the water on Friday afternoon.",
+    "images": [
+      {
+        "id": "it_harbour",
+        "image": {
+          "$ref": "media",
+          "id": "med_harbour",
+          "alt": "Boats moored close to the quay"
+        },
+        "caption": "Waiting for the tide"
+      },
+      {
+        "id": "it_dinghies",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleHarbour",
+          "alt": "Two dinghies on the water"
+        },
+        "caption": "First sail"
+      },
+      {
+        "id": "it_dan",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleDan",
+          "alt": "Dan Okafor holding a mooring line"
+        }
+      },
+      {
+        "id": "it_priya",
+        "image": {
+          "$ref": "media",
+          "id": "med_samplePriya",
+          "alt": "Priya Shah on the pontoon"
+        },
+        "caption": "Priya's first launch"
+      },
+      {
+        "id": "it_quay",
+        "image": {
+          "$ref": "media",
+          "id": "med_sampleMap",
+          "alt": "A map of North Quay, with the slipway marked"
+        },
+        "caption": "The slipway"
+      }
+    ],
+    "columns": "3",
+    "crop": "landscape"
+  }
+}
