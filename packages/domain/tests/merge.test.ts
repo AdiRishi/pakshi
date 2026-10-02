@@ -5,7 +5,7 @@ import { Draft, type SiteContent } from "@repo/contracts/draft";
 import { BlockId, PageId } from "@repo/contracts/ids";
 import type { Conflict, ConflictKey, Resolutions, Side } from "@repo/contracts/merge";
 import { Op } from "@repo/contracts/ops";
-import { LiveRelease } from "@repo/contracts/snapshot";
+import { listingsOf, LiveRelease } from "@repo/contracts/snapshot";
 import { defaultTheme, resolveTheme, type Surface } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
@@ -249,6 +249,7 @@ describe("changes on one side", () => {
       "pg_about",
       "pg_faq",
       "pg_home",
+      "pg_news",
       "pg_visit",
     ]);
     expect(content.pages[PageId.make("pg_about")]).toMatchObject({
@@ -398,6 +399,95 @@ describe("a conflict", () => {
     const pages = merge({ draft, live }, choosing(conflicts, "live")).content.pages;
     expect(PageId.make("pg_liveEvents") in pages).toBe(true);
     expect(PageId.make("pg_draftEvents") in pages).toBe(false);
+  });
+});
+
+describe("blogs and their posts", () => {
+  const post = (id: string, slug: string): WireOp => ({
+    op: "createPage",
+    page: {
+      schema: "pakshi.page/1",
+      id,
+      type: "entry",
+      kind: "blog",
+      collection: "pg_news",
+      slug,
+      meta: {
+        title: "Mentors announced",
+        description: "",
+        date: "2027-04-01",
+        author: "Meera Kapoor",
+        tags: [],
+        excerpt: "",
+      },
+      root: [],
+      blocks: {},
+    },
+  });
+  const deleteNews: ReadonlyArray<WireOp> = [
+    { op: "deletePage", page: "pg_dates" },
+    { op: "deletePage", page: "pg_news" },
+  ];
+  const addressOf = (content: SiteContent, id: string) =>
+    listingsOf(content.pages).find((page) => page.id === id)?.path;
+
+  test("a blog one side removed goes quietly, with its posts, when the other side left them alone", () => {
+    const draft = edit(harbourDraft, [heading("Build a boat")]);
+    const live = edit(harbourDraft, deleteNews);
+    const { content, conflicts, changes } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(Object.keys(content.pages).toSorted()).toEqual(["pg_about", "pg_home"]);
+    expect(changes.filter((change) => change._tag === "PageRemoved")).toHaveLength(2);
+  });
+
+  test("a blog removed on one side while the other adds a post is one conflict for the blog and its posts", () => {
+    const draft = edit(harbourDraft, [post("pg_mentors", "mentors")]);
+    const live = edit(harbourDraft, deleteNews);
+    const { conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        _tag: "Removed",
+        place: { target: "pg_news", title: "News" },
+        block: null,
+        removedOn: "live",
+      }),
+    ]);
+    const removed = merge({ draft, live }, choosing(conflicts, "live")).content.pages;
+    expect(Object.keys(removed).toSorted()).toEqual(["pg_about", "pg_home"]);
+    const kept = merge({ draft, live }, choosing(conflicts, "draft")).content.pages;
+    expect(Object.keys(kept).toSorted()).toEqual([
+      "pg_about",
+      "pg_dates",
+      "pg_home",
+      "pg_mentors",
+      "pg_news",
+    ]);
+  });
+
+  test("a post added to a blog the other side moved lands under the blog's new address", () => {
+    const draft = edit(harbourDraft, [post("pg_mentors", "mentors")]);
+    const live = edit(harbourDraft, [{ op: "setPath", page: "pg_news", path: "/updates" }]);
+    const { content, conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([]);
+    expect(addressOf(content, "pg_mentors")).toBe("/updates/mentors");
+    expect(addressOf(content, "pg_dates")).toBe("/updates/dates");
+  });
+
+  test("posts both sides add to a blog with one slug conflict, and keeping a side removes the other's post", () => {
+    const draft = edit(harbourDraft, [post("pg_draftPost", "mentors")]);
+    const live = edit(harbourDraft, [post("pg_livePost", "mentors")]);
+    const { conflicts } = merge({ draft, live });
+    expect(conflicts).toEqual([
+      expect.objectContaining({
+        _tag: "Address",
+        path: "/news/mentors",
+        draft: { id: "pg_draftPost", title: "Mentors announced" },
+        live: { id: "pg_livePost", title: "Mentors announced" },
+      }),
+    ]);
+    const pages = merge({ draft, live }, choosing(conflicts, "live")).content.pages;
+    expect(PageId.make("pg_livePost") in pages).toBe(true);
+    expect(PageId.make("pg_draftPost") in pages).toBe(false);
   });
 });
 

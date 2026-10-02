@@ -766,6 +766,68 @@ it.effect("a preview shows the draft's latest saved page, and a review marks wha
   ),
 );
 
+it.effect("a preview shows a post at its address in its blog, while the blog is published", () =>
+  withSite((site) =>
+    Effect.gen(function* () {
+      const { id } = yield* site.createDraft(sam, name("News"));
+      const empty = { schema: "pakshi.page/1", root: [], blocks: {} } as const;
+      yield* site.applyBatch(
+        sam,
+        id,
+        decodeBatch({
+          id: "bat_news",
+          ops: [
+            {
+              op: "createPage",
+              page: {
+                ...empty,
+                id: "pg_news",
+                type: "collection",
+                kind: "blog",
+                path: "/news",
+                meta: { title: "News", description: "" },
+              },
+            },
+            {
+              op: "createPage",
+              page: {
+                ...empty,
+                id: "pg_first",
+                type: "entry",
+                kind: "blog",
+                collection: "pg_news",
+                slug: "first",
+                meta: {
+                  title: "Our first post",
+                  description: "",
+                  date: "2027-03-02",
+                  author: "Sam Okafor",
+                  tags: [],
+                  excerpt: "",
+                },
+              },
+            },
+          ],
+        }),
+      );
+      const preview = yield* site.draftView(id, "/news/first");
+      expect(preview.view.page?.id).toBe("pg_first");
+      expect(preview.view.pages).toContainEqual(
+        expect.objectContaining({ id: "pg_first", path: "/news/first" }),
+      );
+      yield* site.applyBatch(
+        sam,
+        id,
+        decodeBatch({
+          id: "bat_unpublish",
+          ops: [{ op: "setStatus", page: "pg_news", status: "unpublished" }],
+        }),
+      );
+      expect((yield* site.draftView(id, "/news/first")).view.page).toBeNull();
+    }),
+  ),
+);
+
 describe("the agent's turns", () => {
   const turn = TurnId.make("turn_one");
 

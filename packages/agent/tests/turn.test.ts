@@ -278,6 +278,26 @@ describe("a turn", () => {
       }),
   );
 
+  it.effect("creates a blog from the blog recipe, but no post outside a blog", () =>
+    Effect.gen(function* () {
+      const create = (recipe: string, title: string, path: string) => ({
+        name: "create_page",
+        params: { recipe, title, description: `${title} from the harbour.`, path },
+      });
+      const { state, calls } = yield* turnWith(
+        [{ calls: [create("blog", "News", "/news"), create("post", "Dates", "/news/dates")] }],
+        "Start a news blog with a first post",
+      );
+      expect(Object.values(state.draft.pages)).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ type: "collection", kind: "blog", path: "/news" }),
+        ]),
+      );
+      expect(Object.values(state.draft.pages).some((page) => page.type === "entry")).toBe(false);
+      expect(JSON.stringify(calls[1]?.prompt)).toContain("Create it in a blog");
+    }),
+  );
+
   it.effect("fetches only addresses the person gave", () =>
     Effect.gen(function* () {
       const { calls } = yield* turnWith(

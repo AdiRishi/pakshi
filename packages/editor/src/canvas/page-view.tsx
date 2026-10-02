@@ -1,7 +1,8 @@
-import { type PageEntry, SiteDataProvider, siteData } from "@repo/blocks";
+import { SiteDataProvider, siteData } from "@repo/blocks";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
+import { listingsOf, type PageListing } from "@repo/contracts/snapshot";
 import { type ReactNode, useMemo } from "react";
 
 import { TargetProvider, useEditorState, useServices } from "../context.tsx";
@@ -123,7 +124,7 @@ function GhostSlotItem(props: {
   );
 }
 
-const sameEntries = (a: ReadonlyArray<PageEntry>, b: ReadonlyArray<PageEntry>) =>
+const sameListings = (a: ReadonlyArray<PageListing>, b: ReadonlyArray<PageListing>) =>
   a.length === b.length &&
   a.every((entry, index) => {
     const other = b[index];
@@ -136,8 +137,7 @@ const sameEntries = (a: ReadonlyArray<PageEntry>, b: ReadonlyArray<PageEntry>) =
   });
 
 /** The draft's pages as site data needs them. Only address and meta changes produce a new list. */
-const usePageEntries = () =>
-  useEditorState((state): ReadonlyArray<PageEntry> => Object.values(state.view.pages), sameEntries);
+const usePageListings = () => useEditorState((state) => listingsOf(state.view.pages), sameListings);
 
 /** What blocks read beyond their props, from the draft as the person sees it. */
 export const useDraftSiteData = () => {
@@ -145,7 +145,7 @@ export const useDraftSiteData = () => {
   const menus = useEditorState((state) => state.view.parts.menus);
   const forms = useEditorState((state) => state.view.forms);
   const identity = useEditorState((state) => state.view.brand.identity);
-  const pages = usePageEntries();
+  const pages = usePageListings();
   return useMemo(() => {
     const files = new Map(media.map((file) => [file.id, file]));
     return siteData({

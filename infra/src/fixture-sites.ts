@@ -12,7 +12,7 @@ import { PageDocument } from "@repo/contracts/page";
 import { contentHash, type Lockfile, SnapshotManifest } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
 
-import { sampleSite } from "./sample-site.ts";
+import { manifestPages, sampleSite } from "./sample-site.ts";
 
 /** Each fixture site shows its block fixtures on its home page. */
 export const fixturesPath = "/";
@@ -146,12 +146,11 @@ export const fixtureSites = async () => {
       if (header === undefined || footer === undefined)
         throw new Error("Blocks need a header and a footer fixture.");
       const site = { id: SiteId.make(`site_fixtures${number}`), name: `Block fixtures ${number}` };
-      // The fixtures' other pages are empty and exist so their links and blog lists resolve.
-      const documents = fixtureSite.pages.map((entry) =>
-        entry.path === fixturesPath
+      // The fixtures' other pages are empty and exist so their links and post lists resolve.
+      const documents = Object.values(fixtureSite.pages).map((page) =>
+        page.type === "page" && page.path === fixturesPath
           ? {
-              ...entry,
-              schema: "pakshi.page/1",
+              ...page,
               meta: {
                 title: site.name,
                 description:
@@ -162,11 +161,11 @@ export const fixtureSites = async () => {
               root: shown.map(({ tree }) => tree.id),
               blocks: Object.fromEntries(shown.flatMap(({ tree }) => flattenTree(tree))),
             }
-          : { ...entry, schema: "pakshi.page/1", root: [], blocks: {} },
+          : page,
       );
       const pages = await Promise.all(
         documents.map(async (document) => {
-          const page = Schema.decodeUnknownSync(PageDocument)(document);
+          const page = Schema.decodeSync(PageDocument)(document);
           const json = Schema.encodeSync(PageDocument)(page);
           return { page, json, hash: await contentHash(json) };
         }),
@@ -189,7 +188,7 @@ export const fixtureSites = async () => {
         })
       ).slice(0, 12);
       const snapshot = SnapshotId.make(`snap_fixtures${number}${version}`);
-      const manifest = Schema.decodeUnknownSync(SnapshotManifest)({
+      const manifest = Schema.decodeSync(SnapshotManifest)({
         schema: "pakshi.snapshot/1",
         id: snapshot,
         site: site.id,
@@ -200,13 +199,7 @@ export const fixtureSites = async () => {
         lockfile,
         brand: revision,
         media,
-        pages: pages.map(({ page, hash }) => ({
-          id: page.id,
-          path: page.path,
-          type: page.type,
-          meta: page.meta,
-          object: hash,
-        })),
+        pages: manifestPages(pages),
         unpublished: [],
         gone: [],
       });

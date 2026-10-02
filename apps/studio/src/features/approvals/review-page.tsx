@@ -1,5 +1,5 @@
 import type { SiteId, SubmissionId } from "@repo/contracts/ids";
-import type { PagePath } from "@repo/contracts/page";
+import { pageName, type PagePath } from "@repo/contracts/page";
 import { type Decision, reviewBasePath, type Review } from "@repo/contracts/studio";
 import { currentStep, type Submission } from "@repo/contracts/submission";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
@@ -296,7 +296,7 @@ export function ReviewPage(props: { readonly site: SiteId; readonly submission: 
           >
             {data.pages.map((candidate) => (
               <NativeSelectOption key={candidate.id} value={candidate.path}>
-                {candidate.title || candidate.path}
+                {pageName(candidate)}
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -318,7 +318,7 @@ export function ReviewPage(props: { readonly site: SiteId; readonly submission: 
         <main className="flex min-w-0 flex-1 flex-col p-4">
           <iframe
             key={`${submission.snapshot}${version}${path}`}
-            title={`${version === "submitted" ? "Submitted version" : "Live version"} of ${page?.title || path}`}
+            title={`${version === "submitted" ? "Submitted version" : "Live version"} of ${page === undefined ? path : pageName(page)}`}
             src={`${reviewBasePath}/${data.site.id}/${submission.id}${path}?${new URLSearchParams({ version, snapshot: submission.snapshot })}`}
             className="min-h-0 flex-1 rounded-md border bg-background"
           />

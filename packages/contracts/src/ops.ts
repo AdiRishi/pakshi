@@ -4,7 +4,7 @@ import { Schema } from "effect";
 import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
 import { BatchId, BlockId, BlockType, FormId, PageId } from "./ids.ts";
-import { PageDocument, PagePath } from "./page.ts";
+import { PageDocument, PagePath, Slug } from "./page.ts";
 import { Link } from "./references.ts";
 import { MenuItem, Menus } from "./site.ts";
 import { LiveRelease, Lockfile } from "./snapshot.ts";
@@ -47,7 +47,7 @@ export const BlockTree = Schema.Struct({
 });
 export type BlockTree = typeof BlockTree.Type;
 
-/** A meta field of a page or post. Which ones a page accepts depends on its type. */
+/** A meta field of a page or entry. Which ones a page accepts depends on its kind. */
 export const MetaField = Schema.Literals([
   "title",
   "description",
@@ -119,7 +119,7 @@ export const RemoveBlock = Schema.Struct({
 });
 export type RemoveBlock = typeof RemoveBlock.Type;
 
-/** Sets one meta field of a page or post. Leaving out `value` removes an optional one. */
+/** Sets one meta field of a page or entry. Leaving out `value` removes an optional one. */
 export const SetMeta = Schema.Struct({
   op: Schema.Literal("setMeta"),
   page: PageId,
@@ -128,13 +128,24 @@ export const SetMeta = Schema.Struct({
 });
 export type SetMeta = typeof SetMeta.Type;
 
-/** Changes a page's address. Links to the page follow it, because they hold its ID. */
+/**
+ * Changes the address of a page or collection; a collection's entries follow
+ * it. Links to a page follow it too, because they hold its ID.
+ */
 export const SetPath = Schema.Struct({
   op: Schema.Literal("setPath"),
   page: PageId,
   path: PagePath,
 });
 export type SetPath = typeof SetPath.Type;
+
+/** Changes an entry's slug, and so its address below its collection's. */
+export const SetSlug = Schema.Struct({
+  op: Schema.Literal("setSlug"),
+  page: PageId,
+  slug: Slug,
+});
+export type SetSlug = typeof SetSlug.Type;
 
 export const CreatePage = Schema.Struct({ op: Schema.Literal("createPage"), page: PageDocument });
 export type CreatePage = typeof CreatePage.Type;
@@ -206,6 +217,7 @@ export const Op = Schema.Union([
   RemoveBlock,
   SetMeta,
   SetPath,
+  SetSlug,
   CreatePage,
   DeletePage,
   SetStatus,
@@ -234,7 +246,7 @@ export const BatchRule = Schema.Literals([
   "unknown-page",
   /** A page with this ID already exists. */
   "page-exists",
-  /** Another page already has this address. */
+  /** Another page, collection or entry already has this address. */
   "path-taken",
   /** No block with this ID is in the target. */
   "unknown-block",
@@ -256,13 +268,16 @@ export const BatchRule = Schema.Literals([
   "unknown-item",
   /** The value breaks the field's rules, such as its maximum length or allowed links. */
   "value",
-  /** The page type has no such meta field, or its value breaks the field's rules. */
+  /** The page's kind has no such meta field, or its value breaks the field's rules. */
   "meta",
-  /** A new page's document breaks the page rules. */
+  /**
+   * A new page's document breaks the page rules, such as an entry outside a
+   * collection of its kind, or the op doesn't apply to this kind of page.
+   */
   "page",
   /** No form has this ID. */
   "unknown-form",
-  /** A block still uses the form. */
+  /** A block still uses the form, or a collection still holds entries. */
   "in-use",
   /** The person may no longer edit this draft. */
   "permission",

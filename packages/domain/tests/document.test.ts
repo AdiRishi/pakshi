@@ -4,6 +4,7 @@ import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, FormId, PageId } from "@repo/contracts/ids";
 import { BatchError, Op } from "@repo/contracts/ops";
 import { PageDocument } from "@repo/contracts/page";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
@@ -31,7 +32,7 @@ const rejection = (...ops: ReadonlyArray<WireOp>) => {
 
 const home = (draft = harbourDraft) => {
   const page = draft.pages[PageId.make("pg_home")];
-  if (page === undefined) throw new Error("The draft has no home page.");
+  if (page?.type !== "page") throw new Error("The draft has no home page.");
   return page;
 };
 
@@ -49,6 +50,28 @@ const visitForm = () => {
   if (form === undefined) throw new Error("The draft has a visit form.");
   return Schema.encodeSync(FormDefinition)(form);
 };
+
+const post = (id: string, slug: string, collection = "pg_news"): WireOp => ({
+  op: "createPage",
+  page: {
+    schema: "pakshi.page/1",
+    id,
+    type: "entry",
+    kind: "blog",
+    collection,
+    slug,
+    meta: {
+      title: "Mentors announced",
+      description: "",
+      date: "2027-04-01",
+      author: "Meera Kapoor",
+      tags: [],
+      excerpt: "",
+    },
+    root: [],
+    blocks: {},
+  },
+});
 
 const insertMore: WireOp = {
   op: "insertBlock",
@@ -169,6 +192,16 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
     [{ op: "setMeta", page: "pg_dates", field: "tags", value: ["dates", "july"] }],
   ],
   ["change a page's address", [{ op: "setPath", page: "pg_about", path: "/who-we-are" }]],
+  ["move a blog with its posts", [{ op: "setPath", page: "pg_news", path: "/updates" }]],
+  ["change a post's slug", [{ op: "setSlug", page: "pg_dates", slug: "dates-out" }]],
+  ["create a post in a blog", [post("pg_mentors", "mentors")]],
+  [
+    "delete a blog after its posts",
+    [
+      { op: "deletePage", page: "pg_dates" },
+      { op: "deletePage", page: "pg_news" },
+    ],
+  ],
   [
     "create a page",
     [
@@ -340,11 +373,37 @@ describe("applying ops", () => {
 
   test("a batch can swap two pages' addresses", () => {
     const { draft } = applied(
-      { op: "setPath", page: "pg_about", path: "/news/dates" },
-      { op: "setPath", page: "pg_dates", path: "/about" },
+      { op: "setPath", page: "pg_about", path: "/news" },
+      { op: "setPath", page: "pg_news", path: "/about" },
     );
-    expect(draft.pages[PageId.make("pg_about")]?.path).toBe("/news/dates");
-    expect(draft.pages[PageId.make("pg_dates")]?.path).toBe("/about");
+    expect(draft.pages[PageId.make("pg_about")]).toMatchObject({ path: "/news" });
+    expect(draft.pages[PageId.make("pg_news")]).toMatchObject({ path: "/about" });
+  });
+
+  test("a blog's posts move with it", () => {
+    const { draft } = applied({ op: "setPath", page: "pg_news", path: "/updates" });
+    expect(listingsOf(draft.pages).find((page) => page.id === "pg_dates")?.path).toBe(
+      "/updates/dates",
+    );
+  });
+
+  test("a blog can't move where one of its posts would take another page's address", () => {
+    const errors = rejection(
+      {
+        op: "createPage",
+        page: {
+          schema: "pakshi.page/1",
+          id: "pg_updates",
+          type: "page",
+          path: "/updates/dates",
+          meta: { title: "Key dates", description: "" },
+          root: [],
+          blocks: {},
+        },
+      },
+      { op: "setPath", page: "pg_news", path: "/updates" },
+    );
+    expect(errors).toEqual([expect.objectContaining({ op: 1, rule: "path-taken" })]);
   });
 
   test("errors are structured, with the op, where in it, the rule and a message", () => {
@@ -372,11 +431,17 @@ describe("each rule rejects the ops that break it", () => {
       "a page ID that's taken",
       {
         op: "createPage",
-        page: { ...Schema.encodeSync(PageDocument)(home()), path: "/elsewhere" },
+        page: Schema.encodeSync(PageDocument)({ ...home(), path: "/elsewhere" }),
       },
       "page-exists",
     ],
     ["an address that's taken", { op: "setPath", page: "pg_about", path: "/" }, "path-taken"],
+    ["a post's slug that's taken in its blog", post("pg_again", "dates"), "path-taken"],
+    ["a post in a page that isn't a blog", post("pg_mentors", "mentors", "pg_about"), "page"],
+    ["a post in a blog that doesn't exist", post("pg_mentors", "mentors", "pg_nope"), "page"],
+    ["an address set on a post", { op: "setPath", page: "pg_dates", path: "/dates" }, "page"],
+    ["a slug on a page outside a blog", { op: "setSlug", page: "pg_about", slug: "us" }, "page"],
+    ["a blog that still holds posts", { op: "deletePage", page: "pg_news" }, "in-use"],
     [
       "a new page at an address that's taken",
       { op: "createPage", page: { ...Schema.encodeSync(PageDocument)(home()), id: "pg_again" } },

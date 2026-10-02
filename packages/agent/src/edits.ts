@@ -3,12 +3,12 @@ import { placeholderMedia, placeholderTree } from "@repo/blocks/placeholders";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, MediaId } from "@repo/contracts/ids";
 import type { BatchError, BlockTree, ItemTree, Op, Target } from "@repo/contracts/ops";
+import { pageName } from "@repo/contracts/page";
 import { MediaRef } from "@repo/contracts/references";
 import type { BlockContracts } from "@repo/domain/document";
 import { Result, Schema } from "effect";
 
 import { type ContentProblem, storedProps, storedValue } from "./content.ts";
-import { pageName } from "./site-view.ts";
 import type { AgentOp, NewBlock } from "./tools.ts";
 import type { TypingIn } from "./workspace.ts";
 

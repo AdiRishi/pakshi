@@ -1,4 +1,5 @@
 import type { BlockType } from "@repo/contracts/ids";
+import type { CollectionKind } from "@repo/contracts/page";
 
 /*
  * A recipe is how the agent composes one kind of page from the library's
@@ -18,8 +19,10 @@ export interface RecipeSection {
 export interface Recipe {
   readonly id: string;
   readonly title: string;
-  /** Whether the recipe makes pages or blog posts. */
-  readonly pageType: "page" | "post";
+  /** What the recipe makes: a page, a collection of one kind, or an entry in one. */
+  readonly makes:
+    | { readonly type: "page" }
+    | { readonly type: "collection" | "entry"; readonly kind: CollectionKind };
   /** When to use it, in one line. */
   readonly purpose: string;
   /** The sections a new page starts with, in order. */
@@ -38,7 +41,7 @@ export const recipes: ReadonlyArray<Recipe> = [
   {
     id: "landing",
     title: "Landing page",
-    pageType: "page",
+    makes: { type: "page" },
     purpose: "A site's home page, or a page that sells one thing and asks for one action",
     sections: [
       section("hero", "What this is and the one thing to do next"),
@@ -56,7 +59,7 @@ export const recipes: ReadonlyArray<Recipe> = [
   {
     id: "event",
     title: "Event page",
-    pageType: "page",
+    makes: { type: "page" },
     purpose: "One event, or a programme of them, with its dates, place and a way to sign up",
     sections: [
       section("hero", "The event's name, dates and place, with a button to register"),
@@ -75,7 +78,7 @@ export const recipes: ReadonlyArray<Recipe> = [
   {
     id: "information",
     title: "Information page",
-    pageType: "page",
+    makes: { type: "page" },
     purpose: "Practical details such as visiting, opening hours, contact or policies",
     sections: [
       section("hero", "What the page answers, in a sentence"),
@@ -91,19 +94,23 @@ export const recipes: ReadonlyArray<Recipe> = [
   {
     id: "blog",
     title: "Blog",
-    pageType: "page",
-    purpose: "The page that lists a site's blog posts",
+    makes: { type: "collection", kind: "blog" },
+    purpose: "A page that holds posts, such as news or stories, and lists them",
     sections: [
       section("hero", "What the blog is about"),
       section("post-list", "The newest posts"),
       section("call-to-action", "A next step for readers, such as signing up", false),
     ],
-    rules: ["A site has one blog page.", "Keep the hero short, so posts appear high on the page."],
+    rules: [
+      "Name it for what it holds, such as News or Stories.",
+      "A site can have several.",
+      "Keep the hero short, so posts appear high on the page.",
+    ],
   },
   {
     id: "post",
     title: "Blog post",
-    pageType: "post",
+    makes: { type: "entry", kind: "blog" },
     purpose: "One blog post: news, a story or an announcement",
     sections: [
       section("rich-text", "The post itself"),

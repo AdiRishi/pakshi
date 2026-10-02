@@ -149,6 +149,8 @@ const valueKey = (op: Op) => {
       return `${op.page}:meta:${op.field}`;
     case "setPath":
       return `${op.page}:path`;
+    case "setSlug":
+      return `${op.page}:slug`;
     default:
       return null;
   }

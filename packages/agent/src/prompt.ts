@@ -3,9 +3,10 @@ import type { Selected, SitePlan, Source } from "@repo/contracts/agent";
 import type { VoiceGuide } from "@repo/contracts/brand";
 import type { Draft } from "@repo/contracts/draft";
 import type { Collaborator } from "@repo/contracts/live";
+import { pageName } from "@repo/contracts/page";
 import type { BlockContracts } from "@repo/domain/document";
 
-import { outline, pageName } from "./site-view.ts";
+import { outline } from "./site-view.ts";
 import type { TypingIn } from "./workspace.ts";
 
 /*
@@ -49,7 +50,11 @@ const blockIndex = (contracts: BlockContracts) =>
 
 const recipeIndex = () =>
   recipes
-    .map((recipe) => `- ${recipe.id} (${recipe.pageType}): ${recipe.title}. ${recipe.purpose}.`)
+    .map((recipe) => {
+      const makes =
+        recipe.makes.type === "page" ? "page" : `${recipe.makes.type} of ${recipe.makes.kind}`;
+      return `- ${recipe.id} (${makes}): ${recipe.title}. ${recipe.purpose}.`;
+    })
     .join("\n");
 
 /** The brand's voice guide, as the agent follows it in the copy it writes. */

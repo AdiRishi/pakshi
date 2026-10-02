@@ -6,6 +6,7 @@ import { placeholderPaths } from "@repo/blocks/placeholders";
 import type { Part, SitePlan } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import { BlockId, PageId } from "@repo/contracts/ids";
+import { listingsOf } from "@repo/contracts/snapshot";
 import { freeze } from "@repo/domain/freeze";
 import { Effect, Option, Schema } from "effect";
 import { describe, expect, test } from "vitest";
@@ -273,9 +274,9 @@ const planning: ReadonlyArray<Task> = [
       converse({ draft: harbourDraft, brief, messages: ["Build the plan."] }),
       ({ state }) =>
         outcome(
-          Object.values(state.draft.pages).some((page) => page.path === "/visit"),
+          listingsOf(state.draft.pages).some((page) => page.path === "/visit"),
           () =>
-            `pages are ${Object.values(state.draft.pages)
+            `pages are ${listingsOf(state.draft.pages)
               .map((page) => page.path)
               .join(", ")}`,
         ),

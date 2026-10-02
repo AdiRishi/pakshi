@@ -2,6 +2,7 @@ import { fieldAt } from "@repo/blocks/fields";
 import type { Draft } from "@repo/contracts/draft";
 import type { NamedBlock, Place } from "@repo/contracts/merge";
 import type { PropPath } from "@repo/contracts/ops";
+import { pageName } from "@repo/contracts/page";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import type { BlockContracts } from "@repo/domain/document";
 
@@ -75,7 +76,7 @@ const brokenTo = (draft: Draft, issue: Extract<CheckIssue, { readonly _tag: "Bro
   const linked = draft.pages[issue.page];
   return linked === undefined
     ? `links to ${issue.page}, a page that no longer exists. Point it at a page that does, or remove the link.`
-    : `links to ${issue.page} "${linked.meta.title || linked.path}", which is unpublished in this draft. Point it at a published page, or ask the person whether to publish ${issue.page} again with setStatus.`;
+    : `links to ${issue.page} "${pageName(linked)}", which is unpublished in this draft. Point it at a published page, or ask the person whether to publish ${issue.page} again with setStatus.`;
 };
 
 const describe = (issue: CheckIssue, draft: Draft, contracts: BlockContracts) => {

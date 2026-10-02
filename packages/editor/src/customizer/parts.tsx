@@ -4,6 +4,7 @@ import type { Draft } from "@repo/contracts/draft";
 import type { BlockId, BlockType, PageId } from "@repo/contracts/ids";
 import type { Target } from "@repo/contracts/ops";
 import type { Link } from "@repo/contracts/references";
+import { addressOf } from "@repo/contracts/snapshot";
 import { Button } from "@repo/ui/components/button";
 import { cn } from "cn";
 import { Option, Predicate, Schema } from "effect";
@@ -122,7 +123,7 @@ const destination = (link: Link, draft: Draft) => {
   if (Predicate.isString(link)) return link.replace(/^https:\/\//, "");
   const page = draft.pages[link.id];
   if (page === undefined) return "a page on the site";
-  return page.path === "/" ? "the home page" : `the ${page.meta.title} page`;
+  return addressOf(draft.pages, page) === "/" ? "the home page" : `the ${page.meta.title} page`;
 };
 
 function Row(props: {

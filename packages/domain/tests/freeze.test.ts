@@ -88,8 +88,46 @@ describe("freezing", () => {
     });
     const result = freeze(unpublished, contracts, previous, new Set());
     if (!result.ok) throw new Error(JSON.stringify(result.issues));
-    expect(result.frozen.pages.map((page) => page.id).toSorted()).toEqual(["pg_dates", "pg_home"]);
+    expect(result.frozen.pages.map((page) => page.document.id).toSorted()).toEqual([
+      "pg_dates",
+      "pg_home",
+      "pg_news",
+    ]);
     expect(result.frozen.gone.toSorted()).toEqual(["/about", "/old-programme"]);
+  });
+
+  test("an unpublished blog takes its posts off the site, and their addresses answer gone", () => {
+    const draft = edit(complete, [{ op: "setStatus", page: "pg_news", status: "unpublished" }]);
+    const previous = Schema.decodeSync(
+      Schema.Struct({ pages: SnapshotManifest.fields.pages, gone: SnapshotManifest.fields.gone }),
+    )({
+      pages: [
+        {
+          id: "pg_dates",
+          path: "/news/dates",
+          type: "entry",
+          kind: "blog",
+          collection: "pg_news",
+          meta: {
+            title: "Dates announced",
+            description: "Summer school runs in July.",
+            date: "2027-03-02",
+            author: "Meera Kapoor",
+            tags: [],
+            excerpt: "",
+          },
+          object: "a".repeat(64),
+        },
+      ],
+      gone: [],
+    });
+    const result = freeze(draft, contracts, previous, new Set());
+    if (!result.ok) throw new Error(JSON.stringify(result.issues));
+    expect(result.frozen.pages.map((page) => page.document.id).toSorted()).toEqual([
+      "pg_about",
+      "pg_home",
+    ]);
+    expect(result.frozen.gone).toEqual(["/news/dates"]);
   });
 
   test("lists the library images the snapshot shows", () => {

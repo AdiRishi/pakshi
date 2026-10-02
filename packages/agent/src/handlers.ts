@@ -1,9 +1,11 @@
 import { recipeById } from "@repo/blocks/recipes";
 import type { Part } from "@repo/contracts/agent";
+import { collectionKinds } from "@repo/contracts/collections";
 import type { Draft } from "@repo/contracts/draft";
 import { type BlockId, type BlockType, PageId, randomId } from "@repo/contracts/ids";
 import type { Op, Target } from "@repo/contracts/ops";
-import type { PageDocument } from "@repo/contracts/page";
+import { type PageDocument, pageName } from "@repo/contracts/page";
+import { addressOf } from "@repo/contracts/snapshot";
 import type { BlockContracts } from "@repo/domain/document";
 import { Effect, Option, Result } from "effect";
 
@@ -18,7 +20,7 @@ import {
   unknownMedia,
 } from "./edits.ts";
 import { issueForAgent } from "./issues.ts";
-import { outline, pageName, pageView } from "./site-view.ts";
+import { outline, pageView } from "./site-view.ts";
 import { AgentTools } from "./tools.ts";
 import { BlockRequests, Sources, Turn, Web, Workspace } from "./workspace.ts";
 
@@ -96,8 +98,6 @@ const commitOps = Effect.fn("Agent.commitOps")(function* (
   );
 });
 
-const today = () => new Date().toISOString().slice(0, 10);
-
 /** The tools' handlers, over the services a turn provides. */
 export const agentHandlers = AgentTools.toLayer({
   get_site_outline: (_, { toolCallId }) =>
@@ -147,7 +147,7 @@ export const agentHandlers = AgentTools.toLayer({
       return {
         id: found.id,
         title: found.title,
-        pageType: found.pageType,
+        makes: found.makes,
         purpose: found.purpose,
         sections: found.sections.map((section) => ({ ...section })),
         rules: [...found.rules],
@@ -203,11 +203,16 @@ export const agentHandlers = AgentTools.toLayer({
   create_page: ({ recipe, title, description, path, sections }, { toolCallId }) =>
     Effect.gen(function* () {
       const workspace = yield* Workspace;
-      const turn = yield* Turn;
       const draft = yield* workspace.draft;
       const contracts = yield* workspace.contracts;
       const found = recipeById(recipe);
       if (found === undefined) return yield* fail(`There's no recipe ${recipe}.`);
+      if (found.makes.type === "entry") {
+        const names = collectionKinds[found.makes.kind].names;
+        return yield* fail(
+          `${found.title} makes a ${names.one}, which goes in a ${names.kind.toLowerCase()}. Create it in a ${names.kind.toLowerCase()}, not with create_page.`,
+        );
+      }
       const types: ReadonlyArray<BlockType> =
         sections ??
         found.sections.filter((section) => section.required).map((section) => section.type);
@@ -238,22 +243,12 @@ export const agentHandlers = AgentTools.toLayer({
         recipe: found.id,
         root: blocks.success.map((block) => block.id),
         blocks: Object.fromEntries(flat),
+        meta: { title, description },
       } as const;
       const page: PageDocument =
-        found.pageType === "post"
-          ? {
-              ...common,
-              type: "post",
-              meta: {
-                title,
-                description,
-                date: today(),
-                author: turn.person.name,
-                tags: [],
-                excerpt: "",
-              },
-            }
-          : { ...common, type: "page", meta: { title, description } };
+        found.makes.type === "collection"
+          ? { ...common, type: "collection", kind: found.makes.kind }
+          : { ...common, type: "page" };
       yield* commitOps(toolCallId, draft, contracts, id, [{ op: "createPage", page }]);
       return {
         page: id,
@@ -265,7 +260,8 @@ export const agentHandlers = AgentTools.toLayer({
     Effect.gen(function* () {
       const workspace = yield* Workspace;
       const draft = yield* workspace.draft;
-      const path = (page === undefined ? undefined : draft.pages[page]?.path) ?? "/";
+      const found = page === undefined ? undefined : draft.pages[page];
+      const path = found === undefined ? "/" : addressOf(draft.pages, found);
       yield* activity(toolCallId, "Got the preview link");
       return workspace.previewLink(path);
     }),

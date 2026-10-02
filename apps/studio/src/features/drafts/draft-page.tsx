@@ -1,7 +1,9 @@
 import { isBehind } from "@repo/contracts/draft";
 import { type DraftId, PageId, randomId, type SiteId } from "@repo/contracts/ids";
-import type { PageDocument } from "@repo/contracts/page";
-import type { DraftPageSummary, PageSummary, Viewer } from "@repo/contracts/studio";
+import { collectionKinds } from "@repo/contracts/collections";
+import { type PageDocument, pageName } from "@repo/contracts/page";
+import { entryAddress } from "@repo/contracts/snapshot";
+import type { DraftPageSummary, Viewer } from "@repo/contracts/studio";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
 import { Badge } from "@repo/ui/components/badge";
 import {
@@ -35,16 +37,9 @@ import {
   TableHeader,
   TableRow,
 } from "@repo/ui/components/table";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@repo/ui/components/tabs";
 import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import {
-  FileTextIcon,
-  GitMergeIcon,
-  MoreHorizontalIcon,
-  NewspaperIcon,
-  PlusIcon,
-} from "lucide-react";
+import { FileTextIcon, GitMergeIcon, MoreHorizontalIcon, PlusIcon } from "lucide-react";
 import { useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
@@ -53,55 +48,50 @@ import { standing } from "@/features/approvals/describe";
 import { draftPagesQuery } from "../sites/queries";
 import { sendBatch } from "../sites/send-batch";
 import { DraftActions } from "./draft-actions";
-import { PageDialog, type SubmittedPage } from "./page-dialog";
+import { PageDialog, type PageValues } from "./page-dialog";
 import { MenusCard, RemovePageDialog, StandingBadge } from "./pages-and-menus";
 
-type PageType = PageSummary["type"];
+const newPageDescription =
+  "The page starts empty in this draft. Nothing goes live until it's published.";
 
-const copy = {
-  page: {
-    tab: "Pages",
-    create: "New page",
-    description: "The page starts empty in this draft. Nothing goes live until it's published.",
-    prefix: "/",
-  },
-  post: {
-    tab: "Blog posts",
-    create: "New post",
-    description: "The post starts empty in this draft. Nothing goes live until it's published.",
-    prefix: "/blog/",
-  },
-} as const;
+const newPage = (values: PageValues): PageDocument => ({
+  schema: "pakshi.page/1",
+  id: PageId.make(randomId("pg")),
+  type: "page",
+  path: values.address,
+  meta: { title: values.title, description: "" },
+  root: [],
+  blocks: {},
+});
 
-const newPage = (type: PageType, values: SubmittedPage, author: string): PageDocument => {
-  const common = {
-    schema: "pakshi.page/1",
-    id: PageId.make(randomId("pg")),
-    path: values.path,
-    root: [],
-    blocks: {},
-  } as const;
-  return type === "page"
-    ? { ...common, type, meta: { title: values.title, description: "" } }
-    : {
-        ...common,
-        type,
-        meta: {
-          title: values.title,
-          description: "",
-          date: new Date().toISOString().slice(0, 10),
-          author,
-          tags: [],
-          excerpt: "",
-        },
-      };
+/** What a row's page is: a page, a collection by its kind, or an entry. */
+const kindOf = (page: DraftPageSummary) => {
+  if (page.type === "page") return "Page";
+  const names = collectionKinds[page.kind].names;
+  return page.type === "collection"
+    ? names.kind
+    : `${names.one.charAt(0).toUpperCase()}${names.one.slice(1)}`;
+};
+
+/** How a page's address is renamed: its whole address, or an entry's slug below its collection's. */
+const renamedAddress = (
+  page: DraftPageSummary,
+  pages: ReadonlyArray<DraftPageSummary>,
+) => {
+  if (page.type !== "entry") return { mode: { under: null, followsTitle: false }, current: page.path };
+  const collection = pages.find((candidate) => candidate.id === page.collection);
+  if (collection === undefined) throw new Error(`${page.collection} isn't among the draft's pages.`);
+  return {
+    mode: { under: collection.path, followsTitle: false },
+    current: page.path.slice(entryAddress(collection.path, "").length),
+  };
 };
 
 function PagesTable(props: {
   readonly site: SiteId;
   readonly draft: DraftId;
   readonly pages: ReadonlyArray<DraftPageSummary>;
-  readonly onRename: (page: PageSummary) => void;
+  readonly onRename: (page: DraftPageSummary) => void;
   readonly onRemove: (page: DraftPageSummary, action: "unpublish" | "delete") => void;
   readonly onRepublish: (page: DraftPageSummary) => void;
 }) {
@@ -110,6 +100,7 @@ function PagesTable(props: {
       <TableHeader>
         <TableRow>
           <TableHead className="px-6">Title</TableHead>
+          <TableHead>Kind</TableHead>
           <TableHead>Address</TableHead>
           <TableHead>In this draft</TableHead>
           <TableHead className="w-0 px-6">
@@ -121,12 +112,13 @@ function PagesTable(props: {
         {props.pages.map((page) => (
           <TableRow key={page.id}>
             <TableCell className="px-6 font-medium">
-              {page.title === "" ? (
+              {page.meta.title === "" ? (
                 <span className="text-muted-foreground">Untitled</span>
               ) : (
-                page.title
+                page.meta.title
               )}
             </TableCell>
+            <TableCell className="text-muted-foreground">{kindOf(page)}</TableCell>
             <TableCell className="font-mono text-muted-foreground">{page.path}</TableCell>
             <TableCell>
               <StandingBadge standing={page.standing} />
@@ -137,7 +129,7 @@ function PagesTable(props: {
                   to="/sites/$siteId/drafts/$draftId/pages/$pageId"
                   params={{ siteId: props.site, draftId: props.draft, pageId: page.id }}
                   className={buttonVariants({ variant: "outline", size: "sm" })}
-                  aria-label={`Edit ${page.title || page.path}`}
+                  aria-label={`Edit ${pageName(page)}`}
                 >
                   Edit
                 </Link>
@@ -147,7 +139,7 @@ function PagesTable(props: {
                       <Button
                         variant="ghost"
                         size="icon-sm"
-                        aria-label={`More for ${page.title || page.path}`}
+                        aria-label={`More for ${pageName(page)}`}
                       />
                     }
                   >
@@ -181,7 +173,7 @@ function PagesTable(props: {
   );
 }
 
-/** A draft's pages and posts, and sharing and submitting it. */
+/** A draft's pages, and sharing and submitting it. */
 export function DraftPage(props: {
   readonly viewer: Viewer;
   readonly site: SiteId;
@@ -190,9 +182,8 @@ export function DraftPage(props: {
   const { data } = useSuspenseQuery(draftPagesQuery(props.site, props.draft));
   const queryClient = useQueryClient();
   const navigate = useNavigate();
-  const [tab, setTab] = useState<PageType>("page");
-  const [creating, setCreating] = useState<PageType | null>(null);
-  const [renaming, setRenaming] = useState<PageSummary | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [renamed, setRenamed] = useState<DraftPageSummary | null>(null);
   const [removing, setRemoving] = useState<{
     readonly page: DraftPageSummary;
     readonly action: "unpublish" | "delete";
@@ -200,13 +191,12 @@ export function DraftPage(props: {
   const [submitting, setSubmitting] = useState(false);
   const behind = isBehind(data.draft.base, data.live);
   const review = data.draft.review;
-  const byType = (type: PageType) => data.pages.filter((page) => page.type === type);
 
   const refresh = () =>
     queryClient.invalidateQueries({ queryKey: draftPagesQuery(props.site, props.draft).queryKey });
 
-  const create = async (type: PageType, values: SubmittedPage) => {
-    const page = newPage(type, values, props.viewer.user.name);
+  const create = async (values: PageValues) => {
+    const page = newPage(values);
     const outcome = await sendBatch(props.site, props.draft, [{ op: "createPage", page }]);
     if (outcome.status === "rejected") return outcome.errors;
     await refresh();
@@ -224,10 +214,12 @@ export function DraftPage(props: {
     await refresh();
   };
 
-  const rename = async (page: PageSummary, values: SubmittedPage) => {
+  const rename = async (page: DraftPageSummary, values: PageValues) => {
     const outcome = await sendBatch(props.site, props.draft, [
       { op: "setMeta", page: page.id, field: "title", value: values.title },
-      { op: "setPath", page: page.id, path: values.path },
+      page.type === "entry"
+        ? { op: "setSlug", page: page.id, slug: values.address }
+        : { op: "setPath", page: page.id, path: values.address },
     ]);
     if (outcome.status === "rejected") return outcome.errors;
     await refresh();
@@ -276,7 +268,7 @@ export function DraftPage(props: {
           </div>
         </div>
         <p className="text-secondary-foreground">
-          Pages and posts in this draft. Edits save to the draft as you make them, and nothing goes
+          Pages in this draft. Edits save to the draft as you make them, and nothing goes
           live until it's published.
         </p>
         {review?.status._tag === "ChangesRequested" && (
@@ -307,55 +299,43 @@ export function DraftPage(props: {
         </div>
       )}
       <div className="px-10 py-8">
-        <Tabs value={tab} onValueChange={(value: PageType) => setTab(value)}>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <TabsList>
-              {(["page", "post"] as const).map((type) => (
-                <TabsTrigger key={type} value={type}>
-                  {copy[type].tab} ({byType(type).length})
-                </TabsTrigger>
-              ))}
-            </TabsList>
-            <Button onClick={() => setCreating(tab)}>
-              <PlusIcon />
-              {copy[tab].create}
-            </Button>
-          </div>
-          {(["page", "post"] as const).map((type) => (
-            <TabsContent key={type} value={type}>
-              <Card className="mt-4 gap-0 py-0">
-                <CardContent className="px-0">
-                  {byType(type).length === 0 ? (
-                    <Empty>
-                      <EmptyHeader>
-                        <EmptyMedia variant="icon">
-                          {type === "page" ? <FileTextIcon /> : <NewspaperIcon />}
-                        </EmptyMedia>
-                        <EmptyTitle>No {copy[type].tab.toLowerCase()} yet</EmptyTitle>
-                        <EmptyDescription>{copy[type].description}</EmptyDescription>
-                      </EmptyHeader>
-                    </Empty>
-                  ) : (
-                    <PagesTable
-                      site={props.site}
-                      draft={props.draft}
-                      pages={byType(type)}
-                      onRename={setRenaming}
-                      onRemove={(page, action) => setRemoving({ page, action })}
-                      onRepublish={(page) => void republish(page)}
-                    />
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
-        </Tabs>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <h2 className="text-lg font-semibold">Pages ({data.pages.length})</h2>
+          <Button onClick={() => setCreating(true)}>
+            <PlusIcon />
+            New page
+          </Button>
+        </div>
+        <Card className="mt-4 gap-0 py-0">
+          <CardContent className="px-0">
+            {data.pages.length === 0 ? (
+              <Empty>
+                <EmptyHeader>
+                  <EmptyMedia variant="icon">
+                    <FileTextIcon />
+                  </EmptyMedia>
+                  <EmptyTitle>No pages yet</EmptyTitle>
+                  <EmptyDescription>{newPageDescription}</EmptyDescription>
+                </EmptyHeader>
+              </Empty>
+            ) : (
+              <PagesTable
+                site={props.site}
+                draft={props.draft}
+                pages={data.pages}
+                onRename={setRenamed}
+                onRemove={(page, action) => setRemoving({ page, action })}
+                onRepublish={(page) => void republish(page)}
+              />
+            )}
+          </CardContent>
+        </Card>
         <div className="mt-8">
           <MenusCard
             site={props.site}
             draft={props.draft}
             menus={data.menus}
-            pages={data.pages.filter((page) => page.type === "page")}
+            pages={data.pages.filter((page) => page.type !== "entry")}
             onSaved={refresh}
           />
         </div>
@@ -375,32 +355,33 @@ export function DraftPage(props: {
           }}
         />
       )}
-      {creating !== null && (
+      {creating && (
         <PageDialog
           open
-          onOpenChange={(open) => {
-            if (!open) setCreating(null);
-          }}
-          heading={copy[creating].create}
-          description={copy[creating].description}
-          submitLabel={`Create ${creating}`}
-          initial={{ title: "", path: copy[creating].prefix }}
-          addressPrefix={copy[creating].prefix}
-          onSubmit={(values) => create(creating, values)}
+          onOpenChange={setCreating}
+          heading="New page"
+          description={newPageDescription}
+          submitLabel="Create page"
+          initial={{ title: "", address: "/" }}
+          address={{ under: null, followsTitle: true }}
+          onSubmit={create}
         />
       )}
-      {renaming !== null && (
+      {renamed !== null && (
         <PageDialog
           open
           onOpenChange={(open) => {
-            if (!open) setRenaming(null);
+            if (!open) setRenamed(null);
           }}
-          heading={`Rename ${renaming.type}`}
+          heading={`Rename ${kindOf(renamed).toLowerCase()}`}
           description="The new title and address apply in this draft. The live site changes when it's published."
           submitLabel="Rename"
-          initial={{ title: renaming.title, path: renaming.path }}
-          addressPrefix={null}
-          onSubmit={(values) => rename(renaming, values)}
+          initial={{
+            title: renamed.meta.title,
+            address: renamedAddress(renamed, data.pages).current,
+          }}
+          address={renamedAddress(renamed, data.pages).mode}
+          onSubmit={(values) => rename(renamed, values)}
         />
       )}
     </AppShell>

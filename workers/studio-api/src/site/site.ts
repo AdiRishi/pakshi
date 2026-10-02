@@ -25,7 +25,7 @@ import {
 import { type CatchUp, type Collaborator, ServerMessage } from "@repo/contracts/live";
 import type { Conflict, MergedChange, Resolutions } from "@repo/contracts/merge";
 import type { Batch } from "@repo/contracts/ops";
-import { type BlockInstance, PageDocument, type PagePath } from "@repo/contracts/page";
+import { type BlockInstance, PageDocument, pageName, type PagePath } from "@repo/contracts/page";
 import type { CheckIssue } from "@repo/contracts/publishing";
 import { liveReleaseOf, now, Release } from "@repo/contracts/release";
 import {
@@ -42,6 +42,7 @@ import {
   type LiveRelease,
   type PageListing,
   type SnapshotManifest,
+  type SnapshotPage,
 } from "@repo/contracts/snapshot";
 import {
   BlocksRemoved,
@@ -52,7 +53,6 @@ import {
   type DraftSummary,
   NothingToRollBack,
   type PageStanding,
-  type PageSummary,
   ReviewPage,
   type SettingsChanged,
   type SiteForm,
@@ -70,7 +70,7 @@ import {
   imagesOnPage,
   imagesUsedBy,
 } from "@repo/domain/document";
-import { type Frozen, freeze, shownMedia } from "@repo/domain/freeze";
+import { type Frozen, freeze, servedPages, shownMedia } from "@repo/domain/freeze";
 import {
   changesBetween,
   contractsAt,
@@ -156,11 +156,21 @@ export interface DraftView {
   readonly standings: Readonly<Record<PageId, PageStanding>>;
 }
 
-/** How a draft's page stands against the live site's page with its ID. */
-const standingOf = (page: PageDocument, live: PageDocument | undefined): PageStanding => {
-  if (page.status === "unpublished") return "unpublished";
-  if (live === undefined || live.status === "unpublished") return "new";
-  return Equal.equals(page, live) ? "live" : "changed";
+/** How each of a draft's pages stands against the live site's page with its ID. */
+const standingsOf = (
+  draft: SiteContent["pages"],
+  live: SiteContent["pages"],
+): Record<PageId, PageStanding> => {
+  const served = (pages: SiteContent["pages"]) =>
+    new Set(servedPages(pages).map(({ document }) => document.id));
+  const [inDraft, onLive] = [served(draft), served(live)];
+  return Object.fromEntries(
+    Object.values(draft).map((page): readonly [PageId, PageStanding] => {
+      if (!inDraft.has(page.id)) return [page.id, "unpublished"];
+      if (!onLive.has(page.id)) return [page.id, "new"];
+      return [page.id, Equal.equals(page, live[page.id]) ? "live" : "changed"];
+    }),
+  );
 };
 
 export type Opened =
@@ -171,7 +181,7 @@ export type Opened =
 export interface SubmissionReview {
   readonly submission: Submission;
   readonly changes: ReadonlyArray<MergedChange>;
-  readonly pages: ReadonlyArray<PageSummary>;
+  readonly pages: ReadonlyArray<PageListing>;
 }
 
 const encodePage = Schema.encodeSync(PageDocument);
@@ -184,18 +194,11 @@ const keptSnapshots = 4;
 
 const releaseOf = (indexed: IndexedRelease) => indexed.release;
 
-/** A page as the page list shows it, from a draft's page or a manifest's entry. */
-const listingOf = (page: PageListing): PageListing =>
-  page.type === "post"
-    ? { id: page.id, path: page.path, type: page.type, meta: page.meta }
-    : { id: page.id, path: page.path, type: page.type, meta: page.meta };
-
-const summaryOf = (page: PageListing): PageSummary => ({
-  id: page.id,
-  type: page.type,
-  path: page.path,
-  title: page.meta.title,
-});
+/** A manifest's page as the page list shows it, without the page object it's stored as. */
+const listingOf = (page: SnapshotPage): PageListing => {
+  const { object: _, ...listing } = page;
+  return listing;
+};
 
 /** Everyone whose approval counted, once each, in the order they gave it. */
 const approversOf = (submission: Submission) =>
@@ -774,11 +777,13 @@ export class Site extends Context.Service<
         });
         const pages = yield* Effect.forEach(
           frozen.pages,
-          (page) => Effect.map(write(page), (hash) => ({ ...listingOf(page), object: hash })),
+          ({ listing, document }) =>
+            Effect.map(write(document), (hash) => ({ ...listing, object: hash })),
           { concurrency: "unbounded" },
         );
+        const served = new Set(frozen.pages.map(({ document }) => document.id));
         const unpublished = yield* Effect.forEach(
-          Object.values(content.pages).filter((page) => page.status === "unpublished"),
+          Object.values(content.pages).filter((page) => !served.has(page.id)),
           write,
           { concurrency: "unbounded" },
         );
@@ -1249,12 +1254,7 @@ export class Site extends Context.Service<
           return yield* inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              const standings = Object.fromEntries(
-                Object.values(draft.pages).map((page) => [
-                  page.id,
-                  standingOf(page, live.pages[page.id]),
-                ]),
-              );
+              const standings = standingsOf(draft.pages, live.pages);
               return { draft, summary: yield* summary(id), standings };
             }),
           );
@@ -1442,16 +1442,14 @@ export class Site extends Context.Service<
           return {
             submission,
             changes: yield* changesOf(submission),
-            pages: manifest.pages.map(summaryOf),
+            pages: manifest.pages.map(listingOf),
           };
         }),
         draftView: (id, path) =>
           inStorageTurn(
             Effect.gen(function* () {
               const draft = yield* openDraft(id);
-              const served = Object.values(draft.pages).filter(
-                (page) => page.status !== "unpublished",
-              );
+              const served = servedPages(draft.pages);
               const files = yield* media.files(shownMedia(draft, yield* drafts.contracts(id)));
               const view: SiteView = {
                 settings: publishedOf((yield* settingsStore.current).settings),
@@ -1459,9 +1457,9 @@ export class Site extends Context.Service<
                 forms: draft.forms,
                 lockfile: draft.lockfile,
                 brand: draft.brand,
-                pages: served.map(listingOf),
+                pages: served.map(({ listing }) => listing),
                 media: Object.fromEntries(files),
-                page: served.find((page) => page.path === path) ?? null,
+                page: served.find(({ listing }) => listing.path === path)?.document ?? null,
               };
               return { name: (yield* drafts.summary(id)).name, view };
             }),
@@ -1636,7 +1634,7 @@ export class Site extends Context.Service<
           for (const content of [live, ...open]) {
             for (const media of imagesUsedBy(content.parts.blocks)) use(media, "Header and footer");
             for (const page of Object.values(content.pages))
-              for (const media of imagesOnPage(page)) use(media, page.meta.title || page.path);
+              for (const media of imagesOnPage(page)) use(media, pageName(page));
           }
           const served = yield* snapshots.manifest((yield* liveRelease).snapshot);
           for (const { sharingImage } of [
@@ -1662,7 +1660,7 @@ export class Site extends Context.Service<
               if (isLive) known.live = true;
               for (const page of Object.values(content.pages))
                 if (formsUsedBy(page.blocks).has(form.id))
-                  known.pages.add(page.meta.title || page.path);
+                  known.pages.add(pageName(page));
               found.set(form.id, known);
             }
           return Array.from(found, ([id, form]) => ({
@@ -1674,9 +1672,7 @@ export class Site extends Context.Service<
         }),
         blocksInUse: Effect.gen(function* () {
           const content = yield* contentOf((yield* liveRelease).snapshot);
-          const pages = Object.values(content.pages).filter(
-            (page) => page.status !== "unpublished",
-          );
+          const pages = servedPages(content.pages).map(({ document }) => document);
           const sitewide = new Set(Object.values(content.parts.blocks).map((block) => block.type));
           return Object.entries(content.lockfile).map(([type, version]) => ({
             type,

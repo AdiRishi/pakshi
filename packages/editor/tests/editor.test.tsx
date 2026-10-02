@@ -294,34 +294,46 @@ describe("a form's settings", () => {
 });
 
 describe("a post's settings", () => {
-  test("edit its date, tags and cover image", async () => {
-    const post = PageId.make("pg_launch");
-    const draft: Draft = {
-      ...fixtureDraft,
-      pages: {
-        ...fixtureDraft.pages,
-        [post]: {
-          schema: "pakshi.page/1",
-          id: post,
-          type: "post",
-          path: "/blog/launch",
-          meta: {
-            title: "We're open",
-            description: "",
-            date: "2027-03-02",
-            author: "Meera Kapoor",
-            tags: [],
-            excerpt: "",
-          },
-          root: [],
-          blocks: {},
+  const post = PageId.make("pg_launch");
+  const draft: Draft = {
+    ...fixtureDraft,
+    pages: {
+      ...fixtureDraft.pages,
+      [post]: {
+        schema: "pakshi.page/1",
+        id: post,
+        type: "entry",
+        kind: "blog",
+        collection: PageId.make("pg_news"),
+        slug: "launch",
+        meta: {
+          title: "We're open",
+          description: "",
+          date: "2027-03-02",
+          author: "Meera Kapoor",
+          tags: [],
+          excerpt: "",
         },
+        root: [],
+        blocks: {},
       },
-    };
+    },
+  };
+
+  test("change its address below its blog's, sending visitors on from the old one", async () => {
+    const { siteDoc } = await open({ draft, page: post });
+    expect(page.getByText("/news/")).toBeVisible();
+    await userEvent.fill(page.getByLabelText("Address"), "we-are-open");
+    await userEvent.keyboard("{Tab}");
+    await expect.poll(() => siteDoc.draft().pages[post]).toMatchObject({ slug: "we-are-open" });
+    expect(siteDoc.draft().redirects["/news/launch"]).toEqual({ $ref: "page", id: post });
+  });
+
+  test("edit its date, tags and cover image", async () => {
     const { siteDoc } = await open({ draft, page: post });
     const meta = () => {
       const page = siteDoc.draft().pages[post];
-      return page?.type === "post" ? page.meta : undefined;
+      return page?.type === "entry" ? page.meta : undefined;
     };
 
     await userEvent.fill(page.getByLabelText("Date"), "2027-04-01");

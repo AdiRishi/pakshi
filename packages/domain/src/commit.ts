@@ -20,7 +20,7 @@ import { incompleteProps } from "./freeze.ts";
  *
  * A part is named by a key of path segments from its page, or from `site`
  * for the header and footer: a field or a part of one, a block's variant,
- * surface or place, a whole block, a page's meta field, address or status,
+ * surface or place, a whole block, a page's meta field, address, slug or status,
  * a whole page, a form, a menu, a redirect, or the site-wide values a
  * rebase sets. A write to a part
  * replaces every write to the parts below it.
@@ -105,6 +105,8 @@ const partsOf = ({ op, before }: Step) => {
       return { own: keyOf([op.page, "meta", op.field]), items: [] };
     case "setPath":
       return { own: keyOf([op.page, "path"]), items: [] };
+    case "setSlug":
+      return { own: keyOf([op.page, "slug"]), items: [] };
     case "createPage":
       return { own: keyOf([op.page.id]), items: [] };
     case "deletePage":
@@ -136,6 +138,7 @@ const setsValue = (op: Op) =>
   op.op === "setSurface" ||
   op.op === "setMeta" ||
   op.op === "setPath" ||
+  op.op === "setSlug" ||
   op.op === "setStatus" ||
   op.op === "setForm" ||
   op.op === "setMenu" ||

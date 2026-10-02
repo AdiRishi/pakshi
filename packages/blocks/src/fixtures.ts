@@ -3,10 +3,10 @@ import { Draft } from "@repo/contracts/draft";
 import { FormDefinition } from "@repo/contracts/form";
 import { BlockId, BlockType, FormId, MediaId, PageId } from "@repo/contracts/ids";
 import type { BlockTree, Target } from "@repo/contracts/ops";
-import { PageMeta, PagePath, PostMeta } from "@repo/contracts/page";
+import { PageDocument } from "@repo/contracts/page";
 import { PublishedSettings } from "@repo/contracts/settings";
 import { Menus } from "@repo/contracts/site";
-import { type Lockfile, MediaFile } from "@repo/contracts/snapshot";
+import { listingsOf, type Lockfile, MediaFile } from "@repo/contracts/snapshot";
 import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 import type { Json } from "effect/Schema";
@@ -30,24 +30,17 @@ export const blockFixtures = fixtureFiles.map((file) => ({
   fixture: Schema.decodeUnknownSync(BlockFixture)(file.fixture),
 }));
 
-const pageEntryFields = { id: PageId, path: PagePath };
-
 /**
  * The site that block fixtures refer to: its name and menus, the forms and
- * media their references point at, and pages and posts for links and blog
- * lists.
+ * media their references point at, and empty pages, a blog and its posts for
+ * links and post lists.
  */
 export const FixtureSite = Schema.Struct({
   settings: PublishedSettings,
   menus: Menus,
   forms: Schema.Record(FormId, FormDefinition),
   media: Schema.Record(MediaId, MediaFile),
-  pages: Schema.Array(
-    Schema.Union([
-      Schema.Struct({ ...pageEntryFields, type: Schema.Literal("page"), meta: PageMeta }),
-      Schema.Struct({ ...pageEntryFields, type: Schema.Literal("post"), meta: PostMeta }),
-    ]),
-  ),
+  pages: Schema.Record(PageId, PageDocument),
 });
 
 export const fixtureSite = Schema.decodeUnknownSync(FixtureSite)(site);
@@ -85,7 +78,7 @@ const home = PageId.make("pg_home");
 /**
  * A draft of the fixture site, with its forms, menus and pages, in the
  * default theme. Its home page holds `sections`, under `header` and above
- * `footer`; the site's other pages and posts are empty.
+ * `footer`; the site's other pages are empty.
  */
 export const fixtureDraft = (content: {
   readonly lockfile: Lockfile;
@@ -113,20 +106,14 @@ export const fixtureDraft = (content: {
       theme: resolveTheme(defaultTheme).theme,
       identity: noIdentity,
     },
-    pages: Object.fromEntries(
-      fixtureSite.pages.map((page) => {
-        const blocks = page.id === home ? content.sections : [];
-        return [
-          page.id,
-          {
-            ...page,
-            schema: "pakshi.page/1",
-            root: blocks.map((block) => block.id),
-            blocks: Object.fromEntries(blocks.flatMap(flattenTree)),
-          },
-        ];
-      }),
-    ),
+    pages: {
+      ...fixtureSite.pages,
+      [home]: {
+        ...fixtureSite.pages[home],
+        root: content.sections.map((block) => block.id),
+        blocks: Object.fromEntries(content.sections.flatMap(flattenTree)),
+      },
+    },
   });
 
 /** Each block type's showcase sample, for its newest version, by type. */
@@ -228,7 +215,7 @@ export const blockShowcase = (
       settings: fixtureSite.settings,
       identity: draft.brand.identity,
       menus: draft.parts.menus,
-      pages: Object.values(draft.pages),
+      pages: listingsOf(draft.pages),
       forms: draft.forms,
       media: (id) => sampleMedia.get(id),
     }),

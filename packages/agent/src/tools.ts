@@ -236,7 +236,7 @@ export const InsertSection = Tool.make("insert_section", {
 
 export const CreatePage = Tool.make("create_page", {
   description:
-    "Creates a page or blog post from a recipe, with its sections holding placeholder content to fill in",
+    "Creates a page or blog from a recipe, with its sections holding placeholder content to fill in",
   parameters: Schema.Struct({
     recipe: Schema.String,
     title: Schema.String,

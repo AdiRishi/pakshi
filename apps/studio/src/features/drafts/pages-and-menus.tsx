@@ -1,6 +1,7 @@
 import { type DraftId, MenuItemId, type PageId, randomId, type SiteId } from "@repo/contracts/ids";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import { ExternalUrl, type Link } from "@repo/contracts/references";
+import { pageName } from "@repo/contracts/page";
 import { MenuItem, type Menus } from "@repo/contracts/site";
 import type { DraftPageSummary, PageStanding } from "@repo/contracts/studio";
 import { menusWithout } from "@repo/domain/document";
@@ -86,7 +87,7 @@ export function RemovePageDialog(props: {
 }) {
   const id = useId();
   const { page } = props;
-  const title = page.title || page.path;
+  const title = pageName(page);
   const [redirect, setRedirect] = useState("");
   const [errors, setErrors] = useState<ReadonlyArray<BatchError>>([]);
   const [working, setWorking] = useState(false);
@@ -135,7 +136,7 @@ export function RemovePageDialog(props: {
             <NativeSelectOption value="">No page: say it has gone</NativeSelectOption>
             {targets.map((target) => (
               <NativeSelectOption key={target.id} value={target.id}>
-                {target.title || target.path} ({target.path})
+                {pageName(target)} ({target.path})
               </NativeSelectOption>
             ))}
           </NativeSelect>
@@ -252,7 +253,7 @@ function MenuRow(props: {
           >
             {props.pages.map((page) => (
               <NativeSelectOption key={page.id} value={page.id}>
-                {page.title || page.path}
+                {pageName(page)}
               </NativeSelectOption>
             ))}
             <NativeSelectOption value={anotherAddress}>Another address</NativeSelectOption>
@@ -395,7 +396,7 @@ function MenuEditor(props: {
               ...rows,
               {
                 id: MenuItemId.make(randomId("mi")),
-                label: first.title || "New item",
+                label: first.meta.title || "New item",
                 target: { $ref: "page", id: first.id },
                 depth: 0,
               },
