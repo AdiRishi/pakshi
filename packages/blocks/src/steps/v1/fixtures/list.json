@@ -1,0 +1,44 @@
+{
+  "variant": "list",
+  "surface": "muted",
+  "props": {
+    "kicker": "Bursaries",
+    "heading": "How to apply for a bursary",
+    "intro": "A bursary covers the full fee and travel for families on a low income. Most applications are answered within two weeks.",
+    "steps": [
+      {
+        "id": "it_check",
+        "title": "Check you can apply",
+        "text": "Bursaries are for students aged 14 to 18 whose families get free school meals or a similar benefit."
+      },
+      {
+        "id": "it_letter",
+        "title": "Write to us",
+        "text": "A few lines from the student about why they'd like to come. No essays, and no wrong answers."
+      },
+      {
+        "id": "it_call",
+        "title": "Have a short call",
+        "text": "One of the mentors rings to say hello and answer any questions you have."
+      },
+      {
+        "id": "it_place",
+        "title": "Get your place",
+        "text": "We confirm by email and send everything you need for the week, including travel tickets."
+      }
+    ],
+    "actions": [
+      {
+        "id": "it_apply",
+        "button": {
+          "label": "Apply now",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "align": "start"
+  }
+}

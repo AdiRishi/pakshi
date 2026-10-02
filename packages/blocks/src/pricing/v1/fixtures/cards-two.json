@@ -1,0 +1,79 @@
+{
+  "variant": "cards",
+  "surface": "inverse",
+  "props": {
+    "align": "start",
+    "kicker": "Friends of the harbour",
+    "heading": "Keep the boatshed open all year",
+    "intro": "Members help pay for tools, timber and bursary places, and get the first say on summer places."
+  },
+  "slots": {
+    "plans": [
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Friend",
+          "price": "£5",
+          "period": "a month",
+          "description": "For anyone who wants the school to carry on.",
+          "features": [
+            {
+              "id": "it_feature12",
+              "feature": "Our newsletter each season"
+            },
+            {
+              "id": "it_feature13",
+              "feature": "First to hear about summer places"
+            },
+            {
+              "id": "it_feature14",
+              "feature": "Your name on the boatshed wall"
+            }
+          ],
+          "button": {
+            "label": "Become a friend",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "no"
+        }
+      },
+      {
+        "type": "pricing-plan",
+        "variant": "default",
+        "props": {
+          "name": "Patron",
+          "price": "£20",
+          "badge": "Funds a bursary",
+          "period": "a month",
+          "description": "Pays for one bursary place every summer.",
+          "features": [
+            {
+              "id": "it_feature15",
+              "feature": "Everything friends get"
+            },
+            {
+              "id": "it_feature16",
+              "feature": "A day in the boatshed each year"
+            },
+            {
+              "id": "it_feature17",
+              "feature": "An invitation to the end-of-summer regatta"
+            }
+          ],
+          "button": {
+            "label": "Become a patron",
+            "link": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
+          },
+          "featured": "brand"
+        }
+      }
+    ]
+  }
+}

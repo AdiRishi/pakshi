@@ -1,0 +1,177 @@
+{
+  "variant": "split",
+  "surface": "muted",
+  "props": {
+    "kicker": "FAQ",
+    "heading": "Everything you need to know",
+    "intro": "About the week, the boats and the harbour.",
+    "questions": [
+      {
+        "id": "it_experience",
+        "question": "Do I need any experience?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "None at all. Most students have never built anything, and everyone starts with the same first lesson on the first morning."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_age",
+        "question": "How old do I need to be?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Summer school is for ages 14 to 18. Juniors aged 10 to 13 can join our three-morning course."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_swim",
+        "question": "Do they need to be able to swim?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Yes. Everyone who goes on the water must be able to swim 25 metres, and life jackets are worn at all times."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_weather",
+        "question": "What if it rains?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Workshops carry on in the boatshed. We only go out on the water when the harbour master says it's safe."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_keep",
+        "question": "Can I keep my boat?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Yes. It's yours to take home, or you can give it to the harbour fleet for next year's students."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_friends",
+        "question": "Can I come with a friend?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Of course. Say so when you "
+                },
+                {
+                  "type": "text",
+                  "text": "book your place",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://example.org/book"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " and we'll put you in the same group."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_stay",
+        "question": "Where can we stay?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "The harbour inn keeps rooms for students and families. Book a "
+                },
+                {
+                  "type": "text",
+                  "text": "week and a bed",
+                  "marks": [
+                    {
+                      "type": "bold"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " place and we'll sort it for you."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "contact": "Can't find what you're looking for? Ask the team in the boatshed.",
+    "actions": [
+      {
+        "id": "it_ask",
+        "button": {
+          "label": "Ask a question",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    ],
+    "align": "start"
+  }
+}

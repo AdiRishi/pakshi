@@ -1,0 +1,109 @@
+{
+  "variant": "columns",
+  "surface": "tint",
+  "props": {
+    "heading": "Good to know",
+    "intro": "The questions we hear most from students.",
+    "questions": [
+      {
+        "id": "it_age",
+        "question": "How old do I need to be?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Summer school is for ages 14 to 18. Juniors aged 10 to 13 can join our three-morning course."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_keep",
+        "question": "Can I keep my boat?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Yes. It's yours to take home, or you can give it to the harbour fleet for next year's students."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_weather",
+        "question": "What if it rains?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Workshops carry on in the boatshed. We only go out on the water when the harbour master says it's safe."
+                }
+              ]
+            }
+          ]
+        }
+      },
+      {
+        "id": "it_friends",
+        "question": "Can I come with a friend?",
+        "answer": {
+          "type": "doc",
+          "content": [
+            {
+              "type": "paragraph",
+              "content": [
+                {
+                  "type": "text",
+                  "text": "Of course. Say so when you "
+                },
+                {
+                  "type": "text",
+                  "text": "book your place",
+                  "marks": [
+                    {
+                      "type": "link",
+                      "attrs": {
+                        "href": "https://example.org/book"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "text": " and we'll put you in the same group."
+                }
+              ]
+            }
+          ]
+        }
+      }
+    ],
+    "contact": "Something else on your mind?",
+    "actions": [
+      {
+        "id": "it_contact",
+        "button": {
+          "label": "Get in touch",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    ],
+    "align": "start"
+  }
+}

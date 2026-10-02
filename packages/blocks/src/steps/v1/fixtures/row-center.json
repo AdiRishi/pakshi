@@ -1,0 +1,27 @@
+{
+  "variant": "row",
+  "surface": "tint",
+  "props": {
+    "heading": "Booking takes five minutes",
+    "intro": "Places for summer 2027 open on the first of March.",
+    "steps": [
+      {
+        "id": "it_choose",
+        "title": "Choose your week",
+        "text": "The first or second week of July. Both run Monday to Friday."
+      },
+      {
+        "id": "it_form",
+        "title": "Fill in the form",
+        "text": "Tell us about you, and anything we should know."
+      },
+      {
+        "id": "it_deposit",
+        "title": "Pay the deposit",
+        "text": "£50 holds your place. The rest is due in June."
+      }
+    ],
+    "actions": [],
+    "align": "center"
+  }
+}

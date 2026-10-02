@@ -1,0 +1,12 @@
+{
+  "variant": "split",
+  "surface": "muted",
+  "props": {
+    "quote": "The mentors never did it for you. They showed you once, then let you get it wrong until you got it right.",
+    "name": "Dan Okafor",
+    "role": "Student, summer 2026",
+    "image": { "$ref": "media", "id": "med_sampleDan", "alt": "Dan Okafor" },
+    "logo": { "$ref": "media", "id": "med_sampleBoatyard", "alt": "North Quay Boatyard" },
+    "mediaSide": "start"
+  }
+}

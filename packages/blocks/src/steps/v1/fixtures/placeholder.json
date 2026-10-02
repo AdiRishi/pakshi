@@ -1,0 +1,27 @@
+{
+  "variant": "row",
+  "surface": "default",
+  "props": {
+    "heading": "How it works",
+    "intro": "Walk people through what happens, one step at a time.",
+    "steps": [
+      {
+        "id": "it_first",
+        "title": "The first step",
+        "text": "Say what people do first, in a sentence or two."
+      },
+      {
+        "id": "it_second",
+        "title": "The next step",
+        "text": "Then what happens after that."
+      },
+      {
+        "id": "it_third",
+        "title": "The last step",
+        "text": "And how it ends."
+      }
+    ],
+    "actions": [],
+    "align": "start"
+  }
+}

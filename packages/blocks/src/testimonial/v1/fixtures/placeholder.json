@@ -1,0 +1,9 @@
+{
+  "variant": "default",
+  "props": {
+    "quote": "What someone said about you, in their own words. A sentence or two is plenty.",
+    "name": "Their name",
+    "role": "Who they are",
+    "avatar": { "$ref": "media", "id": "med_pakshiCircles", "alt": "" }
+  }
+}

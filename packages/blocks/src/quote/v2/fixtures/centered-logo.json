@@ -1,0 +1,11 @@
+{
+  "variant": "centered",
+  "surface": "tint",
+  "props": {
+    "quote": "Every summer we send a few of our young members. They come back steadier in a boat, and far more curious about how one is put together. Several now help out in our own workshop on winter evenings.",
+    "name": "Mei Chen",
+    "role": "Junior captain, Westbay Rowing Club",
+    "logo": { "$ref": "media", "id": "med_sampleRowingClub", "alt": "Westbay Rowing Club" },
+    "mediaSide": "start"
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "variant": "panel",
+  "surface": "inverse",
+  "props": {
+    "quote": "The summer school has brought young people back to the harbour. You hear them on the slipway every July, arguing about knots.",
+    "name": "Asha Patel",
+    "role": "Chair, Westbay Harbour Trust",
+    "image": { "$ref": "media", "id": "med_sampleAsha", "alt": "Asha Patel" },
+    "logo": { "$ref": "media", "id": "med_sampleHarbourTrust", "alt": "Westbay Harbour Trust" },
+    "mediaSide": "start"
+  }
+}

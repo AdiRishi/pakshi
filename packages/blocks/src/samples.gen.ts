@@ -18,13 +18,18 @@ import location from "./location/sample.ts";
 import logoStrip from "./logo-strip/sample.ts";
 import postHeader from "./post-header/sample.ts";
 import postList from "./post-list/sample.ts";
+import pricing from "./pricing/sample.ts";
+import pricingPlan from "./pricing-plan/sample.ts";
 import quote from "./quote/sample.ts";
 import richText from "./rich-text/sample.ts";
 import split from "./split/sample.ts";
 import statement from "./statement/sample.ts";
 import stats from "./stats/sample.ts";
+import steps from "./steps/sample.ts";
 import teamGrid from "./team-grid/sample.ts";
 import teamMember from "./team-member/sample.ts";
+import testimonial from "./testimonial/sample.ts";
+import testimonials from "./testimonials/sample.ts";
 import timeline from "./timeline/sample.ts";
 
 export const samples = {
@@ -47,12 +52,17 @@ export const samples = {
   "logo-strip": logoStrip,
   "post-header": postHeader,
   "post-list": postList,
+  "pricing": pricing,
+  "pricing-plan": pricingPlan,
   "quote": quote,
   "rich-text": richText,
   "split": split,
   "statement": statement,
   "stats": stats,
+  "steps": steps,
   "team-grid": teamGrid,
   "team-member": teamMember,
+  "testimonial": testimonial,
+  "testimonials": testimonials,
   "timeline": timeline,
 };
