@@ -63,8 +63,9 @@ const NewItem = Schema.Struct({
   type: BlockType,
   variant: Schema.optionalKey(Schema.String),
   props: Schema.optionalKey(Props),
+  // Models often send null for a key they mean to leave out.
   slot: Schema.optionalKey(
-    Schema.String.annotate({
+    Schema.NullOr(Schema.String).annotate({
       description: "The slot it goes in. Leave out for the section's only slot",
     }),
   ),

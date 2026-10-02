@@ -146,6 +146,39 @@ describe("a turn", () => {
     }),
   );
 
+  it.effect("takes a list of buttons written as a JSON string", () =>
+    Effect.gen(function* () {
+      const { state } = yield* turnWith([
+        {
+          calls: [
+            {
+              name: "apply_ops",
+              params: {
+                page: "pg_home",
+                ops: [
+                  {
+                    op: "setProp",
+                    block: "b_hero",
+                    path: ["actions"],
+                    value: JSON.stringify([
+                      { button: { label: "Book a place", link: "https://harbour.example/book" } },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+      expect(state.draft.pages[home]?.blocks[BlockId.make("b_hero")]?.props["actions"]).toEqual([
+        {
+          id: expect.stringMatching(/^it_/),
+          button: { label: "Book a place", link: "https://harbour.example/book" },
+        },
+      ]);
+    }),
+  );
+
   it.effect("adds a section with the items it's given, in its only slot", () =>
     Effect.gen(function* () {
       const { state } = yield* turnWith([
@@ -154,7 +187,11 @@ describe("a turn", () => {
           props: { heading: "What you'll do" },
           items: [
             { type: "feature-item", props: { title: "Plane", body: "Shape the hull." } },
-            { type: "feature-item", props: { title: "Sail", body: "Launch on Friday." } },
+            {
+              type: "feature-item",
+              props: { title: "Sail", body: "Launch on Friday." },
+              slot: null,
+            },
           ],
         }),
       ]);
