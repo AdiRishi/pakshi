@@ -6,12 +6,13 @@ import { placeholderPaths } from "@repo/blocks/placeholders";
 import type { Part, SitePlan } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import { BlockId, PageId } from "@repo/contracts/ids";
+import { freeze } from "@repo/domain/freeze";
 import { Effect, Option, Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
 import { languageModel } from "../src/model.ts";
 import { suggestAltText, suggestMerge } from "../src/suggestions.ts";
-import { harbourDraft } from "../tests/support/draft.ts";
+import { draftToFix, harbourDraft } from "../tests/support/draft.ts";
 import { restGateway } from "./support/gateway.ts";
 import { converse } from "./support/run.ts";
 
@@ -456,6 +457,44 @@ const placeholders: ReadonlyArray<Task> = [
   ),
 ];
 
+const fixingChecks: ReadonlyArray<Task> = [
+  task(
+    "fixes what the checks found, and leaves images and alt text for the person",
+    Effect.map(
+      converse({
+        draft: draftToFix,
+        messages: [
+          [
+            "Fix everything the checks found that you can:",
+            "- Harbour Summer School has no description",
+            "- Contact asks for an email address or phone number, so it needs a required consent checkbox that links to a privacy policy",
+            "- Old programme, Main menu, links to a page that isn't published",
+          ].join("\n"),
+        ],
+      }),
+      ({ state, contracts }) => {
+        const frozen = freeze(state.draft, contracts, { pages: [], gone: [] }, new Set());
+        const left = new Set((frozen.ok ? [] : frozen.issues).map((issue) => issue._tag));
+        const visit = blockOf(state.draft, "b_visit")?.props["image"];
+        const hero = blockOf(state.draft, "b_hero")?.props["image"];
+        const fixed = !left.has("MissingMeta") && !left.has("MissingConsent");
+        const menu = !left.has("BrokenLink") || asked(state.parts);
+        const leftAlone =
+          JSON.stringify(visit) ===
+            JSON.stringify({ $ref: "media", id: "med_pakshiArch", alt: "" }) &&
+          JSON.stringify(hero) === JSON.stringify({ $ref: "media", id: "med_harbour" });
+        return outcome(fixed && menu && leftAlone, () =>
+          !fixed
+            ? `still to fix: ${Array.from(left).join(", ")}`
+            : !menu
+              ? "left the menu link broken without asking"
+              : "changed an image or its alt text",
+        );
+      },
+    ),
+  ),
+];
+
 const suggestions = languageModel(
   restGateway(),
   { brand: "eval", site: "site_harbour", person: "user_eval" },
@@ -562,6 +601,7 @@ const categories: ReadonlyArray<{
   { name: "placeholders for missing facts", tasks: placeholders, required: 1 },
   { name: "merge suggestions", tasks: merges, required: 2 },
   { name: "alt text", tasks: altText, required: 1 },
+  { name: "fixing what the checks found", tasks: fixingChecks, required: 1 },
 ];
 
 describe.each(categories)("$name", ({ name, tasks, required }) => {

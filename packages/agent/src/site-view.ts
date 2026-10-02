@@ -128,7 +128,10 @@ const blockView = (
   return view;
 };
 
-/** A page, or the header and footer, as `get_page` gives it: every section, or the ones chosen. */
+/**
+ * A page as `get_page` gives it, with every section or the ones chosen, or
+ * for "site", the header and footer with the menus, redirects and forms.
+ */
 export const pageView = (
   draft: Draft,
   contracts: BlockContracts,
@@ -145,10 +148,9 @@ export const pageView = (
       sections: chosen([draft.parts.header, draft.parts.footer]).map((id) =>
         blockView(contracts, draft.parts, "site", id, typing),
       ),
-      menus: {
-        main: draft.parts.menus.main.map((item) => item.label),
-        footer: draft.parts.menus.footer.map((item) => item.label),
-      },
+      menus: draft.parts.menus,
+      redirects: draft.redirects,
+      forms: Object.values(draft.forms),
     };
   const page = draft.pages[target];
   if (page === undefined) return null;
