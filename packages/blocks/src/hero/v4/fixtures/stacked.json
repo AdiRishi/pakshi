@@ -1,0 +1,56 @@
+{
+  "variant": "stacked",
+  "surface": "default",
+  "props": {
+    "badge": "Applications open for 2027",
+    "badgeLink": {
+      "$ref": "page",
+      "id": "pg_programme"
+    },
+    "heading": "Learn to build boats.",
+    "headingRest": "Five days on the harbour.",
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_secondary",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "points": [
+      {
+        "id": "it_p1",
+        "point": "No experience needed"
+      },
+      {
+        "id": "it_p2",
+        "point": "Lunch every day"
+      },
+      {
+        "id": "it_p3",
+        "point": "Tools provided"
+      }
+    ],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "align": "center",
+    "mediaSide": "end",
+    "height": "auto",
+    "frame": "framed",
+    "backdrop": "glow"
+  }
+}

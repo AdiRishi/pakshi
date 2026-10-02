@@ -1,0 +1,30 @@
+{
+  "variant": "columns",
+  "surface": "inverse",
+  "props": {
+    "note": "Harbour Schools runs summer courses in boatbuilding, sailing and the crafts of the sea.",
+    "social": [
+      {
+        "id": "it_instagram",
+        "icon": "instagram",
+        "link": "https://instagram.com/example"
+      },
+      {
+        "id": "it_youtube",
+        "icon": "youtube",
+        "link": "https://youtube.com/example"
+      },
+      {
+        "id": "it_linkedin",
+        "icon": "linkedin",
+        "link": "https://linkedin.com/company/example"
+      }
+    ],
+    "newsletterHeading": "News from the harbour, once a month",
+    "newsletter": {
+      "$ref": "form",
+      "id": "frm_newsletter"
+    },
+    "legal": "\u00a9 2027 Harbour Schools. Registered charity 1234567."
+  }
+}

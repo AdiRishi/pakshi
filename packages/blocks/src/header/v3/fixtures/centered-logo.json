@@ -1,0 +1,12 @@
+{
+  "variant": "centered-logo",
+  "surface": "tint",
+  "props": {
+    "cta": {
+      "label": "Book a place",
+      "link": "https://example.org/register"
+    },
+    "position": "static",
+    "bar": "inverse"
+  }
+}

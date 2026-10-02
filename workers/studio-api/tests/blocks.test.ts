@@ -23,8 +23,11 @@ const removable = Effect.map(removableVersions(), (versions) =>
 it.effect("a version an older live version upgrades through stays, even unused", () =>
   Effect.gen(function* () {
     yield* allLive(1);
-    // hero v2 is how v1 content reaches v3; header v1 is no one's.
-    expect(yield* removable).toEqual([{ type: "header", version: 1, lastUsedAt: null }]);
+    // hero v2 and v3 are how v1 content reaches v4; header v1 and v2 are no one's.
+    expect(yield* removable).toEqual([
+      { type: "header", version: 1, lastUsedAt: null },
+      { type: "header", version: 2, lastUsedAt: null },
+    ]);
   }).pipe(Effect.provide(core)),
 );
 
@@ -36,6 +39,7 @@ it.effect("a version stays for 3 months after the last site stops using it", () 
       ('hero', 1, '2026-01-01T00:00:00.000Z'), ('hero', 2, ${new Date().toISOString()})`;
     expect((yield* removable).map(({ type, version }) => `${type}@${version}`)).toEqual([
       "header@1",
+      "header@2",
       "hero@1",
     ]);
   }).pipe(Effect.provide(core)),

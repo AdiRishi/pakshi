@@ -1,0 +1,16 @@
+{
+  "variant": "floating",
+  "surface": "inverse",
+  "props": {
+    "cta": {
+      "label": "Register",
+      "link": "https://example.org/register"
+    },
+    "secondary": {
+      "label": "Sign in",
+      "link": "https://example.org/sign-in"
+    },
+    "position": "static",
+    "bar": "accent"
+  }
+}

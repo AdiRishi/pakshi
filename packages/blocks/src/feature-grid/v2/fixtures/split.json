@@ -1,0 +1,60 @@
+{
+  "variant": "split",
+  "surface": "muted",
+  "props": {
+    "heading": "Why the harbour",
+    "intro": "A working boatyard is the best classroom we know.",
+    "actions": [
+      {
+        "id": "it_more",
+        "button": {
+          "label": "About the yard",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "columns": "3",
+    "align": "start",
+    "style": "lines",
+    "background": "full"
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Real projects",
+          "body": "Every boat we build goes on to sail."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Real tools",
+          "body": "Hand tools first, then the machines."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Real tides",
+          "body": "Plans change with the weather, as they do at sea."
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Real people",
+          "body": "The yard's crew teach the classes."
+        }
+      }
+    ]
+  }
+}

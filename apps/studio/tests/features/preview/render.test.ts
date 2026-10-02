@@ -32,7 +32,7 @@ const holding = (id: PageId, block: PageDocument["blocks"][BlockId]): PageDocume
 
 const draft = fixtureDraft({
   lockfile: latestLockfile,
-  header: fixture("header", "simple"),
+  header: fixture("header", "standard"),
   footer: fixture("footer", "simple"),
   sections: [],
 });

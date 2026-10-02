@@ -1,0 +1,12 @@
+{
+  "variant": "default",
+  "props": {
+    "title": "The boatshed",
+    "body": "Where the building happens, open from eight every morning.",
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    }
+  }
+}

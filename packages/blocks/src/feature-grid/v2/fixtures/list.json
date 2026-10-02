@@ -1,0 +1,56 @@
+{
+  "variant": "list",
+  "surface": "tint",
+  "props": {
+    "heading": "Before you come",
+    "align": "center",
+    "actions": [],
+    "columns": "2",
+    "style": "plain",
+    "background": "inset"
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Getting here",
+          "body": "Trains run from the city every hour. The yard is a ten minute walk from the station.",
+          "icon": "train",
+          "link": {
+            "label": "Directions",
+            "link": "https://example.org/directions"
+          }
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Staying over",
+          "body": "We have rooms at the harbour inn for anyone travelling far.",
+          "icon": "bed"
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "What to bring",
+          "body": "Old clothes, sturdy shoes and a waterproof jacket.",
+          "icon": "shirt"
+        }
+      },
+      {
+        "type": "feature-item",
+        "variant": "default",
+        "props": {
+          "title": "Access",
+          "body": "The boatshed and classrooms have step-free access.",
+          "icon": "accessibility"
+        }
+      }
+    ]
+  }
+}

@@ -24,7 +24,7 @@ const fixture = (type: string, name: string) => {
  */
 export const harbour: Draft = fixtureDraft({
   lockfile: latestLockfile,
-  header: fixture("header", "simple"),
+  header: fixture("header", "standard"),
   footer: fixture("footer", "simple"),
   sections: [],
 });

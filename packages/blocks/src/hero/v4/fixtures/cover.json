@@ -1,0 +1,42 @@
+{
+  "variant": "cover",
+  "surface": "inverse",
+  "props": {
+    "kicker": "Summer 2027",
+    "heading": "Learn by building",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Mornings are for making. Afternoons are for trying what you made on the water."
+            }
+          ]
+        }
+      ]
+    },
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      }
+    ],
+    "points": [],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "align": "start",
+    "mediaSide": "end",
+    "height": "tall",
+    "frame": "plain",
+    "backdrop": "none"
+  }
+}

@@ -1,0 +1,19 @@
+{
+  "variant": "simple",
+  "surface": "default",
+  "props": {
+    "social": [
+      {
+        "id": "it_instagram",
+        "icon": "instagram",
+        "link": "https://instagram.com/example"
+      },
+      {
+        "id": "it_x",
+        "icon": "x",
+        "link": "https://x.com/example"
+      }
+    ],
+    "legal": "\u00a9 2027 Harbour Schools"
+  }
+}

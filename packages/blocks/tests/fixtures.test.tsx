@@ -157,5 +157,7 @@ test("an example for a part the sample leaves out comes from the placeholder", (
     throw new Error("faq and hero aren't in the registry.");
   expect(blockSamples.get("faq")?.props["intro"]).toBeUndefined();
   expect(exampleValue(faq, ["intro"], "sample")).toBe(faq.placeholder.props["intro"]);
-  expect(exampleValue(hero, ["kicker"], "sample")).toBe(blockSamples.get("hero")?.props["kicker"]);
+  expect(exampleValue(hero, ["heading"], "sample")).toBe(
+    blockSamples.get("hero")?.props["heading"],
+  );
 });
