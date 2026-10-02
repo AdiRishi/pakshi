@@ -203,7 +203,7 @@ function PostDate(props: { readonly value: string }) {
           if (event.target.value !== "") set(event.target.value);
         }}
       />
-      <FieldDescription>Blog lists show posts newest first.</FieldDescription>
+      <FieldDescription>Posts are listed newest first.</FieldDescription>
       <FieldError errors={[...errors]} />
     </Field>
   );
@@ -459,13 +459,13 @@ function PageSettings() {
             value={page.meta.excerpt}
             max={300}
             multiline
-            description="Shown in blog lists."
+            description="Shown where posts are listed."
           />
           <PostTags key={page.meta.tags.join(",")} value={page.meta.tags} />
           <MetaImage
             field="cover"
             title="Cover image"
-            description="Shown with the post in blog lists and when it's shared."
+            description="Shown with the post where posts are listed, and when it's shared."
             value={page.meta.cover}
           />
         </Section>
