@@ -15,13 +15,26 @@ import {
   visit,
 } from "./support/studio.ts";
 
-/** What axe finds on the page against WCAG 2.2 AA. */
-const violations = async (page: Page) =>
-  (
+/**
+ * What axe finds on the page against WCAG 2.2 AA, once anything opening has
+ * finished fading in: halfway through, its text has less contrast than it ends with.
+ */
+const violations = async (page: Page) => {
+  await page.waitForFunction(() =>
+    document
+      .getAnimations()
+      .every(
+        (animation) =>
+          animation.playState !== "running" ||
+          animation.effect?.getComputedTiming().iterations === Infinity,
+      ),
+  );
+  return (
     await new AxeBuilder({ page })
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"])
       .analyze()
   ).violations;
+};
 
 test("an org admin shapes who can do what, and every screen for it meets WCAG 2.2 AA", async ({
   browser,

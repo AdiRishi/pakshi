@@ -317,6 +317,9 @@ for (const scheme of ["light", "dark"] as const) {
             button.removeAttribute("disabled");
           return Promise.all(
             Array.from(document.images, (image) => {
+              // sites offers resized copies, where the preview shows the original, and a
+              // copy's rounded size can rebalance a masonry gallery. Both show the original.
+              image.removeAttribute("srcset");
               image.loading = "eager";
               return image.decode().catch(() => undefined);
             }),

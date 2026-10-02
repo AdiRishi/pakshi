@@ -162,7 +162,8 @@ export const addTextSection = async (
 
 /**
  * Adds a form section to the end of the page, with a new form whose consent
- * checkbox links to the page it's on.
+ * checkbox links to the page it's on, and its points and note written over
+ * the placeholder's.
  */
 export const addFormSection = async (page: Page, canvas: FrameLocator, heading: string) => {
   await page.getByRole("tab", { name: "Outline" }).click();
@@ -175,6 +176,14 @@ export const addFormSection = async (page: Page, canvas: FrameLocator, heading: 
   const section = canvas.locator("[data-pakshi-block]:has(form)").last();
   await typeInto(page, section.locator('[data-pakshi-field="heading"]'), heading);
   await typeInto(page, section.locator('[data-pakshi-field="intro"]'), "We reply within a day.");
+  const points = section.getByRole("textbox", { name: "Point", exact: true });
+  await typeInto(page, points.nth(0), "Rooms for up to twenty");
+  await typeInto(page, points.nth(1), "Free for community groups");
+  await typeInto(
+    page,
+    section.getByRole("textbox", { name: "Note", exact: true }),
+    "We never share your details.",
+  );
   await page.getByLabel("Form", { exact: true }).selectOption({ label: "Start a new form" });
   await page.getByLabel("Links to", { exact: true }).selectOption({ index: 1 });
   await expect(page.getByText("Saved to the draft")).toBeVisible();
