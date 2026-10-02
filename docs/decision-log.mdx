@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 090 | Studio sets its color scheme with a head script, and site previews keep their own  | 2026-10-02 | Accepted            |
 | 089 | The checks open from the top bar, and Pakshi fixes what it can of them             | 2026-10-02 | Accepted            |
 | 088 | Blocks are named and shown from files beside their released versions               | 2026-10-02 | Accepted            |
 | 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
@@ -98,6 +99,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 090 — Studio sets its color scheme with a head script, and site previews keep their own [#decision-090]
+
+**Context.** People working in Studio at night asked for a dark mode. Studio should follow the device's setting, let someone choose light or dark instead, and never show the wrong scheme while a page loads. Studio renders on the server, but only the browser knows the device's setting.
+
+**Decision.** Studio uses shadcn's theming: a `.dark` class on the html element switches the theme variables in `globals.css`, and Tailwind's `dark` variant follows it. The choice of System, Light or Dark is kept in `localStorage`. A small script in the document's head reads it, or the device's setting for System, and sets the class before the page paints. A `useTheme` hook follows the setting, the stored choice and other tabs as they change. The dark palette is the brand's own: navy surfaces that get lighter the higher they sit, the sky blue kept for primary actions and focus, and a lighter sky blue for links. The editor's outlines, warnings and presence colors draw on the site's page, so they stay the same in both schemes.
+
+**Rejected.** A cookie the server reads, which can't know the device's setting, so System would flash on first load; `next-themes`, which does little more than the script and the hook do.
+
+**Consequences.** The html element's class is set outside React, so the root route tells React to ignore it while hydrating. A color added to `globals.css` needs a dark value too, unless it draws on a site's page.
 
 ## 089 — The checks open from the top bar, and Pakshi fixes what it can of them [#decision-089]
 

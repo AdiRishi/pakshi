@@ -31,6 +31,7 @@ import {
 import { type ReactNode, useId } from "react";
 
 import { Logo } from "@/components/logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 import { initials } from "@/lib/initials";
 
 /** Studio's frame for a signed-in person: the navigation sidebar and the page beside it. */
@@ -190,6 +191,7 @@ export function AppShell(props: { readonly viewer: Viewer; readonly children: Re
               </span>
             </div>
           </div>
+          <ThemeToggle />
           <form method="post" action="/sign-out" className="flex flex-col">
             <Button type="submit" variant="outline">
               <LogOutIcon />
