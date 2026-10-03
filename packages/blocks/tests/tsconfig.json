@@ -3,7 +3,18 @@
   "compilerOptions": {
     "noEmit": true,
     "rootDir": "..",
-    "types": ["vitest/globals", "node"]
+    "types": [
+      "vitest/globals",
+      "node",
+      "vite/client",
+      "@vitest/browser-playwright"
+    ]
   },
-  "include": ["./**/*.ts", "./**/*.tsx", "../src/**/*.ts", "../src/**/*.tsx", "../scripts/**/*.ts"]
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "../src/**/*.ts",
+    "../src/**/*.tsx",
+    "../scripts/**/*.ts"
+  ]
 }

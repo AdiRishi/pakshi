@@ -371,6 +371,9 @@ catalogs:
     alchemy:
       specifier: 2.0.0-beta.79
       version: 2.0.0-beta.79
+    axe-core:
+      specifier: 4.13.0
+      version: 4.13.0
     better-auth:
       specifier: 1.7.6
       version: 1.7.6
@@ -890,6 +893,15 @@ importers:
       '@vitejs/plugin-react':
         specifier: 'catalog:'
         version: 6.1.1(babel-plugin-react-compiler@1.0.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      '@vitest/browser-playwright':
+        specifier: 'catalog:'
+        version: 5.0.2(playwright@1.63.0)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))(vitest@5.0.2)
+      axe-core:
+        specifier: 'catalog:'
+        version: 4.13.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.63.0
       react-dom:
         specifier: 'catalog:'
         version: 19.3.0(react@19.3.0)
@@ -902,6 +914,9 @@ importers:
       vitest:
         specifier: 'catalog:'
         version: 5.0.2(@types/node@26.6.3)(@vitest/browser-playwright@5.0.2)(@vitest/ui@5.0.2)(vite@8.3.1(@types/node@26.6.3)(esbuild@0.28.2)(jiti@2.7.0)(yaml@2.9.1))
+      vitest-browser-react:
+        specifier: 'catalog:'
+        version: 2.3.0(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.2)
 
   packages/brand: {}
 
