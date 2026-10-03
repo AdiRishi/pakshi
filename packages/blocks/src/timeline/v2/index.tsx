@@ -8,6 +8,13 @@ import { Actions } from "../../kit/actions.tsx";
 import { Icon } from "../../kit/icon.tsx";
 import { Intro } from "../../kit/intro.tsx";
 import { Section } from "../../kit/section.tsx";
+import {
+  Carousel,
+  CarouselNext,
+  CarouselPrevious,
+  CarouselViewport,
+  carouselSlide,
+} from "../../kit/ui/carousel.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
@@ -162,39 +169,51 @@ const Vertical = ({ timeline }: { readonly timeline: Timeline }) => (
 );
 
 /*
- * Milestones across the page, joined by a line, scrolling sideways when
- * there are more than fit.
+ * Milestones across the page, joined by a line, in a carousel that moves an
+ * entry at a time when there are more than fit. Its buttons show only once
+ * there's somewhere to move to.
  */
 const Horizontal = ({ timeline }: { readonly timeline: Timeline }) => (
-  <ol className="flex snap-x snap-mandatory [scrollbar-width:thin] overflow-x-auto pb-4">
-    {timeline.entries.map((entry) => (
-      <li
-        key={entry.id}
-        className="group/entry flex w-4/5 shrink-0 snap-start flex-col items-start gap-5 sm:w-2/5 md:w-auto md:min-w-56 md:flex-1 md:basis-0"
-      >
-        <div aria-hidden className="relative flex h-9 w-full items-center">
-          <span className="absolute inset-x-0 top-1/2 h-px bg-foreground/15 group-last/entry:hidden" />
-          <Marker entry={entry} />
-        </div>
-        <div className="flex flex-col items-start gap-2 pe-8">
-          <Text
-            field={field(entry, "when")}
-            as="p"
-            value={entry.when}
-            className="text-small font-medium text-primary"
-          />
-          <Text
-            field={field(entry, "title")}
-            as="h3"
-            value={entry.title}
-            className="text-heading"
-          />
-          <Byline entry={entry} />
-          <Detail entry={entry} />
-        </div>
-      </li>
-    ))}
-  </ol>
+  <Carousel label={timeline.heading} className="flex flex-col gap-8">
+    <CarouselViewport>
+      <ol className="flex">
+        {timeline.entries.map((entry) => (
+          <li
+            key={entry.id}
+            className={cx(
+              carouselSlide,
+              "group/entry flex basis-4/5 flex-col items-start gap-5 sm:basis-1/2 md:basis-1/3 lg:basis-1/4",
+            )}
+          >
+            <div aria-hidden className="relative flex h-9 w-full items-center">
+              <span className="absolute inset-x-0 top-1/2 h-px bg-foreground/15 group-last/entry:hidden" />
+              <Marker entry={entry} />
+            </div>
+            <div className="flex flex-col items-start gap-2 pe-8">
+              <Text
+                field={field(entry, "when")}
+                as="p"
+                value={entry.when}
+                className="text-small font-medium text-primary"
+              />
+              <Text
+                field={field(entry, "title")}
+                as="h3"
+                value={entry.title}
+                className="text-heading"
+              />
+              <Byline entry={entry} />
+              <Detail entry={entry} />
+            </div>
+          </li>
+        ))}
+      </ol>
+    </CarouselViewport>
+    <div className="flex gap-2 empty:hidden [&:has([data-slot=carousel-previous]:disabled):has([data-slot=carousel-next]:disabled)]:invisible">
+      <CarouselPrevious label="Earlier" />
+      <CarouselNext label="Later" />
+    </div>
+  </Carousel>
 );
 
 const layouts = {
@@ -235,6 +254,7 @@ export default defineBlock({
   variants: ["agenda", "vertical", "horizontal"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
+  interactive: true,
   agent: {
     purpose:
       "Things in order: a day's schedule with times, speakers and rooms (agenda), or the days of a week, the stages of a process or a history (vertical or horizontal). An icon on an entry sets it apart as a break",

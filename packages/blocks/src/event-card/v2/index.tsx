@@ -1,7 +1,7 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Cta, Media, Root, Text } from "../../components.tsx";
+import { Cta, Media, Root, Text, useEditing } from "../../components.tsx";
 import { cta, media, optional, text } from "../../fields.ts";
 import type { IconName } from "../../icon-names.ts";
 import { buttonClass } from "../../kit/button.ts";
@@ -59,9 +59,9 @@ const calendarDate = (date: string): CalendarDate | undefined => {
 
 /*
  * An events section marks its layout with `data-events`. In cards, an event
- * shows its picture, or its date large in a panel when it has none; in a
- * list, its date sits large in a column of its own, with any picture small
- * at the end.
+ * shows its picture with its date on a tab over it, or its date large in a
+ * panel when it has no picture; in a list, its date sits large in a column of
+ * its own, with any picture small at the end.
  */
 const Calendar = ({ event }: { readonly event: Event }) => {
   const date = calendarDate(event.date);
@@ -70,8 +70,10 @@ const Calendar = ({ event }: { readonly event: Event }) => {
       aria-hidden
       className={cx(
         "flex flex-col items-center justify-center gap-1 text-center",
-        event.image ? "hidden" : "mb-1 aspect-3/2 w-full rounded-image bg-primary/8 text-primary",
-        "in-data-[events=list]:mb-0 in-data-[events=list]:flex in-data-[events=list]:aspect-auto in-data-[events=list]:w-auto in-data-[events=list]:items-start in-data-[events=list]:justify-start in-data-[events=list]:rounded-none in-data-[events=list]:bg-transparent in-data-[events=list]:text-start in-data-[events=list]:text-foreground",
+        event.image
+          ? "hidden"
+          : "mb-1 aspect-3/2 w-full rounded-image border border-primary/10 bg-linear-to-br from-primary/14 to-primary/4 text-primary",
+        "in-data-[events=list]:mb-0 in-data-[events=list]:flex in-data-[events=list]:aspect-auto in-data-[events=list]:w-auto in-data-[events=list]:items-start in-data-[events=list]:justify-start in-data-[events=list]:rounded-none in-data-[events=list]:border-0 in-data-[events=list]:bg-none in-data-[events=list]:text-start in-data-[events=list]:text-foreground",
       )}
     >
       {date === undefined ? (
@@ -81,7 +83,7 @@ const Calendar = ({ event }: { readonly event: Event }) => {
           {date.before.trim() && (
             <span className="text-small text-muted-foreground">{date.before.trim()}</span>
           )}
-          <span className="font-heading text-display in-data-[events=list]:text-title leading-none tabular-nums">
+          <span className="font-heading text-display heading-weight in-data-[events=list]:text-title leading-none tabular-nums">
             {date.day}
           </span>
           <span className="text-lead in-data-[events=list]:text-small font-medium">
@@ -90,6 +92,25 @@ const Calendar = ({ event }: { readonly event: Event }) => {
         </>
       )}
     </div>
+  );
+};
+
+/**
+ * The day and month on a tab over a card's picture, when they're all of the
+ * date: a tab can't say "until" or when a run ends.
+ */
+const DateTab = ({ event }: { readonly event: Event }) => {
+  const date = calendarDate(event.date);
+  return date?.whole !== true ? null : (
+    <span
+      aria-hidden
+      className="absolute top-3 left-3 flex min-w-14 flex-col items-center rounded-md bg-background/90 px-2.5 py-2 text-foreground shadow-card backdrop-blur-sm in-data-[events=list]:hidden"
+    >
+      <span className="font-heading text-heading heading-weight leading-none tabular-nums">
+        {date.day}
+      </span>
+      <span className="text-small font-medium">{date.month.slice(0, 3)}</span>
+    </span>
   );
 };
 
@@ -136,49 +157,71 @@ const Facts = ({ event }: { readonly event: Event }) => (
   </div>
 );
 
-const EventCard = ({ props: event }: BlockComponentProps<typeof props, "default">) => (
-  <Root
-    as="li"
-    className={cx(
-      "flex flex-col gap-3",
-      "in-data-[events=list]:grid in-data-[events=list]:grid-cols-[4rem_minmax(0,1fr)] in-data-[events=list]:gap-x-6 in-data-[events=list]:border-t in-data-[events=list]:border-border in-data-[events=list]:py-8",
-      "md:in-data-[events=list]:grid-cols-[6rem_minmax(0,1fr)_auto] md:in-data-[events=list]:gap-x-10",
-    )}
-  >
-    <Calendar event={event} />
-    {event.image && (
-      <Media
-        field="image"
-        value={event.image}
-        sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
-        className={cx(
-          "mb-1 aspect-3/2 w-full rounded-image object-cover",
-          "in-data-[events=list]:col-start-3 in-data-[events=list]:row-start-1 in-data-[events=list]:mb-0 in-data-[events=list]:hidden in-data-[events=list]:aspect-4/3 in-data-[events=list]:w-44 md:in-data-[events=list]:block",
+/*
+ * An event with a link opens it from anywhere on the card: the link covers
+ * the card, so the card's hover moves the link's arrow and its picture. In
+ * the editor the link covers nothing, so every field can be reached.
+ */
+const EventCard = ({ props: event }: BlockComponentProps<typeof props, "default">) => {
+  const editing = useEditing();
+  const linked = event.link !== undefined && !editing;
+  return (
+    <Root
+      as="li"
+      className={cx(
+        "group/event relative flex flex-col gap-3",
+        "in-data-[events=list]:grid in-data-[events=list]:grid-cols-[4rem_minmax(0,1fr)] in-data-[events=list]:gap-x-6 in-data-[events=list]:border-t in-data-[events=list]:border-border in-data-[events=list]:py-8",
+        "md:in-data-[events=list]:grid-cols-[6rem_minmax(0,1fr)_auto] md:in-data-[events=list]:gap-x-10",
+      )}
+    >
+      <Calendar event={event} />
+      {event.image && (
+        <div
+          className={cx(
+            "relative mb-1 overflow-hidden rounded-image",
+            "in-data-[events=list]:col-start-3 in-data-[events=list]:row-start-1 in-data-[events=list]:mb-0 in-data-[events=list]:hidden in-data-[events=list]:w-44 md:in-data-[events=list]:block",
+          )}
+        >
+          <Media
+            field="image"
+            value={event.image}
+            sizes="(min-width: 64rem) 30vw, (min-width: 40rem) 50vw, 100vw"
+            className={cx(
+              "aspect-3/2 w-full object-cover in-data-[events=list]:aspect-4/3",
+              linked &&
+                "transition-transform ease-out motion-safe:group-focus-within/event:scale-105 motion-safe:group-hover/event:scale-105",
+            )}
+          />
+          <DateTab event={event} />
+        </div>
+      )}
+      <div className="flex flex-col items-start gap-3">
+        <Text field="title" as="h3" value={event.title} className="text-heading text-balance" />
+        {/* The facts show above the title in cards but follow it in reading order, so heading navigation lands on the title. */}
+        <Facts event={event} />
+        {event.body && (
+          <Text
+            field="body"
+            as="p"
+            value={event.body}
+            className="text-body max-w-prose whitespace-pre-line text-muted-foreground"
+          />
         )}
-      />
-    )}
-    <div className="flex flex-col items-start gap-3">
-      <Text field="title" as="h3" value={event.title} className="text-heading text-balance" />
-      {/* The facts show above the title in cards but follow it in reading order, so heading navigation lands on the title. */}
-      <Facts event={event} />
-      {event.body && (
-        <Text
-          field="body"
-          as="p"
-          value={event.body}
-          className="text-body max-w-prose whitespace-pre-line text-muted-foreground"
-        />
-      )}
-      {event.link && (
-        <Cta
-          field="link"
-          value={event.link}
-          className={buttonClass({ variant: "link", size: "sm", className: "mt-1" })}
-        />
-      )}
-    </div>
-  </Root>
-);
+        {event.link && (
+          <Cta
+            field="link"
+            value={event.link}
+            className={buttonClass({
+              variant: "link",
+              size: "sm",
+              className: cx("mt-1", linked && "before:absolute before:inset-0"),
+            })}
+          />
+        )}
+      </div>
+    </Root>
+  );
+};
 
 export default defineBlock({
   type: "event-card",

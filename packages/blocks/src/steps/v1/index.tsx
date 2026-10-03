@@ -60,12 +60,12 @@ const layoutFor = <Layouts extends Record<(typeof counts)[number], unknown>>(
   count: number,
 ): Layouts[(typeof counts)[number]] => layouts[counts.findLast((size) => size <= count) ?? 2];
 
-/** A step's number in a ring, which the ordered list already announces. */
+/** A step's number on a disc, which the ordered list already announces. */
 const Marker = ({ number, className }: { readonly number: number; readonly className: string }) => (
   <span
     aria-hidden
     className={cx(
-      "flex shrink-0 items-center justify-center rounded-full border border-foreground/15 bg-background font-heading text-primary tabular-nums",
+      "relative flex shrink-0 items-center justify-center rounded-full bg-primary font-heading text-primary-foreground tabular-nums shadow-card ring-6 ring-background",
       className,
     )}
   >
@@ -73,10 +73,18 @@ const Marker = ({ number, className }: { readonly number: number; readonly class
   </span>
 );
 
-const StepWords = ({ step, className }: { readonly step: Step; readonly className?: string }) => (
-  <div className={cx("flex flex-col gap-2", className)}>
+const StepWords = ({
+  step,
+  icon,
+  className,
+}: {
+  readonly step: Step;
+  readonly icon: boolean;
+  readonly className?: string;
+}) => (
+  <div className={cx("flex flex-col gap-2.5", className)}>
     <div className="flex items-center gap-2.5">
-      {step.icon && <Icon name={step.icon} className="size-5 shrink-0 text-primary" />}
+      {icon && step.icon && <Icon name={step.icon} className="size-5 shrink-0 text-primary" />}
       <Text
         field={["steps", step.id, "title"]}
         as="h3"
@@ -104,10 +112,12 @@ const StepsBlock = ({ props: steps, variant }: BlockComponentProps<typeof props,
     case "row": {
       const layout = layoutFor(rowLayouts, count);
       const center = steps.align === "center";
-      const rail = (shown: boolean, className: string) => (
+      /* The line brightens toward each number, so it reads as leading on to the next. */
+      const rail = (shown: boolean, toward: "start" | "end", className: string) => (
         <span
           className={cx(
-            "hidden h-px flex-1 bg-border",
+            "hidden h-px flex-1 from-primary/50 to-foreground/10",
+            toward === "start" ? "bg-linear-to-r" : "bg-linear-to-l",
             layout.line,
             !shown && "invisible",
             className,
@@ -116,23 +126,23 @@ const StepsBlock = ({ props: steps, variant }: BlockComponentProps<typeof props,
       );
       return (
         <Section>
-          <div className="page-width flex flex-col gap-14 md:gap-16">
+          <div className="page-width flex flex-col gap-14 md:gap-20">
             {intro(steps.align)}
             <ol className={cx("grid gap-y-12", layout.grid)}>
               {steps.steps.map((step, index) => (
                 <li
                   key={step.id}
-                  className={cx("flex flex-col gap-6", center && "items-center text-center")}
+                  className={cx("flex flex-col gap-7", center && "items-center text-center")}
                 >
                   <div
                     aria-hidden
                     className={cx("flex w-full items-center", center && "justify-center")}
                   >
-                    {center && rail(index > 0, "me-4")}
-                    <Marker number={index + 1} className="text-lead size-10" />
-                    {rail(index < count - 1, center ? "ms-4" : "mx-4")}
+                    {center && rail(index > 0, "end", "me-3")}
+                    <Marker number={index + 1} className="text-lead size-11" />
+                    {rail(index < count - 1, "start", center ? "ms-3" : "mx-3")}
                   </div>
-                  <StepWords step={step} className={center ? "items-center px-5" : "pe-10"} />
+                  <StepWords step={step} icon className={center ? "items-center px-5" : "pe-10"} />
                 </li>
               ))}
             </ol>
@@ -143,16 +153,16 @@ const StepsBlock = ({ props: steps, variant }: BlockComponentProps<typeof props,
     case "list":
       return (
         <Section>
-          <div className="page-width grid gap-14 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-20">
+          <div className="page-width grid gap-14 lg:grid-cols-[minmax(0,2fr)_minmax(0,3fr)] lg:gap-24">
             <div className="lg:sticky lg:top-24 lg:self-start">{intro("start")}</div>
             <ol>
               {steps.steps.map((step, index) => (
                 <li
                   key={step.id}
-                  className="relative flex gap-6 pb-12 after:absolute after:top-16 after:bottom-2 after:left-7 after:w-px after:bg-border last:pb-0 last:after:hidden md:gap-10"
+                  className="relative flex gap-6 pb-14 after:absolute after:top-15 after:bottom-3 after:left-6 after:w-px after:bg-linear-to-b after:from-primary/50 after:to-foreground/10 last:pb-0 last:after:hidden md:gap-10"
                 >
-                  <Marker number={index + 1} className="text-heading size-14" />
-                  <StepWords step={step} className="pt-3" />
+                  <Marker number={index + 1} className="text-lead size-12" />
+                  <StepWords step={step} icon className="pt-2.5" />
                 </li>
               ))}
             </ol>
@@ -164,13 +174,23 @@ const StepsBlock = ({ props: steps, variant }: BlockComponentProps<typeof props,
         <Section>
           <div className="page-width flex flex-col gap-14 md:gap-16">
             {intro(steps.align)}
-            <ol className={cx("grid gap-4", layoutFor(cardLayouts, count))}>
+            <ol className={cx("grid gap-4 md:gap-5", layoutFor(cardLayouts, count))}>
               {steps.steps.map((step, index) => (
-                <li key={step.id} className="card flex flex-col gap-12 p-7 md:p-8">
-                  <span aria-hidden className="font-heading text-title text-primary tabular-nums">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                  <StepWords step={step} className="mt-auto" />
+                <li
+                  key={step.id}
+                  className="card relative isolate flex flex-col gap-14 overflow-hidden p-7 md:p-8"
+                >
+                  <div aria-hidden className="flex items-start justify-between gap-4">
+                    <span className="font-heading text-display bg-linear-to-b from-primary to-primary/35 bg-clip-text leading-none text-transparent tabular-nums">
+                      {String(index + 1).padStart(2, "0")}
+                    </span>
+                    {step.icon && (
+                      <span className="flex size-11 items-center justify-center rounded-md border border-foreground/10 bg-foreground/5 text-primary">
+                        <Icon name={step.icon} className="size-5" />
+                      </span>
+                    )}
+                  </div>
+                  <StepWords step={step} icon={false} className="mt-auto" />
                 </li>
               ))}
             </ol>
