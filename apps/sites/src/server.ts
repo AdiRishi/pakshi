@@ -46,8 +46,22 @@ const renderPage = async (request: Request, context: PageRequest) => {
 };
 
 /**
+ * What the live release answers at the request's address: a document beside
+ * its pages, a redirect, or a page, rendered.
+ */
+const answer = async (request: Request, url: URL, site: LiveSite) => {
+  const manifest = await loadManifest(site.id, site.live.snapshot);
+  const document = siteDocument(manifest, url);
+  if (document !== null) return document;
+  const found = answerAt(manifest, url.pathname);
+  if (found.kind === "redirect") return Response.redirect(new URL(found.to, url).href, 301);
+  return renderPage(request, { site, manifest, answer: found });
+};
+
+/**
  * Finds the site for the request's host, serves its pages from the Workers
- * cache, and passes form posts on to sites-api. Only reads are cached.
+ * cache, and passes form posts on to sites-api. Only reads are cached, and
+ * the release's manifest is read only when the cache doesn't have the page.
  */
 const serve = async (request: Request) => {
   const url = new URL(request.url);
@@ -57,17 +71,9 @@ const serve = async (request: Request) => {
   if (site === null) return new Response("There is no site at this address.", { status: 404 });
 
   if (request.method === "POST") return takeFormPost(request, site);
-  const manifest = await loadManifest(site.id, site.live.snapshot);
   const reading = request.method === "GET" || request.method === "HEAD";
-  if (reading) {
-    const document = siteDocument(manifest, url);
-    if (document !== null) return document;
-  }
-  const answer = answerAt(manifest, url.pathname);
-  if (answer.kind === "redirect") return Response.redirect(new URL(answer.to, url).href, 301);
-  const context = { site, manifest, answer };
   // A page that thanks someone for sending a form is theirs alone.
-  if (!reading || url.searchParams.has("sent")) return renderPage(request, context);
+  if (!reading || url.searchParams.has("sent")) return answer(request, url, site);
 
   const key = new Request(
     pageCacheKey({ url, release: site.live.release, worker: env.CF_VERSION_METADATA.id }),
@@ -81,7 +87,7 @@ const serve = async (request: Request) => {
     return hit;
   }
 
-  const rendered = await renderPage(request, context);
+  const rendered = await answer(request, url, site);
   const response = new Response(rendered.body, rendered);
   response.headers.set("cache-control", browserCaching);
   response.headers.set("x-pakshi-cache", "miss");
