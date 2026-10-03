@@ -16,7 +16,7 @@ import { authorize, permissionsOn } from "@repo/domain/access";
 import { imageInfo } from "@repo/domain/images";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { getServerByName } from "partyserver";
 
 import { loadAccess } from "./access.ts";

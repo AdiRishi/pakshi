@@ -1,6 +1,6 @@
 import { ContrastIssue, HexColor, ResolvedTheme } from "@repo/tokens";
 import { Context, Schema, SchemaGetter } from "effect";
-import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
+import { Rpc, RpcGroup, RpcMiddleware } from "effect/rpc";
 
 import {
   CustomRole,
@@ -146,7 +146,7 @@ export type Viewer = typeof Viewer.Type;
 
 /** What a site's platform subdomain starts with, such as `northbank-libraries`. */
 export const SiteAddress = Schema.String.check(
-  Schema.isPattern(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/, {
+  Schema.isPattern(/^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$/u, {
     message:
       "Use lowercase letters, digits and hyphens, starting and ending with a letter or digit",
   }),
@@ -385,7 +385,7 @@ export const Hostname = Schema.Trim.pipe(
   }),
 ).check(
   Schema.isMaxLength(253, { message: "Use at most 253 characters" }),
-  Schema.isPattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){2,}[a-z0-9-]{2,63}$/, {
+  Schema.isPattern(/^(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.){2,}[a-z0-9-]{2,63}$/u, {
     message: "Enter an address with a word before the domain, such as www.example.org",
   }),
 );

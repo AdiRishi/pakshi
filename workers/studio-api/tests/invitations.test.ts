@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { InvitationToken } from "@repo/contracts/accounts";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { Effect, Option } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 import { loadAccess } from "../src/access.ts";
 import { acceptInvitation, invitationView, invite } from "../src/invitations.ts";

@@ -33,7 +33,7 @@ import {
   UpToDate,
 } from "@repo/contracts/studio";
 import { Cause, type Duration, Effect, Schema } from "effect";
-import { RpcClientError } from "effect/unstable/rpc";
+import { RpcClientError } from "effect/rpc";
 
 export type StudioClient = ClientFor<typeof StudioRpcs>;
 

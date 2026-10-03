@@ -4,7 +4,7 @@ import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { AccessPlace } from "@repo/contracts/studio";
 import { type Access, authorize, mayGrant, mayOverride, type Resource } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { organizationName } from "./organization.ts";
 import { allRoles, refOf } from "./roles.ts";

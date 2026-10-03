@@ -6,7 +6,7 @@ import { PagePath, Slug } from "@repo/contracts/page";
 import { MenuItem, Menus } from "@repo/contracts/site";
 import { Surface } from "@repo/tokens";
 import { Schema } from "effect";
-import { Tool, Toolkit } from "effect/unstable/ai";
+import { Tool, Toolkit } from "effect/ai";
 
 import { BlockRequests, Sources, Turn, Web, Workspace } from "./workspace.ts";
 

@@ -4,7 +4,7 @@ import { Release } from "@repo/contracts/release";
 import { Lockfile } from "@repo/contracts/snapshot";
 import { Submission } from "@repo/contracts/submission";
 import { Effect, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 import { writeAudit } from "./audit.ts";
 import type { OutboxMessage } from "./site/outbox.ts";

@@ -40,8 +40,8 @@ import type { Approver } from "@repo/domain/approvals";
 import type { Visitor } from "@repo/domain/sharing";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Effect, Layer, ManagedRuntime, Option, Schema } from "effect";
-import type { SqlError } from "effect/unstable/sql";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import type { SqlError } from "effect/sql";
+import * as Migrator from "effect/sql/Migrator";
 import { type Connection, type ConnectionContext, Server, type WSMessage } from "partyserver";
 
 import { SiteApprovals } from "./site/approvals.ts";

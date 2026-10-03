@@ -1,5 +1,5 @@
 import { Effect, Layer, Stream } from "effect";
-import { AiError, LanguageModel, type Response } from "effect/unstable/ai";
+import { AiError, LanguageModel, type Response } from "effect/ai";
 
 /** A reply the scripted model streams: text, tool calls, or a failure. */
 export type Reply =

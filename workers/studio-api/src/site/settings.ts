@@ -8,7 +8,7 @@ import {
 } from "@repo/contracts/settings";
 import { SettingsChanged } from "@repo/contracts/studio";
 import { Context, Effect, Layer, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { Outbox } from "./outbox.ts";
 

@@ -20,7 +20,7 @@ import {
   type Resource,
 } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { describeScope, filedUnder, loadAccess, nameScope, scopeOf } from "./access.ts";
 import { audit } from "./audit.ts";

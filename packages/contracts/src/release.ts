@@ -9,7 +9,7 @@ import type { LiveRelease } from "./snapshot.ts";
  * structured clone, which keeps strings but not the prototypes of date types.
  */
 export const Timestamp = Schema.String.check(
-  Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/),
+  Schema.isPattern(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/u),
 ).pipe(Schema.brand("Timestamp"));
 export type Timestamp = typeof Timestamp.Type;
 

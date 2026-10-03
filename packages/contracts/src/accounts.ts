@@ -41,7 +41,7 @@ export const Password = Schema.String.check(
 );
 
 /** The secret in an invitation's link. Only its hash is stored. */
-export const InvitationToken = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9]{32,64}$/)).pipe(
+export const InvitationToken = Schema.String.check(Schema.isPattern(/^[A-Za-z0-9]{32,64}$/u)).pipe(
   Schema.brand("InvitationToken"),
 );
 export type InvitationToken = typeof InvitationToken.Type;

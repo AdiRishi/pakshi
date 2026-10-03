@@ -2,7 +2,7 @@ import { SiteId } from "@repo/contracts/ids";
 import { now, Timestamp } from "@repo/contracts/release";
 import { DomainTaken, type Hostname, type Person, type SiteDomain } from "@repo/contracts/studio";
 import { Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { audit } from "./audit.ts";
 

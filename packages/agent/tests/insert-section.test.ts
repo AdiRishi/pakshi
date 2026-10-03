@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { emptyVoiceGuide } from "@repo/contracts/brand";
 import { PageId } from "@repo/contracts/ids";
 import { Effect, Layer, Schema } from "effect";
-import { Chat } from "effect/unstable/ai";
+import { Chat } from "effect/ai";
 
 import { languageModel, type ModelRequest } from "../src/model.ts";
 import { systemPrompt } from "../src/prompt.ts";

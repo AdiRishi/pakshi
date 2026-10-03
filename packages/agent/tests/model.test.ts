@@ -1,6 +1,6 @@
 import { expect, it } from "@effect/vitest";
 import { Effect, Schema, Stream } from "effect";
-import { LanguageModel, Tool, Toolkit } from "effect/unstable/ai";
+import { LanguageModel, Tool, Toolkit } from "effect/ai";
 
 import { languageModel, type ModelRequest } from "../src/model.ts";
 import { eventStream, textStream, toolCallStream } from "./support/workers-ai.ts";

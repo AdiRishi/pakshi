@@ -7,7 +7,7 @@ import { ShareAccess } from "@repo/contracts/sharing";
 import { Lockfile } from "@repo/contracts/snapshot";
 import { Submission } from "@repo/contracts/submission";
 import { Context, Effect, Layer, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 /** A release as D1 keeps it: with its place in the site's history, whose last release is live. */
 export const IndexedRelease = Schema.Struct({ seq: Schema.Int, release: Release });

@@ -1,7 +1,7 @@
 import { MediaId, SiteId } from "@repo/contracts/ids";
 import { now } from "@repo/contracts/release";
 import { type Cause, Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 /*
  * Library files are kept while any site's live release or open draft shows

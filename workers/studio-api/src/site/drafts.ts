@@ -28,7 +28,7 @@ import {
 import { type CommitResult, commitBatch, type Writes } from "@repo/domain/commit";
 import type { BlockContracts } from "@repo/domain/document";
 import { Context, Effect, Equal, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { Outbox } from "./outbox.ts";
 

@@ -82,7 +82,7 @@ import { rebaseOps } from "@repo/domain/rebase";
 import { draftAccess, type Visitor } from "@repo/domain/sharing";
 import type { Surface } from "@repo/tokens";
 import { Context, Effect, Equal, Layer, Option, Schema, Semaphore } from "effect";
-import { type SqlError, SqlClient } from "effect/unstable/sql";
+import { type SqlError, SqlClient } from "effect/sql";
 
 import { SiteApprovals, type Stored } from "./approvals.ts";
 import { SiteAudit } from "./audit.ts";

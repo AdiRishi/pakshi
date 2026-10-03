@@ -26,7 +26,7 @@ import { Audience, ShareAccess } from "./sharing.ts";
  * goes on.
  */
 
-export const AuditId = Schema.String.check(Schema.isPattern(/^aud_[A-Za-z0-9:_-]{1,128}$/)).pipe(
+export const AuditId = Schema.String.check(Schema.isPattern(/^aud_[A-Za-z0-9:_-]{1,128}$/u)).pipe(
   Schema.brand("AuditId"),
 );
 export type AuditId = typeof AuditId.Type;

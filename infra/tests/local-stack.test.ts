@@ -1,8 +1,8 @@
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Test from "alchemy/Test/Vitest";
 import * as Effect from "effect/Effect";
+import { ChildProcess, ChildProcessSpawner } from "effect/process";
 import * as Schema from "effect/Schema";
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process";
 import { expect } from "vitest";
 
 import Stack from "../alchemy.run.ts";

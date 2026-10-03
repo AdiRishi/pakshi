@@ -11,7 +11,7 @@ import {
 } from "@repo/contracts/studio";
 import { authorize, permissionsOn } from "@repo/domain/access";
 import { Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 import { audit } from "./audit.ts";

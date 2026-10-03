@@ -2,7 +2,7 @@ import { BrandId, SiteId } from "@repo/contracts/ids";
 import type { Person, Viewer } from "@repo/contracts/studio";
 import { type Access, authorize, mayDefineRole } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 import { waitingFor } from "./lists.ts";

@@ -48,7 +48,7 @@ import { eligibility } from "@repo/domain/approvals";
 import { entriesCsv } from "@repo/domain/forms";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Cause, Effect, Layer, Option, Schedule, Schema } from "effect";
-import { type SqlError, SqlClient } from "effect/unstable/sql";
+import { type SqlError, SqlClient } from "effect/sql";
 import { getServerByName } from "partyserver";
 
 import { describeScope, loadAccess } from "./access.ts";

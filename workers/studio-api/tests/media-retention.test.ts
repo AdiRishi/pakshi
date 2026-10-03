@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest";
 import { MediaId, type SiteId } from "@repo/contracts/ids";
 import { Cause, Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 import { retainImages } from "../src/media-retention.ts";
 import { core } from "./support/core.ts";

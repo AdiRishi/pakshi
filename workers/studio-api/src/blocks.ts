@@ -3,7 +3,7 @@ import { BlockType, SiteId } from "@repo/contracts/ids";
 import { Timestamp } from "@repo/contracts/release";
 import type { BlockVersionInfo, RemovableVersion } from "@repo/contracts/studio";
 import { type Cause, Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 /*
  * The block library's versions, and which of them D1's copy of each site's

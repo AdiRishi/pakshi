@@ -3,7 +3,7 @@ import { type DraftId, randomId, type TurnId } from "@repo/contracts/ids";
 import type { Collaborator } from "@repo/contracts/live";
 import { now, Timestamp } from "@repo/contracts/release";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { SiteIdentity, turnUndoId } from "./drafts.ts";
 import { Outbox } from "./outbox.ts";

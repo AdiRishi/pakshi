@@ -13,7 +13,7 @@ export const ColorScheme = Schema.Literals(["light", "dark"]);
 export type ColorScheme = typeof ColorScheme.Type;
 
 const OklchColor = Schema.String.check(
-  Schema.isPattern(/^oklch\(\d+(\.\d+)?%? \d+(\.\d+)? \d+(\.\d+)?( \/ \d+(\.\d+)?%)?\)$/),
+  Schema.isPattern(/^oklch\(\d+(\.\d+)?%? \d+(\.\d+)? \d+(\.\d+)?( \/ \d+(\.\d+)?%)?\)$/u),
 );
 
 /** The semantic colors a surface sets, named as shadcn/ui names them. */
@@ -69,7 +69,7 @@ export type ContrastIssue = typeof ContrastIssue.Type;
 
 /** A color as a person picks it, such as `#1f5c44`. */
 export const HexColor = Schema.String.check(
-  Schema.isPattern(/^#[0-9a-f]{6}$/, { message: "Use a color such as #1f5c44" }),
+  Schema.isPattern(/^#[0-9a-f]{6}$/u, { message: "Use a color such as #1f5c44" }),
 );
 export type HexColor = typeof HexColor.Type;
 
