@@ -4,6 +4,7 @@ import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { RichText, Text } from "../../components.tsx";
 import { optional, richText, text } from "../../fields.ts";
 import { Heading } from "../../kit/intro.tsx";
+import { ScrollProgress } from "../../kit/magic/scroll-progress.tsx";
 import { Section } from "../../kit/section.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
@@ -71,6 +72,11 @@ const Opening = ({
   );
 };
 
+/**
+ * Long-form writing set for reading: one column in the middle of the page
+ * with a rail beside it that fills as it's read, or the writing beside its
+ * heading, which stays in view.
+ */
 const RichTextBlock = ({ props: writing, variant }: BlockComponentProps<typeof props, Variant>) => {
   switch (variant) {
     case "article":
@@ -79,7 +85,10 @@ const RichTextBlock = ({ props: writing, variant }: BlockComponentProps<typeof p
           <div className="page-width">
             <div className="mx-auto flex max-w-2xl flex-col gap-10 md:gap-12">
               <Opening writing={writing} standfirst />
-              <Body writing={writing} />
+              <div className="relative">
+                <ScrollProgress className="absolute inset-y-0 -left-12 hidden lg:block xl:-left-16" />
+                <Body writing={writing} />
+              </div>
             </div>
           </div>
         </Section>
@@ -88,7 +97,8 @@ const RichTextBlock = ({ props: writing, variant }: BlockComponentProps<typeof p
       // Clipped rather than hidden, so the heading's column can stay in view as the page scrolls.
       return (
         <Section>
-          <div className="page-width grid gap-10 border-t border-border pt-10 lg:grid-cols-12 lg:gap-x-10 lg:pt-14">
+          <div className="page-width relative grid gap-10 border-t border-border pt-10 lg:grid-cols-12 lg:gap-x-10 lg:pt-14">
+            <div aria-hidden className="absolute -top-px left-0 h-0.5 w-16 bg-primary" />
             <div className="lg:sticky lg:top-24 lg:col-span-4 lg:self-start">
               <Opening writing={writing} standfirst={false} />
             </div>
@@ -119,6 +129,7 @@ export default defineBlock({
       "the sidebar layout without a heading to put beside the text",
     ],
   },
+  interactive: true,
   placeholder,
   component: RichTextBlock,
 });

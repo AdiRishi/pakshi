@@ -42,16 +42,17 @@ const coverSizes = {
 /*
  * A post's title links to it, and the link stretches over the whole post, so
  * anywhere on it opens the post; its focus ring is drawn around the post.
+ * Hover effects show for keyboard focus too, through `group-focus-within`.
  */
 const stretchedLink = cx(
   "after:absolute after:inset-0 after:rounded-lg",
   "focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:outline-offset-4 focus-visible:after:outline-ring",
 );
 
-const titleLink = cx(stretchedLink, "decoration-1 underline-offset-4 group-hover:underline");
-
-/** The address of one page of a blog's posts. The first is the blog's own address. */
-const pageHref = (blog: string, number: number) => (number === 1 ? blog : `${blog}?page=${number}`);
+const titleLink = cx(
+  stretchedLink,
+  "underline decoration-transparent decoration-1 underline-offset-4 transition-colors group-focus-within:decoration-current group-hover:decoration-current",
+);
 
 const Title = ({ post, className }: { readonly post: SiteEntry; readonly className: string }) => (
   <h3 className={cx("text-balance", className)}>
@@ -67,36 +68,56 @@ const Byline = ({ post, author }: { readonly post: SiteEntry; readonly author: b
     <time dateTime={post.meta.date}>{dateFormat.format(new Date(post.meta.date))}</time>
     {author && post.meta.author && (
       <>
-        <span aria-hidden>·</span>
+        <span aria-hidden className="size-1 rounded-full bg-current opacity-50" />
         <span>{post.meta.author}</span>
       </>
     )}
   </p>
 );
 
-/** A post's cover, or a quiet panel in its place, so a row of posts keeps its line. */
+/** An arrow in a round chip, which slides into view as the post is pointed at or focused. */
+const Arrow = ({ className }: { readonly className?: string }) => (
+  <span
+    aria-hidden
+    className={cx(
+      "flex size-9 items-center justify-center rounded-full bg-background text-foreground shadow-card ring-1 ring-foreground/10 transition duration-300",
+      "translate-y-1 opacity-0 group-focus-within:translate-y-0 group-focus-within:opacity-100 group-hover:translate-y-0 group-hover:opacity-100 motion-reduce:translate-y-0",
+      className,
+    )}
+  >
+    <Icon name="arrow-up-right" className="size-4" />
+  </span>
+);
+
+/**
+ * A post's cover, or a quiet panel in its place, so a row of posts keeps its
+ * line. A fine inner edge keeps a pale photo from melting into the page.
+ */
 const Cover = ({
   post,
   sizes,
   priority,
+  arrow,
 }: {
   readonly post: SiteEntry;
   readonly sizes: string;
   readonly priority?: boolean;
+  readonly arrow: boolean;
 }) => (
-  <div className="rounded-image aspect-3/2 overflow-hidden bg-foreground/5">
+  <div className="rounded-image after:rounded-image relative isolate aspect-3/2 overflow-hidden bg-linear-to-br from-primary/10 via-foreground/5 to-accent/10 after:absolute after:inset-0 after:ring-1 after:ring-foreground/10 after:ring-inset">
     {post.meta.cover ? (
       <SiteImage
         value={post.meta.cover}
         sizes={sizes}
         priority={priority}
-        className="size-full object-cover transition-transform duration-500 group-hover:scale-103"
+        className="size-full object-cover transition-transform duration-700 ease-out group-focus-within:scale-103 group-hover:scale-103 motion-reduce:transition-none"
       />
     ) : (
       <div className="flex size-full items-center justify-center text-muted-foreground">
         <Icon name="newspaper" className="size-8 opacity-50" />
       </div>
     )}
+    {arrow && <Arrow className="absolute right-4 bottom-4" />}
   </div>
 );
 
@@ -112,9 +133,9 @@ const Card = ({
   readonly post: SiteEntry;
   readonly columns: Columns;
 }) => (
-  <li className="group relative flex flex-col gap-5">
-    <Cover post={post} sizes={coverSizes[count]} />
-    <div className="flex flex-col gap-2">
+  <li className="group relative flex flex-col gap-6">
+    <Cover post={post} sizes={coverSizes[count]} arrow />
+    <div className="flex flex-col gap-2.5">
       <Byline post={post} author />
       <Title post={post} className="text-heading" />
       <Excerpt post={post} className="text-body line-clamp-3" />
@@ -123,33 +144,45 @@ const Card = ({
 );
 
 const TextCard = ({ post }: { readonly post: SiteEntry }) => (
-  <li className="group card relative flex min-h-72 flex-col gap-4 p-6 transition-colors hover:bg-foreground/3 md:p-8">
-    <Byline post={post} author={false} />
+  <li className="group card relative flex min-h-72 flex-col gap-4 p-6 transition duration-300 hover:-translate-y-1 hover:shadow-card motion-reduce:hover:translate-y-0 md:p-8">
+    <div className="flex items-start justify-between gap-4">
+      <Byline post={post} author={false} />
+      <Arrow className="-mt-1.5 -mr-1.5" />
+    </div>
     <Title post={post} className="text-heading" />
     <div className="mt-auto flex flex-col gap-4 pt-6">
       <Excerpt post={post} className="text-body line-clamp-3" />
-      {post.meta.author && <p className="text-small">{post.meta.author}</p>}
+      {post.meta.author && (
+        <p className="text-small border-t border-border pt-4 font-medium">{post.meta.author}</p>
+      )}
     </div>
   </li>
 );
 
 const Row = ({ post }: { readonly post: SiteEntry }) => (
-  <li className="group relative flex flex-col gap-1 py-5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-10 md:py-6">
-    <Title post={post} className="text-lead font-medium" />
+  <li className="group relative flex flex-col gap-1 py-5 sm:flex-row sm:items-center sm:gap-10 md:py-7">
+    <Title
+      post={post}
+      className="text-lead font-medium transition-transform duration-300 group-focus-within:translate-x-1 group-hover:translate-x-1 motion-reduce:transform-none sm:flex-1"
+    />
     <time
       dateTime={post.meta.date}
       className="text-small shrink-0 text-muted-foreground tabular-nums"
     >
       {dateFormat.format(new Date(post.meta.date))}
     </time>
+    <Icon
+      name="arrow-right"
+      className="hidden size-5 shrink-0 -translate-x-2 text-muted-foreground opacity-0 transition duration-300 group-focus-within:translate-x-0 group-focus-within:text-foreground group-focus-within:opacity-100 group-hover:translate-x-0 group-hover:text-foreground group-hover:opacity-100 sm:block"
+    />
   </li>
 );
 
 /** The newest post, large, beside its cover. */
 const Lead = ({ post }: { readonly post: SiteEntry }) => (
   <article className="group relative grid items-center gap-8 md:grid-cols-2 lg:gap-14">
-    <Cover post={post} sizes="(min-width: 48rem) 50vw, 100vw" priority />
-    <div className="flex flex-col items-start gap-4">
+    <Cover post={post} sizes="(min-width: 48rem) 50vw, 100vw" priority arrow={false} />
+    <div className="flex flex-col items-start gap-5">
       <Byline post={post} author />
       <h3 className="text-title text-balance">
         <a className={titleLink} href={post.href}>
@@ -225,6 +258,10 @@ const Posts = ({
   }
 };
 
+/**
+ * The newest posts of one of the site's blogs, each linking to the post. On
+ * the blog's own page it pages through every post.
+ */
 const PostList = ({ props: section, variant }: BlockComponentProps<typeof props, Variant>) => {
   const blog = useCollection(section.collection.id);
   const current = useCurrentPage();
@@ -234,10 +271,10 @@ const PostList = ({ props: section, variant }: BlockComponentProps<typeof props,
   const number = paged ? current.number : 1;
   const start = (number - 1) * section.count;
   const shown = posts.slice(start, start + section.count);
-  const newer = paged && number > 1 && blog !== undefined ? pageHref(blog.href, number - 1) : null;
+  const newer = paged && number > 1 && blog !== undefined ? blog.pageHref(number - 1) : null;
   const older =
     paged && posts.length > start + section.count && blog !== undefined
-      ? pageHref(blog.href, number + 1)
+      ? blog.pageHref(number + 1)
       : null;
   const all = !paged && posts.length > section.count && blog !== undefined ? blog.href : null;
   const pager = buttonClass({ variant: "secondary", size: "sm" });
