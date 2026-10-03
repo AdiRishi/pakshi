@@ -1,9 +1,10 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Text } from "../../components.tsx";
+import { Text, useEditing } from "../../components.tsx";
 import { choice, list, optional, text } from "../../fields.ts";
 import { Intro } from "../../kit/intro.tsx";
+import { NumberTicker } from "../../kit/magic/number-ticker.tsx";
 import { Section } from "../../kit/section.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
@@ -47,7 +48,8 @@ const columns = [
 /**
  * One figure: the number set large in the heading font, what it counts under
  * it, and a line of detail. The number comes first on screen; in the markup
- * the label is the term it defines.
+ * the label is the term it defines. On a site the number counts up to itself
+ * as it scrolls into view; in the editor it's text to edit.
  */
 const Figure = ({
   stat,
@@ -57,29 +59,37 @@ const Figure = ({
   readonly stat: Stat;
   readonly size: "display" | "title";
   readonly className: string;
-}) => (
-  <div className={cx("flex flex-col gap-2", className)}>
-    <dt className="text-body font-medium text-foreground">
-      <Text field={["stats", stat.id, "label"]} as="span" value={stat.label} />
-    </dt>
-    <dd className="order-first mb-3">
-      <Text
-        field={["stats", stat.id, "value"]}
-        as="span"
-        value={stat.value}
-        className={cx(
-          "block font-heading heading-weight leading-none tabular-nums",
-          size === "display" ? "text-display" : "text-title",
+}) => {
+  const editing = useEditing();
+  const figure = cx(
+    "block font-heading heading-weight leading-none tabular-nums",
+    size === "display" ? "text-display" : "text-title",
+  );
+  return (
+    <div className={cx("flex flex-col gap-2", className)}>
+      <dt className="text-body font-medium text-foreground">
+        <Text field={["stats", stat.id, "label"]} as="span" value={stat.label} />
+      </dt>
+      <dd className="order-first mb-3">
+        {editing ? (
+          <Text
+            field={["stats", stat.id, "value"]}
+            as="span"
+            value={stat.value}
+            className={figure}
+          />
+        ) : (
+          <NumberTicker text={stat.value} className={figure} />
         )}
-      />
-    </dd>
-    {stat.detail && (
-      <dd className="text-small text-muted-foreground">
-        <Text field={["stats", stat.id, "detail"]} as="span" value={stat.detail} />
       </dd>
-    )}
-  </div>
-);
+      {stat.detail && (
+        <dd className="text-small max-w-xs text-muted-foreground">
+          <Text field={["stats", stat.id, "detail"]} as="span" value={stat.detail} />
+        </dd>
+      )}
+    </div>
+  );
+};
 
 const StatsBlock = ({ props: stats, variant }: BlockComponentProps<typeof props, Variant>) => {
   const center = stats.align === "center";
@@ -167,6 +177,7 @@ export default defineBlock({
   variants: ["row", "cards", "split"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
+  interactive: true,
   agent: {
     purpose:
       "Two to six headline figures, such as how many took part or how many would come back, each with a short label and an optional line of detail",
