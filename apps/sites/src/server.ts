@@ -32,14 +32,15 @@ const mediaPrefix = "/_media/";
 /**
  * The page at the request's address as TanStack Start renders it, read whole
  * so its policy can name every inline script it holds. An address with no
- * page answers with the status that says why.
+ * page answers with the status that says why. Vite's dev server adds inline
+ * scripts of its own as the page loads, so only built sites send a policy.
  */
 const renderPage = async (request: Request, context: PageRequest) => {
   const rendered = await handler.fetch(request, { context });
   if (!rendered.headers.get("content-type")?.startsWith("text/html")) return rendered;
   const html = await rendered.text();
   const headers = new Headers(rendered.headers);
-  headers.set("content-security-policy", await pagePolicy(html));
+  if (!import.meta.env.DEV) headers.set("content-security-policy", await pagePolicy(html));
   const status = context.answer.kind === "missing" ? context.answer.status : rendered.status;
   return new Response(html, { status, headers });
 };
