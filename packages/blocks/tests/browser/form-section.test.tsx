@@ -1,7 +1,7 @@
 import { afterEach, expect, test, vi } from "vitest";
-import { userEvent } from "vitest/browser";
+import { page, userEvent } from "vitest/browser";
 
-import { fixture, show } from "./support.tsx";
+import { fixture, serverRendered, show } from "./support.tsx";
 
 // Sending posts the page away, so the browser's submit stands in for the post.
 const sends = () => vi.spyOn(HTMLFormElement.prototype, "submit").mockImplementation(() => {});
@@ -55,4 +55,18 @@ test("a form in a preview can't be sent", async () => {
   await expect.element(screen.getByRole("button", { name: "Sign up" })).toBeDisabled();
   await userEvent.type(screen.getByLabelText("Email address"), "sam@example.org{Enter}");
   expect(submit).not.toHaveBeenCalled();
+});
+
+test("answers given before the page hydrates are kept and sent", async () => {
+  const submit = sends();
+  const server = await serverRendered(fixture("form-section", "split"));
+  await userEvent.type(page.getByLabelText("Your name"), "Sam Okafor");
+  await userEvent.type(page.getByLabelText("Email"), "sam@example.org");
+  await userEvent.selectOptions(page.getByLabelText("Which week?"), "First week of July");
+  await userEvent.click(page.getByRole("checkbox"));
+  server.hydrate();
+  await expect.poll(() => document.querySelector("form")?.noValidate).toBe(true);
+  await expect.element(page.getByLabelText("Your name")).toHaveValue("Sam Okafor");
+  await userEvent.click(page.getByRole("button", { name: "Register" }));
+  await expect.poll(() => submit.mock.calls.length).toBe(1);
 });
