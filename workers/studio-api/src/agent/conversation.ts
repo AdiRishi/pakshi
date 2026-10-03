@@ -67,6 +67,8 @@ export class Conversation extends Context.Service<
       from: number,
       messages: ReadonlyArray<ModelMessage>,
     ) => Effect.Effect<void, StorageError>;
+    /** Saves the message at `at` as it now stands, leaving the rest of the thread alone. */
+    readonly saveMessage: (at: number, message: ModelMessage) => Effect.Effect<void, StorageError>;
     readonly brief: Effect.Effect<SitePlan | null, StorageError>;
     readonly saveBrief: (brief: SitePlan) => Effect.Effect<void, StorageError>;
     readonly sources: Effect.Effect<ReadonlyArray<Source>, StorageError>;
@@ -115,6 +117,10 @@ export class Conversation extends Context.Service<
                 { discard: true },
               ),
             ),
+          ),
+        saveMessage: (at, message) =>
+          Effect.asVoid(
+            sql`update messages set message = ${encodeMessage(message)} where seq = ${at}`,
           ),
         brief: Effect.map(findBrief(undefined), (found) =>
           Option.match(found, { onNone: () => null, onSome: (row) => row.brief }),

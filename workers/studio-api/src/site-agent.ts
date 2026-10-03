@@ -94,7 +94,7 @@ const withRecord = (message: ModelMessage, record: TurnRecord): ModelMessage => 
   metadata: { ...message.metadata, [turnKey]: encodeRecord(record) },
 });
 
-/** The thread with the turn of the message at `at` changed by `change`. */
+/** The person's message at `at` with its turn changed by `change`, if it has one. */
 const changeTurn = (
   thread: ReadonlyArray<ModelMessage>,
   at: number,
@@ -102,8 +102,8 @@ const changeTurn = (
 ) => {
   const message = thread[at];
   const record = recordOf(message);
-  if (message === undefined || Option.isNone(record)) return thread;
-  return thread.with(at, withRecord(message, change(record.value)));
+  if (message === undefined || Option.isNone(record)) return Option.none();
+  return Option.some(withRecord(message, change(record.value)));
 };
 
 /** The plan a propose_plan call proposed, by the call's ID. */
@@ -240,11 +240,16 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     return next;
   }
 
-  /** Changes the turn of the message at `at`, and shows every connection. */
+  /**
+   * Changes the turn of the message at `at`, and shows every connection. Only
+   * that message is saved, since a later turn may be saving its own.
+   */
   async #changeTurn(at: number, change: (record: TurnRecord) => TurnRecord) {
-    const thread = changeTurn(await this.#run((conversation) => conversation.thread), at, change);
-    await this.#run((conversation) => conversation.saveThread(at, thread));
-    this.#broadcast(snapshot(thread));
+    const thread = await this.#run((conversation) => conversation.thread);
+    const changed = changeTurn(thread, at, change);
+    if (Option.isNone(changed)) return;
+    await this.#run((conversation) => conversation.saveMessage(at, changed.value));
+    this.#broadcast(snapshot(thread.with(at, changed.value)));
   }
 
   override async onStart() {
@@ -252,12 +257,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     const thread = await this.#run((conversation) => conversation.thread);
     const at = thread.findLastIndex((message) => message.role === "user");
     if (Option.exists(recordOf(thread[at]), (record) => record.status === "working"))
-      await this.#run((conversation) =>
-        conversation.saveThread(
-          at,
-          changeTurn(thread, at, (record) => ({ ...record, status: "interrupted" })),
-        ),
-      );
+      await this.#changeTurn(at, (record) => ({ ...record, status: "interrupted" }));
   }
 
   override onConnect(connection: AgentConnection, { request }: ConnectionContext) {
@@ -340,6 +340,8 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
 
   /** Starts a turn for a person's message, unless one is under way, which ends the message's run. */
   async #startTurn(connection: AgentConnection, who: AgentAuthorization, send: Send) {
+    // A message the chat sends the moment a turn's run ends waits for the turn to be put away.
+    if (this.#working?.events.some(endsRun) === true) await this.#working.done;
     if (this.#working !== null) {
       this.#notice(connection, busy);
       this.#send(connection, {
@@ -382,8 +384,8 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       events: [],
       done: Promise.resolve(),
     };
-    this.#working = working;
     await this.#run((conversation) => conversation.saveThread(working.at, started));
+    this.#working = working;
     this.#broadcast(snapshot(started));
     working.done = this.#runTurn(working, who, send, started, record).then(async (status) => {
       if (!working.events.some(endsRun)) {
@@ -396,8 +398,8 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
         working.events.push(ended);
         this.#broadcast(ended);
       }
-      this.#working = null;
       await this.#changeTurn(working.at, (turn) => ({ ...turn, status }));
+      this.#working = null;
       const doc = await getServerByName(this.env.SITE_DOC, who.site);
       await doc.agentPresence({ id: who.person.id, name: who.person.name }, who.draft, null);
     });
