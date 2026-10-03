@@ -310,16 +310,16 @@ Blocks are React components that run in the visitor's browser where they need to
 **Build:**
 
 - Block tests by behaviour instead of screenshots, and no frozen versions until production ([decision 099](/decision-log#decision-099)).
-- `sites` on TanStack Start, with interactive blocks hydrating in place and pages with none loading no JavaScript ([decision 100](/decision-log#decision-100)).
+- `sites` on TanStack Start, its pages server-rendered and hydrated ([decision 100](/decision-log#decision-100)).
 - The block kit and every block rebuilt on shadcn/ui and Magic UI components, with motion that follows the theme's motion setting and the visitor's, replacing the CSS-only menus, disclosures and marquees. The new versions replace the old ones outright, with no migrations.
 - The form block on TanStack Form, checking answers as the visitor types against the same rules sites-api applies, and still sending as a plain HTML form before it hydrates.
-- Previews that hydrate interactive blocks as `sites` does, and a canvas whose interactive blocks hold still while they're edited.
+- Previews that hydrate as `sites` pages do, and a canvas whose interactive blocks hold still while they're edited.
 
 **Demo:** build a page in Studio from the rebuilt blocks, publish it, and use its menu, FAQ, gallery and form on the live site.
 
 **Done when:**
 
-- A page with no interactive block loads no JavaScript, and one with an interactive block hydrates only the parts that hold one.
+- An interactive block works on a live site and in a draft's preview.
 - Browser tests drive each interactive block by mouse and keyboard, and axe finds no violations on any block's sample.
 - A form shows a visitor's mistakes before it sends, and a form sent before the page hydrates still arrives.
 - Every page of a site sends a content security policy that blocks nothing the page needs.

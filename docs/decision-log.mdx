@@ -7,118 +7,129 @@ sidebar:
 
 One short entry per significant decision: the context, what we chose, and why. Newest first.
 
-| #   | Decision                                                                           | Date       | Status              |
-| --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
-| 100 | Sites render with TanStack Start, and only the blocks that run hydrate             | 2026-10-03 | Accepted            |
-| 099 | Blocks are tested by their behaviour, and stop being frozen until production       | 2026-10-03 | Accepted            |
-| 098 | An overlaid header takes the surface of the section under it                       | 2026-10-03 | Accepted            |
-| 097 | The editor canvas opens every disclosure                                           | 2026-10-03 | Accepted            |
-| 096 | The rebuilt block library replaces the old versions outright                       | 2026-10-03 | Accepted            |
-| 095 | Blocks are built on a shared kit, and designed in a lab                            | 2026-10-03 | Accepted            |
-| 094 | A block version can rename the layouts of the one before it                        | 2026-10-03 | Accepted            |
-| 093 | Blocks offer choices and icons as fields                                           | 2026-10-03 | Accepted            |
-| 092 | Themes set color mode, a second color, type styles, buttons, cards and width       | 2026-10-03 | Accepted            |
-| 091 | Blogs are pages that hold posts                                                    | 2026-10-02 | Accepted            |
-| 090 | Studio sets its color scheme with a head script, and site previews keep their own  | 2026-10-02 | Accepted            |
-| 089 | The checks open from the top bar, and Pakshi fixes what it can of them             | 2026-10-02 | Accepted            |
-| 088 | Blocks are named and shown from files beside their released versions               | 2026-10-02 | Accepted            |
-| 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
-| 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
-| 085 | Alerts and the security review move out of checkpoint 11                           | 2026-10-01 | Accepted            |
-| 084 | Sites use Astro's content security policy, sent by built sites only                | 2026-10-01 | Superseded by 100   |
-| 083 | Success metrics are worked out from what Pakshi records anyway                     | 2026-10-01 | Accepted            |
-| 082 | The audit log is written by whatever makes each change                             | 2026-10-01 | Accepted            |
-| 081 | Custom roles are rows in D1, held to the delegation rule                           | 2026-10-01 | Accepted            |
-| 080 | SiteDoc keeps each person's permissions, for live and agent batches alike          | 2026-10-01 | Accepted            |
-| 079 | Pre-flight becomes the checks, with no heading rules, and a panel to fix them      | 2026-10-01 | Amended by 089      |
-| 078 | Site settings leave out a default description and the email sender, for now        | 2026-10-01 | Accepted            |
-| 077 | Deleted sites are kept for 30 days, then purged by the daily job                   | 2026-10-01 | Accepted            |
-| 076 | In the dev stack, only `.localhost` domains are proven                             | 2026-10-01 | Accepted            |
-| 075 | Library images are resized on `sites` with the Images binding                      | 2026-10-01 | Accepted            |
-| 074 | Form notifications retry from `SiteSubmissions`' alarm                             | 2026-10-01 | Accepted            |
-| 073 | Forms, menus and redirects are edited as whole values in drafts                    | 2026-10-01 | Accepted            |
-| 072 | Site settings are a registry of definitions with one home in SiteDoc               | 2026-10-01 | Accepted            |
-| 071 | Build and test in the dev stack as real people; production comes last              | 2026-10-01 | Accepted            |
-| 070 | Measuring `sites` startup moves to checkpoint 9, with production                   | 2026-10-01 | Amended by 071      |
-| 069 | A brand color too light to read fails the contrast check rather than being changed | 2026-10-01 | Accepted            |
-| 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Superseded by 099   |
-| 067 | A new draft offers every block in the library                                      | 2026-10-01 | Accepted            |
-| 066 | Brand revisions reach sites through SiteDoc, and the scheduled job catches misses  | 2026-10-01 | Accepted            |
-| 065 | A draft's brand pin carries the revision, and merges keep the newer one            | 2026-10-01 | Accepted            |
-| 064 | Theme fonts are static assets of each app                                          | 2026-10-01 | Accepted            |
-| 063 | Lockfiles pin version numbers; a released folder is one on the base branch         | 2026-10-01 | Accepted            |
-| 062 | The agent's evals run on demand, never as routine                                  | 2026-10-01 | Accepted            |
-| 061 | One conversation per person per draft                                              | 2026-10-01 | Accepted            |
-| 060 | The agent proposes a site plan with a tool, and the plan becomes its brief         | 2026-10-01 | Accepted            |
-| 059 | One spend limit on AI Gateway for the whole product                                | 2026-10-01 | Accepted            |
-| 058 | The agent runs on Effect AI in a PartyServer Durable Object                        | 2026-10-01 | Accepted            |
-| 057 | One turn orders every change to submissions and the live release                   | 2026-10-01 | Accepted            |
-| 056 | A submission whose merge needs a person goes back to its draft                     | 2026-10-01 | Accepted            |
-| 055 | A draft's sharing lives with the draft in SiteDoc                                  | 2026-10-01 | Accepted            |
-| 054 | Studio serves previews from the draft itself                                       | 2026-10-01 | Accepted            |
-| 053 | Drafts behind the live site merge on their own when no one needs to decide         | 2026-09-30 | Accepted            |
-| 052 | Publishing's production checks move to checkpoint 9, with domains                  | 2026-09-30 | Amended by 071      |
-| 051 | The outbox copies to D1 only what something reads                                  | 2026-09-30 | Accepted            |
-| 050 | A site's first release is the one KV serves                                        | 2026-09-30 | Accepted            |
-| 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts         | 2026-09-30 | Accepted            |
-| 048 | A rollback is a release of the snapshot that was live before                       | 2026-09-30 | Accepted            |
-| 047 | A merge commits as a batch of ops, led by a system-only rebase                     | 2026-09-30 | Accepted            |
-| 046 | Someone typing in a replaced field is told when they stop                          | 2026-09-30 | Accepted            |
-| 045 | Remote changes wait for composition, and the canvas keeps the view in place        | 2026-09-30 | Accepted            |
-| 044 | Studio forwards live connections before TanStack Start                             | 2026-09-30 | Accepted            |
-| 043 | Live connections catch up from the batch log                                       | 2026-09-30 | Accepted            |
-| 042 | Undo passes over parts someone else wrote since                                    | 2026-09-30 | Accepted            |
-| 041 | Permission changes reach live connections with the permissions screens             | 2026-09-30 | Amended by 080      |
-| 040 | Dragging is for pointers; the keyboard moves blocks with commands                  | 2026-09-29 | Accepted            |
-| 039 | The picker previews one block, and layouts are chosen from the block's own content | 2026-09-29 | Amended by 088      |
-| 038 | Items move up and down across sections                                             | 2026-09-29 | Accepted            |
-| 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted            |
-| 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted            |
-| 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted            |
-| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Superseded by 100   |
-| 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Amended by 042      |
-| 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Superseded by 043   |
-| 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted            |
-| 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted            |
-| 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted            |
-| 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Amended by 071      |
-| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Superseded by 100   |
-| 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted            |
-| 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted            |
-| 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Amended by 057      |
-| 023 | One-click rollback undoes only the latest publish                                  | 2026-09-29 | Accepted            |
-| 022 | Each site's submissions in their own Durable Object                                | 2026-09-29 | Accepted            |
-| 021 | No spam protection on forms                                                        | 2026-09-29 | Accepted            |
-| 020 | Share drafts like documents                                                        | 2026-09-28 | Amended by 054      |
-| 019 | Brand changes reach sites as drafts; no brand locks                                | 2026-09-28 | Amended by 065      |
-| 018 | Media files never change                                                           | 2026-09-28 | Accepted            |
-| 017 | Named drafts that merge like branches                                              | 2026-09-28 | Accepted            |
-| 016 | Keep all site data: submissions and releases are never deleted automatically       | 2026-09-29 | Accepted            |
-| 015 | Approval workflows on the organization, a brand or a site                          | 2026-09-29 | Accepted            |
-| 014 | Fine-grained permissions, with roles as bundles and per-person overrides           | 2026-09-28 | Accepted            |
-| 013 | Integrate Puck through a sync module; don't fork                                   | 2026-09-29 | Superseded by 025   |
-| 012 | Effect Schema instead of Zod                                                       | 2026-09-27 | Accepted            |
-| 011 | Build on application-platform-starter                                              | 2026-09-27 | Accepted            |
-| 010 | Workers Paid plan; no Enterprise features, no root domains                         | 2026-09-27 | Accepted            |
-| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                    | 2026-09-29 | Amended by 054, 071 |
-| 008 | Agent on the Agents SDK, validated edits only, models chosen per task              | 2026-09-27 | Amended by 058, 059 |
-| 007 | One live, collaborative Durable Object per site, with edits by block ID            | 2026-09-28 | Accepted            |
-| 006 | Block versions: v1, v2, v3 for editors, any number live                            | 2026-09-28 | Amended by 063      |
-| 005 | Own the page schema; Puck edits it through an adapter                              | 2026-09-27 | Amended by 025      |
-| 004 | Publish immutable snapshots, render on request, cache per release                  | 2026-09-28 | Accepted            |
-| 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
-| 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
-| 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+| #   | Decision                                                                            | Date       | Status              |
+| --- | ----------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 101 | Blocks use shadcn/ui and Magic UI as made, and never hide content until scripts run | 2026-10-03 | Accepted            |
+| 100 | Sites render and hydrate with TanStack Start                                        | 2026-10-03 | Accepted            |
+| 099 | Blocks are tested by their behaviour, and stop being frozen until production        | 2026-10-03 | Accepted            |
+| 098 | An overlaid header takes the surface of the section under it                        | 2026-10-03 | Accepted            |
+| 097 | The editor canvas opens every disclosure                                            | 2026-10-03 | Accepted            |
+| 096 | The rebuilt block library replaces the old versions outright                        | 2026-10-03 | Accepted            |
+| 095 | Blocks are built on a shared kit, and designed in a lab                             | 2026-10-03 | Accepted            |
+| 094 | A block version can rename the layouts of the one before it                         | 2026-10-03 | Accepted            |
+| 093 | Blocks offer choices and icons as fields                                            | 2026-10-03 | Accepted            |
+| 092 | Themes set color mode, a second color, type styles, buttons, cards and width        | 2026-10-03 | Accepted            |
+| 091 | Blogs are pages that hold posts                                                     | 2026-10-02 | Accepted            |
+| 090 | Studio sets its color scheme with a head script, and site previews keep their own   | 2026-10-02 | Accepted            |
+| 089 | The checks open from the top bar, and Pakshi fixes what it can of them              | 2026-10-02 | Accepted            |
+| 088 | Blocks are named and shown from files beside their released versions                | 2026-10-02 | Accepted            |
+| 087 | Brands store every theme value, with no presets                                     | 2026-10-02 | Accepted            |
+| 086 | Block requests are kept in Pakshi, not filed in an outside tracker                  | 2026-10-01 | Accepted            |
+| 085 | Alerts and the security review move out of checkpoint 11                            | 2026-10-01 | Accepted            |
+| 084 | Sites use Astro's content security policy, sent by built sites only                 | 2026-10-01 | Superseded by 100   |
+| 083 | Success metrics are worked out from what Pakshi records anyway                      | 2026-10-01 | Accepted            |
+| 082 | The audit log is written by whatever makes each change                              | 2026-10-01 | Accepted            |
+| 081 | Custom roles are rows in D1, held to the delegation rule                            | 2026-10-01 | Accepted            |
+| 080 | SiteDoc keeps each person's permissions, for live and agent batches alike           | 2026-10-01 | Accepted            |
+| 079 | Pre-flight becomes the checks, with no heading rules, and a panel to fix them       | 2026-10-01 | Amended by 089      |
+| 078 | Site settings leave out a default description and the email sender, for now         | 2026-10-01 | Accepted            |
+| 077 | Deleted sites are kept for 30 days, then purged by the daily job                    | 2026-10-01 | Accepted            |
+| 076 | In the dev stack, only `.localhost` domains are proven                              | 2026-10-01 | Accepted            |
+| 075 | Library images are resized on `sites` with the Images binding                       | 2026-10-01 | Accepted            |
+| 074 | Form notifications retry from `SiteSubmissions`' alarm                              | 2026-10-01 | Accepted            |
+| 073 | Forms, menus and redirects are edited as whole values in drafts                     | 2026-10-01 | Accepted            |
+| 072 | Site settings are a registry of definitions with one home in SiteDoc                | 2026-10-01 | Accepted            |
+| 071 | Build and test in the dev stack as real people; production comes last               | 2026-10-01 | Accepted            |
+| 070 | Measuring `sites` startup moves to checkpoint 9, with production                    | 2026-10-01 | Amended by 071      |
+| 069 | A brand color too light to read fails the contrast check rather than being changed  | 2026-10-01 | Accepted            |
+| 068 | Released versions' changed screenshots are logged and shown to their sites          | 2026-10-01 | Superseded by 099   |
+| 067 | A new draft offers every block in the library                                       | 2026-10-01 | Accepted            |
+| 066 | Brand revisions reach sites through SiteDoc, and the scheduled job catches misses   | 2026-10-01 | Accepted            |
+| 065 | A draft's brand pin carries the revision, and merges keep the newer one             | 2026-10-01 | Accepted            |
+| 064 | Theme fonts are static assets of each app                                           | 2026-10-01 | Accepted            |
+| 063 | Lockfiles pin version numbers; a released folder is one on the base branch          | 2026-10-01 | Accepted            |
+| 062 | The agent's evals run on demand, never as routine                                   | 2026-10-01 | Accepted            |
+| 061 | One conversation per person per draft                                               | 2026-10-01 | Accepted            |
+| 060 | The agent proposes a site plan with a tool, and the plan becomes its brief          | 2026-10-01 | Accepted            |
+| 059 | One spend limit on AI Gateway for the whole product                                 | 2026-10-01 | Accepted            |
+| 058 | The agent runs on Effect AI in a PartyServer Durable Object                         | 2026-10-01 | Accepted            |
+| 057 | One turn orders every change to submissions and the live release                    | 2026-10-01 | Accepted            |
+| 056 | A submission whose merge needs a person goes back to its draft                      | 2026-10-01 | Accepted            |
+| 055 | A draft's sharing lives with the draft in SiteDoc                                   | 2026-10-01 | Accepted            |
+| 054 | Studio serves previews from the draft itself                                        | 2026-10-01 | Accepted            |
+| 053 | Drafts behind the live site merge on their own when no one needs to decide          | 2026-09-30 | Accepted            |
+| 052 | Publishing's production checks move to checkpoint 9, with domains                   | 2026-09-30 | Amended by 071      |
+| 051 | The outbox copies to D1 only what something reads                                   | 2026-09-30 | Accepted            |
+| 050 | A site's first release is the one KV serves                                         | 2026-09-30 | Accepted            |
+| 049 | Items in lists and menus merge by ID, and clashing addresses are conflicts          | 2026-09-30 | Accepted            |
+| 048 | A rollback is a release of the snapshot that was live before                        | 2026-09-30 | Accepted            |
+| 047 | A merge commits as a batch of ops, led by a system-only rebase                      | 2026-09-30 | Accepted            |
+| 046 | Someone typing in a replaced field is told when they stop                           | 2026-09-30 | Accepted            |
+| 045 | Remote changes wait for composition, and the canvas keeps the view in place         | 2026-09-30 | Accepted            |
+| 044 | Studio forwards live connections before TanStack Start                              | 2026-09-30 | Accepted            |
+| 043 | Live connections catch up from the batch log                                        | 2026-09-30 | Accepted            |
+| 042 | Undo passes over parts someone else wrote since                                     | 2026-09-30 | Accepted            |
+| 041 | Permission changes reach live connections with the permissions screens              | 2026-09-30 | Amended by 080      |
+| 040 | Dragging is for pointers; the keyboard moves blocks with commands                   | 2026-09-29 | Accepted            |
+| 039 | The picker previews one block, and layouts are chosen from the block's own content  | 2026-09-29 | Amended by 088      |
+| 038 | Items move up and down across sections                                              | 2026-09-29 | Accepted            |
+| 037 | A placeholder is a block's own starting content, found by its value                 | 2026-09-29 | Accepted            |
+| 036 | The canvas fixes the theme's color scheme instead of following the system           | 2026-09-29 | Accepted            |
+| 035 | Tailwind's spacing scale counts as a theme token in blocks                          | 2026-09-29 | Accepted            |
+| 034 | Islands and media upload wait for the checkpoints that need them                    | 2026-09-29 | Superseded by 100   |
+| 033 | A draft's history is its batch log until something reads more                       | 2026-09-29 | Amended by 042      |
+| 032 | The editor sends batches over RPC until live co-editing                             | 2026-09-29 | Superseded by 043   |
+| 031 | Ops name their page, and cover variants, surfaces and addresses                     | 2026-09-29 | Accepted            |
+| 030 | Alt text belongs to where an image is placed                                        | 2026-09-29 | Accepted            |
+| 029 | Studio calls studio-api through an Effect RPC contract                              | 2026-09-29 | Accepted            |
+| 028 | Two stacks, dev and prod, and destroying one deletes everything                     | 2026-09-29 | Amended by 071      |
+| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware    | 2026-09-29 | Superseded by 100   |
+| 026 | Drafts may be incomplete; completeness is checked at submission                     | 2026-09-29 | Accepted            |
+| 025 | Build our own visual editor on the page document, instead of Puck                   | 2026-09-29 | Accepted            |
+| 024 | The site's Durable Object owns approvals and publishing                             | 2026-09-29 | Amended by 057      |
+| 023 | One-click rollback undoes only the latest publish                                   | 2026-09-29 | Accepted            |
+| 022 | Each site's submissions in their own Durable Object                                 | 2026-09-29 | Accepted            |
+| 021 | No spam protection on forms                                                         | 2026-09-29 | Accepted            |
+| 020 | Share drafts like documents                                                         | 2026-09-28 | Amended by 054      |
+| 019 | Brand changes reach sites as drafts; no brand locks                                 | 2026-09-28 | Amended by 065      |
+| 018 | Media files never change                                                            | 2026-09-28 | Accepted            |
+| 017 | Named drafts that merge like branches                                               | 2026-09-28 | Accepted            |
+| 016 | Keep all site data: submissions and releases are never deleted automatically        | 2026-09-29 | Accepted            |
+| 015 | Approval workflows on the organization, a brand or a site                           | 2026-09-29 | Accepted            |
+| 014 | Fine-grained permissions, with roles as bundles and per-person overrides            | 2026-09-28 | Accepted            |
+| 013 | Integrate Puck through a sync module; don't fork                                    | 2026-09-29 | Superseded by 025   |
+| 012 | Effect Schema instead of Zod                                                        | 2026-09-27 | Accepted            |
+| 011 | Build on application-platform-starter                                               | 2026-09-27 | Accepted            |
+| 010 | Workers Paid plan; no Enterprise features, no root domains                          | 2026-09-27 | Accepted            |
+| 009 | Staff sign-in with Better Auth over OIDC, not Cloudflare Access                     | 2026-09-29 | Amended by 054, 071 |
+| 008 | Agent on the Agents SDK, validated edits only, models chosen per task               | 2026-09-27 | Amended by 058, 059 |
+| 007 | One live, collaborative Durable Object per site, with edits by block ID             | 2026-09-28 | Accepted            |
+| 006 | Block versions: v1, v2, v3 for editors, any number live                             | 2026-09-28 | Amended by 063      |
+| 005 | Own the page schema; Puck edits it through an adapter                               | 2026-09-27 | Amended by 025      |
+| 004 | Publish immutable snapshots, render on request, cache per release                   | 2026-09-28 | Accepted            |
+| 003 | Four Workers: a web and API pair for sites and for Studio                           | 2026-09-27 | Amended by 054      |
+| 002 | Host on Cloudflare                                                                  | 2026-09-27 | Accepted            |
+| 001 | Sites pin block versions                                                            | 2026-09-27 | Accepted            |
 
-## 100 — Sites render with TanStack Start, and only the blocks that run hydrate [#decision-100]
+## 101 — Blocks use shadcn/ui and Magic UI as made, and never hide content until scripts run [#decision-101]
+
+**Context.** With pages hydrating ([decision 100](#decision-100)), blocks can use shadcn/ui's and Magic UI's components instead of CSS stand-ins. Studio's copies of shadcn/ui use Studio's sizes and a class merger that doesn't know a site theme's type scale. Some Magic UI components, such as BlurFade and TextAnimate, render content hidden and reveal it with JavaScript, and others, such as DotPattern, measure themselves in the browser before drawing anything. A page shows its server HTML until its scripts have loaded and hydrated it, and for good when they fail.
+
+**Decision.** The kit holds site-styled copies of shadcn/ui's components on Base UI and Embla (`kit/ui/`) and of Magic UI's open-source components (`kit/magic/`), adapted to the theme's tokens, holding still with the theme's motion off, in the editor, and for visitors who ask for less motion. A form's controls stay the browser's own, so it posts before hydrating, and TanStack Form checks its answers once it has, by the rules sites-api applies (`answerProblem` in contracts). Server HTML is always the finished content: section entrances stay CSS scroll-driven animations, and counters render their real figure. Site data's `address` maps a site's paths to where they open, so a preview's links stay inside it without rewriting its HTML. Studio's previews and reviews render and hydrate through TanStack Start as `sites` does.
+
+**Rejected.** Reusing Studio's `packages/ui` components, whose look is Studio's. Magic UI's JavaScript entrances, which would leave a section blank until the page hydrates. Components that draw an image inside an SVG, such as Magic UI's Safari and iPhone frames, which the editor can't make editable.
+
+**Consequences.** The canvas opens every disclosure as before ([decision 097](#decision-097)), now by keeping the accordion's items open while editing.
+
+## 100 — Sites render and hydrate with TanStack Start [#decision-100]
 
 **Context.** Blocks are React components, but `sites` rendered them with Astro and sent no scripts, so a block could only do what HTML and CSS do on their own. Menus, disclosures, the marquee and section entrances were rebuilt in CSS, and no block could use shadcn/ui's or Magic UI's interactive components, motion or TanStack Form. Astro hydrates only a component an `.astro` file imports, so interactive blocks would have had to be top-level sections listed in a generated island map. Studio already runs on TanStack Start.
 
-**Decision.** `sites` is a TanStack Start app, like Studio. Its server entry looks up the host's site, serves media, robots.txt, the sitemap and feeds, takes form posts, and serves pages from the Workers cache before TanStack Start renders; the site travels to the page's server function as request context. A block version says whether it's `interactive`. Each of the page's header, sections and footer renders inside TanStack Start's `Hydrate`: one that holds an interactive block hydrates once it scrolls into view, and loads only its own block versions' code, while the rest stay the server's HTML and never load theirs. A page with no interactive block leaves out TanStack Start's scripts, so it loads no JavaScript at all. A page's content security policy names each inline script it was rendered with by its hash, so a cached page keeps a policy that matches it, and allows inline styles, since animated components render their first frame as style attributes.
+**Decision.** `sites` is a TanStack Start app, like Studio, and its pages hydrate whole, as any TanStack Start app's do. Its server entry looks up the host's site, serves media, robots.txt, the sitemap and feeds, takes form posts, decides what each address answers (a page, a 301, a 404 or a 410), and serves pages from the Workers cache before TanStack Start renders; the site, its manifest and that answer travel to the page's server function as request context. Each of a page's header, sections and footer loads its block versions' code on demand and hydrates inside its own `Suspense` boundary as soon as that code arrives. A built site's pages send a content security policy that names each inline script they were rendered with by its hash, so a cached page keeps a policy that matches it, and allows inline styles, since animated components render their first frame as style attributes. Vite's dev server adds inline scripts as a page loads, so only built sites send a page policy, as under Astro.
 
-**Rejected.** Astro islands, for the reasons above. A Vite app with React Server Components, whose TanStack Start support is still early. Hydrating every page whole, which sends every block's code to every visitor. A nonce per response, which a cached page would repeat.
+**Rejected.** Astro islands, for the reasons above. A Vite app with React Server Components, whose TanStack Start support is still early. Hydrating only the parts that hold an interactive block, through TanStack Start's `Hydrate` and a flag on each block version: the header's menus hydrate on every page, so React and the shared block code load anyway, and the flag, the wrapper elements and the CSS that looked through them cost more than the few kilobytes they saved. It can come back where measurements show a page needs it.
 
-**Consequences.** `Hydrate` wraps each part in a `div`, which site CSS shows as `display: contents` and looks through where it places sections by their neighbours; the editor canvas renders no wrapper, so those rules match both. Interactive blocks can sit anywhere, items included. A page with an interactive block loads React and the router. Previews and the canvas still show server markup until they hydrate too.
+**Consequences.** Every block can use React freely, items included. Every page loads React and the router. The editor canvas already renders blocks live in Studio, so interactive blocks run there too, holding still while edited.
 
 ## 099 — Blocks are tested by their behaviour, and stop being frozen until production [#decision-099]
 
@@ -142,7 +153,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** FAQ answers sit in closed `details` elements, which work without a script on sites. In the canvas a closed answer couldn't be clicked, tabbed to or edited.
 
-**Decision.** The kit's `Disclosure` renders open whenever blocks render in the editor. The check that the canvas renders each fixture as sites does opens every disclosure on the published page before comparing.
+**Decision.** A closed disclosure, now the kit's accordion ([decision 101](#decision-101)), renders open whenever blocks render in the editor.
 
 **Consequences.** The canvas shows FAQs longer than visitors first see them. Other closed elements, such as the header's phone menu, keep their fields elsewhere on the page or stay closed.
 
