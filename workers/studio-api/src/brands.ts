@@ -25,7 +25,7 @@ import {
   ThemeValues,
 } from "@repo/tokens";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 import { audit } from "./audit.ts";

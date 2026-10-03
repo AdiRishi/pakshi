@@ -2,7 +2,7 @@ import type { Permission, Scope } from "@repo/contracts/access";
 import { BrandId, SiteId } from "@repo/contracts/ids";
 import { covers, permissionsOn } from "@repo/domain/access";
 import { type Cause, Context, Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 

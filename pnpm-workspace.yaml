@@ -7,22 +7,22 @@ packages:
   - workers/*
 
 catalog:
-  "@alchemy.run/frontend-frameworks": 2.0.0-beta.79
+  "@alchemy.run/frontend-frameworks": 2.0.0-beta.80
   "@axe-core/playwright": 4.13.0
   "@base-ui/react": 1.8.0
-  "@cloudflare/vitest-plugin": 1.3.3
-  "@cloudflare/workers-types": 5.20260928.1
+  "@cloudflare/vitest-plugin": 1.3.5
+  "@cloudflare/workers-types": 5.20261002.1
   "@dnd-kit/abstract": 0.5.0
   "@dnd-kit/dom": 0.5.0
   "@dnd-kit/react": 0.5.0
-  "@effect/ai-openai-compat": 4.0.0-rc.117
-  "@effect/platform-node": 4.0.0-rc.117
-  "@effect/platform-node-shared": 4.0.0-rc.117
-  "@effect/sql-d1": 4.0.0-rc.117
-  "@effect/sql-sqlite-do": 4.0.0-rc.117
-  "@effect/sql-sqlite-node": 4.0.0-rc.117
-  "@effect/tsgo": 0.46.1
-  "@effect/vitest": 4.0.0-rc.117
+  "@effect/ai-openai-compat": 4.0.0
+  "@effect/platform-node": 4.0.0
+  "@effect/platform-node-shared": 4.0.0
+  "@effect/sql-d1": 4.0.0
+  "@effect/sql-sqlite-do": 4.0.0
+  "@effect/sql-sqlite-node": 4.0.0
+  "@effect/tsgo": 0.47.2
+  "@effect/vitest": 4.0.0
   "@fontsource-variable/archivo": 5.3.0
   "@fontsource-variable/bodoni-moda": 5.3.0
   "@fontsource-variable/bricolage-grotesque": 5.3.0
@@ -51,68 +51,70 @@ catalog:
   "@fontsource-variable/syne": 5.3.0
   "@fontsource-variable/unbounded": 5.3.0
   "@fontsource-variable/work-sans": 5.3.0
-  "@oxlint/plugins": 1.85.0
+  "@oxlint/plugins": 1.86.0
   "@playwright/test": 1.63.0
   "@tailwindcss/vite": 4.3.3
   "@tanstack/devtools-vite": 0.8.5
   "@tanstack/react-devtools": 0.10.13
   "@tanstack/react-form": 1.33.5
   "@tanstack/react-query": 5.104.0
-  "@tanstack/react-router": 1.170.40
+  "@tanstack/react-router": 1.170.41
   "@tanstack/react-router-devtools": 1.167.2
   "@tanstack/react-router-ssr-query": 1.167.3
-  "@tanstack/react-start": 1.168.59
-  "@tiptap/core": 3.31.3
-  "@tiptap/extension-bold": 3.31.3
-  "@tiptap/extension-document": 3.31.3
-  "@tiptap/extension-hard-break": 3.31.3
-  "@tiptap/extension-heading": 3.31.3
-  "@tiptap/extension-italic": 3.31.3
-  "@tiptap/extension-link": 3.31.3
-  "@tiptap/extension-list": 3.31.3
-  "@tiptap/extension-paragraph": 3.31.3
-  "@tiptap/extension-text": 3.31.3
-  "@tiptap/extensions": 3.31.3
-  "@tiptap/markdown": 3.31.3
-  "@tiptap/pm": 3.31.3
-  "@tiptap/static-renderer": 3.31.3
-  "@types/node": 26.6.3
+  "@tanstack/react-start": 1.168.60
+  "@tiptap/core": 3.31.4
+  "@tiptap/extension-bold": 3.31.4
+  "@tiptap/extension-document": 3.31.4
+  "@tiptap/extension-hard-break": 3.31.4
+  "@tiptap/extension-heading": 3.31.4
+  "@tiptap/extension-italic": 3.31.4
+  "@tiptap/extension-link": 3.31.4
+  "@tiptap/extension-list": 3.31.4
+  "@tiptap/extension-paragraph": 3.31.4
+  "@tiptap/extension-text": 3.31.4
+  "@tiptap/extensions": 3.31.4
+  "@tiptap/markdown": 3.31.4
+  "@tiptap/pm": 3.31.4
+  "@tiptap/static-renderer": 3.31.4
+  "@types/node": 26.6.4
   "@types/react": 19.3.0
   "@types/react-dom": 19.3.0
   "@types/ws": 8.18.2
   "@vitejs/plugin-react": 6.1.1
-  "@vitest/browser-playwright": 5.0.2
-  alchemy: 2.0.0-beta.79
+  "@vitest/browser-playwright": 5.0.3
+  alchemy: 2.0.0-beta.80
   axe-core: 4.13.0
-  better-auth: 1.7.6
-  blume: 2.0.3
+  better-auth: 1.7.7
+  blume: 2.1.0
   class-variance-authority: 0.7.1
   cmdk: 1.1.1
   cn: 0.4.0
   dotenv-cli: 11.0.0
-  effect: 4.0.0-rc.117
+  effect: 4.0.0
   embla-carousel-react: 8.6.0
   esbuild: 0.28.2
   jose: 6.2.12
-  lucide-react: 1.48.0
+  lucide-react: 1.49.0
+  # Only marked's types are imported. The lexer that runs is @tiptap/markdown's,
+  # so keep the major it depends on.
   marked: 17.0.6
   motion: 13.5.0
-  oxfmt: 0.70.0
-  oxlint: 1.85.0
+  oxfmt: 0.71.0
+  oxlint: 1.86.0
   oxlint-tsgolint: 7.0.2003
   partyserver: 0.5.10
   partysocket: 1.3.0
   playwright: 1.63.0
   react: 19.3.0
   react-dom: 19.3.0
-  shadcn: 4.21.0
+  shadcn: 4.21.1
   sonner: 2.0.8
   tailwindcss: 4.3.3
-  turbo: 2.11.5
+  turbo: 2.11.6
   tw-animate-css: 1.4.0
   typescript: 7.0.2
-  vite: 8.3.1
-  vitest: 5.0.2
+  vite: 8.3.2
+  vitest: 5.0.3
   vitest-browser-react: 2.3.0
   ws: 8.22.0
   yaml: 2.9.1
@@ -126,15 +128,41 @@ allowBuilds:
   workerd: true
 
 minimumReleaseAge: 1440
+# Alchemy beta.80 and the packages released with it. Remove once they are a day
+# old, after 2026-10-03 12:21 UTC.
+minimumReleaseAgeExclude:
+  - alchemy@2.0.0-beta.80
+  - "@alchemy.run/cloudflare-runtime@2.0.0-beta.80"
+  - "@alchemy.run/floci@2.0.0-beta.80"
+  - "@alchemy.run/frontend-frameworks@2.0.0-beta.80"
+  - "@alchemy.run/node-utils@2.0.0-beta.80"
+  - "@distilled.cloud/acme@1.0.0-rc.13"
+  - "@distilled.cloud/aws@1.0.0-rc.13"
+  - "@distilled.cloud/axiom@1.0.0-rc.13"
+  - "@distilled.cloud/cloudflare@1.0.0-rc.13"
+  - "@distilled.cloud/core@1.0.0-rc.13"
+  - "@distilled.cloud/doppler@1.0.0-rc.13"
+  - "@distilled.cloud/fly-io@1.0.0-rc.13"
+  - "@distilled.cloud/gcp@1.0.0-rc.13"
+  - "@distilled.cloud/hetzner@1.0.0-rc.13"
+  - "@distilled.cloud/infisical@1.0.0-rc.13"
+  - "@distilled.cloud/neon@1.0.0-rc.13"
+  - "@distilled.cloud/planetscale@1.0.0-rc.13"
+  - "@distilled.cloud/prisma@1.0.0-rc.13"
+  - "@distilled.cloud/railway@1.0.0-rc.13"
+  - "@distilled.cloud/stripe@1.0.0-rc.13"
+  - "@distilled.cloud/zerossl@1.0.0-rc.13"
 
 # Node gives each address 250ms to connect before trying the next. Cloudflare's
 # API can take longer on some networks, so every attempt times out and Alchemy
 # reports its state store as missing. curl, which waits longer, still connects.
 nodeOptions: --network-family-autoselection-attempt-timeout=2000
 
-# Effect's release candidates break between versions, but its packages depend on
-# each other with caret ranges, so a fresh resolve can mix them. Hold every
-# Effect package, direct or transitive, to the catalog's version.
+# Effect releases its packages together, and the HTTP, RPC, SQL and AI modules
+# Pakshi uses can break in a minor release. Alchemy and @effect/platform-node
+# depend on some Effect packages with caret ranges, so a fresh resolve could
+# pair a newer one with ours. Hold every Effect package, direct or transitive,
+# to the catalog's version.
 overrides:
   "@effect/ai-openai-compat": "catalog:"
   "@effect/platform-node": "catalog:"
@@ -149,24 +177,18 @@ peerDependencyRules:
   allowedVersions:
     "capnp-es@0.0.16>typescript": "7"
     # Patched to support Vitest 5; see patchedDependencies.
-    "@cloudflare/vitest-plugin@1.3.3>vitest": "5"
+    "@cloudflare/vitest-plugin@1.3.5>vitest": "5"
 
 patchedDependencies:
-  # A Worker's local `url` changes between `alchemy dev` runs, but the planner
-  # handed downstream bindings the previous run's value whenever the Worker's
-  # own bindings held Outputs, so studio-api kept a stale test identity
-  # provider address. Backports the planner change from
-  # https://github.com/alchemy-run/alchemy/pull/1379 (in its three copies:
-  # src, lib and the bundled bin/exec.js).
-  # Destroying a local stage also left its Durable Objects' storage in
-  # .alchemy/local, keyed by worker name and class, so redeploying the same
-  # worker brought the old objects back. The local Worker provider now
-  # removes each namespace's storage when the worker is deleted (src and lib).
-  # Remove when upgrading past beta.79.
-  alchemy@2.0.0-beta.79: patches/alchemy@2.0.0-beta.79.patch
+  # Destroying a local stage left its Durable Objects' storage in .alchemy/local,
+  # keyed by worker name and class, so redeploying the same worker brought the
+  # old objects back. The local Worker provider now removes each namespace's
+  # storage when the worker is deleted (src and lib). Remove when Alchemy's
+  # local Worker provider does this itself.
+  alchemy@2.0.0-beta.80: patches/alchemy@2.0.0-beta.80.patch
   # Vitest 5 support, ported to the published build from
   # https://github.com/cloudflare/workers-sdk/pull/15500: the runner always uses
   # workerd's new module registry and its V2 module fallback protocol, enables
   # `weak_ref` for Vitest 5's spies, and forwards coverage files to the host.
   # Remove when a release includes that pull request.
-  "@cloudflare/vitest-plugin@1.3.3": patches/@cloudflare__vitest-plugin@1.3.3.patch
+  "@cloudflare/vitest-plugin@1.3.5": patches/@cloudflare__vitest-plugin@1.3.5.patch

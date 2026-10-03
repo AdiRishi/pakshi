@@ -1,6 +1,6 @@
 import { Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import { SqlClient } from "effect/sql";
+import * as Migrator from "effect/sql/Migrator";
 
 /** The schema of a SiteDoc's own storage, applied when the object starts. */
 export const migrations = Migrator.fromRecord({

@@ -2,8 +2,8 @@ import { describe, expect, it } from "@effect/vitest";
 import { PageId } from "@repo/contracts/ids";
 import { listingsOf } from "@repo/contracts/snapshot";
 import { Effect, Layer } from "effect";
+import { Chat } from "effect/ai";
 import { TestClock } from "effect/testing";
-import { Chat } from "effect/unstable/ai";
 
 import { CreateEntry } from "../src/tools.ts";
 import { runTurn } from "../src/turn.ts";

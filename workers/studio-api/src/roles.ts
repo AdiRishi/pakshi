@@ -18,7 +18,7 @@ import {
 } from "@repo/contracts/studio";
 import { defaultRole, isDefaultRole, mayDefineRole, permissionsOn } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess, namedScopeOf, scopeOf } from "./access.ts";
 import { audit } from "./audit.ts";

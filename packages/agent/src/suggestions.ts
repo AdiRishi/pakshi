@@ -2,7 +2,7 @@ import { RichTextDocument } from "@repo/blocks";
 import type { Field } from "@repo/blocks/fields";
 import { richTextFromMarkdown, richTextToMarkdown } from "@repo/blocks/markdown";
 import { Effect, Option, Result, Schema, Stream } from "effect";
-import { LanguageModel, type Prompt } from "effect/unstable/ai";
+import { LanguageModel, type Prompt } from "effect/ai";
 
 /*
  * Suggestions a person accepts or not: alt text for an image, and a merged

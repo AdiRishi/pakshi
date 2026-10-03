@@ -14,7 +14,7 @@ import {
 } from "@repo/contracts/snapshot";
 import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Deferred, Effect, Layer, Option, Schema } from "effect";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import * as Migrator from "effect/sql/Migrator";
 
 import { SiteApprovals } from "../../src/site/approvals.ts";
 import { SiteAudit } from "../../src/site/audit.ts";

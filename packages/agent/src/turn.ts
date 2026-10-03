@@ -1,6 +1,6 @@
 import type { TurnStatus } from "@repo/contracts/agent";
 import { Effect, Ref, Stream } from "effect";
-import { type AiError, type Chat, Prompt } from "effect/unstable/ai";
+import { type AiError, type Chat, Prompt } from "effect/ai";
 
 import { agentHandlers } from "./handlers.ts";
 import { AgentTools, waitingTools } from "./tools.ts";

@@ -5,7 +5,7 @@ import { SqliteClient } from "@effect/sql-sqlite-node";
 import { noIdentity } from "@repo/contracts/brand";
 import { defaultTheme, ResolvedTheme, resolveTheme } from "@repo/tokens";
 import { Effect, Layer, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 /** A fresh core database with the real migrations applied, two brands of sites and people with grants. */
 export const core = Layer.effectDiscard(

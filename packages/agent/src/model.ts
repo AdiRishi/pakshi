@@ -1,6 +1,6 @@
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai-compat";
 import { Effect, Layer, Option, Schema } from "effect";
-import { HttpClient, HttpClientError, HttpClientResponse } from "effect/unstable/http";
+import { HttpClient, HttpClientError, HttpClientResponse } from "effect/http";
 
 /*
  * The agent reaches models through Effect's OpenAI-compatible provider. Its

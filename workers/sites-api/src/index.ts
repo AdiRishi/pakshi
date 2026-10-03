@@ -7,7 +7,7 @@ import type { LiveSettings } from "@repo/contracts/settings";
 import type { SitesApiEnv } from "@repo/infra/worker-bindings";
 import { DurableObject } from "cloudflare:workers";
 import { Effect, Layer, ManagedRuntime } from "effect";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import * as Migrator from "effect/sql/Migrator";
 
 import { type EntriesBefore, migrations, SiteEntries, type StorageError } from "./entries.ts";
 import { takeEntry } from "./intake.ts";

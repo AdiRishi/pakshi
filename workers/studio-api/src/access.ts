@@ -4,7 +4,7 @@ import { BrandId } from "@repo/contracts/ids";
 import { ScopeNotFound } from "@repo/contracts/studio";
 import { type Access, defaultRoles, isDefaultRole, type Resource } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 const ScopeRow = Schema.Struct({
   scope_kind: Schema.Literals(["organization", "brand", "site"]),

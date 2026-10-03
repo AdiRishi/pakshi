@@ -17,7 +17,7 @@ import { authorize } from "@repo/domain/access";
 import { auditEventTitles, describeAuditEvent } from "@repo/domain/audit";
 import { csv } from "@repo/domain/csv";
 import { Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 import { everyPlace } from "./places.ts";

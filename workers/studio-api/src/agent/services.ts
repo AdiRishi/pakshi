@@ -23,7 +23,7 @@ import {
 import { previewBasePath } from "@repo/contracts/studio";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { type DateTime, Effect, Layer, Option, Schema } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 import { getServerByName } from "partyserver";
 
 import { requestBlock } from "../block-requests.ts";

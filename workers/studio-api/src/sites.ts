@@ -13,7 +13,7 @@ import {
 import { authorize, permissionsOn, rolesOn } from "@repo/domain/access";
 import type { Approver } from "@repo/domain/approvals";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { describeScope, loadAccess } from "./access.ts";
 import { everyPlace } from "./places.ts";

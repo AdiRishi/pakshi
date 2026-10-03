@@ -1,7 +1,7 @@
 import { Release } from "@repo/contracts/release";
 import type { Lockfile } from "@repo/contracts/snapshot";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { type IndexedRelease, Outbox } from "./outbox.ts";
 

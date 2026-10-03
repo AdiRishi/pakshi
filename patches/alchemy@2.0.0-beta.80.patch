@@ -1,22 +1,8 @@
-diff --git a/bin/exec.js b/bin/exec.js
-index 37c52045c5430a4cc2fdbb2d2e549176b326c4aa..c1cbb06ed08bdaa132eb99a4fc68fd662f049bc5 100644
---- a/bin/exec.js
-+++ b/bin/exec.js
-@@ -7166,7 +7166,8 @@ const make = (stack, options = {}) => Effect.gen(function* () {
- 			if (hasModeSwitched(mode, oldState)) return resourceExpr;
- 			const oldProps = oldState.status === "updating" ? oldState.old.props : oldState.props;
- 			const oldBindings = dedupeBindings(oldState.bindings ?? []);
--			const newBindings = dedupeBindings(stack.bindings[resource.FQN] ?? []);
-+			const bindings = stack.bindings[resource.FQN] ?? [];
-+			const newBindings = dedupeBindings(combinedCycleMembers.has(resource.FQN) ? bindings : yield* resolveInput(bindings));
- 			const diff = yield* provider.diff ? provider.diff({
- 				id: resource.LogicalId,
- 				fqn: resource.FQN,
 diff --git a/lib/Cloudflare/Workers/LocalWorkerProvider.js b/lib/Cloudflare/Workers/LocalWorkerProvider.js
-index 3eefe4f3d6a3d397fe64ced4fb1107aefaa687b2..d07e1bcc6eeea333b1d7d659cbd1f318a759e9fa 100644
+index 53bd66d3..e6674dc6 100644
 --- a/lib/Cloudflare/Workers/LocalWorkerProvider.js
 +++ b/lib/Cloudflare/Workers/LocalWorkerProvider.js
-@@ -14,6 +14,7 @@ import * as Result from "effect/Result";
+@@ -16,6 +16,7 @@ import * as Result from "effect/Result";
  import * as Scope from "effect/Scope";
  import * as Semaphore from "effect/Semaphore";
  import * as Stream from "effect/Stream";
@@ -24,7 +10,7 @@ index 3eefe4f3d6a3d397fe64ced4fb1107aefaa687b2..d07e1bcc6eeea333b1d7d659cbd1f318
  import * as os from "node:os";
  import { ANSI_RESET, ansiFg, colorsEnabled } from "../../Util/Terminal.js";
  import { theme } from "../../Util/Theme.js";
-@@ -1206,7 +1207,7 @@ export const LocalWorkerProvider = () => LocalProvider.make(Worker, LOCAL_PROVID
+@@ -1209,7 +1210,7 @@ export const LocalWorkerProvider = () => LocalProvider.make(Worker, LOCAL_PROVID
                  accountId,
              };
          }),
@@ -33,7 +19,7 @@ index 3eefe4f3d6a3d397fe64ced4fb1107aefaa687b2..d07e1bcc6eeea333b1d7d659cbd1f318
              // Cross-restart state: the serve/restart bookkeeping, the running
              // workerd (which outlives instance scopes for make-before-break),
              // and the URL proxy live outside instance scopes and are only
-@@ -1214,6 +1215,11 @@ export const LocalWorkerProvider = () => LocalProvider.make(Worker, LOCAL_PROVID
+@@ -1217,6 +1218,11 @@ export const LocalWorkerProvider = () => LocalProvider.make(Worker, LOCAL_PROVID
              dropServeState(fqn);
              yield* closeWorkerd(fqn);
              yield* stopProxy(fqn);
@@ -46,10 +32,10 @@ index 3eefe4f3d6a3d397fe64ced4fb1107aefaa687b2..d07e1bcc6eeea333b1d7d659cbd1f318
      };
  }));
 diff --git a/lib/Local/LocalProvider.js b/lib/Local/LocalProvider.js
-index 2ff3cf55ac3da8c2020dad8f18835dd682f9b31e..d179928c67086d12c88d09b1785e491da214506a 100644
+index e7d8bc1c..8b04df92 100644
 --- a/lib/Local/LocalProvider.js
 +++ b/lib/Local/LocalProvider.js
-@@ -192,7 +192,7 @@ export const make = (cls, providersUrl, spec) => RpcProvider.effect(cls, provide
+@@ -193,7 +193,7 @@ export const make = (cls, providersUrl, spec) => RpcProvider.effect(cls, provide
                  return yield* startInstance(input, session, config, configHash);
              }));
          }),
@@ -58,7 +44,7 @@ index 2ff3cf55ac3da8c2020dad8f18835dd682f9b31e..d179928c67086d12c88d09b1785e491d
              yield* withLock(fqn, Effect.gen(function* () {
                  const existing = instances.get(fqn);
                  if (existing && existing.instanceId !== instanceId) {
-@@ -209,7 +209,7 @@ export const make = (cls, providersUrl, spec) => RpcProvider.effect(cls, provide
+@@ -210,7 +210,7 @@ export const make = (cls, providersUrl, spec) => RpcProvider.effect(cls, provide
                  // (proxies, restart hooks) and out-of-session cleanup (e.g.
                  // deleting a local row during a live deploy) still need it.
                  if (stop) {
@@ -67,35 +53,19 @@ index 2ff3cf55ac3da8c2020dad8f18835dd682f9b31e..d179928c67086d12c88d09b1785e491d
                  }
              }));
          }),
-diff --git a/lib/Plan.js b/lib/Plan.js
-index 5370eeff04025209f70670dd162ef6fa6ce28e04..0a75908d957caa97a0f23b8e49a966d28b616231 100644
---- a/lib/Plan.js
-+++ b/lib/Plan.js
-@@ -390,7 +390,10 @@ Effect.gen(function* () {
-                 // diffs that hash/compare the arrays never churn on
-                 // registration-order flips (or on legacy unsorted state).
-                 const oldBindings = dedupeBindings(oldState.bindings ?? []);
--                const newBindings = dedupeBindings(stack.bindings[resource.FQN] ?? []);
-+                const bindings = stack.bindings[resource.FQN] ?? [];
-+                const newBindings = dedupeBindings(combinedCycleMembers.has(resource.FQN)
-+                    ? bindings
-+                    : yield* resolveInput(bindings));
-                 const diff = yield* provider.diff
-                     ? provider
-                         .diff({
 diff --git a/src/Cloudflare/Workers/LocalWorkerProvider.ts b/src/Cloudflare/Workers/LocalWorkerProvider.ts
-index 02757fb2cfd6cb7eb0c7af3ae4bc0ae2699e0b43..a68a544aa19f623c9b91bfe85f2fafa4d36867cb 100644
+index 109a8af6..50bedf65 100644
 --- a/src/Cloudflare/Workers/LocalWorkerProvider.ts
 +++ b/src/Cloudflare/Workers/LocalWorkerProvider.ts
-@@ -27,6 +27,7 @@ import * as Scope from "effect/Scope";
+@@ -29,6 +29,7 @@ import * as Scope from "effect/Scope";
  import * as Semaphore from "effect/Semaphore";
  import * as Stream from "effect/Stream";
- import type * as ChildProcessSpawner from "effect/unstable/process/ChildProcessSpawner";
+ import type * as ChildProcessSpawner from "effect/process/ChildProcessSpawner";
 +import { rmSync } from "node:fs";
  import * as os from "node:os";
  import type * as Bundle from "../../Bundle/Bundle.ts";
  import { ANSI_RESET, ansiFg, colorsEnabled } from "../../Util/Terminal.ts";
-@@ -1605,7 +1606,7 @@ export const LocalWorkerProvider = () =>
+@@ -1610,7 +1611,7 @@ export const LocalWorkerProvider = () =>
            } satisfies Worker["Attributes"];
          }),
  
@@ -104,7 +74,7 @@ index 02757fb2cfd6cb7eb0c7af3ae4bc0ae2699e0b43..a68a544aa19f623c9b91bfe85f2fafa4
            // Cross-restart state: the serve/restart bookkeeping, the running
            // workerd (which outlives instance scopes for make-before-break),
            // and the URL proxy live outside instance scopes and are only
-@@ -1613,6 +1614,13 @@ export const LocalWorkerProvider = () =>
+@@ -1618,6 +1619,13 @@ export const LocalWorkerProvider = () =>
            dropServeState(fqn);
            yield* closeWorkerd(fqn);
            yield* stopProxy(fqn);
@@ -119,7 +89,7 @@ index 02757fb2cfd6cb7eb0c7af3ae4bc0ae2699e0b43..a68a544aa19f623c9b91bfe85f2fafa4
        } satisfies LocalProvider.LocalProviderSpec<
          Worker,
 diff --git a/src/Local/LocalProvider.ts b/src/Local/LocalProvider.ts
-index 091f2fb60ed36ade312b4d9936c0fb41803a8366..4053c9796ff44f66f3a841ab2d3169ea430e587d 100644
+index 7d6c69d0..97012d1a 100644
 --- a/src/Local/LocalProvider.ts
 +++ b/src/Local/LocalProvider.ts
 @@ -80,7 +80,7 @@ export interface StartContext<
@@ -152,7 +122,7 @@ index 091f2fb60ed36ade312b4d9936c0fb41803a8366..4053c9796ff44f66f3a841ab2d3169ea
    /**
     * Attributes that remain stable across the update the generated `diff`
     * is about to report (see `Diff.stables`). Called only when the diff is
-@@ -478,10 +483,12 @@ export const make = <
+@@ -479,10 +484,12 @@ export const make = <
            id,
            fqn,
            instanceId,
@@ -165,7 +135,7 @@ index 091f2fb60ed36ade312b4d9936c0fb41803a8366..4053c9796ff44f66f3a841ab2d3169ea
          }) {
            yield* withLock(
              fqn,
-@@ -501,7 +508,7 @@ export const make = <
+@@ -502,7 +509,7 @@ export const make = <
                // (proxies, restart hooks) and out-of-session cleanup (e.g.
                // deleting a local row during a live deploy) still need it.
                if (stop) {
@@ -174,20 +144,3 @@ index 091f2fb60ed36ade312b4d9936c0fb41803a8366..4053c9796ff44f66f3a841ab2d3169ea
                }
              }),
            );
-diff --git a/src/Plan.ts b/src/Plan.ts
-index 33ae5c615915fa18a7bb64ca0d8d3ada8fd83400..255f7167c181cc2cf92055802a2b7d951ed36496 100644
---- a/src/Plan.ts
-+++ b/src/Plan.ts
-@@ -743,8 +743,11 @@ export const make = <A>(
-               // diffs that hash/compare the arrays never churn on
-               // registration-order flips (or on legacy unsorted state).
-               const oldBindings = dedupeBindings(oldState.bindings ?? []);
-+              const bindings = stack.bindings[resource.FQN] ?? [];
-               const newBindings = dedupeBindings(
--                stack.bindings[resource.FQN] ?? [],
-+                combinedCycleMembers.has(resource.FQN)
-+                  ? bindings
-+                  : yield* resolveInput(bindings),
-               );
- 
-               const diff = yield* provider.diff

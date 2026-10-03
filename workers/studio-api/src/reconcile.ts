@@ -1,7 +1,7 @@
 import { ReleaseId, SiteId, SnapshotId } from "@repo/contracts/ids";
 import { LiveRelease } from "@repo/contracts/snapshot";
 import { Effect, Equal, Exit, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 const LatestRow = Schema.Struct({ site_id: SiteId, id: ReleaseId, snapshot: SnapshotId });
 

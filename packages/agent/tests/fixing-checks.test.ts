@@ -3,7 +3,7 @@ import type { Draft } from "@repo/contracts/draft";
 import { BlockId, FormId, PageId } from "@repo/contracts/ids";
 import { freeze } from "@repo/domain/freeze";
 import { Effect, Layer } from "effect";
-import { Chat } from "effect/unstable/ai";
+import { Chat } from "effect/ai";
 
 import { runTurn } from "../src/turn.ts";
 import { draftToFix, harbourDraft, sampleListDraft } from "./support/draft.ts";

@@ -1,7 +1,7 @@
 import { SitePlan, Source, Turn } from "@repo/contracts/agent";
 import { SourceId } from "@repo/contracts/ids";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 /*
  * One person's conversation in one draft, in its SiteAgent's SQLite storage:

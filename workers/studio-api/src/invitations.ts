@@ -7,7 +7,7 @@ import { now, Timestamp } from "@repo/contracts/release";
 import { AlreadyMember, InvitationClosed, NotPermitted, type Person } from "@repo/contracts/studio";
 import { type Access, authorize, mayGrant } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { describeScope, filedUnder, loadAccess, nameScope, scopeOf } from "./access.ts";
 import { audit } from "./audit.ts";

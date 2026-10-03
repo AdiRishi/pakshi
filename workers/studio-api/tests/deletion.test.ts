@@ -1,7 +1,7 @@
 import { expect, it } from "@effect/vitest";
 import { type MediaId, SiteId } from "@repo/contracts/ids";
 import { Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 import { deleteSite, purgeDeletedSites, restoreSite, type SiteHosts } from "../src/deletion.ts";
 import { removeDomain } from "../src/domains.ts";

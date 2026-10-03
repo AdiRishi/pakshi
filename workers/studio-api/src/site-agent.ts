@@ -18,9 +18,9 @@ import { type PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids";
 import { now } from "@repo/contracts/release";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
 import { Cause, type DateTime, Effect, Exit, Layer, ManagedRuntime, Option, Schema } from "effect";
-import { Chat } from "effect/unstable/ai";
-import type { SqlError } from "effect/unstable/sql";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import { Chat } from "effect/ai";
+import type { SqlError } from "effect/sql";
+import * as Migrator from "effect/sql/Migrator";
 import {
   type Connection,
   type ConnectionContext,

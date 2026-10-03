@@ -1,7 +1,7 @@
 import { Effect, Layer } from "effect";
-import { HttpRouter } from "effect/unstable/http";
-import type { Rpc, RpcGroup } from "effect/unstable/rpc";
-import { RpcSerialization, RpcServer } from "effect/unstable/rpc";
+import { HttpRouter } from "effect/http";
+import type { Rpc, RpcGroup } from "effect/rpc";
+import { RpcSerialization, RpcServer } from "effect/rpc";
 
 export const rpcPath = "/rpc";
 

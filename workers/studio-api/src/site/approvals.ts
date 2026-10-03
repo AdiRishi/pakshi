@@ -2,7 +2,7 @@ import { type DraftId, SnapshotId, SubmissionId } from "@repo/contracts/ids";
 import { SubmissionNotFound } from "@repo/contracts/studio";
 import { Submission } from "@repo/contracts/submission";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 import { Outbox } from "./outbox.ts";
 

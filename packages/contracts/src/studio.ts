@@ -1,6 +1,6 @@
 import { ContrastIssue, HexColor, ResolvedTheme } from "@repo/tokens";
 import { Context, Schema, SchemaGetter } from "effect";
-import { Rpc, RpcGroup, RpcMiddleware } from "effect/unstable/rpc";
+import { Rpc, RpcGroup, RpcMiddleware } from "effect/rpc";
 
 import {
   CustomRole,

@@ -1,7 +1,7 @@
 import type { RoleId, Scope } from "@repo/contracts/access";
 import type { Collaborator } from "@repo/contracts/live";
 import { Effect, Option, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { audit } from "./audit.ts";
 

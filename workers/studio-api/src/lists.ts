@@ -6,7 +6,7 @@ import { Submission } from "@repo/contracts/submission";
 import { permissionsOn, rolesOn } from "@repo/domain/access";
 import { eligibility } from "@repo/domain/approvals";
 import { Effect, Schema } from "effect";
-import { SqlClient, SqlSchema } from "effect/unstable/sql";
+import { SqlClient, SqlSchema } from "effect/sql";
 
 import { loadAccess } from "./access.ts";
 

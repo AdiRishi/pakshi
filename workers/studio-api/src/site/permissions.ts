@@ -1,6 +1,6 @@
 import { Permission } from "@repo/contracts/access";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 /*
  * What each person may do on the site, as studio-api last found it, in the

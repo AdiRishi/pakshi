@@ -1,12 +1,7 @@
 import { Duration, Effect, Layer } from "effect";
-import {
-  FetchHttpClient,
-  HttpClient,
-  HttpClientError,
-  HttpClientRequest,
-} from "effect/unstable/http";
-import type { Rpc, RpcGroup } from "effect/unstable/rpc";
-import { RpcClient, RpcClientError, RpcSerialization } from "effect/unstable/rpc";
+import { FetchHttpClient, HttpClient, HttpClientError, HttpClientRequest } from "effect/http";
+import type { Rpc, RpcGroup } from "effect/rpc";
+import { RpcClient, RpcClientError, RpcSerialization } from "effect/rpc";
 
 import { rpcPath } from "./server.ts";
 

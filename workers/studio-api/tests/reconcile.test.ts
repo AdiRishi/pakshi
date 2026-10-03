@@ -2,7 +2,7 @@ import { expect, it } from "@effect/vitest";
 import { ReleaseId, SiteId, SnapshotId } from "@repo/contracts/ids";
 import { Release, Timestamp } from "@repo/contracts/release";
 import { Effect } from "effect";
-import { SqlClient } from "effect/unstable/sql";
+import { SqlClient } from "effect/sql";
 
 import { recordCopy } from "../src/copies.ts";
 import { reconcileSites } from "../src/reconcile.ts";

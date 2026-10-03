@@ -5,7 +5,7 @@ import { FormFieldId, FormId, SiteId } from "@repo/contracts/ids";
 import { now, Timestamp } from "@repo/contracts/release";
 import { LiveSettings } from "@repo/contracts/settings";
 import { Effect, Layer, Schema } from "effect";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import * as Migrator from "effect/sql/Migrator";
 
 import { type EntryEmail, migrations, SiteEntries } from "../src/entries.ts";
 

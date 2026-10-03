@@ -3,8 +3,8 @@ import { EntryId, FormId, randomId, type SiteId } from "@repo/contracts/ids";
 import { now, Timestamp } from "@repo/contracts/release";
 import { LiveSettings } from "@repo/contracts/settings";
 import { Context, Effect, Layer, Option, Schema } from "effect";
-import { type SqlError, SqlClient, SqlSchema } from "effect/unstable/sql";
-import * as Migrator from "effect/unstable/sql/Migrator";
+import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
+import * as Migrator from "effect/sql/Migrator";
 
 /*
  * A site's form entries in its SiteSubmissions' SQLite storage, with the

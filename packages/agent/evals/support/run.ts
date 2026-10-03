@@ -4,7 +4,7 @@ import { emptyVoiceGuide, type VoiceGuide } from "@repo/contracts/brand";
 import type { Draft } from "@repo/contracts/draft";
 import { PageId, SourceId } from "@repo/contracts/ids";
 import { Effect, Layer } from "effect";
-import { Chat } from "effect/unstable/ai";
+import { Chat } from "effect/ai";
 
 import { languageModel } from "../../src/model.ts";
 import { systemPrompt, turnContext } from "../../src/prompt.ts";
