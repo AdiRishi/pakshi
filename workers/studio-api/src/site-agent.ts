@@ -273,9 +273,23 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
         this.#sources(),
       ]);
       const working = this.#working;
-      // A turn under way is replayed from its events, after its message.
-      this.#send(connection, snapshot(working === null ? thread : thread.slice(0, working.at + 1)));
-      for (const event of working?.events ?? []) this.#send(connection, event);
+      if (working === null) {
+        this.#send(connection, snapshot(thread));
+        // A tab that lost its connection while its turn ran missed the run's
+        // end, and waits for it before it lets the person send again.
+        const last = recordOf(thread.findLast((message) => message.role === "user"));
+        if (Option.isSome(last))
+          this.#send(connection, {
+            type: EventType.RUN_FINISHED,
+            timestamp: Date.now(),
+            runId: last.value.run,
+            threadId: this.name,
+          });
+      } else {
+        // A turn under way is replayed from its events, after its message.
+        this.#send(connection, snapshot(thread.slice(0, working.at + 1)));
+        for (const event of working.events) this.#send(connection, event);
+      }
       this.#send(connection, sourcesEvent(sources));
     });
   }
@@ -347,6 +361,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     }
     const record: TurnRecord = {
       id: TurnId.make(randomId("turn")),
+      run: send.run,
       status: "working",
       undone: false,
       sources: attached.filter((source) => send.sources.includes(source.id)),
@@ -404,11 +419,12 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       if (!view.ok) return "failed";
       const draft = view.value.draft;
       const contracts = await loadBlocks(draft.lockfile);
-      const [voice, brief] = await Promise.all([
+      const [voice, brief, sources] = await Promise.all([
         Effect.runPromise(
           voiceOf(who.brand).pipe(Effect.provide(D1Client.layer({ db: env.CORE })), Effect.orDie),
         ),
         this.#run((conversation) => conversation.brief),
+        this.#sources(),
       ]);
       const services = await this.#conversation().runPromise(
         Layer.buildWithScope(
@@ -440,7 +456,8 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
           page: draft.pages[send.page],
           selected: send.selected,
           typing,
-          sources: record.sources,
+          // Every document in the conversation, not only this message's, which a later turn may need.
+          sources,
         }),
         services,
         threadId: this.name,
