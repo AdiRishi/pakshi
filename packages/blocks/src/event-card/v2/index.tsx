@@ -25,6 +25,8 @@ interface CalendarDate {
   readonly before: string;
   readonly day: string;
   readonly month: string;
+  /** Whether the calendar shows all of the date, with nothing such as a year or an end after it. */
+  readonly whole: boolean;
 }
 
 const dayFirst = /^(.*?)\b(\d{1,2}(?:\s*[–-]\s*\d{1,2})?)(?:st|nd|rd|th)?\s+(\p{L}{3,})/u;
@@ -35,11 +37,23 @@ const monthFirst = /^(.*?)\b(\p{L}{3,})\.?\s+(\d{1,2}(?:\s*[–-]\s*\d{1,2})?)\b
  * "Until 3 May 2027", or undefined when it names no day.
  */
 const calendarDate = (date: string): CalendarDate | undefined => {
+  const whole = (match: RegExpExecArray) => date.slice(match[0].length).trim() === "";
   const parts = dayFirst.exec(date);
-  if (parts !== null) return { before: parts[1] ?? "", day: parts[2] ?? "", month: parts[3] ?? "" };
+  if (parts !== null)
+    return {
+      before: parts[1] ?? "",
+      day: parts[2] ?? "",
+      month: parts[3] ?? "",
+      whole: whole(parts),
+    };
   const reversed = monthFirst.exec(date);
   if (reversed !== null)
-    return { before: reversed[1] ?? "", day: reversed[3] ?? "", month: reversed[2] ?? "" };
+    return {
+      before: reversed[1] ?? "",
+      day: reversed[3] ?? "",
+      month: reversed[2] ?? "",
+      whole: whole(reversed),
+    };
   return undefined;
 };
 
@@ -99,7 +113,7 @@ const Fact = ({
 /**
  * When, then where: the date and time on one line and the place under them
  * in cards, all on one line in a list, where the date column already shows
- * the date to sighted readers.
+ * the date to sighted readers when it can show all of it.
  */
 const Facts = ({ event }: { readonly event: Event }) => (
   <div className="text-small order-first flex flex-col gap-1 text-muted-foreground in-data-[events=list]:order-none in-data-[events=list]:flex-row in-data-[events=list]:flex-wrap in-data-[events=list]:gap-x-4">
@@ -109,7 +123,7 @@ const Facts = ({ event }: { readonly event: Event }) => (
         field="date"
         value={event.date}
         className={
-          calendarDate(event.date) === undefined ? undefined : "in-data-[events=list]:sr-only"
+          calendarDate(event.date)?.whole === true ? "in-data-[events=list]:sr-only" : undefined
         }
       />
       {event.time && <Fact icon="clock" field="time" value={event.time} />}

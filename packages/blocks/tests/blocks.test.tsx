@@ -259,6 +259,28 @@ test("every hero layout with a sign-up form shows the form in place of its butto
   expect(shown).toEqual(block.variants.map((variant) => ({ variant, form: true, buttons: false })));
 });
 
+describe("event dates", () => {
+  /** Whether a list of events visually hides the date written beside an event. */
+  const hidesWrittenDate = async (date: string) => {
+    const block = await newest("event-card");
+    const result = renderProps(block, { date, title: "Open day" }, "default");
+    if (!result.ok) throw new Error(result.problem);
+    const fact = markup(result.element).match(
+      /<span class="[^"]*">(?:(?!<\/span>).)*?<span>([^<]*)<\/span><\/span>/u,
+    );
+    return fact?.[0].includes("sr-only") ?? false;
+  };
+
+  test("a list leaves the written date to its calendar when the calendar shows all of it", async () => {
+    expect(await hidesWrittenDate("Sat 5 July")).toBe(true);
+  });
+
+  test("a list keeps the written date when the calendar shows only its start", async () => {
+    expect(await hidesWrittenDate("12 July to 30 August")).toBe(false);
+    expect(await hidesWrittenDate("Until 3 May 2027")).toBe(false);
+  });
+});
+
 describe("blocks that read the site", () => {
   test("the header shows the site's name and main menu, with links following their pages", async () => {
     const block = await newest("header");
