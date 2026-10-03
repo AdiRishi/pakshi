@@ -1,12 +1,17 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { RichText, Text } from "../../components.tsx";
+import { RichText, Text, useEditing } from "../../components.tsx";
 import { choice, cta, list, optional, richText, text } from "../../fields.ts";
-import { Disclosure } from "../../kit/accordion.tsx";
 import { Actions } from "../../kit/actions.tsx";
 import { Intro } from "../../kit/intro.tsx";
 import { Section } from "../../kit/section.tsx";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "../../kit/ui/accordion.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
 const props = {
@@ -34,32 +39,49 @@ type Faq = BlockComponentProps<typeof props, Variant>["props"];
 const answerClass =
   "text-body max-w-2xl text-muted-foreground [&_a]:text-primary [&_a]:underline [&_a]:underline-offset-2 [&_p+*]:mt-4";
 
-/** The questions, each opening to show its answer, with the first open. */
-const Questions = ({ faq }: { readonly faq: Faq }) => (
-  <ul className="border-y border-border [&>li+li]:border-t [&>li+li]:border-border">
-    {faq.questions.map((item, index) => (
-      <li key={item.id}>
-        <Disclosure
-          open={index === 0}
-          summary={
+/**
+ * The questions, each opening to show its answer, with the first open and
+ * any number open at once. Closed answers stay in the page for search, and
+ * open when the browser's find lands in them. In the editor every answer is
+ * open, and a question isn't a button, so both can be edited.
+ */
+const Questions = ({ faq }: { readonly faq: Faq }) => {
+  const editing = useEditing();
+  const ids = faq.questions.map((item) => item.id);
+  return (
+    <Accordion
+      multiple
+      hiddenUntilFound
+      defaultValue={ids.slice(0, 1)}
+      value={editing ? ids : undefined}
+      className="border-t border-border"
+    >
+      {faq.questions.map((item) => (
+        <AccordionItem key={item.id} value={item.id}>
+          <AccordionTrigger
+            nativeButton={!editing}
+            render={editing ? <div /> : undefined}
+            className="text-lead text-balance"
+          >
             <Text
               field={["questions", item.id, "question"]}
-              as="h3"
+              as="span"
               value={item.question}
-              className="text-lead text-balance"
+              className="heading-weight"
             />
-          }
-        >
-          <RichText
-            field={["questions", item.id, "answer"]}
-            value={item.answer}
-            className={answerClass}
-          />
-        </Disclosure>
-      </li>
-    ))}
-  </ul>
-);
+          </AccordionTrigger>
+          <AccordionContent>
+            <RichText
+              field={["questions", item.id, "answer"]}
+              value={item.answer}
+              className={answerClass}
+            />
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
+  );
+};
 
 /** Where to go when the answer isn't here: a line and a button or two, on a quiet panel. */
 const Contact = ({ faq, center }: { readonly faq: Faq; readonly center: boolean }) =>
@@ -151,6 +173,7 @@ export default defineBlock({
   variants: ["accordion", "split", "columns"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
+  interactive: true,
   agent: {
     purpose:
       "Questions visitors ask, each with a short, direct answer, and where to ask anything else. The accordion suits many questions; columns suit a few that everyone should read",

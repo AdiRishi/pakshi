@@ -7,7 +7,10 @@ export default {
   hint: "Use it for several photos that belong together. For a single photo, use an Image.",
   order: 70,
   variants: {
-    grid: { label: "Grid", description: "Photos in even rows, all cropped to the same size." },
+    grid: {
+      label: "Grid",
+      description: "Photos in even rows, all cropped to the same size. Each opens larger.",
+    },
     mosaic: {
       label: "Mosaic",
       description: "The first photo large, with the others in smaller tiles beside it.",
@@ -18,7 +21,7 @@ export default {
     },
     scroller: {
       label: "Scrolling row",
-      description: "One row of photos that people swipe or scroll through sideways.",
+      description: "One row of photos that people move through with its buttons or a swipe.",
     },
   },
   lists: {

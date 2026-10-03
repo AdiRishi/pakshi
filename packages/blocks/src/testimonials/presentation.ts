@@ -17,7 +17,7 @@ export default {
     },
     scroller: {
       label: "Scrolling row",
-      description: "One row that scrolls sideways, with the next testimonial peeking in.",
+      description: "One row that people move through with its buttons or a swipe.",
     },
     marquee: {
       label: "Moving row",
