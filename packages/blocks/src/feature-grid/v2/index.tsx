@@ -25,8 +25,8 @@ type Features = BlockComponentProps<typeof props, Variant>["props"];
 
 const columns = {
   "2": "sm:grid-cols-2",
-  "3": "sm:grid-cols-2 lg:grid-cols-3",
-  "4": "sm:grid-cols-2 lg:grid-cols-4",
+  "3": "sm:grid-cols-2 lg:grid-cols-3 fill-row-3",
+  "4": "sm:grid-cols-2 lg:grid-cols-4 fill-row-4",
 } as const satisfies Record<Features["columns"], string>;
 
 /*
@@ -59,7 +59,7 @@ const FeatureGrid = ({ props: grid, variant }: BlockComponentProps<typeof props,
             <Slot
               name="items"
               as="ul"
-              className={cx("fill-row grid", columns[grid.columns], styles[grid.style])}
+              className={cx("grid", columns[grid.columns], styles[grid.style])}
             />
           </div>
         </Section>
@@ -82,7 +82,7 @@ const FeatureGrid = ({ props: grid, variant }: BlockComponentProps<typeof props,
               name="items"
               as="ul"
               className={cx(
-                "fill-row grid [&>li]:flex-row [&>li]:items-start [&>li]:gap-5",
+                "grid [&>li]:flex-row [&>li]:items-start [&>li]:gap-5",
                 columns[grid.columns],
                 styles[grid.style],
               )}

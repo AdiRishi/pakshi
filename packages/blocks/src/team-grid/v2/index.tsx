@@ -23,8 +23,8 @@ type Variant = "grid" | "list" | "overlay";
 type Team = BlockComponentProps<typeof props, Variant>["props"];
 
 const gridColumns = {
-  "4": "lg:grid-cols-4",
-  "3": "lg:grid-cols-3",
+  "4": "lg:grid-cols-4 fill-row-4",
+  "3": "lg:grid-cols-3 fill-row-3",
 } as const satisfies Record<Team["columns"], string>;
 
 /*
@@ -34,7 +34,7 @@ const gridColumns = {
 const people = {
   grid: (team: Team) =>
     cx(
-      "page-width fill-row grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-14",
+      "page-width grid grid-cols-2 gap-x-4 gap-y-10 md:gap-x-6 md:gap-y-14",
       gridColumns[team.columns],
     ),
   list: () => "page-width max-w-5xl border-b border-border",

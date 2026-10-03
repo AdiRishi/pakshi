@@ -26,8 +26,8 @@ type Testimonials = BlockComponentProps<typeof props, Variant>["props"];
 
 const gridColumns = {
   "2": "sm:grid-cols-2",
-  "3": "sm:grid-cols-2 lg:grid-cols-3",
-  "4": "sm:grid-cols-2 lg:grid-cols-4",
+  "3": "sm:grid-cols-2 lg:grid-cols-3 fill-row-3",
+  "4": "sm:grid-cols-2 lg:grid-cols-4 fill-row-4",
 } as const satisfies Record<Testimonials["columns"], string>;
 
 const masonryColumns = {
@@ -88,7 +88,7 @@ const TestimonialsBlock = ({
               name="items"
               as="ul"
               className={cx(
-                "fill-row grid",
+                "grid",
                 gridColumns[section.columns],
                 section.style === "cards" ? "gap-4" : "gap-x-10 gap-y-12",
                 styles[section.style],

@@ -21,7 +21,7 @@ type Variant = "grid" | "list";
 type Events = BlockComponentProps<typeof props, Variant>["props"];
 
 const columns = {
-  "3": "sm:grid-cols-2 lg:grid-cols-3",
+  "3": "sm:grid-cols-2 lg:grid-cols-3 fill-row-3",
   "2": "sm:grid-cols-2",
 } as const satisfies Record<Events["columns"], string>;
 
@@ -44,7 +44,7 @@ const EventCards = ({ props: events, variant }: BlockComponentProps<typeof props
         as="ul"
         className={
           variant === "grid"
-            ? cx("fill-row grid gap-x-6 gap-y-14", columns[events.columns])
+            ? cx("grid gap-x-6 gap-y-14", columns[events.columns])
             : "border-b border-border"
         }
       />

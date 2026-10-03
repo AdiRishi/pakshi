@@ -24,8 +24,8 @@ type Cards = BlockComponentProps<typeof props, Variant>["props"];
 
 const columns = {
   "2": "sm:grid-cols-2",
-  "3": "sm:grid-cols-2 lg:grid-cols-3",
-  "4": "sm:grid-cols-2 lg:grid-cols-4",
+  "3": "sm:grid-cols-2 lg:grid-cols-3 fill-row-3",
+  "4": "sm:grid-cols-2 lg:grid-cols-4 fill-row-4",
 } as const satisfies Record<Cards["columns"], string>;
 
 const gaps = {
@@ -58,7 +58,7 @@ const CardsBlock = ({ props: section, variant }: BlockComponentProps<typeof prop
             name="cards"
             as="ul"
             className={cx(
-              "fill-row grid",
+              "grid",
               columns[section.columns],
               rows === "lines" && "gap-x-10 border-b border-border",
               rows === "tiles" && "gap-4",
