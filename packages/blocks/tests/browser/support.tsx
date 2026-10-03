@@ -3,6 +3,9 @@ import { BlockType, MediaId } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
 import { listingsOf } from "@repo/contracts/snapshot";
 import axe from "axe-core";
+import { hydrateRoot } from "react-dom/client";
+import { renderToString } from "react-dom/server";
+import { onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
 
 import { type SiteData, SiteDataProvider } from "../../src/components.tsx";
@@ -47,6 +50,29 @@ export const show = async (tree: BlockTree, data: Partial<SiteData> = {}) => {
       <main>{definitions.get(tree.type)?.placement === "item" ? <ul>{block}</ul> : block}</main>
     </SiteDataProvider>,
   );
+};
+
+/**
+ * Puts a block's server HTML on the page, as a site sends it, for a visitor
+ * to use before `hydrate` lets React take it over.
+ */
+export const serverRendered = async (tree: BlockTree) => {
+  const definitions = await loadBlocks(latestLockfile);
+  const page = (
+    <SiteDataProvider value={site}>
+      <main>{renderTree(definitions, tree)}</main>
+    </SiteDataProvider>
+  );
+  const container = document.createElement("div");
+  container.innerHTML = renderToString(page);
+  document.body.append(container);
+  onTestFinished(() => container.remove());
+  return {
+    hydrate: () => {
+      const root = hydrateRoot(container, page);
+      onTestFinished(() => root.unmount());
+    },
+  };
 };
 
 /** What axe finds against WCAG 2.2 AA in an element. */

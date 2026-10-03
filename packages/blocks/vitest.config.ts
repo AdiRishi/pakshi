@@ -24,6 +24,24 @@ export default defineConfig({
           // file's clicks and keys would land in another running beside it.
           fileParallelism: false,
           setupFiles: ["./tests/browser/setup.ts"],
+          // Bundled before the first test, or Vite reloads the page mid-run when it finds them.
+          deps: {
+            optimizer: {
+              client: {
+                include: [
+                  "@base-ui/react/accordion",
+                  "@base-ui/react/dialog",
+                  "@base-ui/react/navigation-menu",
+                  "@tanstack/react-form",
+                  "axe-core",
+                  "embla-carousel-react",
+                  "motion/react",
+                  "react-dom/client",
+                  "react-dom/server",
+                ],
+              },
+            },
+          },
           browser: {
             enabled: true,
             headless: true,

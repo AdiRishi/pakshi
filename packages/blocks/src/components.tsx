@@ -485,10 +485,29 @@ export const FormView = (options: {
     onSubmitInvalid: () =>
       element.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus(),
   });
-  // The browser's own checks stand in until the page hydrates; then this form's take over.
+  // The controls are the browser's own and keep what a visitor typed before
+  // the page hydrated, which the form reads once it has. Then its checks
+  // take over from the browser's.
   useEffect(() => {
-    if (element.current !== null) element.current.noValidate = true;
-  }, []);
+    const controls = element.current;
+    if (controls === null) return;
+    controls.noValidate = true;
+    for (const name of Object.keys(form.state.values)) {
+      const control = controls.elements.namedItem(name);
+      const value =
+        control instanceof HTMLInputElement && control.type === "checkbox"
+          ? control.checked
+            ? "Yes"
+            : ""
+          : control instanceof HTMLInputElement ||
+              control instanceof HTMLTextAreaElement ||
+              control instanceof HTMLSelectElement
+            ? control.value
+            : "";
+      if (value !== "")
+        form.setFieldValue(name, value, { dontValidate: true, dontUpdateMeta: true });
+    }
+  }, [form]);
   if (definition === undefined) return null;
   if (sent === definition.id)
     return <output className="text-lead">Thank you. Your answers were sent.</output>;
@@ -528,7 +547,6 @@ export const FormView = (options: {
               id={inputId(field.id)}
               name={field.id}
               required={field.required}
-              checked={state.state.value === "Yes"}
               onChange={(event) => state.handleChange(event.target.checked ? "Yes" : "")}
               onBlur={state.handleBlur}
               aria-invalid={problem !== undefined || undefined}
@@ -591,7 +609,6 @@ export const FormView = (options: {
                           required={field.required}
                           type={inputType[field.kind]}
                           autoComplete={autoComplete[field.kind]}
-                          value={state.state.value}
                           onChange={(event) => state.handleChange(event.target.value)}
                           onBlur={state.handleBlur}
                           aria-invalid={problem !== undefined || undefined}
@@ -630,7 +647,6 @@ export const FormView = (options: {
                     id: inputId(field.id),
                     name: field.id,
                     required: field.required,
-                    value: state.state.value,
                     onBlur: state.handleBlur,
                     "aria-invalid": problem !== undefined || undefined,
                     "aria-describedby": problem === undefined ? undefined : errorId(field.id),
