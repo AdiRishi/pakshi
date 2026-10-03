@@ -250,7 +250,16 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
                   )}
                   <Points hero={hero} center={false} />
                 </div>
-                <Actions actions={hero.actions} size="lg" className="md:justify-end" />
+                {hero.signup === undefined ? (
+                  <Actions actions={hero.actions} size="lg" className="md:justify-end" />
+                ) : (
+                  <FormView
+                    field="signup"
+                    value={hero.signup}
+                    layout="inline"
+                    className="w-full max-w-md md:justify-self-end"
+                  />
+                )}
               </div>
             </div>
             <Picture hero={hero} className="aspect-video" sizes="(min-width: 90rem) 88rem, 100vw" />

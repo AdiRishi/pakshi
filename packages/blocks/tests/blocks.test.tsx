@@ -233,6 +233,32 @@ describe("field components", () => {
   });
 });
 
+test("every hero layout with a sign-up form shows the form in place of its buttons", async () => {
+  const block = await newest("hero");
+  const shown = block.variants.map((variant) => {
+    const result = renderProps(
+      block,
+      {
+        heading: "Come and build a boat",
+        actions: [
+          { id: "it_more", button: { label: "Find out more", link: "https://example.org" } },
+        ],
+        points: [],
+        signup: { $ref: "form", id: "frm_newsletter" },
+      },
+      variant,
+    );
+    if (!result.ok) throw new Error(result.problem);
+    const html = markup(result.element);
+    return {
+      variant,
+      form: html.includes('action="?form=frm_newsletter"'),
+      buttons: html.includes("Find out more"),
+    };
+  });
+  expect(shown).toEqual(block.variants.map((variant) => ({ variant, form: true, buttons: false })));
+});
+
 describe("blocks that read the site", () => {
   test("the header shows the site's name and main menu, with links following their pages", async () => {
     const block = await newest("header");
