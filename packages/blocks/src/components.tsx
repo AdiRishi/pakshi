@@ -63,6 +63,8 @@ export interface SiteEntry {
 export interface SiteCollection {
   readonly id: PageId;
   readonly href: string;
+  /** Where a page of its entries opens, counting from 1. */
+  readonly pageHref: (number: number) => string;
   readonly title: string;
   readonly entries: ReadonlyArray<SiteEntry>;
 }
@@ -106,6 +108,12 @@ export interface SiteData {
   readonly current: { readonly page: PageId; readonly number: number } | null;
   /** Whether the theme's motion is on. Visitors who ask for less motion still get less. */
   readonly motion: boolean;
+  /**
+   * Where a link to an address on the site opens, its query included, such
+   * as the home page, or a blog's second page of posts. Page addresses the
+   * site data gives are already where they open.
+   */
+  readonly address: (path: string) => string;
 }
 
 const SiteDataContext = createContext<SiteData | null>(null);
@@ -126,6 +134,9 @@ export const useLogo = () => useSiteData().logo;
 
 /** A menu's items, with links resolved to addresses. */
 export const useMenu = (name: "main" | "footer") => useSiteData().menus[name];
+
+/** Where a link to an address on the site, such as `/` for the home page, opens. */
+export const useAddress = () => useSiteData().address;
 
 /** A collection with its entries, or undefined when the site has no such collection. */
 export const useCollection = (id: PageId) => useSiteData().collections.get(id);
