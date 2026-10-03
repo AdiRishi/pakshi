@@ -9,7 +9,9 @@ import { PlacedBlock } from "./render.tsx";
 
 /**
  * A page as a site serves it: the header, the page's sections and the footer,
- * at the lockfile's block versions, with the site's data. In the browser,
+ * at the lockfile's block versions, with the site's data. A server awaits
+ * `loadBlocks` for the lockfile before rendering it, or a part whose code is
+ * still loading arrives hidden until a script reveals it. In the browser,
  * each part hydrates as soon as its versions' code has loaded.
  */
 export const SitePage = (props: {

@@ -1,4 +1,4 @@
-import type { ResolvedMedia } from "@repo/blocks";
+import { loadBlocks, type ResolvedMedia } from "@repo/blocks";
 import { pageNumberOf } from "@repo/contracts/collections";
 import { FormId, MediaId } from "@repo/contracts/ids";
 import { pageName } from "@repo/contracts/page";
@@ -46,7 +46,11 @@ export const getSitePage = createServerFn({ method: "GET" }).handler(async ({ co
       home: !answer.unpublished,
     };
   const { entry } = answer;
-  const page = await loadPage(site.id, entry.object);
+  // Rendering waits for nothing once the page's block versions are loaded, so its HTML is whole.
+  const [page] = await Promise.all([
+    loadPage(site.id, entry.object),
+    loadBlocks(manifest.lockfile),
+  ]);
   const media: Record<MediaId, ResolvedMedia> = Object.fromEntries(
     Object.entries(manifest.media).map(([id, file]) => [
       id,
