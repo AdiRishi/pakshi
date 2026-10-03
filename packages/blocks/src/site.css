@@ -173,8 +173,10 @@
 
 /*
  * A row that scrolls by itself, for logos and quotes. Its items are shown
- * twice so the row loops without a gap; it pauses when the theme's motion is
- * off, when visitors ask for less motion, and while a pointer is over it.
+ * twice so the row loops without a gap, and it pauses while a pointer or
+ * keyboard focus is in it. With the theme's motion off, or for visitors who
+ * ask for less motion, it stands still: the copy goes, and the row scrolls
+ * sideways so every item can still be reached.
  */
 @keyframes pakshi-marquee {
   to {
@@ -184,8 +186,14 @@
 
 @utility marquee {
   display: flex;
-  overflow: hidden;
+  overflow-x: var(--theme-marquee-overflow);
   mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+  &:focus-within > * {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    overflow-x: auto;
+  }
 }
 
 @utility marquee-track {
@@ -199,6 +207,13 @@
   }
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+}
+
+@utility marquee-copy {
+  display: var(--theme-marquee-copies);
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
   }
 }
 
