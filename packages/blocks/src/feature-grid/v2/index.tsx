@@ -31,12 +31,16 @@ const columns = {
 
 /*
  * The features are blocks of their own, so the grid sets how each one sits
- * in it: on the page, on a card, or under a line.
+ * in it: on the page, on a card, or under a line that starts in the brand's
+ * color.
  */
 const styles = {
   plain: "gap-x-10 gap-y-14",
-  cards: "gap-4 [&>li]:card [&>li]:p-7",
-  lines: "gap-x-10 gap-y-12 [&>li]:border-t [&>li]:border-border [&>li]:pt-7",
+  cards: "gap-4 [&>li]:card [&>li]:p-7 md:[&>li]:p-8",
+  lines: cx(
+    "gap-x-10 gap-y-12 [&>li]:relative [&>li]:border-t [&>li]:border-border [&>li]:pt-7",
+    "[&>li]:before:absolute [&>li]:before:-top-px [&>li]:before:left-0 [&>li]:before:h-px [&>li]:before:w-12 [&>li]:before:bg-primary",
+  ),
 } as const satisfies Record<Features["style"], string>;
 
 const FeatureGrid = ({ props: grid, variant }: BlockComponentProps<typeof props, Variant>) => {

@@ -20,11 +20,11 @@ const FeatureItem = ({ props: item }: BlockComponentProps<typeof props, "default
         field="image"
         value={item.image}
         sizes="(min-width: 64rem) 33vw, (min-width: 40rem) 50vw, 100vw"
-        className="rounded-image aspect-3/2 w-full object-cover"
+        className="rounded-image aspect-3/2 w-full object-cover outline-1 -outline-offset-1 outline-foreground/10"
       />
     )}
     {item.icon && (
-      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+      <span className="inline-flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary ring-1 ring-primary/15 ring-inset">
         <Icon name={item.icon} className="size-5" />
       </span>
     )}

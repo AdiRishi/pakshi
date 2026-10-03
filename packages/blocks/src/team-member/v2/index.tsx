@@ -19,17 +19,20 @@ type Member = BlockComponentProps<typeof props, "default">["props"];
 /*
  * A team grid marks its layout with `data-team`: a portrait with the words
  * under it (the default, and what a person shows on their own), a row with
- * a small round photo, or the words over the bottom of a tall portrait.
+ * a small round photo, or the words over the bottom of a tall portrait. A
+ * person with a profile link opens it from anywhere on them, and their
+ * photo draws in a little on hover.
  */
 const card = cx(
-  "relative isolate flex flex-col gap-2",
-  "in-data-[team=list]:grid in-data-[team=list]:grid-cols-[auto_minmax(0,1fr)] in-data-[team=list]:items-start in-data-[team=list]:gap-x-5 in-data-[team=list]:gap-y-3 in-data-[team=list]:border-t in-data-[team=list]:border-border in-data-[team=list]:py-7",
+  "group relative isolate flex flex-col gap-2 rounded-image",
+  "has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-ring",
+  "in-data-[team=list]:grid in-data-[team=list]:grid-cols-[auto_minmax(0,1fr)] in-data-[team=list]:items-start in-data-[team=list]:gap-x-5 in-data-[team=list]:gap-y-3 in-data-[team=list]:rounded-none in-data-[team=list]:border-t in-data-[team=list]:border-border in-data-[team=list]:py-7",
   "md:in-data-[team=list]:grid-cols-[auto_minmax(0,2fr)_minmax(0,3fr)] md:in-data-[team=list]:gap-x-10",
-  "in-data-[team=overlay]:aspect-3/4 in-data-[team=overlay]:justify-end in-data-[team=overlay]:gap-0 in-data-[team=overlay]:overflow-hidden in-data-[team=overlay]:rounded-image in-data-[team=overlay]:bg-muted in-data-[team=overlay]:p-5 md:in-data-[team=overlay]:p-6",
+  "in-data-[team=overlay]:aspect-3/4 in-data-[team=overlay]:justify-end in-data-[team=overlay]:gap-0 in-data-[team=overlay]:overflow-hidden in-data-[team=overlay]:bg-muted in-data-[team=overlay]:p-5 md:in-data-[team=overlay]:p-6",
 );
 
-const picture = cx(
-  "mb-2 aspect-4/5 w-full rounded-image bg-foreground/5 object-cover",
+const frame = cx(
+  "relative mb-2 aspect-4/5 w-full overflow-hidden rounded-image bg-foreground/5",
   "in-data-[team=list]:mb-0 in-data-[team=list]:size-14 in-data-[team=list]:rounded-full md:in-data-[team=list]:size-16",
   "in-data-[team=overlay]:absolute in-data-[team=overlay]:inset-0 in-data-[team=overlay]:-z-20 in-data-[team=overlay]:mb-0 in-data-[team=overlay]:size-full in-data-[team=overlay]:rounded-none",
 );
@@ -53,12 +56,12 @@ const Name = ({ member }: { readonly member: Member }) => {
       ) : (
         <a
           href={href}
-          className="group/link inline-flex items-baseline gap-1.5 rounded-sm decoration-1 underline-offset-4 hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          className="inline-flex items-baseline gap-1.5 decoration-1 underline-offset-4 group-hover:underline after:absolute after:inset-0 after:z-10 focus-visible:outline-none"
         >
           {words}
           <Icon
             name="arrow-up-right"
-            className="size-4 shrink-0 self-center text-muted-foreground transition-transform group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5"
+            className="size-4 shrink-0 self-center text-muted-foreground transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
           />
         </a>
       )}
@@ -68,25 +71,27 @@ const Name = ({ member }: { readonly member: Member }) => {
 
 const TeamMember = ({ props: member }: BlockComponentProps<typeof props, "default">) => (
   <Root as="li" className={card}>
-    {member.image ? (
-      <Media
-        field="image"
-        value={member.image}
-        sizes="(min-width: 64rem) 25vw, (min-width: 48rem) 50vw, 80vw"
-        className={picture}
-      />
-    ) : (
-      <span
-        aria-hidden
-        className={cx(
-          picture,
-          "flex items-center justify-center font-heading text-title text-muted-foreground",
-          "in-data-[team=list]:text-body",
-        )}
-      >
-        {initials(member.name)}
-      </span>
-    )}
+    <div className={frame}>
+      {member.image ? (
+        <Media
+          field="image"
+          value={member.image}
+          sizes="(min-width: 64rem) 25vw, (min-width: 48rem) 50vw, 80vw"
+          className={cx(
+            "size-full object-cover",
+            member.link !== undefined &&
+              "transition-transform duration-700 ease-out motion-safe:group-hover:scale-104",
+          )}
+        />
+      ) : (
+        <span
+          aria-hidden
+          className="font-heading text-title in-data-[team=list]:text-body flex size-full items-center justify-center text-muted-foreground"
+        >
+          {initials(member.name)}
+        </span>
+      )}
+    </div>
     <span
       aria-hidden
       className="absolute inset-x-0 bottom-0 -z-10 hidden h-3/5 bg-linear-to-t from-background via-background/85 via-35% to-transparent in-data-[team=overlay]:block"

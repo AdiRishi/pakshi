@@ -29,7 +29,7 @@ const columns = {
 } as const satisfies Record<Cards["columns"], string>;
 
 const gaps = {
-  grid: "gap-x-6 gap-y-12",
+  grid: "gap-4 md:gap-6",
   overlay: "gap-4",
   list: "",
   tiles: "gap-4",
@@ -38,7 +38,7 @@ const gaps = {
 /*
  * The cards are blocks of their own, which read the layout and its choices
  * from the data attributes around them. Rows set apart by lines run edge to
- * edge, with a line under the last row; tiles stand apart.
+ * edge, with a line under the last row; boxed rows and tiles stand apart.
  */
 const CardsBlock = ({ props: section, variant }: BlockComponentProps<typeof props, Variant>) => {
   const rows = variant === "list" ? section.rows : undefined;
@@ -65,7 +65,7 @@ const CardsBlock = ({ props: section, variant }: BlockComponentProps<typeof prop
               // Four narrow pictures with a title on each still read two to a row on a phone,
               // and so do portraits, which one to a row would fill the screen.
               variant === "overlay" && section.columns === "4" && "grid-cols-2",
-              variant === "grid" && section.crop === "portrait" && "grid-cols-2 max-sm:gap-x-4",
+              variant === "grid" && section.crop === "portrait" && "grid-cols-2 max-sm:gap-x-3",
               gaps[variant],
             )}
           />
