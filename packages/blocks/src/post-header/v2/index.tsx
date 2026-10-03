@@ -17,7 +17,7 @@ const dateFormat = new Intl.DateTimeFormat("en-GB", {
   timeZone: "UTC",
 });
 
-/** The post's title, its excerpt and a line of when it was published and by whom. */
+/** The post's tags, its title, its excerpt and a line of when it was published and by whom. */
 const Words = ({
   meta,
   center,
@@ -28,6 +28,18 @@ const Words = ({
   readonly size: "text-title" | "text-display";
 }) => (
   <div className={cx("flex flex-col gap-6", center ? "items-center text-center" : "items-start")}>
+    {meta.tags.length > 0 && (
+      <ul className={cx("flex flex-wrap gap-2", center && "justify-center")}>
+        {meta.tags.map((tag) => (
+          <li
+            key={tag}
+            className="text-small rounded-full border border-foreground/12 px-3 py-0.5 text-muted-foreground"
+          >
+            {tag}
+          </li>
+        ))}
+      </ul>
+    )}
     <h1 className={size}>{meta.title}</h1>
     {meta.excerpt && <p className="text-lead max-w-2xl text-muted-foreground">{meta.excerpt}</p>}
     <p
@@ -47,6 +59,7 @@ const Words = ({
   </div>
 );
 
+/** The top of a blog post, from the post's own settings. */
 const PostHeader = ({ variant }: BlockComponentProps<typeof props, Variant>) => {
   const { meta } = useEntry();
   const { cover } = meta;
@@ -85,7 +98,7 @@ const PostHeader = ({ variant }: BlockComponentProps<typeof props, Variant>) => 
                 value={cover}
                 priority
                 sizes="(min-width: 90rem) 88rem, 100vw"
-                className="rounded-image aspect-3/2 w-full object-cover md:aspect-2/1"
+                className="rounded-image aspect-3/2 w-full object-cover outline-1 -outline-offset-1 outline-foreground/10 md:aspect-2/1"
               />
             )}
           </div>
@@ -107,7 +120,7 @@ const PostHeader = ({ variant }: BlockComponentProps<typeof props, Variant>) => 
                 value={cover}
                 priority
                 sizes="(min-width: 48rem) 50vw, 100vw"
-                className="rounded-image aspect-4/3 w-full object-cover"
+                className="rounded-image aspect-4/3 w-full object-cover outline-1 -outline-offset-1 outline-foreground/10"
               />
             )}
           </div>

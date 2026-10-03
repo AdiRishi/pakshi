@@ -77,7 +77,7 @@ const Points = ({ split }: { readonly split: Split }) =>
       {split.points.map((point) => (
         <li key={point.id} className="flex flex-col gap-3">
           {point.icon && (
-            <span className="inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary">
+            <span className="inline-flex size-9 items-center justify-center rounded-md bg-primary/10 text-primary ring-1 ring-primary/15 ring-inset">
               <Icon name={point.icon} className="size-4.5" />
             </span>
           )}
@@ -143,7 +143,8 @@ const SplitBlock = ({ props: split, variant }: BlockComponentProps<typeof props,
                   }
                   className={cx(
                     frameImageClass(split.frame),
-                    split.frame === "plain" && "aspect-4/5",
+                    split.frame === "plain" &&
+                      "aspect-4/5 outline-1 -outline-offset-1 outline-foreground/10",
                   )}
                 />
               </Frame>

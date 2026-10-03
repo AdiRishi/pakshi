@@ -78,7 +78,10 @@ const ImageCaption = ({ props: figure, variant }: BlockComponentProps<typeof pro
             field="image"
             value={figure.image}
             sizes={sizes[variant]}
-            className={cx("w-full rounded-image object-cover", crops[figure.crop])}
+            className={cx(
+              "w-full rounded-image object-cover outline-1 -outline-offset-1 outline-foreground/10",
+              crops[figure.crop],
+            )}
           />
           <Caption figure={figure} />
         </figure>
