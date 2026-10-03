@@ -18,6 +18,18 @@ const props = {
  */
 const logoInk = "h-8 w-auto self-start object-contain logo-ink opacity-75";
 
+/** The first letters of someone's first and last names, such as "PS" for Priya Shah. */
+const initials = (name: string) => {
+  const words = name.trim().split(/\s+/);
+  const last = words.length > 1 ? words.at(-1) : undefined;
+  return `${words[0]?.charAt(0) ?? ""}${last?.charAt(0) ?? ""}`.toUpperCase();
+};
+
+/**
+ * One person's words, with their name and role under them beside their photo,
+ * or their initials on a disc of the brand's color when there's no photo.
+ * The section it sits in sets it on a card or under a line.
+ */
 const Testimonial = ({ props: item }: BlockComponentProps<typeof props, "default">) => (
   <Root as="li" className="flex">
     <figure className="flex flex-1 flex-col gap-6">
@@ -31,13 +43,20 @@ const Testimonial = ({ props: item }: BlockComponentProps<typeof props, "default
         />
       </blockquote>
       <figcaption className="flex items-center gap-3">
-        {item.avatar && (
+        {item.avatar ? (
           <Media
             field="avatar"
             value={item.avatar}
-            sizes="2.5rem"
-            className="size-10 shrink-0 rounded-full object-cover"
+            sizes="2.75rem"
+            className="size-11 shrink-0 rounded-full object-cover ring-2 ring-background"
           />
+        ) : (
+          <span
+            aria-hidden
+            className="text-small grid size-11 shrink-0 place-items-center rounded-full bg-primary/12 font-semibold text-primary"
+          >
+            {initials(item.name)}
+          </span>
         )}
         <div className="flex min-w-0 flex-col">
           <Text field="name" as="p" value={item.name} className="text-small font-semibold" />

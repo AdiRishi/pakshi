@@ -34,7 +34,10 @@ const Logo = ({ quote, className }: { readonly quote: Quote; readonly className?
     <Media field="logo" value={quote.logo} sizes="10rem" className={cx(logoInk, className)} />
   );
 
-/** The quote's words, with its marks hung outside the text when it's set to the start. */
+/**
+ * The quote's words, its marks in the brand's color, and hung outside the
+ * text when it's set to the start, so the words keep a clean edge.
+ */
 const Words = ({ quote, hang }: { readonly quote: Quote; readonly hang: boolean }) => (
   <blockquote>
     <Text
@@ -42,7 +45,7 @@ const Words = ({ quote, hang }: { readonly quote: Quote; readonly hang: boolean 
       as="p"
       value={quote.quote}
       className={cx(
-        "font-heading whitespace-pre-line before:content-['“'] after:content-['”']",
+        "font-heading whitespace-pre-line before:text-primary before:content-['“'] after:text-primary after:content-['”']",
         quoteSize(quote),
         hang ? "relative text-pretty before:absolute before:right-full" : "text-balance",
       )}
@@ -73,7 +76,7 @@ const Attribution = ({
         field="image"
         value={quote.image}
         sizes="3.5rem"
-        className="size-12 shrink-0 rounded-full object-cover md:size-14"
+        className="size-12 shrink-0 rounded-full object-cover ring-2 shadow-card ring-background md:size-14"
       />
     )}
     <div className={cx("flex flex-col", center && !(avatar && quote.image) && "items-center")}>
@@ -134,7 +137,7 @@ const QuoteBlock = ({ props: quote, variant }: BlockComponentProps<typeof props,
       );
     case "panel":
       return (
-        <Section background="inset">
+        <Section background="inset" backdrop="glow">
           <figure className="page-width flex flex-col gap-10 md:gap-14">
             <div className="max-w-5xl">
               <Words quote={quote} hang />

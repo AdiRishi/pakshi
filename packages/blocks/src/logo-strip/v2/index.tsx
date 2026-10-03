@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import { Media, SiteImage, Text, useHref } from "../../components.tsx";
 import { choice, link, list, media, optional, text } from "../../fields.ts";
-import { Marquee } from "../../kit/marquee.tsx";
+import { Marquee } from "../../kit/magic/marquee.tsx";
 import { Section } from "../../kit/section.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
@@ -147,7 +147,7 @@ const LogoStripBlock = ({ props: strip, variant }: BlockComponentProps<typeof pr
             <Caption strip={strip} className="page-width text-center" />
             <div className="w-full">
               <Marquee
-                className="gap-16 pe-16 md:gap-24 md:pe-24"
+                className="mask-x-from-85% py-2 [--gap:--spacing(16)] md:[--gap:--spacing(24)]"
                 items={strip.logos.map((item) => (
                   <LogoImage key={item.id} strip={strip} item={item} />
                 ))}
