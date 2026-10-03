@@ -96,6 +96,8 @@ export default defineConfig({
           name: "e2e",
           include: ["tests/e2e/**/*.e2e.test.ts"],
           setupFiles: ["tests/e2e/support/setup.ts"],
+          // A journey takes 2 to 4 seconds alone, and more while other suites run beside it.
+          testTimeout: 20_000,
         },
       },
     ],
