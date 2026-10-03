@@ -1,38 +1,30 @@
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai-compat";
-import { Effect, Layer, Option, Schema } from "effect";
-import { HttpClient, HttpClientError, HttpClientResponse } from "effect/http";
+import { createCloudflareText } from "@tanstack/ai-cloudflare";
+import { Schema } from "effect";
 
 /*
- * The agent reaches models through Effect's OpenAI-compatible provider. Its
- * requests go to Workers AI through AI Gateway: from a Worker over the AI
- * binding, and from Node, for evals, over the gateway's REST endpoint. Both
- * send Workers AI's own inputs for a model, which for chat models are
- * OpenAI's.
+ * The agent reaches Workers AI through the stage's AI Gateway: from a Worker
+ * over the AI binding, and from Node, for evals, over the REST API.
  */
 
 /** The models the agent uses, by task. The platform team chooses them; people never do. */
 export const models = {
   /** Planning, writing and editing pages: every turn of a conversation. */
-  edit: { model: "@cf/zai-org/glm-5.3-flash", reasoningEffort: "low" },
+  edit: "@cf/zai-org/glm-5.3-flash",
   /** Alt text for an image, which needs a model that sees. */
-  describe: { model: "@cf/zai-org/glm-5.3-flash", reasoningEffort: "low" },
+  describe: "@cf/zai-org/glm-5.3-flash",
   /** A merged value for a text field both sides of a merge changed. */
-  merge: { model: "@cf/zai-org/glm-5.3-flash", reasoningEffort: "low" },
-} as const satisfies Record<string, ModelChoice>;
-
-export interface ModelChoice {
-  readonly model: string;
-  /**
-   * GLM models reason at their highest effort unless asked otherwise, which
-   * makes routine calls slow enough for Workers AI to time them out.
-   */
-  readonly reasoningEffort: "low" | "medium" | "high";
-}
+  merge: "@cf/zai-org/glm-5.3-flash",
+} as const satisfies Record<string, string>;
 
 export type Task = keyof typeof models;
 
-/** The most a model call may write, reasoning included. */
-const maxOutputTokens = 16_384;
+/**
+ * What every call asks of the model. GLM models reason at their highest
+ * effort unless asked otherwise, which makes routine calls slow enough for
+ * Workers AI to time them out, and Workers AI's own output limit cuts long
+ * answers, such as a site plan, short.
+ */
+export const modelOptions = { reasoning_effort: "low", max_tokens: 16_384 } as const;
 
 /**
  * What AI Gateway records with each request, for cost tracking. The gateway
@@ -40,129 +32,69 @@ const maxOutputTokens = 16_384;
  */
 export type CostTags = Readonly<Record<"brand" | "site" | "person" | "task", string>>;
 
-/** A model call as Workers AI takes it: the model, and its inputs. */
-export interface ModelRequest {
-  readonly model: string;
-  readonly inputs: Schema.JsonObject;
-  readonly tags: CostTags;
-  readonly signal: AbortSignal;
+/** The AI gateway a call goes through, and what it records with it. */
+interface Gateway {
+  readonly id: string;
+  readonly metadata: CostTags;
 }
 
-/** Sends a model call through AI Gateway and returns the gateway's response as it is. */
-export type SendToModel = (request: ModelRequest) => Promise<Response>;
+/** The AI binding, as the agent calls it: a model by name, with Workers AI's inputs for it. */
+export interface AiBinding {
+  run(
+    model: string,
+    inputs: Schema.JsonObject,
+    options: { gateway: Gateway; returnRawResponse: true },
+  ): Promise<Response>;
+}
 
-const encoder = new TextEncoder();
+/** How a call reaches Workers AI: the AI binding in a Worker, or an account's REST API. */
+export type WorkersAi =
+  | { readonly binding: AiBinding }
+  | { readonly accountId: string; readonly apiKey: string };
 
-/** A request the provider makes: Workers AI's inputs for a model, with the model's name. */
+/** A request of the OpenAI-compatible client: Workers AI's inputs for a model, with the model's name. */
 const ModelCall = Schema.fromJsonString(
   Schema.StructWithRest(Schema.Struct({ model: Schema.String }), [Schema.JsonObject]),
 );
 const decodeCall = Schema.decodeUnknownSync(ModelCall);
 
-/** An event of Workers AI's stream: an OpenAI chunk, or the turn's token counts on their own. */
-const WorkersAiEvent = Schema.fromJsonString(
-  Schema.Union([
-    Schema.StructWithRest(
-      Schema.Struct({
-        id: Schema.String,
-        model: Schema.String,
-        created: Schema.Finite,
-        choices: Schema.Array(Schema.Json),
-      }),
-      [Schema.JsonObject],
-    ),
-    Schema.Struct({ usage: Schema.JsonObject }),
-  ]),
-);
-const decodeEvent = Schema.decodeUnknownOption(WorkersAiEvent);
-
 /**
- * One event of Workers AI's stream as a strict OpenAI chunk. Workers AI sends
- * token counts on every chunk and the turn's totals in a last event of its
- * own, neither of which the provider's parser accepts.
+ * Sends the OpenAI-compatible client's requests over the AI binding instead
+ * of HTTP, through the gateway, and cancelled with the request. The
+ * adapter's own binding mode drops the cancellation, and types the binding
+ * with its own copy of the Workers types, which ours don't match.
  */
-const toOpenAiEvent = (
-  data: string,
-  last: { id: string; model: string; created: number },
-): Option.Option<string> => {
-  if (data === "[DONE]") return Option.some(data);
-  return Option.map(decodeEvent(data), (event) => {
-    if (!("choices" in event)) return JSON.stringify({ ...last, choices: [], usage: event.usage });
-    last.id = event.id;
-    last.model = event.model;
-    last.created = event.created;
-    const { usage: _, ...chunk } = event;
-    return JSON.stringify(chunk);
+const overBinding =
+  (binding: AiBinding, gateway: Gateway) =>
+  async (_url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+    const { model, ...inputs } = decodeCall(init?.body);
+    const response = await binding.run(model, inputs, { gateway, returnRawResponse: true });
+    const signal = init?.signal;
+    if (response.body === null || signal === undefined || signal === null) return response;
+    // Cancelling the request cancels Workers AI's stream, as a fetch's would.
+    return new Response(response.body.pipeThrough(new TransformStream(), { signal }), response);
+  };
+
+/** The language model for a task, reached through AI Gateway and tagged for cost tracking. */
+export const languageModel = (
+  workersAi: WorkersAi,
+  gateway: string,
+  tags: Omit<CostTags, "task">,
+  task: Task,
+) => {
+  const through = { id: gateway, metadata: { ...tags, task } };
+  return createCloudflareText(models[task], {
+    ...("binding" in workersAi
+      ? {
+          // The binding authenticates the call; the client only needs an account and a key to exist.
+          accountId: "binding",
+          apiKey: "binding",
+          fetch: overBinding(workersAi.binding, through),
+        }
+      : { ...workersAi, gateway: through }),
+    // Every tool schema is open, as Effect writes them, so the warning is noise.
+    strictFallbackWarning: false,
   });
 };
 
-/** Workers AI's server-sent events rewritten as OpenAI's. */
-export const openAiStream = (body: ReadableStream<Uint8Array>): ReadableStream<Uint8Array> => {
-  const last = { id: "", model: "", created: 0 };
-  const decoder = new TextDecoder();
-  let buffer = "";
-  const emit = (controller: TransformStreamDefaultController<Uint8Array>, event: string) => {
-    const data = event.startsWith("data:") ? event.slice(5).trim() : null;
-    if (data === null || data.length === 0) return;
-    for (const rewritten of Option.toArray(toOpenAiEvent(data, last)))
-      controller.enqueue(encoder.encode(`data: ${rewritten}\n\n`));
-  };
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        buffer += decoder.decode(chunk, { stream: true });
-        const events = buffer.split(/\r?\n\r?\n/);
-        buffer = events.pop() ?? "";
-        for (const event of events) emit(controller, event);
-      },
-      flush(controller) {
-        emit(controller, buffer);
-      },
-    }),
-  );
-};
-
-/**
- * The HTTP client the OpenAI-compatible provider sends through: each request
- * becomes a model call through AI Gateway, tagged for cost tracking.
- */
-export const gatewayClient = (send: SendToModel, tags: Omit<CostTags, "task">, task: Task) =>
-  HttpClient.make((request, _url, signal) =>
-    Effect.tryPromise({
-      try: async () => {
-        const body = request.body;
-        if (body._tag !== "Uint8Array") throw new Error("A model call carries a JSON body.");
-        const { model, ...inputs } = decodeCall(new TextDecoder().decode(body.body));
-        const response = await send({
-          model,
-          inputs,
-          tags: { ...tags, task },
-          signal,
-        });
-        return inputs["stream"] === true && response.ok && response.body !== null
-          ? new Response(openAiStream(response.body), response)
-          : response;
-      },
-      catch: (cause) =>
-        new HttpClientError.HttpClientError({
-          reason: new HttpClientError.TransportError({ request, cause }),
-        }),
-    }).pipe(Effect.map((response) => HttpClientResponse.fromWeb(request, response))),
-  );
-
-/** The language model for a task, reached through AI Gateway. */
-export const languageModel = (send: SendToModel, tags: Omit<CostTags, "task">, task: Task) => {
-  const choice = models[task];
-  return OpenAiLanguageModel.layer({
-    model: choice.model,
-    // Workers AI's own default cuts long answers, such as a site plan, short.
-    config: {
-      reasoning_effort: choice.reasoningEffort,
-      max_output_tokens: maxOutputTokens,
-      strictJsonSchema: false,
-    },
-  }).pipe(
-    Layer.provide(OpenAiClient.layer({ apiUrl: "https://workers-ai.invalid/v1" })),
-    Layer.provide(Layer.succeed(HttpClient.HttpClient)(gatewayClient(send, tags, task))),
-  );
-};
+export type LanguageModel = ReturnType<typeof languageModel>;

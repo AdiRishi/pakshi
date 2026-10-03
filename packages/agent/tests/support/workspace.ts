@@ -1,5 +1,5 @@
 import { loadBlocks } from "@repo/blocks";
-import type { Part, Selected } from "@repo/contracts/agent";
+import type { Selected } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import { BatchId, PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids";
 import type { Op } from "@repo/contracts/ops";
@@ -26,8 +26,6 @@ export interface Desk {
   readonly typing: ReadonlyArray<TypingIn>;
   /** Every batch the agent committed, in order. */
   readonly commits: Array<ReadonlyArray<Op>>;
-  /** The chat's parts as the person sees them. */
-  readonly parts: Array<Part>;
   readonly sources: Map<string, { readonly name: string; readonly markdown: string }>;
   readonly pages: Map<string, string>;
   readonly requests: Array<string>;
@@ -55,7 +53,6 @@ export const desk = async (
     writes: new Map(),
     typing: options.typing ?? [],
     commits: [],
-    parts: [],
     sources: new Map(
       (options.sources ?? []).map((source, index) => [`src_${index + 1}`, source] as const),
     ),
@@ -120,18 +117,6 @@ export const desk = async (
       page: PageId.make("pg_home"),
       selected: options.selected ?? null,
       links: new Set(options.links ?? []),
-      show: (part) =>
-        Effect.sync(() => {
-          const index = state.parts.findIndex((found) => found.id === part.id);
-          if (index === -1) state.parts.push(part);
-          else state.parts[index] = part;
-        }),
-      write: (id, delta) =>
-        Effect.sync(() => {
-          const index = state.parts.findIndex((found) => found.id === id);
-          const part = state.parts[index];
-          if (part?._tag === "Text") state.parts[index] = { ...part, text: part.text + delta };
-        }),
     }),
   );
   return { state, layer, contracts };

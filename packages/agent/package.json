@@ -11,6 +11,10 @@
     "./issues": {
       "types": "./src/issues.ts",
       "default": "./src/issues.ts"
+    },
+    "./tools": {
+      "types": "./src/tools.ts",
+      "default": "./src/tools.ts"
     }
   },
   "scripts": {
@@ -19,11 +23,12 @@
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests && tsc --noEmit -p evals"
   },
   "dependencies": {
-    "@effect/ai-openai-compat": "catalog:",
     "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/domain": "workspace:*",
     "@repo/tokens": "workspace:*",
+    "@tanstack/ai": "catalog:",
+    "@tanstack/ai-cloudflare": "catalog:",
     "effect": "catalog:"
   },
   "devDependencies": {

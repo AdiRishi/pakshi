@@ -15,6 +15,7 @@
   "dependencies": {
     "@base-ui/react": "catalog:",
     "@fontsource-variable/onest": "catalog:",
+    "@shadcn/react": "catalog:",
     "class-variance-authority": "catalog:",
     "cmdk": "catalog:",
     "cn": "catalog:",

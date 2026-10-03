@@ -15,7 +15,6 @@ catalog:
   "@dnd-kit/abstract": 0.5.0
   "@dnd-kit/dom": 0.5.0
   "@dnd-kit/react": 0.5.0
-  "@effect/ai-openai-compat": 4.0.0
   "@effect/platform-node": 4.0.0
   "@effect/platform-node-shared": 4.0.0
   "@effect/sql-d1": 4.0.0
@@ -53,8 +52,13 @@ catalog:
   "@fontsource-variable/work-sans": 5.3.0
   "@oxlint/plugins": 1.86.0
   "@playwright/test": 1.63.0
+  "@shadcn/react": 0.3.1
   "@tailwindcss/vite": 4.3.3
+  "@tanstack/ai": 0.64.0
+  "@tanstack/ai-cloudflare": 0.2.2
+  "@tanstack/ai-react": 0.29.4
   "@tanstack/devtools-vite": 0.8.5
+  "@tanstack/react-ai-devtools": 0.2.71
   "@tanstack/react-devtools": 0.10.13
   "@tanstack/react-form": 1.33.5
   "@tanstack/react-query": 5.104.0
@@ -152,13 +156,20 @@ minimumReleaseAgeExclude:
   - "@distilled.cloud/railway@1.0.0-rc.13"
   - "@distilled.cloud/stripe@1.0.0-rc.13"
   - "@distilled.cloud/zerossl@1.0.0-rc.13"
+  # TanStack AI and the packages released with it. Remove once they are a day
+  # old, after 2026-10-03 12:45 UTC.
+  - "@tanstack/ai@0.64.0"
+  - "@tanstack/ai-client@0.36.1"
+  - "@tanstack/ai-cloudflare@0.2.2"
+  - "@tanstack/ai-react@0.29.4"
+  - "@tanstack/openai-base@0.12.2"
 
 # Node gives each address 250ms to connect before trying the next. Cloudflare's
 # API can take longer on some networks, so every attempt times out and Alchemy
 # reports its state store as missing. curl, which waits longer, still connects.
 nodeOptions: --network-family-autoselection-attempt-timeout=2000
 
-# Effect releases its packages together, and the HTTP, RPC, SQL and AI modules
+# Effect releases its packages together, and the HTTP, RPC and SQL modules
 # Pakshi uses can break in a minor release. Alchemy and @effect/platform-node
 # depend on some Effect packages with caret ranges, so a fresh resolve could
 # pair a newer one with ours. Hold every Effect package, direct or transitive,
@@ -168,7 +179,6 @@ overrides:
   # dates after its build. The Vitest plugin already runs 1.20261001. Remove
   # when Alchemy pins a workerd at least as new as `workerCompatibility.date`.
   "@alchemy.run/cloudflare-runtime>workerd": 1.20261001.1
-  "@effect/ai-openai-compat": "catalog:"
   "@effect/platform-node": "catalog:"
   "@effect/platform-node-shared": "catalog:"
   "@effect/sql-d1": "catalog:"

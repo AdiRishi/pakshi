@@ -7,6 +7,7 @@ import {
   EmptyTitle,
 } from "@repo/ui/components/empty";
 import { Toaster } from "@repo/ui/components/sonner";
+import { aiDevtoolsPlugin } from "@tanstack/react-ai-devtools";
 import { TanStackDevtools } from "@tanstack/react-devtools";
 import { type QueryClient } from "@tanstack/react-query";
 import {
@@ -110,7 +111,10 @@ function StudioDocument({ children }: { readonly children: React.ReactNode }) {
         <Toaster theme={resolved} />
         <TanStackDevtools
           config={{ position: "bottom-right" }}
-          plugins={[{ name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> }]}
+          plugins={[
+            { name: "Tanstack Router", render: <TanStackRouterDevtoolsPanel /> },
+            aiDevtoolsPlugin(),
+          ]}
         />
         <Scripts />
       </body>

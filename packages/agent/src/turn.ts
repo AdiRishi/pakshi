@@ -1,10 +1,17 @@
 import type { TurnStatus } from "@repo/contracts/agent";
-import { Effect, Ref, Stream } from "effect";
-import { type AiError, type Chat, Prompt } from "effect/ai";
+import {
+  chat,
+  type ChatMiddleware,
+  maxIterations,
+  type ModelMessage,
+  type StreamChunk,
+} from "@tanstack/ai";
+import { type Context, Option, Schema } from "effect";
 
-import { agentHandlers } from "./handlers.ts";
-import { AgentTools, waitingTools } from "./tools.ts";
-import { Turn } from "./workspace.ts";
+import { Refused, serverTools } from "./handlers.ts";
+import { type LanguageModel, modelOptions } from "./model.ts";
+import { waitingTools } from "./tools.ts";
+import type { TurnServices } from "./workspace.ts";
 
 /*
  * One turn of a conversation: the model streams text and tool calls, the
@@ -19,150 +26,101 @@ const maxSteps = 60;
 /** Refused tool calls in a row after which the agent stops trying: the first attempt and two repairs. */
 const attempts = 3;
 
-const giveUp = Prompt.make([
-  {
-    role: "user",
-    content:
-      "Your last three tool calls were refused. Don't try again. Tell me in plain language what went wrong and what I could do about it.",
-  },
-]);
-
-/** What the chat shows while a tool runs, and if it fails. */
-const toolWords = new Map<string, readonly [running: string, failed: string]>([
-  ["get_site_outline", ["Looking over the site", "Couldn't read the site"]],
-  ["get_page", ["Reading the page", "Couldn't read the page"]],
-  ["get_block_contract", ["Checking a block", "Couldn't check the block"]],
-  ["get_recipe", ["Reading a recipe", "Couldn't read the recipe"]],
-  ["read_source", ["Reading a document", "Couldn't read the document"]],
-  ["apply_ops", ["Changing the page", "Couldn't make that change"]],
-  ["insert_section", ["Adding a section", "Couldn't add the section"]],
-  ["create_page", ["Creating a page", "Couldn't create the page"]],
-  ["create_entry", ["Writing a post", "Couldn't create the post"]],
-  ["get_preview_link", ["Getting the preview link", "Couldn't get the preview link"]],
-  ["fetch_url", ["Reading a web page", "Couldn't read the web page"]],
-  ["ask_user", ["Asking you", "Couldn't ask"]],
-  ["propose_plan", ["Planning the site", "Couldn't show the plan"]],
-  ["check_draft", ["Checking the draft", "Couldn't check the draft"]],
-  ["prepare_submission", ["Checking the draft", "Couldn't check the draft"]],
-  ["request_block", ["Requesting a block", "Couldn't request the block"]],
-]);
-
-const words = (tool: string) => toolWords.get(tool) ?? ["Working", "Something went wrong"];
-
-/** How a model failure ends a turn. AI Gateway refuses requests once the product's spend limit is reached. */
-const endedBy = (error: AiError.AiError): TurnStatus =>
-  error.reason._tag === "RateLimitError" ? "unavailable" : "failed";
+const giveUp =
+  "Your last three tool calls were refused. Don't try again. Tell me in plain language what went wrong and what I could do about it.";
 
 /**
- * Runs one turn of a conversation, from the person's message, with the
- * conversation's history in `chat` and its current system prompt, and says
- * how it ended. A turn the person stops is interrupted instead.
+ * A model call AI Gateway refused, as it does once the product's spend limit
+ * is reached: with HTTP status 429, and its own error code 2003 when it
+ * gives one.
  */
-export const runTurn = Effect.fn("Agent.runTurn")(
-  function* (options: {
-    readonly chat: Chat.Chat;
-    readonly system: string;
-    readonly message: string;
-    /** Runs after each model call and its tools, so a turn cut off later keeps what it got through. */
-    readonly afterStep: Effect.Effect<void>;
-  }) {
-    const turn = yield* Turn;
-    const tools = yield* AgentTools;
-    yield* Ref.update(options.chat.history, Prompt.setSystem(options.system));
-    let prompt: Prompt.RawInput = options.message;
-    let refused = 0;
-    let givenUp = false;
-    let texts = 0;
-    let thoughts = 0;
-    for (let step = 0; step < maxSteps; step++) {
-      let calls = 0;
-      let waiting = false;
-      const textIds = new Map<string, string>();
-      yield* options.chat
-        .streamText({
-          prompt,
-          toolkit: tools,
-          toolChoice: givenUp ? "none" : "auto",
-          concurrency: 1,
-        })
-        .pipe(
-          Stream.runForEach((part) => {
-            switch (part.type) {
-              case "text-start": {
-                texts += 1;
-                const id = `${turn.id}_text${texts}`;
-                textIds.set(part.id, id);
-                return turn.show({ _tag: "Text", id, text: "" });
-              }
-              case "text-delta": {
-                const id = textIds.get(part.id);
-                return id === undefined ? Effect.void : turn.write(id, part.delta);
-              }
-              case "reasoning-start": {
-                thoughts += 1;
-                return turn.show({
-                  _tag: "Activity",
-                  id: `${turn.id}_thinking${thoughts}`,
-                  label: "Thinking",
-                  status: "running",
-                  changed: false,
-                  at: null,
-                });
-              }
-              case "reasoning-end":
-                return turn.show({
-                  _tag: "Activity",
-                  id: `${turn.id}_thinking${thoughts}`,
-                  label: "Thought it through",
-                  status: "done",
-                  changed: false,
-                  at: null,
-                });
-              case "tool-params-start":
-                return turn.show({
-                  _tag: "Activity",
-                  id: part.id,
-                  label: words(part.name)[0],
-                  status: "running",
-                  changed: false,
-                  at: null,
-                });
-              case "tool-result": {
-                calls += 1;
-                if (waitingTools.has(part.name) && !part.isFailure) waiting = true;
-                refused = part.isFailure ? refused + 1 : 0;
-                if (!part.isFailure) return Effect.void;
-                return Effect.andThen(
-                  Effect.logInfo("The agent's tool call was refused", {
-                    tool: part.name,
-                    result: part.result,
-                  }),
-                  turn.show({
-                    _tag: "Activity",
-                    id: part.id,
-                    label: words(part.name)[1],
-                    status: "failed",
-                    changed: false,
-                    at: null,
-                  }),
-                );
-              }
-              default:
-                return Effect.void;
-            }
-          }),
-        );
-      yield* options.afterStep;
-      if (waiting || calls === 0) break;
-      if (refused >= attempts && !givenUp) {
-        givenUp = true;
-        prompt = giveUp;
-      } else prompt = Prompt.empty;
-    }
-    return "done" as const;
-  },
-  Effect.catchTag("AiError", (error) =>
-    Effect.as(Effect.logWarning("A model call failed, so the turn ended", error), endedBy(error)),
-  ),
-  Effect.provide(agentHandlers),
+const readRefusal = Schema.decodeUnknownOption(
+  Schema.Struct({ code: Schema.Literals(["429", "2003"]) }),
 );
+
+export interface TurnOptions {
+  readonly model: LanguageModel;
+  /** The conversation so far, ending with the person's message. */
+  readonly messages: ReadonlyArray<ModelMessage>;
+  readonly system: string;
+  /** What the model reads with the person's message, such as the outline, the page they have open and who is typing where. */
+  readonly context: string;
+  readonly services: Context.Context<TurnServices>;
+  readonly threadId: string;
+  readonly runId: string;
+  readonly abortController: AbortController;
+  /** Keeps the conversation as it stands, after each model call's tools and when the turn ends, so a turn cut off later keeps what it got through. */
+  readonly save: (messages: ReadonlyArray<ModelMessage>) => Promise<void>;
+}
+
+export interface RunningTurn {
+  readonly events: AsyncIterable<StreamChunk>;
+  /** How the turn ended, once its events have. A turn the person stops ends as stopped. */
+  readonly status: () => TurnStatus;
+}
+
+/**
+ * Runs one turn: the agent's policy over `chat`'s loop. After three refused
+ * calls in a row it explains instead of trying again; after a tool that
+ * waits for the person, the turn ends; a tool that fails for any other
+ * reason ends it as failed.
+ */
+export const runTurn = (options: TurnOptions): RunningTurn => {
+  let status: TurnStatus = "done";
+  let refused = 0;
+  let waiting = false;
+  const policy: ChatMiddleware<Context.Context<TurnServices>> = {
+    name: "pakshi-turn",
+    onConfig(ctx, config) {
+      if (ctx.phase !== "beforeModel") return;
+      // What the model reads, never what the conversation keeps: the context
+      // just before the person's newest message, and the nudge to give up.
+      const messages = config.providerMessages ?? config.messages;
+      const last = messages.findLastIndex((message) => message.role === "user");
+      const withContext = messages.toSpliced(last, 0, { role: "user", content: options.context });
+      if (refused < attempts) return { providerMessages: withContext };
+      return {
+        providerMessages: [...withContext, { role: "user", content: giveUp }],
+        tools: [],
+      };
+    },
+    onIteration: (ctx) => options.save(ctx.messages),
+    onAfterToolCall(ctx, { toolName, ok, error }) {
+      if (!ok && !(error instanceof Refused)) {
+        console.error("A tool of the agent's failed", toolName, error);
+        status = "failed";
+        ctx.abort("A tool failed");
+        return;
+      }
+      if (!ok) console.info("The agent's tool call was refused", toolName, error);
+      refused = ok ? 0 : refused + 1;
+      if (ok && waitingTools.has(toolName)) waiting = true;
+    },
+    onShouldContinue: () => !waiting,
+    onFinish: (ctx) => options.save(ctx.messages),
+    async onAbort(ctx) {
+      if (status === "done") status = "stopped";
+      await options.save(ctx.messages);
+    },
+    async onError(ctx, { error }) {
+      console.warn("A model call failed, so the turn ended", error);
+      status = Option.isSome(readRefusal(error)) ? "unavailable" : "failed";
+      await options.save(ctx.messages);
+    },
+  };
+  const events = chat({
+    adapter: options.model,
+    messages: [...options.messages],
+    systemPrompts: [options.system],
+    tools: serverTools,
+    context: options.services,
+    modelOptions,
+    agentLoopStrategy: maxIterations(maxSteps),
+    toolExecution: "sequential",
+    threadId: options.threadId,
+    runId: options.runId,
+    abortController: options.abortController,
+    middleware: [policy],
+  });
+  return { events, status: () => status };
+};

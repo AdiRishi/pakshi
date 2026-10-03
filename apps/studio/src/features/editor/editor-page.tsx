@@ -60,8 +60,8 @@ import { type ReactNode, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 
 import { Logo } from "@/components/logo";
+import { useAgent } from "@/features/agent/agent";
 import { ChatPanel } from "@/features/agent/chat-panel";
-import { Conversation } from "@/features/agent/conversation";
 import { standing } from "@/features/approvals/describe";
 import { blocksQuery } from "@/features/blocks/blocks-query";
 import { ChecksButton } from "@/features/checks/checks-button";
@@ -397,15 +397,7 @@ export function EditorPage(props: {
   const [connection] = useState(() => liveConnection(props.site, props.draft));
   const [mediaSrc] = useState(() => draftImage(props.site, props.draft));
   const [submitting, setSubmitting] = useState(false);
-  const [conversation] = useState(
-    () =>
-      new Conversation({
-        site: props.site,
-        draft: props.draft,
-        onNotice: (message) => toast.info(message),
-      }),
-  );
-  useEffect(() => conversation.connect(), [conversation]);
+  const agent = useAgent(props.site, props.draft);
   const [beside, setBeside] = useState<"agent" | "outline">("agent");
   const context: DraftContext = {
     person: props.person,
@@ -445,7 +437,7 @@ export function EditorPage(props: {
               site={props.site}
               draft={props.draft}
               contracts={definitions}
-              conversation={conversation}
+              agent={agent}
               onShowPakshi={() => setBeside("agent")}
             />
           }
@@ -480,7 +472,7 @@ export function EditorPage(props: {
                 <ChatPanel
                   site={props.site}
                   draft={context.draft}
-                  conversation={conversation}
+                  agent={agent}
                   onSubmit={() => setSubmitting(true)}
                 />
               </TabsContent>

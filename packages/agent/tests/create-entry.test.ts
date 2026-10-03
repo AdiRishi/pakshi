@@ -1,15 +1,13 @@
 import { describe, expect, it } from "@effect/vitest";
 import { PageId } from "@repo/contracts/ids";
 import { listingsOf } from "@repo/contracts/snapshot";
-import { Effect, Layer } from "effect";
-import { Chat } from "effect/ai";
+import { Effect } from "effect";
 import { TestClock } from "effect/testing";
 
-import { CreateEntry } from "../src/tools.ts";
-import { runTurn } from "../src/turn.ts";
+import { createEntry as createEntryTool } from "../src/tools.ts";
 import { newsDraft } from "./support/draft.ts";
-import { type Reply, scriptedModel } from "./support/model.ts";
-import { desk } from "./support/workspace.ts";
+import { type Reply, refusalsIn } from "./support/model.ts";
+import { turnWith } from "./support/turn.ts";
 
 /**
  * Runs a turn on the News draft on the morning of 2 October 2026 in Sydney,
@@ -18,18 +16,10 @@ import { desk } from "./support/workspace.ts";
 const writing = (script: ReadonlyArray<Reply>) =>
   Effect.gen(function* () {
     yield* TestClock.setTime(Date.parse("2026-10-01T22:30:00Z"));
-    const { state, layer } = yield* Effect.promise(() => desk(newsDraft));
-    const model = scriptedModel(script);
-    yield* runTurn({
-      chat: yield* Chat.empty,
-      system: "You edit pages.",
-      message: "Write a post.",
-      afterStep: Effect.void,
-    }).pipe(Effect.provide(Layer.merge(layer, model.layer)));
-    return { state, calls: model.calls };
+    return yield* turnWith(script, "Write a post.", { draft: newsDraft });
   });
 
-const createEntry = (params: typeof CreateEntry.parametersSchema.Encoded) => ({
+const createEntry = (params: typeof createEntryTool.inputSchema.Encoded) => ({
   calls: [{ name: "create_entry", params }],
 });
 
@@ -82,7 +72,7 @@ describe("creating a post", () => {
 
   it.effect("refuses a page that isn't a blog, and names the blogs there are", () =>
     Effect.gen(function* () {
-      const { state, calls } = yield* writing([
+      const { state, requests } = yield* writing([
         createEntry({
           collection: "pg_home",
           title: "Launch day moves to Friday",
@@ -90,9 +80,11 @@ describe("creating a post", () => {
         }),
       ]);
       expect(state.commits).toEqual([]);
-      const toModel = JSON.stringify(calls[1]?.prompt);
-      expect(toModel).toContain("(pg_home) isn't a blog");
-      expect(toModel).toContain('pg_news \\"News\\"');
+      expect(refusalsIn(requests[1])).toEqual([
+        expect.stringContaining(
+          "(pg_home) isn't a blog. Posts go in one of the draft's blogs: pg_news \"News\"",
+        ),
+      ]);
     }),
   );
 });
@@ -102,7 +94,7 @@ describe("a post's address", () => {
 
   it.effect("changes with its slug, and the agent is told so when it tries a path", () =>
     Effect.gen(function* () {
-      const { state, calls } = yield* writing([
+      const { state, requests } = yield* writing([
         {
           calls: [
             {
@@ -120,7 +112,9 @@ describe("a post's address", () => {
           ],
         },
       ]);
-      expect(JSON.stringify(calls[1]?.prompt)).toContain("Change the slug with setSlug instead.");
+      expect(JSON.stringify(requests[1]?.messages)).toContain(
+        "Change the slug with setSlug instead.",
+      );
       expect(state.commits).toHaveLength(1);
       expect(listingsOf(state.draft.pages)).toContainEqual(
         expect.objectContaining({ id: dates, path: "/news/dates" }),

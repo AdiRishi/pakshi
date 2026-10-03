@@ -3,15 +3,13 @@ import { Schema } from "effect";
 import { BlockId, BlockType, PageId, SourceId, TurnId } from "./ids.ts";
 import { Focus } from "./live.ts";
 import { PagePath } from "./page.ts";
-import { CheckIssue } from "./publishing.ts";
-import { Timestamp } from "./release.ts";
 
 /*
  * A person's conversation with the agent in one draft, and the messages
- * between the chat panel and their SiteAgent. A conversation is a list of
- * turns: something the person said or chose, and everything the agent did
- * for it. The agent streams a turn as it works, and every connection to the
- * conversation follows it.
+ * between the chat panel and their SiteAgent. The conversation is a TanStack
+ * AI thread: the person's messages, each starting a turn, and everything the
+ * agent did for them. The agent streams a turn as it works, and every
+ * connection to the conversation follows it.
  */
 
 /** Where Studio and studio-api serve a person's conversation in a draft: at `${agentBasePath}/${site}/${draft}`. */
@@ -65,50 +63,12 @@ export const Selected = Schema.Struct({
 });
 export type Selected = typeof Selected.Type;
 
-/** What started a turn: something the person wrote, or an answer they chose. */
-export const Request = Schema.Struct({
-  text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(8000)),
-  sources: Schema.Array(Source),
-  selected: Schema.NullOr(Selected),
-  at: Timestamp,
-});
-export type Request = typeof Request.Type;
-
-/** What the agent did with a tool, in words, and how it went. */
-export const Activity = Schema.Struct({
-  id: Schema.String,
+/** What an edit of the agent's did, in words, and where it landed, for the chat to show on the page. */
+export const Change = Schema.Struct({
   label: Schema.String,
-  status: Schema.Literals(["running", "done", "failed"]),
-  /** Whether it changed the draft, so it counts among the turn's changes. */
-  changed: Schema.Boolean,
-  /** The page and block it changed, for the chat panel to show on the page. */
-  at: Schema.NullOr(Schema.Struct({ page: PageId, block: Schema.NullOr(BlockId) })),
+  at: Schema.Struct({ page: PageId, block: Schema.NullOr(BlockId) }),
 });
-export type Activity = typeof Activity.Type;
-
-/** One part of a turn, in the order the agent produced them. */
-export const Part = Schema.TaggedUnion({
-  Text: { id: Schema.String, text: Schema.String },
-  Activity: Activity.fields,
-  /** A question with choices. The person answers by choosing one, or by writing. */
-  Question: {
-    id: Schema.String,
-    question: Schema.String,
-    choices: Schema.Array(Schema.String),
-    answer: Schema.NullOr(Schema.String),
-  },
-  /** A site plan to build or change. */
-  Plan: {
-    id: Schema.String,
-    plan: SitePlan,
-    status: Schema.Literals(["proposed", "building", "replaced"]),
-  },
-  /** What the checks found, and whether the draft can be submitted. A person submits it. */
-  Submission: { id: Schema.String, issues: Schema.Array(CheckIssue), behind: Schema.Boolean },
-  /** A block the agent asked the platform team for. */
-  BlockRequest: { id: Schema.String, need: Schema.String },
-});
-export type Part = typeof Part.Type;
+export type Change = typeof Change.Type;
 
 /**
  * How a turn stands. A turn that ends early says why: the person stopped
@@ -125,41 +85,50 @@ export const TurnStatus = Schema.Literals([
 ]);
 export type TurnStatus = typeof TurnStatus.Type;
 
-export const Turn = Schema.Struct({
+/**
+ * What Pakshi keeps about a turn, on the person's message that started it:
+ * how it stands, whether the person undid it, and what they sent with it.
+ */
+export const TurnRecord = Schema.Struct({
   id: TurnId,
-  request: Request,
-  parts: Schema.Array(Part),
   status: TurnStatus,
   /** Whether the person undid everything the turn changed. */
   undone: Schema.Boolean,
+  sources: Schema.Array(Source),
+  selected: Schema.NullOr(Selected),
+  /** The propose_plan call whose plan the turn builds. */
+  builds: Schema.NullOr(Schema.String),
 });
-export type Turn = typeof Turn.Type;
+export type TurnRecord = typeof TurnRecord.Type;
+
+/** The key a person's message keeps its turn under, in the message's metadata. */
+export const turnKey = "pakshi";
 
 /** Where the person is, by an IANA name such as "Australia/Sydney". It dates the posts a turn writes. */
 const TimeZone = Schema.TimeZoneNamedFromString;
 
-/** What the chat panel sends. */
+/**
+ * What the chat panel sends. SiteAgent answers with the conversation as
+ * AG-UI events: a snapshot of its messages when a connection opens and
+ * whenever a turn starts, ends or is undone, and each turn's events as it
+ * runs, to every connection.
+ */
 export const AgentClientMessage = Schema.TaggedUnion({
-  /** Opens every connection; the agent answers with the conversation. */
-  Sync: {},
+  /** Starts a turn with the person's message, as the chat run `run`. */
   Send: {
-    text: Request.fields.text,
+    run: Schema.String,
+    message: Schema.Struct({
+      id: Schema.String,
+      text: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(8000)),
+    }),
     sources: Schema.Array(SourceId),
     /** The page the person has open. */
     page: PageId,
     selected: Schema.NullOr(Selected),
     timeZone: TimeZone,
+    /** The propose_plan call whose plan the person chose to build. */
+    builds: Schema.NullOr(Schema.String),
   },
-  /** Answers a question in a turn, which starts the next turn. */
-  Answer: {
-    turn: TurnId,
-    part: Schema.String,
-    answer: Request.fields.text,
-    page: PageId,
-    timeZone: TimeZone,
-  },
-  /** Builds a proposed plan, which starts the next turn. */
-  Build: { turn: TurnId, part: Schema.String, page: PageId, timeZone: TimeZone },
   /** Stops the turn under way. What it committed stays. */
   Stop: {},
   /** Undoes everything a turn changed, except what someone has changed since. */
@@ -169,21 +138,15 @@ export const AgentClientMessage = Schema.TaggedUnion({
 });
 export type AgentClientMessage = typeof AgentClientMessage.Type;
 
-/** What SiteAgent sends. */
-export const AgentServerMessage = Schema.TaggedUnion({
-  /** The answer to Sync: the conversation so far, a turn under way included. */
-  Synced: { turns: Schema.Array(Turn), sources: Schema.Array(Source) },
-  /** A turn as it now stands, when it starts, changes or ends. */
-  TurnChanged: { turn: Turn },
-  /** More text for a text part of the turn under way. */
-  TextDelta: { turn: TurnId, part: Schema.String, delta: Schema.String },
-  /** A source someone attached, now ready to send with a message. */
-  SourceAdded: { source: Source },
-  Cleared: {},
-  /** Something the agent couldn't do for a message, such as undo a turn that changed nothing. */
-  Notice: { message: Schema.String },
-});
-export type AgentServerMessage = typeof AgentServerMessage.Type;
-
 export const AgentClientMessageJson = Schema.fromJsonString(AgentClientMessage);
-export const AgentServerMessageJson = Schema.fromJsonString(AgentServerMessage);
+
+/** The AG-UI custom events SiteAgent sends besides a turn's own, by name. */
+export const agentEvents = {
+  /** Something the agent couldn't do for a message, such as undo a turn that changed nothing. */
+  notice: "pakshi.notice",
+  /** The documents attached to the conversation, sent when a connection opens and when one is added. */
+  sources: "pakshi.sources",
+} as const;
+
+export const Notice = Schema.Struct({ message: Schema.String });
+export const Sources = Schema.Struct({ sources: Schema.Array(Source) });
