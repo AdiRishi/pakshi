@@ -7,6 +7,7 @@ import { now, Timestamp } from "@repo/contracts/release";
 import { AlreadyMember, InvitationClosed, NotPermitted, type Person } from "@repo/contracts/studio";
 import { type Access, authorize, mayGrant } from "@repo/domain/access";
 import { Effect, Option, Schema } from "effect";
+import { Hex } from "effect/encoding";
 import { SqlClient, SqlSchema } from "effect/sql";
 
 import { describeScope, filedUnder, loadAccess, nameScope, scopeOf } from "./access.ts";
@@ -37,9 +38,7 @@ const newToken = () =>
 const hashOf = (token: InvitationToken) =>
   Effect.promise(async () => {
     const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(token));
-    return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(
-      "",
-    );
+    return Hex.encode(new Uint8Array(digest));
   });
 
 const InvitationRow = Schema.Struct({

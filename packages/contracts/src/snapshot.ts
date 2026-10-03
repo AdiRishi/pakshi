@@ -1,4 +1,5 @@
 import { Predicate, Schema } from "effect";
+import { Hex } from "effect/encoding";
 
 import { BrandRevision } from "./brand.ts";
 import { FormDefinition } from "./form.ts";
@@ -156,8 +157,7 @@ const sortedKeys = (_key: string, value: Schema.Json) =>
 export const contentHash = async (value: Schema.Json) => {
   const json = JSON.stringify(value, sortedKeys);
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(json));
-  const hex = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0"));
-  return ContentHash.make(hex.join(""));
+  return ContentHash.make(Hex.encode(new Uint8Array(digest)));
 };
 
 /**
