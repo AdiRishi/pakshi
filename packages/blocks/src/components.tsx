@@ -442,11 +442,14 @@ type AnsweredField = Exclude<FormField, { readonly kind: "hidden" }>;
 const inputType = { shortText: "text", email: "email", phone: "tel" } as const;
 const autoComplete = { shortText: undefined, email: "email", phone: "tel" } as const;
 
-/** What a form's live check says about an answer: the problem, or nothing. */
+/**
+ * What a form's live check says about an answer: the problem, or nothing. It
+ * reads the answer as sites-api does, without the spaces around it.
+ */
 const check =
   (field: AnsweredField) =>
   ({ value }: { readonly value: string }) =>
-    answerProblem(field, value) ?? undefined;
+    answerProblem(field, field.kind === "checkbox" ? value : value.trim()) ?? undefined;
 
 /**
  * A form from the site's forms, with its fields in order. Its markup lives
