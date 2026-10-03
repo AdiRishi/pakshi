@@ -159,6 +159,6 @@ it.prop(
       expect(state.view).toEqual(server);
     }
   },
-  // 150 random sessions take a few seconds, more on a busy CI runner than Vitest's 5-second default.
-  { timeout: 30_000, arbitrary: { runs: 150 } },
+  // 150 random sessions take about 15 seconds, and several times that while browser suites run beside them.
+  { timeout: 120_000, arbitrary: { runs: 150 } },
 );
