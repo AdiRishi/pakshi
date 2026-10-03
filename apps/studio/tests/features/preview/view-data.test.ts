@@ -1,12 +1,15 @@
-import { latestLockfile } from "@repo/blocks";
+import { latestLockfile, loadBlocks, SitePage } from "@repo/blocks";
 import { blockFixtures, fixtureDraft, fixtureSite, fixtureTree } from "@repo/blocks/fixtures";
-import { BlockId, BlockType, PageId } from "@repo/contracts/ids";
+import { BlockId, BlockType, PageId, SnapshotId } from "@repo/contracts/ids";
 import type { PageDocument } from "@repo/contracts/page";
 import { listingsOf } from "@repo/contracts/snapshot";
 import type { SiteView } from "@repo/contracts/studio";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, test } from "vitest";
 
-import { siteDocument } from "@/features/preview/render";
+import { reviewLink } from "@/features/preview/address";
+import { viewData } from "@/features/preview/view-data";
 
 const fixture = (type: string, name: string) => {
   const entry = blockFixtures.find(
@@ -37,6 +40,9 @@ const draft = fixtureDraft({
   sections: [],
 });
 
+const base = "/review/site_fixtures/sub_fixtures";
+
+/** A page of the fixture site as a review shows it, at `number` among a blog's pages of posts. */
 const preview = async (page: PageDocument, number: number) => {
   const view: SiteView = {
     settings: fixtureSite.settings,
@@ -48,17 +54,22 @@ const preview = async (page: PageDocument, number: number) => {
     media: fixtureSite.media,
     page,
   };
-  const response = await siteDocument(view, {
-    base: "/preview/site_fixtures/dr_fixtures",
-    address: (path) => `/preview/site_fixtures/dr_fixtures${path}`,
-    bar: null,
-    changed: [],
-    number,
-  });
-  return response.text();
+  await loadBlocks(view.lockfile);
+  return renderToStaticMarkup(
+    createElement(SitePage, {
+      site: viewData(view, {
+        number,
+        src: (id) => `${base}/_media/${id}`,
+        address: reviewLink(base, { version: "submitted", snapshot: SnapshotId.make("snap_one") }),
+      }),
+      page,
+      parts: view.parts,
+      lockfile: view.lockfile,
+    }),
+  );
 };
 
-/** The text of a document's main content, as a visitor reads it. */
+/** The text of a page's main content, as a visitor reads it. */
 const mainText = (html: string) =>
   (html.split("<main>")[1] ?? "").replaceAll(/<[^>]*>/g, "").replaceAll("&#x27;", "'");
 
@@ -87,5 +98,25 @@ describe("a previewed page", () => {
     const second = mainText(await preview(page, 2));
     expect(second).toContain("Dates for this summer are out");
     expect(second).not.toContain("Meet this year's mentors");
+  });
+
+  test("in a review, links to the site's pages stay on the version and snapshot being reviewed", async () => {
+    const page = holding(news, {
+      type: BlockType.make("post-list"),
+      variant: "list",
+      surface: "default",
+      props: { heading: "All the news", collection: { $ref: "page", id: news }, count: 1 },
+    });
+    const hrefs = Array.from(
+      (await preview(page, 1)).matchAll(/href="([^"]*)"/g),
+      ([, href]) => href,
+    );
+    const internal = hrefs.filter((href) => href?.startsWith("/"));
+    expect(internal.length).toBeGreaterThan(0);
+    for (const href of internal) {
+      expect(href).toMatch(new RegExp(`^${base}/`));
+      expect(href).toContain("version=submitted");
+      expect(href).toContain("snapshot=snap_one");
+    }
   });
 });
