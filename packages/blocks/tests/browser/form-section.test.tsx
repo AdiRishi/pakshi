@@ -19,6 +19,13 @@ test("a required question left empty says so once the visitor leaves it", async 
   await expect.element(screen.getByLabelText("Your name")).toHaveAttribute("aria-invalid", "true");
 });
 
+test("an answer of only spaces counts as no answer, as sites-api reads it", async () => {
+  const screen = await show(fixture("form-section", "split"));
+  await userEvent.type(screen.getByLabelText("Your name"), "   ");
+  await userEvent.tab();
+  await expect.element(screen.getByText("Answer this question")).toBeVisible();
+});
+
 test("an email address that isn't one says so", async () => {
   const screen = await show(fixture("form-section", "split"));
   await userEvent.type(screen.getByLabelText("Email"), "sam@");
