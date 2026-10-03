@@ -1,7 +1,7 @@
 import { Schema } from "effect";
 
 const prefixed = (prefix: string) =>
-  Schema.String.check(Schema.isPattern(new RegExp(`^${prefix}_[A-Za-z0-9]{1,64}$`)));
+  Schema.String.check(Schema.isPattern(new RegExp(`^${prefix}_[A-Za-z0-9]{1,64}$`, "u")));
 
 export const BrandId = prefixed("brand").pipe(Schema.brand("BrandId"));
 export type BrandId = typeof BrandId.Type;
@@ -86,5 +86,5 @@ export const randomId = <P extends string>(prefix: P): `${P}_${string}` => {
 };
 
 /** A block type such as `hero` or `call-to-action`. */
-export const BlockType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/));
+export const BlockType = Schema.String.check(Schema.isPattern(/^[a-z][a-z0-9]*(-[a-z0-9]+)*$/u));
 export type BlockType = typeof BlockType.Type;

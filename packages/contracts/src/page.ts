@@ -6,7 +6,7 @@ import { MediaRef, WebUrl } from "./references.ts";
 
 /** A page's address on its site: `/` or lowercase segments such as `/summer-school/2027`. */
 export const PagePath = Schema.String.check(
-  Schema.isPattern(/^\/([a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*)*)?$/),
+  Schema.isPattern(/^\/([a-z0-9]+(-[a-z0-9]+)*(\/[a-z0-9]+(-[a-z0-9]+)*)*)?$/u),
 );
 export type PagePath = typeof PagePath.Type;
 
@@ -14,7 +14,7 @@ const slugLength = 80;
 
 /** An entry's own part of its address, one segment below its collection's, such as `dates-announced`. */
 export const Slug = Schema.String.check(
-  Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/),
+  Schema.isPattern(/^[a-z0-9]+(-[a-z0-9]+)*$/u),
   Schema.isMaxLength(slugLength),
 );
 export type Slug = typeof Slug.Type;
@@ -81,7 +81,7 @@ export type PageMeta = typeof PageMeta.Type;
 
 export const PostMeta = Schema.Struct({
   ...PageMeta.fields,
-  date: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/)),
+  date: Schema.String.check(Schema.isPattern(/^\d{4}-\d{2}-\d{2}$/u)),
   author: atMost(80),
   tags: Schema.Array(Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(40))),
   excerpt: atMost(300),

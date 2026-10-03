@@ -8,7 +8,7 @@ import { PublishedSettings } from "./settings.ts";
 import { Redirects, SiteParts } from "./site.ts";
 
 /** The SHA-256 of a page object's canonical JSON, in lowercase hex. */
-export const ContentHash = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/)).pipe(
+export const ContentHash = Schema.String.check(Schema.isPattern(/^[a-f0-9]{64}$/u)).pipe(
   Schema.brand("ContentHash"),
 );
 export type ContentHash = typeof ContentHash.Type;
