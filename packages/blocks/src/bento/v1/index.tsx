@@ -54,7 +54,6 @@ export default defineBlock({
   variants: ["grid", "showcase"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { tiles: { title: "Tiles", accepts: ["bento-tile"] } },
-  interactive: false,
   agent: {
     purpose:
       "A showcase of four to seven things worth seeing, such as what a week holds, as tiles of different sizes and colors, each a short title with a picture or icon",

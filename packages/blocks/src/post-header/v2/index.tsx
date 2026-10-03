@@ -126,7 +126,6 @@ export default defineBlock({
   variants: ["simple", "centered", "cover", "split"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "The top of a blog post: its title, excerpt, date and author, and its cover photo in the cover and split layouts, all from the post's settings",

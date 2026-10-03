@@ -235,7 +235,6 @@ export default defineBlock({
   variants: ["agenda", "vertical", "horizontal"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Things in order: a day's schedule with times, speakers and rooms (agenda), or the days of a week, the stages of a process or a history (vertical or horizontal). An icon on an entry sets it apart as a break",

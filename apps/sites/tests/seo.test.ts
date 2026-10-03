@@ -7,6 +7,7 @@ import { defaultTheme, resolveTheme } from "@repo/tokens";
 import { Schema } from "effect";
 import { describe, expect, test } from "vitest";
 
+import { answerAt } from "../src/lib/addresses.ts";
 import { collectionFeed, pageMeta, redirectFor, sitemap } from "../src/lib/seo.ts";
 
 const origin = "https://www.northbanklibraries.org";
@@ -164,6 +165,39 @@ describe("redirects", () => {
     expect(redirectFor(manifest, "/whats-on/book-fair")).toBe("/events/book-fair");
     expect(redirectFor(manifest, "/whats-on/longer-hours")).toBeNull();
     expect(redirectFor(manifest, "/borrowing/book-fair")).toBeNull();
+  });
+});
+
+describe("what an address answers", () => {
+  test("a page's address shows it, and an old one goes where it redirects", () => {
+    expect(answerAt(manifest, "/borrow")).toMatchObject({
+      kind: "page",
+      entry: { id: "pg_borrow" },
+    });
+    expect(answerAt(manifest, "/borrowing")).toEqual({ kind: "redirect", to: "/borrow" });
+  });
+
+  test("a page taken down answers 410 unless a redirect covers it, and anything else 404", () => {
+    const later = { ...manifest, gone: ["/old-hours", "/whats-on"] };
+    expect(answerAt(later, "/old-hours")).toEqual({
+      kind: "missing",
+      status: 410,
+      unpublished: false,
+    });
+    expect(answerAt(later, "/whats-on")).toEqual({ kind: "redirect", to: "/events" });
+    expect(answerAt(later, "/nowhere")).toEqual({
+      kind: "missing",
+      status: 404,
+      unpublished: false,
+    });
+  });
+
+  test("a site that hasn't published yet has no page anywhere", () => {
+    expect(answerAt({ ...manifest, pages: [] }, "/")).toEqual({
+      kind: "missing",
+      status: 404,
+      unpublished: true,
+    });
   });
 });
 

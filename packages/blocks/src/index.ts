@@ -101,7 +101,8 @@ export {
   registeredVersions,
   removedBlockVersions,
   renderBlock,
-  renderPage,
+  interactiveParts,
+  PlacedBlock,
   renderTree,
   withNewBlockTypes,
 } from "./render.tsx";

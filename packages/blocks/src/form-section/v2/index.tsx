@@ -112,7 +112,6 @@ export default defineBlock({
   variants: ["split", "card", "inline"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Collect a registration, an enquiry or a sign-up with one of the site's forms. The inline layout suits a newsletter sign-up with an email field or two",

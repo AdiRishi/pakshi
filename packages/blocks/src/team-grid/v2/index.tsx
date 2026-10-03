@@ -84,7 +84,6 @@ export default defineBlock({
   variants: ["grid", "list", "overlay"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { people: { title: "People", accepts: ["team-member"] } },
-  interactive: false,
   agent: {
     purpose:
       "The people behind something, such as staff, mentors, speakers or a board, each with a photo, their role and perhaps a sentence about them",

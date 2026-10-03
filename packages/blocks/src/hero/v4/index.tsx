@@ -336,7 +336,6 @@ export default defineBlock({
   variants: ["stacked", "split", "cover", "editorial", "panel"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Opening of a page: what it is, in a heading and a sentence or two, with one main button and at most one more",

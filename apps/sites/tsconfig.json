@@ -3,8 +3,8 @@
   "compilerOptions": {
     "allowImportingTsExtensions": true,
     "noEmit": true,
-    "types": ["@cloudflare/workers-types"]
+    "types": ["vite/client", "@cloudflare/workers-types"]
   },
-  "include": [".astro/types.d.ts", "src"],
+  "include": ["src"],
   "exclude": ["dist"]
 }

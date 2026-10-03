@@ -161,7 +161,6 @@ export default defineBlock({
   variants: ["centered", "split", "panel"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "One person's own words, such as a student's or a parent's, given room on their own, with who said it and, if it helps, their photo or their organisation's logo",

@@ -113,7 +113,7 @@ The editor gives Studio:
 - The canvas is a same-origin iframe (`srcdoc`) that Studio's React tree renders into through a portal. Studio and the canvas share one store, one drag-and-drop manager and one connection, with no message protocol between them.
 - The iframe receives only the platform CSS, the site's theme CSS for the draft's pinned brand revision, and its fonts. Studio's styles never enter it.
 - It renders the header, the page and the footer with the components `sites` uses, from the same registry, at the draft's pinned block versions.
-- It shows the markup `sites` renders on the server. Interactive blocks don't run their island behaviour in the canvas, so a form doesn't submit and a carousel doesn't rotate.
+- It renders blocks with the same components as `sites`, live in Studio's React tree. An interactive block reads `useEditing` to hold still while it's edited, so a form doesn't submit and a carousel doesn't rotate.
 - Width presets (desktop, tablet, mobile) resize the iframe, so the page's own media queries apply. Light and dark fix the theme's color scheme in the frame, because a frame's `prefers-color-scheme` follows the operating system ([decision 036](/decision-log#decision-036)).
 - Keyboard shortcuts work whether focus is in the canvas or in Studio's panels.
 - The editor's menus and popovers render in Studio, positioned from the canvas, so they use Studio's styles.

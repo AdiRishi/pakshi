@@ -43,8 +43,6 @@ export type Placement =
       readonly placement: "section";
       readonly surfaces: readonly [Surface, ...Array<Surface>];
       readonly slots: Readonly<Record<string, SlotSpec>>;
-      /** Interactive blocks hydrate on the site, so they must be top-level sections. */
-      readonly interactive: boolean;
       /**
        * The kind of entry the section belongs on, such as a blog's posts, when
        * it shows the entry's own details; null when it goes on any page.
@@ -72,6 +70,12 @@ export type BlockContract = Placement & {
   readonly fields: Fields;
   readonly variants: ReadonlyArray<string>;
   readonly agent: { readonly purpose: string; readonly avoid?: ReadonlyArray<string> };
+  /**
+   * Whether the block runs in the visitor's browser. A site sends the code of
+   * an interactive block, and of any section holding one, and hydrates it
+   * when it scrolls into view; every other block stays server-rendered HTML.
+   */
+  readonly interactive: boolean;
   /**
    * Turns the previous version's props into this version's, so content can
    * move up any number of versions. It's told the variant the content had in

@@ -102,7 +102,6 @@ export default defineBlock({
   variants: ["grid", "split", "list"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { items: { title: "Features", accepts: ["feature-item"] } },
-  interactive: false,
   agent: {
     purpose:
       "Several parallel points, such as what's included or why to come, each with a short title, a sentence or two and an optional icon",

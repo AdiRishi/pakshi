@@ -95,7 +95,6 @@ export default defineBlock({
   variants: ["text", "wide", "full"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "One photo worth a section of its own, between other sections or in the middle of long writing, with a line on what it shows and who took it",

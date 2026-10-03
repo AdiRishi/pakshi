@@ -191,7 +191,6 @@ export default defineBlock({
   variants: ["standard", "bleed"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "One idea told beside a picture that shows it: a heading, a few sentences or a short list, and up to four short points. Several in a row tell a story, their pictures taking turns on each side",

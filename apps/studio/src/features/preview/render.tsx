@@ -1,4 +1,4 @@
-import { PreviewBar, renderPage, SitePage } from "@repo/blocks";
+import { loadBlocks, PreviewBar, SitePage } from "@repo/blocks";
 import type { BlockId } from "@repo/contracts/ids";
 import { mediaSegment, type SiteView } from "@repo/contracts/studio";
 import { themeCss } from "@repo/tokens";
@@ -66,7 +66,8 @@ export const siteDocument = async (
     preview: { changed: new Set(options.changed) },
   };
   const page = view.page;
-  const rendered = page === null ? null : await renderPage(page, view.parts, view.lockfile);
+  // Static markup can't wait for a block's code, so every version is loaded first.
+  await loadBlocks(view.lockfile);
   const title = page?.meta.title ?? "Page not found";
   const head = renderToStaticMarkup(
     <head>
@@ -87,7 +88,7 @@ export const siteDocument = async (
   );
   const bar = options.bar === null ? "" : renderToStaticMarkup(<PreviewBar {...options.bar} />);
   const body =
-    rendered === null
+    page === null
       ? renderToStaticMarkup(
           <main className="mx-auto flex min-h-screen max-w-xl flex-col justify-center gap-4 px-6">
             <h1 className="text-title">Page not found</h1>
@@ -98,12 +99,7 @@ export const siteDocument = async (
           </main>,
         )
       : renderToStaticMarkup(
-          <SitePage
-            site={data}
-            header={rendered.header}
-            sections={rendered.sections}
-            footer={rendered.footer}
-          />,
+          <SitePage site={data} page={page} parts={view.parts} lockfile={view.lockfile} />,
         );
   return new Response(
     `${doctype}<html lang="en">${head}<body>${bar}${linksTo(body, options.address)}</body></html>`,

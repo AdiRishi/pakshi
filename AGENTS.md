@@ -32,7 +32,7 @@ organization, then create brands and sites and invite people through Studio, as
 a real organization would. Tests do the same through Studio or the endpoints it
 calls, and never write to D1, KV or R2 directly. Under `pnpm dev`, emails such as
 invitations and password resets land in `infra/.alchemy/local/email/text/`, and a
-site answers at `{address}.localhost:1339`.
+site answers at `{address}.localhost:1338`.
 
 The agent calls Workers AI through the stage's AI Gateway even under
 `pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and

@@ -84,7 +84,6 @@ export default defineBlock({
   variants: ["grid", "overlay", "list", "tiles"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { cards: { title: "Cards", accepts: ["card"] } },
-  interactive: false,
   agent: {
     purpose:
       "Ways into other pages of the site, such as plan your visit, what's on or how to apply: each card a short title, a line of text and a picture or icon, and the whole card links on",

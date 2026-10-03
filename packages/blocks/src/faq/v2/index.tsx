@@ -151,7 +151,6 @@ export default defineBlock({
   variants: ["accordion", "split", "columns"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Questions visitors ask, each with a short, direct answer, and where to ask anything else. The accordion suits many questions; columns suit a few that everyone should read",

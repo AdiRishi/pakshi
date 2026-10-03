@@ -15,7 +15,8 @@ import {
   showcaseMediaSrc,
 } from "../src/fixtures.ts";
 import { presentationOf } from "../src/presentation.ts";
-import { latestLockfile, loadBlocks, renderPage, renderTree } from "../src/render.tsx";
+import { latestLockfile, loadBlocks, renderTree } from "../src/render.tsx";
+import { SitePage } from "../src/site-page.tsx";
 
 const newest = await loadBlocks(latestLockfile);
 const types = Array.from(newest.keys());
@@ -91,13 +92,14 @@ test("a section's showcase holds the section alone, between the sample header an
   const page = showcasePage(showcase);
   expect(page.root).toEqual([showcase.tree.id]);
   expect(page.blocks[showcase.tree.id]?.type).toBe("faq");
-  const rendered = await renderPage(page, showcase.draft.parts, showcase.draft.lockfile);
+  await loadBlocks(showcase.draft.lockfile);
   const markup = renderToStaticMarkup(
-    <SiteDataProvider value={showcase.data}>
-      {rendered.header}
-      {rendered.sections}
-      {rendered.footer}
-    </SiteDataProvider>,
+    <SitePage
+      site={showcase.data}
+      page={page}
+      parts={showcase.draft.parts}
+      lockfile={showcase.draft.lockfile}
+    />,
   );
   expect(markup).toContain("Questions from parents");
   expect(markup).toContain("Harbour Summer School");

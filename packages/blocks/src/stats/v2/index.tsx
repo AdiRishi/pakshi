@@ -167,7 +167,6 @@ export default defineBlock({
   variants: ["row", "cards", "split"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Two to six headline figures, such as how many took part or how many would come back, each with a short label and an optional line of detail",
