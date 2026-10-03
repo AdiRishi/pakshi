@@ -294,7 +294,6 @@ export default defineBlock({
   variants: ["cards", "list", "featured", "text"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "The newest posts of one of the site's blogs, with links to each. On the blog's own page it shows every post, a page at a time",

@@ -98,7 +98,6 @@ export default defineBlock({
   variants: ["start", "center"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "A position, mission or belief stated in two to four sentences set very large: a first sentence that lands, and the rest that explains it, optionally signed by the person who holds it",

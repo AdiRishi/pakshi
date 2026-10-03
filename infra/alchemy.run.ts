@@ -1,5 +1,3 @@
-import { join } from "node:path";
-
 import * as Alchemy from "alchemy";
 import * as Cloudflare from "alchemy/Cloudflare";
 import * as Effect from "effect/Effect";
@@ -12,7 +10,7 @@ export const Infrastructure = Effect.gen(function* () {
   // Alchemy loads the stack under this stage for commands that never deploy it.
   if (stack.stage === "placeholder") return {};
 
-  const sites = yield* Sites(join(import.meta.dirname, "../apps/sites"));
+  const sites = yield* Sites;
   const studio = yield* Studio(sites);
 
   return {

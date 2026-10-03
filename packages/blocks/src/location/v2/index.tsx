@@ -181,7 +181,6 @@ export default defineBlock({
   variants: ["split", "stacked"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Where a place is and how to visit it: its address, opening hours by day, how to get there, a map or photo from the media library, and a button for directions",

@@ -1,10 +1,10 @@
-import { renderPage, type SiteData, SitePage } from "@repo/blocks";
+import { SitePage } from "@repo/blocks";
 import type { SiteId } from "@repo/contracts/ids";
 import type { SiteOverview } from "@repo/contracts/studio";
 import { ScaledSiteFrame } from "@repo/editor";
 import { Skeleton } from "@repo/ui/components/skeleton";
 import { cn } from "cn";
-import { Suspense, use, useMemo } from "react";
+import { Suspense, useMemo } from "react";
 
 import { BrowserFrame } from "@/components/browser-frame";
 import { siteMediaSrc } from "@/features/media/addresses";
@@ -16,19 +16,6 @@ type Home = NonNullable<SiteOverview["home"]>;
 
 /** The width the page lays out at, a desktop's, before it's scaled down. */
 const pageWidth = 1280;
-
-/** Each live home page's blocks, rendered once however often the thumbnail renders. */
-const renders = new WeakMap<Home, ReturnType<typeof renderPage>>();
-
-const renderHome = (home: Home) => {
-  const rendered = renders.get(home) ?? renderPage(home.page, home.parts, home.lockfile);
-  renders.set(home, rendered);
-  return rendered;
-};
-
-function HomePage(props: { readonly home: Home; readonly data: SiteData }) {
-  return <SitePage site={props.data} {...use(renderHome(props.home))} />;
-}
 
 /**
  * The top of the live home page, as visitors see it on a desktop, in a small
@@ -59,7 +46,12 @@ export function LiveThumbnail(props: {
           maxHeight={(pageWidth * 9) / 16}
         >
           <Suspense>
-            <HomePage home={props.home} data={data} />
+            <SitePage
+              site={data}
+              page={props.home.page}
+              parts={props.home.parts}
+              lockfile={props.home.lockfile}
+            />
           </Suspense>
         </ScaledSiteFrame>
       </div>

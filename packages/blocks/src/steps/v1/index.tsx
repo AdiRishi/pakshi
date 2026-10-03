@@ -189,7 +189,6 @@ export default defineBlock({
   variants: ["row", "list", "cards"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "How something works or how to take part, as two to six numbered steps in order, such as applying, booking or what happens on the day, each a short title and a sentence or two",

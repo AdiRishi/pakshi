@@ -207,13 +207,16 @@ const surfaceDeclarations = (colors: SurfaceColors, cards: ResolvedTheme["cards"
 /**
  * The selector of the elements a surface re-scopes, inside `root` unless
  * that's the page: those set to it, and a header overlaid on a first section
- * set to it, so the header reads on whatever it sits over.
+ * set to it, so the header reads on whatever it sits over. On a site the
+ * header and each section sit in a hydration marker of their own.
  */
 const surfaceSelector = (root: string, surface: string) => {
   const scope = root === ":root" ? "" : `${root} `;
+  const marker = "[data-ts-hydrate-id]";
   return [
     `${scope}[data-surface="${surface}"]`,
     `${scope}:has(+ main > [data-surface="${surface}"]:first-child) > [data-overlay]`,
+    `${scope}${marker}:has(+ main > ${marker}:first-child > [data-surface="${surface}"]) > * > [data-overlay]`,
   ].join(", ");
 };
 

@@ -157,7 +157,6 @@ export default defineBlock({
   variants: ["centered", "split", "panel", "image"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "The closing ask of a page or part of one: one next step, such as registering or signing up, as a button or two or an email sign-up form",

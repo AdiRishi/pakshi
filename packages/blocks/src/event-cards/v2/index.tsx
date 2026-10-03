@@ -61,7 +61,6 @@ export default defineBlock({
   variants: ["grid", "list"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { events: { title: "Events", accepts: ["event-card"] } },
-  interactive: false,
   agent: {
     purpose:
       "Upcoming events or exhibitions, each with its date, time and place, what it is and a sentence about it. The list suits many events or ones without pictures",

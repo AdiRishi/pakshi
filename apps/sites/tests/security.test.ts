@@ -1,14 +1,24 @@
 import { describe, expect, test } from "vitest";
 
-import { plainPagePolicy, secured, styleHash } from "../src/lib/security.ts";
+import { inlineHash, pagePolicy, plainPagePolicy, secured } from "../src/lib/security.ts";
 
 describe("what a site's responses let the browser load", () => {
-  test("an inline stylesheet is named by the SHA-256 of its text", async () => {
+  test("an inline script or stylesheet is named by the SHA-256 of its text", async () => {
     // The SHA-256 of the empty string, as base64.
-    expect(await styleHash("")).toBe("sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=");
+    expect(await inlineHash("")).toBe("sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU=");
   });
 
-  test("a page written without Astro may apply only its own stylesheet", async () => {
+  test("a page may run its own scripts and exactly the inline scripts it holds", async () => {
+    const policy = await pagePolicy(
+      '<head><script type="module" src="/assets/main.js"></script><script>self.$x=1</script></head><body><script class="$tsr">self.$x=1</script><script></script></body>',
+    );
+    const scripts = policy.split("; ").find((directive) => directive.startsWith("script-src"));
+    expect(scripts).toBe(
+      `script-src 'self' '${await inlineHash("self.$x=1")}' '${await inlineHash("")}'`,
+    );
+  });
+
+  test("a small page with no scripts may apply only its own stylesheet", async () => {
     expect(await plainPagePolicy("")).toBe(
       "default-src 'none'; style-src 'sha256-47DEQpj8HBSa+/TImW+5JCeuQeRkm5NMpJWZG3hSuFU='; form-action 'self'; base-uri 'none'; frame-ancestors 'none'",
     );

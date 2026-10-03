@@ -75,7 +75,6 @@ export default defineBlock({
   variants: ["cards", "rows"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { plans: { title: "Plans", accepts: ["pricing-plan"] } },
-  interactive: false,
   agent: {
     purpose:
       "Prices to choose between: ticket types, membership tiers or plans, each with what it includes and a button. Cards suit two to four plans compared side by side, rows suit ticket types with a sentence each",

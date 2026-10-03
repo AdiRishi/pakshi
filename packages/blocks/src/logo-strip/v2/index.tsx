@@ -191,7 +191,6 @@ export default defineBlock({
   variants: ["row", "grid", "marquee", "split"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Logos of partners, sponsors or funders, under a short caption such as Supported by. Each logo's alt text is the organisation's name",

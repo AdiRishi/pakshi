@@ -190,7 +190,6 @@ export default defineBlock({
   variants: ["columns", "split", "cards"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "How to reach the organisation: its email, phone number, postal address and opening hours, with a button such as one to a contact form",

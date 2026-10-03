@@ -6,11 +6,11 @@ import { type ColorScheme, defaultTheme, resolveTheme, themeCss } from "@repo/to
 import { type ReactElement, StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 
+import { SiteDataProvider } from "../src/components.tsx";
 import { blockFixtures, fixtureSite, fixtureTree } from "../src/fixtures.ts";
 import { latestLockfile, loadBlocks, renderTree } from "../src/render.tsx";
 import { sampleMedia } from "../src/sample-media.ts";
 import { siteData } from "../src/site-data.ts";
-import { SitePage } from "../src/site-page.tsx";
 import { labMedia } from "./media.ts";
 import { type Scene, type SceneBlock, scenes } from "./scenes/index.ts";
 import { themes } from "./scenes/themes.ts";
@@ -65,12 +65,11 @@ const theme = params.has("scheme") ? { ...preset, colorMode: "system" as const }
 const Page = ({ scene }: { readonly scene: Scene }) => (
   <>
     <style>{themeCss(resolveTheme(theme).theme, scheme)}</style>
-    <SitePage
-      site={data(scene)}
-      header={render(tree(scene.header))}
-      sections={scene.sections.map((section) => render(tree(section)))}
-      footer={render(tree(scene.footer))}
-    />
+    <SiteDataProvider value={data(scene)}>
+      {render(tree(scene.header))}
+      <main>{scene.sections.map((section) => render(tree(section)))}</main>
+      {render(tree(scene.footer))}
+    </SiteDataProvider>
   </>
 );
 
@@ -84,26 +83,25 @@ const Fixtures = ({ only }: { readonly only: string | null }) => {
   return (
     <>
       <style>{themeCss(resolveTheme(defaultTheme).theme, scheme)}</style>
-      <SitePage
-        site={site}
-        header={<></>}
-        footer={<></>}
-        sections={entries.map((entry) => (
-          <div key={`${entry.type}${entry.name}`} data-fixture={`${entry.type}-${entry.name}`}>
-            <p
-              style={{
-                font: "12px monospace",
-                padding: "4px 8px",
-                background: "#ff0",
-                color: "#000",
-              }}
-            >
-              {entry.type}@{entry.version} {entry.name}
-            </p>
-            {render(fixtureTree(entry))}
-          </div>
-        ))}
-      />
+      <SiteDataProvider value={site}>
+        <main>
+          {entries.map((entry) => (
+            <div key={`${entry.type}${entry.name}`} data-fixture={`${entry.type}-${entry.name}`}>
+              <p
+                style={{
+                  font: "12px monospace",
+                  padding: "4px 8px",
+                  background: "#ff0",
+                  color: "#000",
+                }}
+              >
+                {entry.type}@{entry.version} {entry.name}
+              </p>
+              {render(fixtureTree(entry))}
+            </div>
+          ))}
+        </main>
+      </SiteDataProvider>
     </>
   );
 };

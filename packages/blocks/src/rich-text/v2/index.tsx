@@ -110,7 +110,6 @@ export default defineBlock({
   variants: ["article", "sidebar"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: false,
   agent: {
     purpose:
       "Long-form writing set for reading: paragraphs with subheadings and lists, such as an article, a policy or the story behind something",

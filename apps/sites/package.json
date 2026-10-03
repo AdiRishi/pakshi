@@ -5,30 +5,32 @@
   "type": "module",
   "scripts": {
     "dev": "pnpm --dir ../.. dev",
-    "typecheck": "astro sync && tsc --noEmit && tsc --noEmit -p tests",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tests",
     "test": "vitest run"
   },
   "dependencies": {
-    "@astrojs/react": "catalog:",
     "@repo/blocks": "workspace:*",
     "@repo/contracts": "workspace:*",
     "@repo/tokens": "workspace:*",
     "@tailwindcss/vite": "catalog:",
-    "astro": "catalog:",
+    "@tanstack/react-router": "catalog:",
+    "@tanstack/react-start": "catalog:",
     "effect": "catalog:",
     "react": "catalog:",
     "react-dom": "catalog:",
     "tailwindcss": "catalog:"
   },
   "devDependencies": {
-    "@alchemy.run/frontend-frameworks": "catalog:",
     "@cloudflare/workers-types": "catalog:",
     "@repo/infra": "workspace:*",
     "@repo/tsconfig": "workspace:*",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

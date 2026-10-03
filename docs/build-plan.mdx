@@ -12,7 +12,7 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - **Build the checkpoints in order.** Each one starts from the finished state of the one before it.
 - **The spec and the design are the source of truth.** A checkpoint lists what to build and links to the sections that define it; it doesn't restate them. If building something shows the design is wrong, change the design doc and record the decision in the [decision log](/decision-log).
 - **A checkpoint is done when its checks pass.** Each check is a test, automated wherever possible, and every earlier checkpoint's tests keep passing.
-- **Every checkpoint is built and checked in the dev stack.** Each ends in a demo someone can run locally with `pnpm dev`. Nothing before the [last checkpoint](#12-production) deploys to production; checks that need Cloudflare's network, such as custom hostnames or KV propagation, wait for it.
+- **Every checkpoint is built and checked in the dev stack.** Each ends in a demo someone can run locally with `pnpm dev`. Nothing before the [last checkpoint](#13-production) deploys to production; checks that need Cloudflare's network, such as custom hostnames or KV propagation, wait for it.
 - **Demos and integration journeys act as real people.** They start from an empty stack, set up the organization, create brands and sites, and invite the people they need, through Studio. Unit and E2E tests set up whatever data they need ([kinds of tests](/adr/three-kinds-of-tests)).
 - **The riskiest work comes first.** Checkpoints 1 to 5 prove the [unproven assumptions](/technical-design#unproven-assumptions) before much depends on them.
 - **Studio screens follow the [Studio designs](https://claude.ai/artifact/Soz1iX7Fw3M1KnotJgL5QU)**, built as each checkpoint needs them.
@@ -31,7 +31,8 @@ This plan builds the product described in the [product spec](/product-spec) and 
 - [x] [9. Real accounts and setup](#9-real-accounts-and-setup)
 - [x] [10. Site essentials](#10-site-essentials)
 - [x] [11. Ready for real sites](#11-ready-for-real-sites)
-- [ ] [12. Production](#12-production)
+- [ ] [12. React on sites](#12-react-on-sites)
+- [ ] [13. Production](#13-production)
 
 ## 1. Skeleton
 
@@ -151,7 +152,7 @@ Named drafts that publish, roll back, and merge like branches. Every workflow ha
 - The reconcile job restores a KV entry that was changed by hand.
 - A draft edited after it was submitted stays open after publishing, and keeps only its later edits.
 
-The checks that a publish and a rollback are live on a production platform subdomain within 60 seconds, and that no cached page links to CSS or JavaScript a `sites` deploy removed, moved to [checkpoint 12](#12-production), which deploys production ([decision 052](/decision-log#decision-052)).
+The checks that a publish and a rollback are live on a production platform subdomain within 60 seconds, and that no cached page links to CSS or JavaScript a `sites` deploy removed, moved to [checkpoint 13](#13-production), which deploys production ([decision 052](/decision-log#decision-052)).
 
 **Proves:** the three-way merge.
 
@@ -226,7 +227,7 @@ Brands own their look, and blocks improve without surprising live sites.
 - An upgrade from v1 to v3 migrates content through both steps.
 - CI rejects an edit to a released block's folder.
 
-The check that `sites` startup stays well under 1 second with several versions of a block live moved to [checkpoint 12](#12-production), because Cloudflare reports startup time only for uploaded code ([decision 070](/decision-log#decision-070)).
+The check that `sites` startup stays well under 1 second with several versions of a block live moved to [checkpoint 13](#13-production), because Cloudflare reports startup time only for uploaded code ([decision 070](/decision-log#decision-070)).
 
 **Proves:** block versions at runtime.
 
@@ -236,7 +237,7 @@ Pakshi starts empty, and people set it up the way a real organization would: no 
 
 **Build:**
 
-- [Staff sign-in](/technical-design#security-and-access) with email and password through Better Auth, with password reset by email. The test identity provider, its users and the OIDC wiring go; signing in through the organization's identity provider returns in [checkpoint 12](#12-production).
+- [Staff sign-in](/technical-design#security-and-access) with email and password through Better Auth, with password reset by email. The test identity provider, its users and the OIDC wiring go; signing in through the organization's identity provider returns in [checkpoint 13](#13-production).
 - [Setting up the organization](/product-spec#roles-and-permissions): on an empty stack, the first person to open Studio names the organization and creates their account, and becomes its org admin. After that, nobody signs up without an invitation.
 - Invitations: someone who may manage members invites a person by email with a default role on the organization, a brand or a site. The invitation is emailed, its link can be copied, and opening it creates the person's account with that grant, or adds the grant to their account. A person can't invite with a role holding permissions they don't hold there.
 - [Creating brands and sites](/product-spec#sites-and-brands): org admins create brands from a name and a brand color, on the default theme, and org and brand admins create sites in them. A new site gets its platform subdomain at once, starts from a release with its brand's newest revision, a header, a footer and no pages, and opens in its first draft.
@@ -302,7 +303,28 @@ Alerts and the security review moved out of this checkpoint: Workers Logs and tr
 - axe finds no WCAG 2.2 AA violations on the screens this checkpoint adds.
 - Every success metric is being recorded.
 
-## 12. Production
+## 12. React on sites
+
+Blocks are React components that run in the visitor's browser where they need to, built on shadcn/ui, Magic UI and TanStack Form as those libraries intend.
+
+**Build:**
+
+- Block tests by behaviour instead of screenshots, and no frozen versions until production ([decision 099](/decision-log#decision-099)).
+- `sites` on TanStack Start, with interactive blocks hydrating in place and pages with none loading no JavaScript ([decision 100](/decision-log#decision-100)).
+- The block kit and every block rebuilt on shadcn/ui and Magic UI components, with motion that follows the theme's motion setting and the visitor's, replacing the CSS-only menus, disclosures and marquees. The new versions replace the old ones outright, with no migrations.
+- The form block on TanStack Form, checking answers as the visitor types against the same rules sites-api applies, and still sending as a plain HTML form before it hydrates.
+- Previews that hydrate interactive blocks as `sites` does, and a canvas whose interactive blocks hold still while they're edited.
+
+**Demo:** build a page in Studio from the rebuilt blocks, publish it, and use its menu, FAQ, gallery and form on the live site.
+
+**Done when:**
+
+- A page with no interactive block loads no JavaScript, and one with an interactive block hydrates only the parts that hold one.
+- Browser tests drive each interactive block by mouse and keyboard, and axe finds no violations on any block's sample.
+- A form shows a visitor's mistakes before it sends, and a form sent before the page hydrates still arrives.
+- Every page of a site sends a content security policy that blocks nothing the page needs.
+
+## 13. Production
 
 Deploy Pakshi to Cloudflare and run real sites on it.
 
@@ -320,6 +342,7 @@ Deploy Pakshi to Cloudflare and run real sites on it.
 
 - A custom hostname serves over HTTPS.
 - A publish and a rollback are each live on a platform subdomain within 60 seconds.
+- Released block versions are guarded again, starting with golden props schemas ([decision 099](/decision-log#decision-099)).
 - With several versions of a block live, the `sites` Worker's startup time Cloudflare reports is well under 1 second.
 - After a `sites` deploy, no cached page links to CSS or JavaScript the deploy removed.
 - Every page of a deployed site sends its content security policy, and the browser blocks nothing the page needs.

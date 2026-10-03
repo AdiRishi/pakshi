@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 100 | Sites render with TanStack Start, and only the blocks that run hydrate             | 2026-10-03 | Accepted            |
 | 099 | Blocks are tested by their behaviour, and stop being frozen until production       | 2026-10-03 | Accepted            |
 | 098 | An overlaid header takes the surface of the section under it                       | 2026-10-03 | Accepted            |
 | 097 | The editor canvas opens every disclosure                                           | 2026-10-03 | Accepted            |
@@ -24,7 +25,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 087 | Brands store every theme value, with no presets                                    | 2026-10-02 | Accepted            |
 | 086 | Block requests are kept in Pakshi, not filed in an outside tracker                 | 2026-10-01 | Accepted            |
 | 085 | Alerts and the security review move out of checkpoint 11                           | 2026-10-01 | Accepted            |
-| 084 | Sites use Astro's content security policy, sent by built sites only                | 2026-10-01 | Accepted            |
+| 084 | Sites use Astro's content security policy, sent by built sites only                | 2026-10-01 | Superseded by 100   |
 | 083 | Success metrics are worked out from what Pakshi records anyway                     | 2026-10-01 | Accepted            |
 | 082 | The audit log is written by whatever makes each change                             | 2026-10-01 | Accepted            |
 | 081 | Custom roles are rows in D1, held to the delegation rule                           | 2026-10-01 | Accepted            |
@@ -74,14 +75,14 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 037 | A placeholder is a block's own starting content, found by its value                | 2026-09-29 | Accepted            |
 | 036 | The canvas fixes the theme's color scheme instead of following the system          | 2026-09-29 | Accepted            |
 | 035 | Tailwind's spacing scale counts as a theme token in blocks                         | 2026-09-29 | Accepted            |
-| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Accepted            |
+| 034 | Islands and media upload wait for the checkpoints that need them                   | 2026-09-29 | Superseded by 100   |
 | 033 | A draft's history is its batch log until something reads more                      | 2026-09-29 | Amended by 042      |
 | 032 | The editor sends batches over RPC until live co-editing                            | 2026-09-29 | Superseded by 043   |
 | 031 | Ops name their page, and cover variants, surfaces and addresses                    | 2026-09-29 | Accepted            |
 | 030 | Alt text belongs to where an image is placed                                       | 2026-09-29 | Accepted            |
 | 029 | Studio calls studio-api through an Effect RPC contract                             | 2026-09-29 | Accepted            |
 | 028 | Two stacks, dev and prod, and destroying one deletes everything                    | 2026-09-29 | Amended by 071      |
-| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Accepted            |
+| 027 | Serve sites through Alchemy's Astro adapter, with lookup and cache in middleware   | 2026-09-29 | Superseded by 100   |
 | 026 | Drafts may be incomplete; completeness is checked at submission                    | 2026-09-29 | Accepted            |
 | 025 | Build our own visual editor on the page document, instead of Puck                  | 2026-09-29 | Accepted            |
 | 024 | The site's Durable Object owns approvals and publishing                            | 2026-09-29 | Amended by 057      |
@@ -108,6 +109,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 100 — Sites render with TanStack Start, and only the blocks that run hydrate [#decision-100]
+
+**Context.** Blocks are React components, but `sites` rendered them with Astro and sent no scripts, so a block could only do what HTML and CSS do on their own. Menus, disclosures, the marquee and section entrances were rebuilt in CSS, and no block could use shadcn/ui's or Magic UI's interactive components, motion or TanStack Form. Astro hydrates only a component an `.astro` file imports, so interactive blocks would have had to be top-level sections listed in a generated island map. Studio already runs on TanStack Start.
+
+**Decision.** `sites` is a TanStack Start app, like Studio. Its server entry looks up the host's site, serves media, robots.txt, the sitemap and feeds, takes form posts, and serves pages from the Workers cache before TanStack Start renders; the site travels to the page's server function as request context. A block version says whether it's `interactive`. Each of the page's header, sections and footer renders inside TanStack Start's `Hydrate`: one that holds an interactive block hydrates once it scrolls into view, and loads only its own block versions' code, while the rest stay the server's HTML and never load theirs. A page with no interactive block leaves out TanStack Start's scripts, so it loads no JavaScript at all. A page's content security policy names each inline script it was rendered with by its hash, so a cached page keeps a policy that matches it, and allows inline styles, since animated components render their first frame as style attributes.
+
+**Rejected.** Astro islands, for the reasons above. A Vite app with React Server Components, whose TanStack Start support is still early. Hydrating every page whole, which sends every block's code to every visitor. A nonce per response, which a cached page would repeat.
+
+**Consequences.** `Hydrate` wraps each part in a `div`, which site CSS shows as `display: contents` and looks through where it places sections by their neighbours; the editor canvas renders no wrapper, so those rules match both. Interactive blocks can sit anywhere, items included. A page with an interactive block loads React and the router. Previews and the canvas still show server markup until they hydrate too.
 
 ## 099 — Blocks are tested by their behaviour, and stop being frozen until production [#decision-099]
 
@@ -259,6 +270,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Consequences.** The page policy can only be seen in a deployed site, which checkpoint 12 checks.
 
+**Superseded** by [decision 100](#decision-100): pages run scripts, and their policy names each inline script by its hash.
+
 ## 083 — Success metrics are worked out from what Pakshi records anyway [#decision-083]
 
 **Context.** Every success metric must be recorded, and the Pakshi team needs somewhere to read them.
@@ -307,7 +320,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Context.** The Studio designs show a default description among the General settings and a choice of sender on Forms and email.
 
-**Decision.** Neither is built. Every page needs its own description before it publishes, so a default would never be shown. Choosing a sender needs a sender domain on Cloudflare DNS, which comes with [checkpoint 12](/build-plan#12-production); until then every email comes from the stage's shared sender.
+**Decision.** Neither is built. Every page needs its own description before it publishes, so a default would never be shown. Choosing a sender needs a sender domain on Cloudflare DNS, which comes with [checkpoint 13](/build-plan#13-production); until then every email comes from the stage's shared sender.
 
 **Consequences.** Adding either later is a field in the settings registry ([decision 072](#decision-072)).
 
@@ -709,6 +722,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 **Consequences.** Nothing hydrates on sites yet. The first interactive block builds the island map, and a lightbox arrives as a new gallery version.
 
+**Superseded** by [decision 100](#decision-100): interactive blocks hydrate wherever they sit, with no island map.
+
 ## 033 — A draft's history is its batch log until something reads more [#decision-033]
 
 **Context.** The technical design records one revision per editing session or agent turn, with a full checkpoint every so often. Nothing reads them before the audit log, restore and agent-turn undo, and SiteDoc needs a record of committed batches anyway, to apply a batch sent twice only once.
@@ -770,6 +785,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 **Rejected.** Building with the upstream adapter and deploying the output as a plain Worker, which gives up Alchemy's local emulation and build memoization for `sites`; a separate front Worker for caching, which adds a fifth Worker; Cloudflare's newer Workers Caching and Astro 7's route cache built on it, whose cache key leaves out the hostname, so one Worker serving many sites would need a gateway Worker to tell them apart, and Alchemy's adapter turns Astro's cache provider off.
 
 **Consequences.** `sites` has no Worker entry of its own, so anything that must run before Astro goes in middleware. The Cache API does nothing on `workers.dev` hostnames, so deployed pages are cached only once `sites` serves a custom domain; the dev stack emulates the cache locally. The key starts with the site, and only GET and HEAD requests use the cache.
+
+**Superseded** by [decision 100](#decision-100): the lookup, media and cache run in TanStack Start's server entry, with the same cache key.
 
 ## 026 — Drafts may be incomplete; completeness is checked at submission [#decision-026]
 

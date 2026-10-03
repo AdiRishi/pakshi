@@ -3,7 +3,7 @@ import type { BlockTree } from "@repo/contracts/ops";
 import type { BlockInstance, PageDocument } from "@repo/contracts/page";
 import type { SiteParts } from "@repo/contracts/site";
 import type { Lockfile } from "@repo/contracts/snapshot";
-import { Fragment } from "react";
+import { Fragment, use } from "react";
 
 import type { BlockDefinition } from "./block.tsx";
 import { blockKey } from "./contract.ts";
@@ -41,13 +41,29 @@ export const removedBlockVersions = (lockfile: Lockfile) =>
     .map(([type, version]) => blockKey(type, version))
     .filter((key) => !(key in registry));
 
-/** Loads the version of a block type that a lockfile pins. */
-export const loadBlock = async (type: BlockType, lockfile: Lockfile) => {
+/** Every block version loading or loaded in this process, by its registry key. */
+const loading = new Map<string, Promise<BlockDefinition>>();
+const loaded = new Map<string, BlockDefinition>();
+
+const pinnedKey = (type: BlockType, lockfile: Lockfile) => {
   const version = lockfile[type];
   if (version === undefined) throw new Error(`The lockfile pins no version of ${type}.`);
-  const load = registry[blockKey(type, version)];
-  if (load === undefined) throw new Error(`${blockKey(type, version)} is not in the registry.`);
-  return (await load()).default;
+  return blockKey(type, version);
+};
+
+/** Loads the version of a block type that a lockfile pins. */
+export const loadBlock = (type: BlockType, lockfile: Lockfile) => {
+  const key = pinnedKey(type, lockfile);
+  const known = loading.get(key);
+  if (known !== undefined) return known;
+  const load = registry[key];
+  if (load === undefined) throw new Error(`${key} is not in the registry.`);
+  const started = load().then((module) => {
+    loaded.set(key, module.default);
+    return module.default;
+  });
+  loading.set(key, started);
+  return started;
 };
 
 /** Loads every block version a lockfile pins, keyed by block type. */
@@ -137,12 +153,54 @@ export const flattenTree = (tree: BlockTree): ReadonlyArray<readonly [BlockId, B
 export const renderTree = (definitions: ReadonlyMap<BlockType, BlockDefinition>, tree: BlockTree) =>
   renderBlock(definitions, Object.fromEntries(flattenTree(tree)), tree.id);
 
-/** Renders a page with the site's header and footer, at the lockfile's block versions. */
-export const renderPage = async (page: PageDocument, parts: SiteParts, lockfile: Lockfile) => {
+/** The types of a placed block and of every item in its slots. */
+const typesUnder = (
+  blocks: Readonly<Record<BlockId, BlockInstance>>,
+  id: BlockId,
+): ReadonlyArray<BlockType> => {
+  const instance = blocks[id];
+  if (instance === undefined) return [];
+  return [
+    instance.type,
+    ...Object.values(instance.slots ?? {}).flatMap((items) =>
+      items.flatMap((item) => typesUnder(blocks, item)),
+    ),
+  ];
+};
+
+/**
+ * One placed block with its items, rendered once the versions it needs have
+ * loaded. Where they already have, as on a server that awaited
+ * `loadBlocks`, it renders without suspending.
+ */
+export const PlacedBlock = (props: {
+  readonly blocks: Readonly<Record<BlockId, BlockInstance>>;
+  readonly id: BlockId;
+  readonly lockfile: Lockfile;
+}) => {
+  const definitions = new Map<BlockType, BlockDefinition>();
+  for (const type of new Set(typesUnder(props.blocks, props.id)))
+    definitions.set(
+      type,
+      loaded.get(pinnedKey(type, props.lockfile)) ?? use(loadBlock(type, props.lockfile)),
+    );
+  return renderBlock(definitions, props.blocks, props.id);
+};
+
+/**
+ * The page's header, sections and footer that run in the visitor's browser:
+ * each interactive block, and each holding an interactive item.
+ */
+export const interactiveParts = async (
+  page: PageDocument,
+  parts: SiteParts,
+  lockfile: Lockfile,
+): Promise<ReadonlyArray<BlockId>> => {
   const definitions = await loadBlocks(lockfile);
-  return {
-    header: renderBlock(definitions, parts.blocks, parts.header),
-    sections: page.root.map((id) => renderBlock(definitions, page.blocks, id)),
-    footer: renderBlock(definitions, parts.blocks, parts.footer),
-  };
+  const runs = (blocks: Readonly<Record<BlockId, BlockInstance>>, id: BlockId) =>
+    typesUnder(blocks, id).some((type) => definitions.get(type)?.interactive === true);
+  return [
+    ...[parts.header, parts.footer].filter((id) => runs(parts.blocks, id)),
+    ...page.root.filter((id) => runs(page.blocks, id)),
+  ];
 };
