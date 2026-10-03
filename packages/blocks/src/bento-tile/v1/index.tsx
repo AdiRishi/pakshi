@@ -1,7 +1,7 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Cta, Media, Root, Text } from "../../components.tsx";
+import { Cta, Media, Root, Text, useMotion } from "../../components.tsx";
 import { choice, cta, icon, media, optional, text } from "../../fields.ts";
 import { buttonClass } from "../../kit/button.ts";
 import { Icon } from "../../kit/icon.tsx";
@@ -32,32 +32,51 @@ const spans = {
   large: "md:col-span-2 md:row-span-2",
 } as const satisfies Record<Tile["size"], string>;
 
-const IconChip = ({ tile, className }: { readonly tile: Tile; readonly className?: string }) =>
-  tile.icon === undefined ? null : (
-    <span
-      className={cx(
-        "inline-flex size-10 shrink-0 items-center justify-center self-start rounded-lg bg-primary/10 text-primary",
-        className,
-      )}
-    >
-      <Icon name={tile.icon} className="size-5" />
-    </span>
-  );
+const sizes = {
+  small: "(min-width: 64rem) 24rem, (min-width: 48rem) 50vw, 100vw",
+  wide: "(min-width: 64rem) 48rem, 100vw",
+  tall: "(min-width: 64rem) 24rem, (min-width: 48rem) 50vw, 100vw",
+  large: "(min-width: 64rem) 48rem, 100vw",
+} as const satisfies Record<Tile["size"], string>;
 
-/** The tile's words, under its icon unless the tile shows the icon on its own. */
+/*
+ * As in Magic UI's bento grid, a tile whose words sit at its foot lifts them
+ * on hover or focus to show its link underneath, on screens wide enough to
+ * point with. The link opens up rather than moving into place, as a moved or
+ * positioned link would keep its stretched area to itself rather than the
+ * whole tile. Without the theme's motion, for visitors who ask for less, on
+ * a narrower screen, or with the words at the top, the link always shows.
+ */
+const lifting = cx(
+  "lg:motion-safe:mt-0 lg:motion-safe:max-h-0 lg:motion-safe:opacity-0",
+  "lg:motion-safe:transition-[max-height,margin,opacity] lg:motion-safe:duration-300 lg:motion-safe:ease-out",
+  "lg:motion-safe:group-focus-within:mt-2 lg:motion-safe:group-focus-within:max-h-8 lg:motion-safe:group-focus-within:opacity-100",
+  "lg:motion-safe:group-hover:mt-2 lg:motion-safe:group-hover:max-h-8 lg:motion-safe:group-hover:opacity-100",
+);
+
+/** The tile's words: its icon, a short label, the title, a sentence and its link. */
 const Words = ({
   tile,
-  withIcon,
+  lifts,
   className,
 }: {
   readonly tile: Tile;
-  readonly withIcon: boolean;
+  readonly lifts: boolean;
   readonly className?: string;
 }) => (
-  <div className={cx("flex flex-col gap-3 p-6 md:p-8", className)}>
-    {withIcon && <IconChip tile={tile} className="mb-2" />}
+  <div className={cx("flex flex-col gap-2 p-6 md:p-8", className)}>
+    {tile.icon && (
+      <Icon
+        name={tile.icon}
+        className={cx(
+          "mb-3 size-10 origin-left text-primary",
+          tile.link &&
+            "transition-transform duration-300 ease-out motion-safe:group-hover:scale-75",
+        )}
+      />
+    )}
     {tile.kicker && (
-      <Text field="kicker" as="p" value={tile.kicker} className="kicker text-primary" />
+      <Text field="kicker" as="p" value={tile.kicker} className="kicker mb-1 text-primary" />
     )}
     <Text
       field="title"
@@ -80,51 +99,56 @@ const Words = ({
         className={buttonClass({
           variant: "link",
           size: "sm",
-          className: "mt-1 self-start before:absolute before:inset-0",
+          className: cx(
+            "mt-2 self-start before:absolute before:inset-0 before:z-10",
+            lifts && lifting,
+          ),
         })}
       />
     )}
   </div>
 );
 
-const sizes = {
-  small: "(min-width: 64rem) 24rem, (min-width: 48rem) 50vw, 100vw",
-  wide: "(min-width: 64rem) 48rem, 100vw",
-  tall: "(min-width: 64rem) 24rem, (min-width: 48rem) 50vw, 100vw",
-  large: "(min-width: 64rem) 48rem, 100vw",
-} as const satisfies Record<Tile["size"], string>;
-
 /**
- * A tile of a bento grid: a card in a color of its own, with a title, a
- * sentence and an icon or image. The image sits under the words, running off
- * the card's bottom edge; above them; or behind them, faded into the card's
- * color where the words sit.
+ * A tile of a bento grid, after Magic UI's bento card: a card in a color of
+ * its own, with a title, a sentence and an icon or image. The image fills
+ * the top and fades into the words below it; sits behind them, faded into
+ * the card's color where they are; or runs off the card's bottom edge under
+ * them. A tile with a link opens it from anywhere on the tile, and answers
+ * the pointer.
  */
 const BentoTile = ({ props: tile }: BlockComponentProps<typeof props, "default">) => {
+  const moving = useMotion();
   const surface = tile.tone === "default" ? undefined : tile.tone;
   const image = tile.image;
+  const linked = tile.link !== undefined;
+  const lifts = linked && moving && (image === undefined || tile.media !== "bottom");
   return (
     <Root as="li" className={cx("flex", spans[tile.size])}>
       <div
         data-surface={surface}
-        className="card relative isolate flex min-h-44 w-full flex-col overflow-hidden md:min-h-72"
+        className={cx(
+          "group card relative isolate flex min-h-52 w-full flex-col overflow-hidden md:min-h-72",
+          image === undefined && "decor-dots",
+        )}
       >
         {image === undefined ? (
-          <>
-            <IconChip tile={tile} className="mx-6 mt-6 md:mx-8 md:mt-8" />
-            <Words tile={tile} withIcon={false} className="mt-auto" />
-          </>
+          <Words tile={tile} lifts={lifts} className="mt-auto" />
         ) : tile.media === "top" ? (
           <>
-            <div className="relative min-h-48 flex-1">
+            <div className="relative min-h-40 flex-1 overflow-hidden mask-b-from-50%">
               <Media
                 field="image"
                 value={image}
                 sizes={sizes[tile.size]}
-                className="absolute inset-0 size-full object-cover"
+                className={cx(
+                  "absolute inset-0 size-full object-cover",
+                  linked &&
+                    "transition-transform duration-700 ease-out motion-safe:group-hover:scale-103",
+                )}
               />
             </div>
-            <Words tile={tile} withIcon />
+            <Words tile={tile} lifts={lifts} />
           </>
         ) : tile.media === "cover" ? (
           <>
@@ -132,28 +156,42 @@ const BentoTile = ({ props: tile }: BlockComponentProps<typeof props, "default">
               field="image"
               value={image}
               sizes={sizes[tile.size]}
-              className="absolute inset-0 -z-20 size-full object-cover"
+              className={cx(
+                "absolute inset-0 -z-20 size-full object-cover",
+                linked &&
+                  "transition-transform duration-700 ease-out motion-safe:group-hover:scale-103",
+              )}
             />
             <div
               aria-hidden
-              className="absolute inset-0 -z-10 bg-linear-to-t from-card via-card/75 to-card/0"
+              className="absolute inset-0 -z-10 bg-linear-to-t from-card via-card/80 via-35% to-card/0"
             />
-            <Words tile={tile} withIcon className="mt-auto pt-24" />
+            <Words tile={tile} lifts={lifts} className="mt-auto pt-24" />
           </>
         ) : (
           <>
-            <Words tile={tile} withIcon />
+            <Words tile={tile} lifts={false} />
             <div className="relative mt-auto min-h-48 flex-1 ps-6 md:ps-8">
               <div className="relative size-full">
                 <Media
                   field="image"
                   value={image}
                   sizes={sizes[tile.size]}
-                  className="absolute inset-0 size-full rounded-tl-lg border-s border-t border-foreground/10 object-cover object-left-top"
+                  className={cx(
+                    "absolute inset-0 size-full translate-y-4 rounded-tl-lg border-s border-t border-foreground/10 object-cover object-left-top shadow-card",
+                    linked &&
+                      "transition-transform duration-500 ease-out motion-safe:group-hover:translate-y-2",
+                  )}
                 />
               </div>
             </div>
           </>
+        )}
+        {linked && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 transition-colors group-hover:bg-foreground/3"
+          />
         )}
       </div>
     </Root>
