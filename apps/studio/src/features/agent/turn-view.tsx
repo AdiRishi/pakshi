@@ -417,6 +417,15 @@ function ChangesCard(props: {
   );
 }
 
+/**
+ * Whether a working turn's last part already shows Pakshi at work: a tool
+ * call still running, or a thought it's having. Between them, Pakshi waits on
+ * the model, which says nothing until it has something.
+ */
+const showsProgress = (part: AgentPart | undefined) =>
+  part?.type === "thinking" ||
+  (part?.type === "tool-call" && part.state !== "complete" && part.state !== "error");
+
 /** A part of Pakshi's reply, as the chat shows it. */
 function ReplyPart(props: {
   readonly part: AgentPart;
@@ -525,19 +534,19 @@ export function Reply(props: {
     <Message>
       <MessageContent>
         <p className="text-xs font-semibold text-muted-foreground">Pakshi</p>
-        {context.working && turn.parts.length === 0 && (
+        {turn.parts.map((part, index) =>
+          // Pakshi shows it's thinking only while that's what it's doing.
+          part.type === "thinking" && index !== turn.parts.length - 1 ? null : (
+            <ReplyPart key={index} part={part} context={context} actions={actions} />
+          ),
+        )}
+        {context.working && !showsProgress(turn.parts.at(-1)) && (
           <Marker render={<output />}>
             <MarkerIcon>
               <Spinner />
             </MarkerIcon>
             <MarkerContent className="shimmer">Thinking</MarkerContent>
           </Marker>
-        )}
-        {turn.parts.map((part, index) =>
-          // Pakshi shows it's thinking only while that's what it's doing.
-          part.type === "thinking" && index !== turn.parts.length - 1 ? null : (
-            <ReplyPart key={index} part={part} context={context} actions={actions} />
-          ),
         )}
         {changes.length > 0 && (
           <ChangesCard
