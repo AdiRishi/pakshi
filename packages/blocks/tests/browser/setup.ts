@@ -1,5 +1,4 @@
 import "../../src/site.css";
-
 import { defaultTheme, resolveTheme, themeCss } from "@repo/tokens";
 
 // The default theme's variables, as a site's page inlines its own.
