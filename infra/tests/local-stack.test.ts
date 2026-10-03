@@ -10,8 +10,7 @@ import { waitForWorker } from "./support/worker-readiness.ts";
 
 /*
  * Deploys a throwaway local stack, then runs the integration journeys in
- * `*.integration.test.ts` against it with Playwright. The stack starts empty
- * but for the block fixture sites test stages get.
+ * `*.integration.test.ts` against it with Playwright. The stack starts empty.
  */
 
 const { test, beforeAll, afterAll, deploy, destroy } = Test.make({
@@ -27,13 +26,7 @@ const stack = beforeAll(
         Schema.Struct({ studioUrl: Schema.String, sitesUrl: Schema.String }),
       ),
     ),
-    Effect.tap(({ studioUrl, sitesUrl }) => {
-      const sites = new URL(sitesUrl);
-      return Effect.all([
-        waitForWorker(`${studioUrl}/set-up`),
-        waitForWorker(`${sites.protocol}//fixtures-1.${sites.host}/`),
-      ]);
-    }),
+    Effect.tap(({ studioUrl }) => waitForWorker(`${studioUrl}/set-up`)),
   ),
   { timeout: 600_000 },
 );

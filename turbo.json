@@ -20,10 +20,6 @@
         "$TURBO_ROOT$/workers/*/package.json"
       ]
     },
-    "@repo/scripts#transit": {
-      "dependsOn": ["^transit"],
-      "inputs": ["$TURBO_DEFAULT$", "$TURBO_ROOT$/infra/tests/support/screenshot-tolerance.ts"]
-    },
     "build": {
       "dependsOn": ["transit"],
       "outputs": ["dist/**"]
