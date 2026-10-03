@@ -73,6 +73,7 @@ export const getSitePage = createServerFn({ method: "GET" }).handler(async ({ co
     },
     sent: Option.getOrNull(Schema.decodeUnknownOption(FormId)(url.searchParams.get("sent"))),
     current: { page: entry.id, number: pageNumberOf(url) },
+    motion: manifest.brand.theme.motion,
   };
 });
 

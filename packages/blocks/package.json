@@ -45,8 +45,10 @@
     "lab": "vite --config lab/vite.config.ts"
   },
   "dependencies": {
+    "@base-ui/react": "catalog:",
     "@repo/contracts": "workspace:*",
     "@repo/tokens": "workspace:*",
+    "@tanstack/react-form": "catalog:",
     "@tiptap/core": "catalog:",
     "@tiptap/extension-bold": "catalog:",
     "@tiptap/extension-document": "catalog:",
@@ -61,9 +63,12 @@
     "@tiptap/pm": "catalog:",
     "@tiptap/static-renderer": "catalog:",
     "class-variance-authority": "catalog:",
+    "cn": "catalog:",
     "effect": "catalog:",
+    "embla-carousel-react": "catalog:",
     "lucide-react": "catalog:",
     "marked": "catalog:",
+    "motion": "catalog:",
     "react": "catalog:",
     "tailwindcss": "catalog:"
   },

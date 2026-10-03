@@ -24,4 +24,5 @@ export const viewData = (
     },
   }),
   current: view.page === null ? null : { page: view.page.id, number: options.number },
+  motion: view.brand.theme.motion,
 });

@@ -45,22 +45,24 @@ const tree = (block: SceneBlock): BlockTree => {
   };
 };
 
-const data = (scene: Scene | undefined) =>
-  siteData({
+const themeName = params.get("theme");
+const preset = Object.entries(themes).find(([name]) => name === themeName)?.[1] ?? defaultTheme;
+// Asking for a scheme shows the theme in it, whatever color mode the theme fixes.
+const theme = params.has("scheme") ? { ...preset, colorMode: "system" as const } : preset;
+
+const data = (scene: Scene | undefined) => ({
+  ...siteData({
     settings: { ...fixtureSite.settings, name: scene?.siteName ?? fixtureSite.settings.name },
     identity: noIdentity,
     menus: scene?.menus ?? fixtureSite.menus,
     pages: listingsOf(fixtureSite.pages),
     forms: fixtureSite.forms,
     media: (id) => labMedia.get(id) ?? sampleMedia.get(MediaId.make(id)),
-  });
+  }),
+  motion: resolveTheme(theme).theme.motion,
+});
 
 const render = (block: BlockTree): ReactElement => renderTree(definitions, block);
-
-const themeName = params.get("theme");
-const preset = Object.entries(themes).find(([name]) => name === themeName)?.[1] ?? defaultTheme;
-// Asking for a scheme shows the theme in it, whatever color mode the theme fixes.
-const theme = params.has("scheme") ? { ...preset, colorMode: "system" as const } : preset;
 
 const Page = ({ scene }: { readonly scene: Scene }) => (
   <>

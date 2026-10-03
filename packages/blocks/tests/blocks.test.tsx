@@ -210,8 +210,8 @@ describe("field components", () => {
     );
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
-    expect(html).toContain('<label for="b_test-ff_email"');
-    const email = html.match(/<input id="b_test-ff_email"[^>]*>/)?.[0] ?? "";
+    expect(html).toMatch(/<label[^>]*for="b_test-ff_email"/);
+    const email = html.match(/<input[^>]*id="b_test-ff_email"[^>]*>/)?.[0] ?? "";
     expect(email).toContain('name="ff_email"');
     expect(email).toContain('type="email"');
     expect(email).toContain('required=""');

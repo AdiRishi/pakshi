@@ -1,22 +1,18 @@
 import { EmailAddress } from "@repo/contracts/email";
 import type { EntryField, EntryIssue, FormEntry } from "@repo/contracts/entries";
-import type { FormDefinition, FormField } from "@repo/contracts/form";
+import { answerProblem, type FormDefinition } from "@repo/contracts/form";
 import type { FormFieldId } from "@repo/contracts/ids";
 import { Option, Schema } from "effect";
 
 import { csv } from "./csv.ts";
 
+const decodeEmail = Schema.decodeOption(EmailAddress);
+
 /*
- * How a form post becomes an entry. Browsers check most of this before
+ * How a form post becomes an entry. Visitors' forms check each answer before
  * sending, but a post can come from anywhere, so the answers are checked
  * again against the form the live release has.
  */
-
-const maxLength = { shortText: 500, longText: 10_000, email: 254, phone: 40, select: 120 };
-
-const phonePattern = /^[0-9+()\-.\s]{3,40}$/;
-
-const decodeEmail = Schema.decodeOption(EmailAddress);
 
 export type ReadEntry =
   | {
@@ -26,26 +22,6 @@ export type ReadEntry =
       readonly email: EmailAddress | null;
     }
   | { readonly ok: false; readonly issues: ReadonlyArray<EntryIssue> };
-
-/** What's wrong with one answer, or null when it's fine. */
-const problemWith = (field: Exclude<FormField, { kind: "hidden" }>, value: string) => {
-  if (field.kind === "checkbox")
-    return field.required && value === "" ? "Tick this box to send the form" : null;
-  if (value === "") return field.required ? "Answer this question" : null;
-  if (value.length > maxLength[field.kind])
-    return `Use at most ${maxLength[field.kind]} characters`;
-  switch (field.kind) {
-    case "email":
-      return Option.isNone(decodeEmail(value)) ? "Enter an email address" : null;
-    case "phone":
-      return phonePattern.test(value) ? null : "Enter a phone number";
-    case "select":
-      return field.options.includes(value) ? null : "Choose one of the options";
-    case "shortText":
-    case "longText":
-      return null;
-  }
-};
 
 /**
  * Reads a post's answers for a form: each field's value with its label, or
@@ -66,7 +42,7 @@ export const readEntry = (
     }
     const sent = posted(field.id);
     const value = field.kind === "checkbox" ? (sent === null ? "" : "Yes") : (sent ?? "").trim();
-    const problem = problemWith(field, value);
+    const problem = answerProblem(field, value);
     if (problem !== null) issues.push({ field: field.id, label: field.label, message: problem });
     else
       fields.push({
