@@ -34,13 +34,6 @@ calls, and never write to D1, KV or R2 directly. Under `pnpm dev`, emails such a
 invitations and password resets land in `infra/.alchemy/local/email/text/`, and a
 site answers at `{address}.localhost:1339`.
 
-Test stages also seed the "Block fixtures N" sites at `fixtures-N.<sites host>`.
-Each shows block fixtures on its home page, so the browser suite can check that
-the editor canvas renders every fixture exactly as `sites` does
-(`infra/src/fixture-sites.ts`). The section and item fixtures are spread over
-the first sites, forty to a page; further sites exist because a site shows only
-one header and one footer fixture.
-
 The agent calls Workers AI through the stage's AI Gateway even under
 `pnpm dev`, so the Alchemy profile's Cloudflare token needs the Workers AI and
 AI Gateway permissions, and its calls cost money. Its evals
@@ -52,20 +45,10 @@ edit a draft runs only with `PAKSHI_AGENT_TESTS=1`.
 After adding or removing a block version folder, run
 `pnpm --filter @repo/blocks generate` to rebuild the registry.
 
-A block version is released once its folder is on `main`, and a released
-folder never changes: change a block by adding its next version folder, with
-`changes` and `migrate`. CI runs `node scripts/src/check-released-blocks.ts
-origin/main` to enforce this. A new version also needs golden files: run
-`pnpm --filter @repo/blocks exec vitest run tests/schemas.test.ts -u`, and
-update only the new version's file. The integration suite keeps a baseline
-screenshot of every block fixture (`infra/tests/blocks.integration.test.ts`).
-Accepting changed baselines of a released version needs an entry naming it in
-`packages/blocks/src/rendering-changes.json`, which the sites using it see.
-When only the way the suite takes screenshots changes, record a re-shoot in
-`infra/tests/baseline-reshoots.json` instead. The check then accepts each
-re-shot baseline only if, apart from its top and bottom rows, it still matches
-the old one within the baseline test's tolerance
-(`infra/tests/support/screenshot-tolerance.ts`).
+Until the production checkpoint, block versions change in place: there are
+no migrations to write and no screenshots to accept (decision 099 in
+`docs/decision-log.mdx`). Check a block's look in the lab
+(`pnpm --filter @repo/blocks lab`), and test what it does.
 
 Tests come in three kinds, set out in
 `docs/adr/0003-three-kinds-of-tests.mdx`: unit tests for most behaviour, E2E

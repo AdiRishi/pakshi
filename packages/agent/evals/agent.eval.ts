@@ -663,9 +663,7 @@ const altText: ReadonlyArray<Task> = [
       suggestAltText(
         {
           data: new Uint8Array(
-            readFileSync(
-              new URL("../../../fixtures/sample-site/media/med_harbour.jpg", import.meta.url),
-            ),
+            readFileSync(new URL("../../../fixtures/media/med_harbour.jpg", import.meta.url)),
           ),
           mediaType: "image/jpeg",
         },

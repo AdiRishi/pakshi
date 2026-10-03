@@ -14,11 +14,10 @@ import {
 } from "@repo/ui/components/table";
 import { useMutation, useQueryClient, useSuspenseQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
-import { InfoIcon, SparklesIcon } from "lucide-react";
+import { SparklesIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { AppShell } from "@/components/app-shell";
-import { formatDay } from "@/lib/dates";
 
 import { SiteHeader } from "../sites/site-header";
 import { adoptUpgrade } from "./functions";
@@ -78,44 +77,6 @@ function Adopt(props: {
   );
 }
 
-/**
- * Changes the platform team accepted to how this site's block versions look,
- * which reach the live site without a draft.
- */
-function RenderingChanges(props: { readonly blocks: ReadonlyArray<SiteBlock> }) {
-  const changes = Map.groupBy(
-    props.blocks.flatMap((block) =>
-      block.renderingChanges.map((entry) => ({ ...entry, title: block.title })),
-    ),
-    (entry) => `${entry.date} ${entry.change}`,
-  );
-  if (changes.size === 0) return null;
-  return (
-    <Alert>
-      <InfoIcon />
-      <AlertTitle>
-        <h2>Changes to how your blocks look</h2>
-      </AlertTitle>
-      <AlertDescription>
-        <ul className="flex flex-col gap-2">
-          {Array.from(changes.values(), (entries) => {
-            const [first] = entries;
-            if (first === undefined) return null;
-            return (
-              <li key={`${first.date} ${first.change}`}>
-                <strong>
-                  {formatDay(first.date)}, {entries.map((entry) => entry.title).join(", ")}:
-                </strong>{" "}
-                {first.change}
-              </li>
-            );
-          })}
-        </ul>
-      </AlertDescription>
-    </Alert>
-  );
-}
-
 /** The blocks a site uses, the version of each, and the upgrades it can adopt. */
 export function SiteBlocksPage(props: { readonly viewer: Viewer; readonly site: SiteId }) {
   const { data } = useSuspenseQuery(siteBlocksQuery(props.site));
@@ -154,7 +115,6 @@ export function SiteBlocksPage(props: { readonly viewer: Viewer; readonly site: 
             )}
           </Alert>
         ))}
-        <RenderingChanges blocks={data.blocks} />
         <Card className="gap-0 py-0">
           <CardContent className="px-0">
             <Table>

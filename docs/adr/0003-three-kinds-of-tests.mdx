@@ -17,7 +17,7 @@ Pakshi has three kinds of tests. Each kind checks what the cheaper kind can't.
 
 **E2E tests run our Workers as Cloudflare would.** The Cloudflare Vitest plugin runs a Worker in `workerd` with real D1, KV, R2, Durable Objects, WebSockets, alarms and scheduled events, and the Worker's own entrypoints. They check what only the whole Worker shows: routes and RPC methods, sign-in and permissions, what reaches storage, live connections, and how Durable Objects, the outbox and scheduled jobs work together. A test sets up its data however it needs, through the Worker or straight into storage. Each test file gets storage of its own.
 
-**Integration tests are few, and follow people through happy paths.** Each one starts from a stack with nothing set up, signs people up, and does what a person would, end to end in browsers: setting Pakshi up, building and publishing a site, an approval, two people editing at once. The block fixture checks are integration tests too, because they compare two real renderers. Those checks render sites seeded straight into the test stage, since nothing in Pakshi moves a site to an older block version.
+**Integration tests are few, and follow people through happy paths.** Each one starts from a stack with nothing set up, signs people up, and does what a person would, end to end in browsers: setting Pakshi up, building and publishing a site, an approval, two people editing at once.
 
 **Every test earns its place.** It protects behaviour a caller depends on, an invariant, or a failure and how Pakshi recovers from it, and it survives a refactor of the code it covers. A test doesn't assert private helpers, call order or mock call counts, and doesn't compute its expected value with the code under test.
 

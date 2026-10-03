@@ -116,11 +116,6 @@ export const AuditEvent = Schema.TaggedUnion({
   SiteRestored: { name: Schema.String },
   /** A site deleted 30 days ago, erased for good. */
   SitePurged: { name: Schema.String },
-  /** The platform team accepted a change to how a released block version looks. */
-  RenderingChange: {
-    blocks: Schema.Array(Schema.String),
-    summary: Schema.String,
-  },
   BlockRequested: { need: Schema.String },
 });
 export type AuditEvent = typeof AuditEvent.Type;
@@ -169,7 +164,7 @@ export const auditKinds = {
   restores: { title: "Restored as drafts", events: ["DraftRestored"] },
   upgrades: {
     title: "Block upgrade drafts",
-    events: ["BlockUpgradeDraft", "BlockUpgradeEverywhere", "RenderingChange", "BlockRequested"],
+    events: ["BlockUpgradeDraft", "BlockUpgradeEverywhere", "BlockRequested"],
   },
   brands: {
     title: "Brands",

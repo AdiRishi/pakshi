@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                           | Date       | Status              |
 | --- | ---------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 099 | Blocks are tested by their behaviour, and stop being frozen until production       | 2026-10-03 | Accepted            |
 | 098 | An overlaid header takes the surface of the section under it                       | 2026-10-03 | Accepted            |
 | 097 | The editor canvas opens every disclosure                                           | 2026-10-03 | Accepted            |
 | 096 | The rebuilt block library replaces the old versions outright                       | 2026-10-03 | Accepted            |
@@ -39,7 +40,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 071 | Build and test in the dev stack as real people; production comes last              | 2026-10-01 | Accepted            |
 | 070 | Measuring `sites` startup moves to checkpoint 9, with production                   | 2026-10-01 | Amended by 071      |
 | 069 | A brand color too light to read fails the contrast check rather than being changed | 2026-10-01 | Accepted            |
-| 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Accepted            |
+| 068 | Released versions' changed screenshots are logged and shown to their sites         | 2026-10-01 | Superseded by 099   |
 | 067 | A new draft offers every block in the library                                      | 2026-10-01 | Accepted            |
 | 066 | Brand revisions reach sites through SiteDoc, and the scheduled job catches misses  | 2026-10-01 | Accepted            |
 | 065 | A draft's brand pin carries the revision, and merges keep the newer one            | 2026-10-01 | Accepted            |
@@ -107,6 +108,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                          | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                 | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                           | 2026-09-27 | Accepted            |
+
+## 099 — Blocks are tested by their behaviour, and stop being frozen until production [#decision-099]
+
+**Context.** The browser suite kept 308 baseline screenshots of every block fixture, compared the editor canvas and previews with `sites` pixel by pixel, and seeded fixture sites into every test stage to do it. CI refused any edit to a released block's folder, golden files pinned each version's schemas, and a rendering changes log had to name every released version whose screenshots changed. That protects live sites that pin versions. No site is live yet, and the block library is being rebuilt in place ([decision 096](#decision-096)), so every block change paid for that protection and nothing used it.
+
+**Decision.** Blocks are tested like the rest of Pakshi ([kinds of tests](/adr/three-kinds-of-tests)): unit tests for their fields, schemas and rendering, browser tests of what a visitor does with an interactive block, with axe, and a few integration journeys. How a block looks is reviewed in the block lab. The screenshot baselines, the canvas and preview comparisons, the fixture sites, the released-folder check, the golden schemas and the rendering changes log are deleted. Version numbers, lockfiles and `migrate` stay. Until the production checkpoint, a block version can change in place.
+
+**Rejected.** Keeping the canvas comparison alone. The canvas and `sites` render the same components, and where they differ, `useEditing` makes them differ on purpose.
+
+**Consequences.** Changing a block is a code change and its tests. The production checkpoint brings back a guard for released versions, starting with golden props schemas, since stored content depends on them; a shared dependency can then change a released version's look unnoticed, which this accepts.
 
 ## 098 — An overlaid header takes the surface of the section under it [#decision-098]
 
@@ -393,6 +404,8 @@ One short entry per significant decision: the context, what we chose, and why. N
 **Decision.** The browser suite keeps a baseline screenshot of every fixture of every block version, in light and dark. A released version's baselines change only with a new entry in `packages/blocks/src/rendering-changes.json` that names the version, says what changed and gives the date, and the released blocks check fails a change without one. Each site's Blocks screen shows the entries for the versions it uses. Recording these changes in the audit log comes with the audit log in checkpoint 10.
 
 **Consequences.** An accepted change to a live site's look is a reviewed commit with its reason, and the sites it reaches hear about it. Baselines are rendered on the platform the browser suite runs on.
+
+**Superseded** by [decision 099](#decision-099): the baselines and the log are gone until production.
 
 ## 067 — A new draft offers every block in the library [#decision-067]
 

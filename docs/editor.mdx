@@ -76,10 +76,10 @@ It does not own:
 
 ### With blocks
 
-Blocks are frozen code: a released version never changes ([decision 006](/decision-log#decision-006)). Whatever a block uses to make its fields editable is frozen into every version, so this contract must be small and stable.
+Blocks are versioned code, and from production on a released version never changes ([decision 006](/decision-log#decision-006), [decision 099](/decision-log#decision-099)). Whatever a block uses to make its fields editable is part of every version, so this contract must be small and stable.
 
 - **Field components.** Blocks render every editable field through field components from `packages/blocks`: text, rich text, media, link, and slot (a named list of child blocks). The block's root element also carries the block's identity.
-- **Two implementations, one output.** Outside the editor, field components render exactly the markup a block would write by hand, with no attributes or wrappers added. Inside the editor, the editor supplies editing versions through React context. They keep the same element, classes and content, and may add attributes, event handlers and `contenteditable`. They never add wrappers that change layout. The screenshot parity gate enforces this.
+- **Two implementations, one output.** Outside the editor, field components render exactly the markup a block would write by hand, with no attributes or wrappers added. Inside the editor, the editor supplies editing versions through React context. They keep the same element, classes and content, and may add attributes, event handlers and `contenteditable`. They never add wrappers that change layout.
 - **Why components.** A `contenteditable` element only works if the editor owns its children. If a block renders a value as React children, each re-render fights the caret. Owning the field components also lets the editor improve without a new block version.
 - **No globals.** Blocks never read `window`, `document` or other browser globals while rendering. In the canvas, React renders into the iframe from Studio's window, so those globals would point at Studio.
 - **Picker metadata.** Each block definition gives the picker what it needs: title, where the block is allowed (a section that shows an entry's own details declares `entryOf`, such as `post-header` with `entryOf: "blog"`, and goes only on entries of that kind), and the placeholder content a new instance starts with, which is also its preview. Sections and items keep that content in `fixtures/placeholder.json`, and it should look finished ([decision 037](/decision-log#decision-037)). The checks block a submission while placeholders remain.
@@ -259,7 +259,6 @@ To read a dependency's code at the version in use, such as TipTap or dnd-kit, cl
 - **The local copy** is tested through the editor's public interface against an in-process fake `SiteDoc` that runs the real document module. The fake stands in for the connection only.
 - **Convergence:** a property test runs several simulated clients making random concurrent batches: inserts, moves, removals, writes to the same field, undo and reconnects. Every client must end showing the server's document.
 - **Browser tests** (Vitest browser mode with Playwright, already in the workspace) cover each [remote-change rule](#remote-changes), input-method composition, and keyboard-only journeys.
-- **Screenshot parity:** every fixture of every live block version is captured in the canvas and in `sites`, in light and dark, and they must match. This is the [quality gate](/technical-design#blocks-and-versioning) every block release already runs.
 - **Accessibility:** axe runs on the editor screen.
 - **Two browsers:** the [live co-editing checkpoint](/build-plan#4-live-co-editing) runs a scripted session in two browsers against one draft in the dev stack.
 

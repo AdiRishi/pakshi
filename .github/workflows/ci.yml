@@ -16,9 +16,6 @@ jobs:
       TURBO_REMOTE_CACHE_SIGNATURE_KEY: ${{ secrets.TURBO_REMOTE_CACHE_SIGNATURE_KEY }}
     steps:
       - uses: actions/checkout@v6
-        with:
-          # The released blocks check compares with the base branch's history.
-          fetch-depth: 0
       - uses: pnpm/setup@v2
         with:
           runtime: node@24
@@ -26,8 +23,6 @@ jobs:
           install: false
       - run: pnpm install --frozen-lockfile
       - run: pnpm check
-      - name: Keep released block versions as released
-        run: node scripts/src/check-released-blocks.ts "${{ github.event_name == 'pull_request' && format('origin/{0}', github.base_ref) || github.event.before }}"
       - run: pnpm typecheck
       - run: pnpm --filter @repo/studio exec playwright install --with-deps chromium
       - run: pnpm test:unit

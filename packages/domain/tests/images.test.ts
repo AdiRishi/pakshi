@@ -6,9 +6,7 @@ import { describe, expect, test } from "vitest";
 import { imageInfo } from "../src/images.ts";
 
 const fixture = async (name: string) =>
-  new Uint8Array(
-    await readFile(join(import.meta.dirname, "../../../fixtures/sample-site/media", name)),
-  );
+  new Uint8Array(await readFile(join(import.meta.dirname, "../../../fixtures/media", name)));
 
 /** A WebP file's first bytes with an extended (VP8X) header for an image of this size. */
 const webpHeader = (width: number, height: number) => {

@@ -419,9 +419,6 @@ catalogs:
     playwright:
       specifier: 1.63.0
       version: 1.63.0
-    playwright-core:
-      specifier: 1.63.0
-      version: 1.63.0
     react:
       specifier: 19.3.0
       version: 19.3.0
@@ -1191,9 +1188,6 @@ importers:
       effect:
         specifier: 4.0.0-rc.117
         version: 4.0.0-rc.117
-      playwright-core:
-        specifier: 'catalog:'
-        version: 1.63.0
       yaml:
         specifier: 'catalog:'
         version: 2.9.1
