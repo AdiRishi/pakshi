@@ -1,4 +1,4 @@
-import type { FormDefinition } from "@repo/contracts/form";
+import type { FormDefinition, FormField } from "@repo/contracts/form";
 import type { BlockId, FormId, MediaId, MenuItemId, PageId } from "@repo/contracts/ids";
 import type { PostMeta } from "@repo/contracts/page";
 import type { FormRef, Link, MediaRef } from "@repo/contracts/references";
@@ -395,6 +395,12 @@ export const Slot = (options: SlotProps) => {
   );
 };
 
+/** A field that fits a form laid out in one row. */
+type RowField = Exclude<FormField, { readonly kind: "longText" | "select" }>;
+
+const fitRow = (fields: ReadonlyArray<FormField>): fields is ReadonlyArray<RowField> =>
+  fields.every((field) => field.kind !== "longText" && field.kind !== "select");
+
 const inputClass =
   "w-full rounded-md border border-input bg-background px-4 py-3 text-body text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
@@ -412,7 +418,8 @@ export const FormView = (options: {
   /**
    * Fields one under another with their labels above them, or in one row
    * with the button, labelled by their placeholders, as a sign-up form is.
-   * Checkboxes go under the row.
+   * Checkboxes go under the row. A form with a longer answer or a choice
+   * doesn't fit a row, so it's stacked whatever the layout.
    */
   readonly layout?: "stacked" | "inline";
   readonly className?: string | undefined;
@@ -435,7 +442,8 @@ export const FormView = (options: {
       {definition.submitLabel}
     </button>
   );
-  if (options.layout === "inline") {
+  const fields = definition.fields;
+  if (options.layout === "inline" && fitRow(fields)) {
     const inline = (editable: EditableAttributes) => (
       <form
         {...editable}
@@ -444,13 +452,11 @@ export const FormView = (options: {
         className={options.className}
       >
         <div className="flex flex-wrap gap-2">
-          {definition.fields.map((field) => {
+          {fields.map((field) => {
             switch (field.kind) {
               case "hidden":
                 return <input key={field.id} type="hidden" name={field.id} value={field.value} />;
               case "checkbox":
-              case "longText":
-              case "select":
                 return null;
               default:
                 return (
@@ -471,7 +477,7 @@ export const FormView = (options: {
           })}
           {submit}
         </div>
-        {definition.fields.map((field) =>
+        {fields.map((field) =>
           field.kind === "checkbox" ? (
             <label
               key={field.id}

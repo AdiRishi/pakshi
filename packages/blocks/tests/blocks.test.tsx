@@ -218,6 +218,19 @@ describe("field components", () => {
     expect(html).toContain('<input type="hidden" name="ff_source" value="website"/>');
     expect(html).toContain(">Register</button>");
   });
+
+  test("a form with a longer answer or a choice is stacked, even where a row is asked for", async () => {
+    const block = await newest("form-section");
+    const result = renderProps(
+      block,
+      { heading: "Register", points: [], form: { $ref: "form", id: "frm_register" } },
+      "inline",
+    );
+    if (!result.ok) throw new Error(result.problem);
+    const html = markup(result.element);
+    expect(html).toMatch(/<select[^>]*name="ff_week"/);
+    expect(html).toMatch(/<textarea[^>]*name="ff_notes"/);
+  });
 });
 
 describe("blocks that read the site", () => {
