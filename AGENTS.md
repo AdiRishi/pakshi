@@ -48,7 +48,11 @@ After adding or removing a block version folder, run
 Until the production checkpoint, block versions change in place: there are
 no migrations to write and no screenshots to accept (decision 099 in
 `docs/decision-log.mdx`). Check a block's look in the lab
-(`pnpm --filter @repo/blocks lab`), and test what it does.
+(`pnpm --filter @repo/blocks lab`), and test what it does: what a visitor
+does with a block goes in browser tests in `packages/blocks/tests/browser/`,
+where axe also checks every fixture. Build blocks on the kit
+(`packages/blocks/src/kit/`, decision 101), and never render content that only
+JavaScript reveals: a page shows its server HTML until it hydrates.
 
 Tests come in three kinds, set out in
 `docs/adr/0003-three-kinds-of-tests.mdx`: unit tests for most behaviour, E2E
