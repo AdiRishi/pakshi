@@ -127,8 +127,6 @@ export const describeAuditEvent = (event: AuditEvent): string => {
       return `Restored the site ${event.name}`;
     case "SitePurged":
       return `Deleted ${event.name} for good, 30 days after it was deleted`;
-    case "RenderingChange":
-      return `${event.blocks.join(", ")}: ${event.summary}`;
     case "BlockRequested":
       return `Asked for a new block: ${event.need}`;
   }
@@ -178,6 +176,5 @@ export const auditEventTitles = {
   SiteDeleted: "Site deleted",
   SiteRestored: "Site restored",
   SitePurged: "Site deleted for good",
-  RenderingChange: "Rendering change",
   BlockRequested: "Block requested",
 } as const satisfies Record<AuditEventTag, string>;

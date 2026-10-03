@@ -930,11 +930,6 @@ export const SiteBlock = Schema.Struct({
   sitewide: Schema.Boolean,
   /** The open draft that upgrades this block to its newest version, if there is one. */
   upgradeDraft: Schema.NullOr(Schema.Struct({ id: DraftId, name: DraftName })),
-  /**
-   * Accepted changes to how the version in use looks, made by shared code
-   * rather than a new version, oldest first.
-   */
-  renderingChanges: Schema.Array(Schema.Struct({ date: Schema.String, change: Schema.String })),
 });
 export type SiteBlock = typeof SiteBlock.Type;
 

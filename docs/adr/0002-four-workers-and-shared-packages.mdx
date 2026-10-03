@@ -20,11 +20,11 @@ packages/ui                      shadcn/ui components for Studio and the editor
 packages/editor                  @repo/editor, the visual editor Studio edits drafts with
 packages/agent                   The agent's tools, prompts, turns and eval suite
 packages/brand                   Pakshi's own logos, marks and icons
-fixtures/sample-site             The brand, images and pages the block fixture sites use
+fixtures/media                   Images the domain tests and agent evals read
 ```
 
 `studio-api` and `sites-api` are plain Workers with their own entry files, because PartyServer's Durable Objects are plain classes. Their Durable Object classes are exported from the entry file and declared in the Worker's `env`.
 
 `infra/src/worker-bindings.ts` defines every Worker's bindings and exports its env type, which each runtime imports from `@repo/infra/worker-bindings`. The infra package reaches Worker source through relative imports, never package dependencies, so no package depends on infra and infra on it in turn.
 
-A stage starts empty. People set it up through Studio, as they would in production, and test stages add only the block fixture sites the browser suite renders.
+A stage starts empty. People set it up through Studio, as they would in production, and test stages do the same.

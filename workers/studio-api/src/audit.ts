@@ -1,4 +1,3 @@
-import type { RenderingChange } from "@repo/blocks/rendering-changes";
 import {
   type AuditCursor,
   AuditEntry,
@@ -232,22 +231,4 @@ export const exportAudit = Effect.fn("StudioApi.exportAudit")(function* (
       ]),
     ]),
   };
-});
-
-/**
- * Files each accepted change to released block versions' output in the
- * audit log, once, as a change Pakshi's platform team made on its date.
- */
-export const recordRenderingChanges = Effect.fn("StudioApi.recordRenderingChanges")(function* (
-  changes: ReadonlyArray<RenderingChange>,
-) {
-  for (const [index, change] of changes.entries())
-    yield* writeAudit({
-      id: AuditId.make(`aud_rendering_${index}`),
-      at: Timestamp.make(`${change.date}T00:00:00.000Z`),
-      actor: null,
-      site: null,
-      brand: null,
-      event: { _tag: "RenderingChange", blocks: change.versions, summary: change.change },
-    });
 });

@@ -32,10 +32,6 @@
       "types": "./src/recipes.ts",
       "default": "./src/recipes.ts"
     },
-    "./rendering-changes": {
-      "types": "./src/rendering-changes.ts",
-      "default": "./src/rendering-changes.ts"
-    },
     "./rich-text": {
       "types": "./src/rich-text.ts",
       "default": "./src/rich-text.ts"

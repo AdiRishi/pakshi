@@ -1,6 +1,5 @@
 import { D1Client } from "@effect/sql-d1";
-import { blockKey, latestLockfile } from "@repo/blocks";
-import { renderingChanges } from "@repo/blocks/rendering-changes";
+import { latestLockfile } from "@repo/blocks";
 import type { Permission } from "@repo/contracts/access";
 import type { Draft } from "@repo/contracts/draft";
 import type { BlockType, DraftId, MediaId, SiteId } from "@repo/contracts/ids";
@@ -1318,11 +1317,6 @@ const handlers = (env: StudioApiEnv) =>
                       newer: yield* newerVersions(block.type, block.version),
                       upgradeDraft:
                         upgrade === undefined ? null : { id: upgrade.id, name: upgrade.name },
-                      renderingChanges: renderingChanges
-                        .filter((entry) =>
-                          entry.versions.includes(blockKey(block.type, block.version)),
-                        )
-                        .map(({ date, change }) => ({ date, change })),
                     };
                   }),
                 );
