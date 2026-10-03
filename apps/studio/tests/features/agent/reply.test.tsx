@@ -239,3 +239,15 @@ test("Pakshi shows it's thinking before it has said or done anything", async () 
   await renderConversation([said("one", "Shorten the heading.", { status: "working" })], true);
   await expect.element(page.getByText("Thinking")).toBeVisible();
 });
+
+test("between steps, while Pakshi waits on the model, the chat still shows it working", async () => {
+  await renderConversation(
+    [
+      said("one", "Shorten the heading.", { status: "working" }),
+      ...called("call_read", "get_page", { page: "pg_home" }, { blocks: [] }),
+    ],
+    true,
+  );
+  await expect.element(page.getByText("Read a page")).toBeVisible();
+  await expect.element(page.getByText("Thinking")).toBeVisible();
+});
