@@ -1,11 +1,13 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Cta, FormView, Media } from "../../components.tsx";
+import { Cta, FormView, Media, Text, useMotion } from "../../components.tsx";
 import { choice, cta, form, list, media, optional, text } from "../../fields.ts";
 import { Actions } from "../../kit/actions.tsx";
 import { buttonClass } from "../../kit/button.ts";
-import { Intro } from "../../kit/intro.tsx";
+import { Heading } from "../../kit/intro.tsx";
+import { MagicCard } from "../../kit/magic/magic-card.tsx";
+import { ShinyText } from "../../kit/magic/shiny-text.tsx";
 import { Section } from "../../kit/section.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
@@ -26,6 +28,59 @@ const props = {
 
 type Variant = "centered" | "split" | "panel" | "image";
 type CallToAction = BlockComponentProps<typeof props, Variant>["props"];
+
+/** The panel's backdrop, which it draws itself, as the section's would sit behind the panel. */
+const panelBackdrops = {
+  none: "",
+  glow: "decor-glow",
+  arc: "decor-arc",
+  grid: "decor-grid",
+  dots: "decor-dots",
+  stripes: "decor-stripes",
+  noise: "decor-noise",
+} as const satisfies Record<CallToAction["backdrop"], string>;
+
+/**
+ * The ask in words: a short label that a band of light crosses now and then,
+ * the heading, and a sentence on why now.
+ */
+const Opening = ({
+  cta: action,
+  align,
+  className,
+}: {
+  readonly cta: CallToAction;
+  readonly align: "start" | "center";
+  readonly className?: string;
+}) => {
+  const center = align === "center";
+  return (
+    <div
+      className={cx(
+        "flex max-w-3xl flex-col gap-5",
+        center ? "mx-auto items-center text-center" : "items-start",
+        className,
+      )}
+    >
+      {action.kicker && (
+        <p className="kicker">
+          <ShinyText className="text-primary/85">
+            <Text field="kicker" as="span" value={action.kicker} />
+          </ShinyText>
+        </p>
+      )}
+      <Heading as="h2" heading={action.heading} headingRest={action.headingRest} size="title" />
+      {action.intro && (
+        <Text
+          field="intro"
+          as="p"
+          value={action.intro}
+          className="text-lead max-w-2xl whitespace-pre-line text-muted-foreground"
+        />
+      )}
+    </div>
+  );
+};
 
 /**
  * What the visitor can do: the buttons, or a sign-up form in one row. Beside
@@ -63,23 +118,29 @@ const Response = ({
 /** The words on one side and the response on the other, stacked on narrow screens. */
 const Row = ({ cta: action }: { readonly cta: CallToAction }) => (
   <div className="flex flex-col gap-10 lg:flex-row lg:items-end lg:justify-between lg:gap-16">
-    <Intro content={action} className="lg:flex-1" />
+    <Opening cta={action} align="start" className="lg:flex-1" />
     <div className={cx("shrink-0", action.form && "w-full max-w-md lg:w-md")}>
       <Response cta={action} align="start" />
     </div>
   </div>
 );
 
+/**
+ * The closing ask of a page: what to do next, with buttons or a sign-up form,
+ * in the middle, beside the words, on a panel that lights up round the
+ * pointer, or over a photo.
+ */
 const CallToActionBlock = ({
   props: action,
   variant,
 }: BlockComponentProps<typeof props, Variant>) => {
+  const moving = useMotion();
   switch (variant) {
     case "centered":
       return (
         <Section backdrop={action.backdrop}>
           <div className="page-width flex flex-col items-center gap-10">
-            <Intro content={action} align="center" />
+            <Opening cta={action} align="center" />
             <Response cta={action} align="center" />
           </div>
         </Section>
@@ -94,37 +155,40 @@ const CallToActionBlock = ({
       );
     case "panel":
       return (
-        <Section
-          background="inset"
-          spacing="flush"
-          backdrop={action.backdrop}
-          className="page-width my-section border border-foreground/10"
-        >
-          {action.image === undefined ? (
-            <div className="px-6 py-14 sm:px-12 md:py-20 lg:px-16">
-              <Row cta={action} />
-            </div>
-          ) : (
-            <div className="grid md:grid-cols-2">
-              <div className="flex flex-col justify-center gap-10 px-6 py-12 sm:px-12 md:py-20 lg:px-16">
-                <Intro content={action} />
-                <Response cta={action} align="start" />
+        <Section background="inset" spacing="flush" className="page-width my-section">
+          <MagicCard
+            className={cx(
+              "overflow-hidden rounded-inherit",
+              panelBackdrops[action.backdrop],
+              !moving && "border border-foreground/10",
+            )}
+          >
+            {action.image === undefined ? (
+              <div className="px-6 py-14 sm:px-12 md:py-20 lg:px-16">
+                <Row cta={action} />
               </div>
-              <div
-                className={cx(
-                  "relative min-h-72 md:min-h-full",
-                  action.mediaSide === "start" && "md:order-first",
-                )}
-              >
-                <Media
-                  field="image"
-                  value={action.image}
-                  sizes="(min-width: 76rem) 38rem, (min-width: 48rem) 50vw, 100vw"
-                  className="absolute inset-0 size-full object-cover"
-                />
+            ) : (
+              <div className="grid md:grid-cols-2">
+                <div className="flex flex-col justify-center gap-10 px-6 py-12 sm:px-12 md:py-20 lg:px-16">
+                  <Opening cta={action} align="start" />
+                  <Response cta={action} align="start" />
+                </div>
+                <div
+                  className={cx(
+                    "relative min-h-72 md:min-h-full",
+                    action.mediaSide === "start" && "md:order-first",
+                  )}
+                >
+                  <Media
+                    field="image"
+                    value={action.image}
+                    sizes="(min-width: 76rem) 38rem, (min-width: 48rem) 50vw, 100vw"
+                    className="absolute inset-0 size-full object-cover"
+                  />
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </MagicCard>
         </Section>
       );
     case "image":
@@ -140,7 +204,7 @@ const CallToActionBlock = ({
           )}
           <div aria-hidden className="absolute inset-0 -z-10 bg-background/65" />
           <div className="page-width py-section flex flex-col items-center gap-10">
-            <Intro content={action} align="center" />
+            <Opening cta={action} align="center" />
             <Response cta={action} align="center" />
           </div>
         </Section>
@@ -153,6 +217,7 @@ export default defineBlock({
   version: 2,
   title: "Call to action",
   placement: "section",
+  interactive: true,
   props,
   variants: ["centered", "split", "panel", "image"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],

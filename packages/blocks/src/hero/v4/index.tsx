@@ -7,6 +7,8 @@ import { Actions } from "../../kit/actions.tsx";
 import { Frame, frameImageClass } from "../../kit/frame.tsx";
 import { Icon } from "../../kit/icon.tsx";
 import { Heading } from "../../kit/intro.tsx";
+import { BorderBeam } from "../../kit/magic/border-beam.tsx";
+import { ShinyText } from "../../kit/magic/shiny-text.tsx";
 import { Section } from "../../kit/section.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
 
@@ -54,8 +56,12 @@ const Badge = ({ hero }: { readonly hero: Hero }) => {
   const href = useHref(hero.badgeLink ?? "#");
   if (!hero.badge) return null;
   const pill =
-    "inline-flex items-center rounded-full border border-foreground/15 bg-background/60 px-3.5 py-1 text-small text-foreground";
-  const words = <Text field="badge" as="span" value={hero.badge} />;
+    "inline-flex items-center gap-2 rounded-full border border-foreground/12 bg-background/70 px-4 py-1.5 text-small backdrop-blur-sm";
+  const words = (
+    <ShinyText className="text-foreground/75">
+      <Text field="badge" as="span" value={hero.badge} />
+    </ShinyText>
+  );
   return hero.badgeLink === undefined ? (
     <p className={pill}>{words}</p>
   ) : (
@@ -63,13 +69,27 @@ const Badge = ({ hero }: { readonly hero: Hero }) => {
       href={href}
       className={cx(
         pill,
-        "link-arrow transition-colors hover:bg-foreground/5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        "group/badge transition-colors hover:border-foreground/25 hover:bg-background focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
       )}
     >
       {words}
+      <Icon
+        name="arrow-right"
+        className="size-3.5 text-muted-foreground transition-transform group-hover/badge:translate-x-0.5 motion-reduce:transition-none"
+      />
     </a>
   );
 };
+
+/** The short line above the heading, which a band of light crosses now and then. */
+const Kicker = ({ hero }: { readonly hero: Hero }) =>
+  hero.kicker ? (
+    <p className="kicker">
+      <ShinyText className="text-primary/85">
+        <Text field="kicker" as="span" value={hero.kicker} />
+      </ShinyText>
+    </p>
+  ) : null;
 
 const Points = ({ hero, center }: { readonly hero: Hero; readonly center: boolean }) =>
   hero.points.length === 0 ? null : (
@@ -132,9 +152,7 @@ const Copy = ({
   >
     <Badge hero={hero} />
     <div className={cx("flex flex-col gap-4", center && "items-center")}>
-      {hero.kicker && (
-        <Text field="kicker" as="p" value={hero.kicker} className="kicker text-primary" />
-      )}
+      <Kicker hero={hero} />
       <Heading
         as="h1"
         heading={hero.heading}
@@ -172,7 +190,13 @@ const Copy = ({
   </div>
 );
 
-/** The hero's image, plain, on a tray, in a browser window or on a phone. */
+const showcases = new Set<Hero["frame"]>(["framed", "browser"]);
+
+/**
+ * The hero's image, plain, on a tray, in a browser window or on a phone. A
+ * screenshot on a tray or in a window gets a glow beneath it and a beam of
+ * light round its edge.
+ */
 const Picture = ({
   hero,
   className,
@@ -181,19 +205,42 @@ const Picture = ({
   readonly hero: Hero;
   readonly className: string;
   readonly sizes: string;
-}) =>
-  hero.image === undefined ? null : (
-    <Frame kind={hero.frame}>
+}) => {
+  if (hero.image === undefined) return null;
+  const showcase = showcases.has(hero.frame);
+  const picture = (
+    <Frame kind={hero.frame} className={cx(showcase && "relative")}>
       <Media
         field="image"
         value={hero.image}
         priority
         sizes={hero.frame === "phone" ? "19rem" : sizes}
-        className={cx(frameImageClass(hero.frame), hero.frame !== "phone" && className)}
+        className={cx(
+          frameImageClass(hero.frame),
+          hero.frame !== "phone" && className,
+          hero.frame === "plain" && "outline-1 -outline-offset-1 outline-foreground/10",
+        )}
       />
+      {showcase && <BorderBeam duration={10} />}
     </Frame>
   );
+  return showcase ? (
+    <div className="relative">
+      <div
+        aria-hidden
+        className="absolute -inset-x-4 top-1/3 -bottom-12 -z-10 rounded-full bg-primary/30 blur-3xl"
+      />
+      {picture}
+    </div>
+  ) : (
+    picture
+  );
+};
 
+/**
+ * The opening of a page: an announcement, the heading, a sentence or two and
+ * one main button or a sign-up form, over, beside, on or under a picture.
+ */
 const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Variant>) => {
   const center = hero.align === "center";
   switch (variant) {
@@ -228,9 +275,7 @@ const Hero = ({ props: hero, variant }: BlockComponentProps<typeof props, Varian
             <div className="flex flex-col gap-10">
               <div className="flex flex-col items-start gap-4">
                 <Badge hero={hero} />
-                {hero.kicker && (
-                  <Text field="kicker" as="p" value={hero.kicker} className="kicker text-primary" />
-                )}
+                <Kicker hero={hero} />
                 <Heading
                   as="h1"
                   heading={hero.heading}
@@ -332,6 +377,7 @@ export default defineBlock({
   version: 4,
   title: "Hero",
   placement: "section",
+  interactive: true,
   props,
   variants: ["stacked", "split", "cover", "editorial", "panel"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
