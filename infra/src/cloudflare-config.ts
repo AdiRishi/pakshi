@@ -1,8 +1,11 @@
 /**
  * Node.js compatibility is on by default from 2026-08-04, so no flag is set.
- * Alchemy's local runtime pins workerd, which caps the date `pnpm dev` accepts.
+ * From 2026-10-01, a Durable Object with work in flight, such as an agent turn
+ * waiting on a model or on SiteDoc, isn't evicted when its last client leaves.
+ * Alchemy's local runtime pins workerd, which caps the date `pnpm dev` accepts;
+ * `pnpm-workspace.yaml` overrides that pin.
  */
-export const workerCompatibility = { date: "2026-09-01" };
+export const workerCompatibility = { date: "2026-10-01" };
 
 export const workerObservability = {
   enabled: true,

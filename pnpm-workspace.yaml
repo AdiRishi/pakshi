@@ -164,6 +164,10 @@ nodeOptions: --network-family-autoselection-attempt-timeout=2000
 # pair a newer one with ours. Hold every Effect package, direct or transitive,
 # to the catalog's version.
 overrides:
+  # Alchemy's local runtime pins workerd 1.20260918, which refuses compatibility
+  # dates after its build. The Vitest plugin already runs 1.20261001. Remove
+  # when Alchemy pins a workerd at least as new as `workerCompatibility.date`.
+  "@alchemy.run/cloudflare-runtime>workerd": 1.20261001.1
   "@effect/ai-openai-compat": "catalog:"
   "@effect/platform-node": "catalog:"
   "@effect/platform-node-shared": "catalog:"
