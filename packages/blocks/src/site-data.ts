@@ -17,21 +17,34 @@ import {
 } from "./placeholders.ts";
 
 /** The site's collections with their entries, and the placeholder collection with its samples. */
-const collectionsOf = (pages: ReadonlyArray<PageListing>) => {
+const collectionsOf = (pages: ReadonlyArray<PageListing>, address: (path: string) => string) => {
   const collections = new Map<PageId, SiteCollection>(
     pages.flatMap((page) => {
       if (page.type !== "collection") return [];
       const held = entriesOf(pages, page).map((entry) => ({
         id: entry.id,
-        href: entry.path,
+        href: address(entry.path),
         meta: entry.meta,
       }));
-      return [[page.id, { id: page.id, href: page.path, title: page.meta.title, entries: held }]];
+      return [
+        [
+          page.id,
+          {
+            id: page.id,
+            href: address(page.path),
+            pageHref: (number: number) =>
+              address(number === 1 ? page.path : `${page.path}?page=${number}`),
+            title: page.meta.title,
+            entries: held,
+          },
+        ],
+      ];
     }),
   );
   return collections.set(placeholderCollection, {
     id: placeholderCollection,
     href: "#",
+    pageHref: () => "#",
     title: "Sample posts",
     entries: samplePosts,
   });
@@ -51,8 +64,14 @@ export const siteData = (site: {
   readonly pages: ReadonlyArray<PageListing>;
   readonly forms: Readonly<Record<FormId, FormDefinition>>;
   readonly media: (id: MediaId) => ResolvedMedia | undefined;
+  /**
+   * Where a link to an address on the site opens, such as a page's address
+   * inside a preview. A live site's links open where they point.
+   */
+  readonly address?: (path: string) => string;
 }): SiteData => {
-  const paths = new Map(site.pages.map((page) => [page.id, page.path]));
+  const address = site.address ?? ((path: string) => path);
+  const paths = new Map(site.pages.map((page) => [page.id, address(page.path)]));
   const href = (link: Link) => (Predicate.isString(link) ? link : (paths.get(link.id) ?? "#"));
   const resolve = (item: Menus["footer"][number]) => ({
     id: item.id,
@@ -72,7 +91,7 @@ export const siteData = (site: {
       })),
       footer: site.menus.footer.map((item) => ({ ...resolve(item), children: [] })),
     },
-    collections: collectionsOf(site.pages),
+    collections: collectionsOf(site.pages, address),
     media: (id) => placeholderMedia.get(id) ?? site.media(id),
     pagePath: (id) => paths.get(id),
     form: (id) => site.forms[id] ?? (id === placeholderForm.id ? placeholderForm : undefined),
@@ -80,5 +99,6 @@ export const siteData = (site: {
     sent: null,
     current: null,
     motion: true,
+    address,
   };
 };

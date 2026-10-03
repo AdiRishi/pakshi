@@ -23,6 +23,7 @@ export {
   SiteImage,
   Slot,
   Text,
+  useAddress,
   useCollection,
   useCurrentPage,
   useEntry,
