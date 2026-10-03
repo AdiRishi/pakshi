@@ -76,15 +76,10 @@ const WorkersAiEvent = Schema.fromJsonString(
 );
 const decodeEvent = Schema.decodeUnknownOption(WorkersAiEvent);
 
-/** Leaves out the nulls Workers AI sends where OpenAI leaves a field out. Text content may be null. */
-const withoutNulls = (key: string, value: Schema.Json) =>
-  value === null && key !== "content" ? undefined : value;
-
 /**
  * One event of Workers AI's stream as a strict OpenAI chunk. Workers AI sends
- * null for fields OpenAI leaves out, token counts on every chunk, and the
- * turn's totals in a last event of its own, none of which the provider's
- * parser accepts.
+ * token counts on every chunk and the turn's totals in a last event of its
+ * own, neither of which the provider's parser accepts.
  */
 const toOpenAiEvent = (
   data: string,
@@ -97,7 +92,7 @@ const toOpenAiEvent = (
     last.model = event.model;
     last.created = event.created;
     const { usage: _, ...chunk } = event;
-    return JSON.stringify(chunk, withoutNulls);
+    return JSON.stringify(chunk);
   });
 };
 
