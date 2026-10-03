@@ -160,7 +160,15 @@ export function ChatPanel(props: {
               </AlertDialogHeader>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={agent.clear}>Start again</AlertDialogAction>
+                <AlertDialogAction
+                  onClick={() => {
+                    agent.clear();
+                    // Starting again deletes the documents, these among them.
+                    setAttached([]);
+                  }}
+                >
+                  Start again
+                </AlertDialogAction>
               </AlertDialogFooter>
             </AlertDialogContent>
           </AlertDialog>

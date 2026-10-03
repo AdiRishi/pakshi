@@ -91,6 +91,8 @@ export type TurnStatus = typeof TurnStatus.Type;
  */
 export const TurnRecord = Schema.Struct({
   id: TurnId,
+  /** The chat run that carried the turn, as the chat panel named it when it sent the message. */
+  run: Schema.String,
   status: TurnStatus,
   /** Whether the person undid everything the turn changed. */
   undone: Schema.Boolean,

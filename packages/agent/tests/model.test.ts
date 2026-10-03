@@ -118,3 +118,32 @@ it("a stopped turn cancels the model's call rather than waiting for it", async (
   await turn;
   expect(cancelled).toBe(true);
 });
+
+it("a stopped turn doesn't wait for Workers AI to start answering", async () => {
+  const stop = new AbortController();
+  const { promise: answered, resolve: answer } = Promise.withResolvers<Response>();
+  let cancelled = false;
+  const model = languageModel(
+    { binding: { run: () => answered } },
+    "gateway_harbour",
+    tags,
+    "edit",
+  );
+  const turn = chat({
+    adapter: model,
+    messages: [{ role: "user", content: "Hi" }],
+    abortController: stop,
+    stream: false,
+  }).catch(() => "");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  stop.abort();
+  await turn;
+  // The answer that comes after all is cancelled rather than read.
+  answer(
+    new Response(new ReadableStream({ cancel: () => void (cancelled = true) }), {
+      headers: { "content-type": "text/event-stream" },
+    }),
+  );
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(cancelled).toBe(true);
+});

@@ -68,10 +68,24 @@ const overBinding =
   (binding: AiBinding, gateway: Gateway) =>
   async (_url: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const { model, ...inputs } = decodeCall(init?.body);
-    const response = await binding.run(model, inputs, { gateway, returnRawResponse: true });
+    const answering = binding.run(model, inputs, { gateway, returnRawResponse: true });
     const signal = init?.signal;
-    if (response.body === null || signal === undefined || signal === null) return response;
-    // Cancelling the request cancels Workers AI's stream, as a fetch's would.
+    if (signal === undefined || signal === null) return answering;
+    // Cancelling the request cancels Workers AI's answer, as a fetch's would:
+    // the wait for it to start, and its stream once it has.
+    const { promise: cancelled, reject } = Promise.withResolvers<never>();
+    let started = false;
+    const cancel = () => {
+      reject(signal.reason);
+      // An answer that starts after the request was cancelled is never read.
+      if (!started)
+        answering.then((response) => response.body?.cancel(signal.reason)).catch(() => undefined);
+    };
+    if (signal.aborted) cancel();
+    else signal.addEventListener("abort", cancel, { once: true });
+    const response = await Promise.race([answering, cancelled]);
+    started = true;
+    if (response.body === null) return response;
     return new Response(response.body.pipeThrough(new TransformStream(), { signal }), response);
   };
 

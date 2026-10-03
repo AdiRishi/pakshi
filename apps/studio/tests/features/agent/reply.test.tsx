@@ -24,6 +24,7 @@ const said = (id: string, text: string, turn: Partial<TurnRecord> = {}): ModelMe
   metadata: {
     [turnKey]: {
       id: TurnId.make(`turn_${id}`),
+      run: `run_${id}`,
       status: "done",
       undone: false,
       sources: [],

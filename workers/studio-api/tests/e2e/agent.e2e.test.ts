@@ -43,6 +43,7 @@ const attach = (path: string, session: string, origin = studioOrigin) =>
 const Event = Schema.fromJsonString(
   Schema.Struct({
     type: Schema.String,
+    runId: Schema.optionalKey(Schema.String),
     metadata: Schema.optionalKey(
       Schema.Struct({ tanstack: Schema.Struct({ runId: Schema.optionalKey(Schema.String) }) }),
     ),
@@ -148,8 +149,12 @@ it.live(
         expect(yield* socket.next(turnIn)).toMatchObject({ status: "unavailable" });
       }
 
-      // A connection opened later gets the conversation as it ended.
+      // A connection opened later, such as a tab's that dropped while the
+      // turn ran, gets the conversation as it ended, and the end of its run.
       const later = yield* openSocket(Event, path, session);
       expect(yield* later.next(turnIn)).toMatchObject({ status: "unavailable" });
+      expect(
+        yield* later.next((event) => (event.type === "RUN_FINISHED" ? event : undefined)),
+      ).toMatchObject({ runId: "run_1" });
     }).pipe(Effect.scoped),
 );
