@@ -1,4 +1,4 @@
-import { interactiveParts, type ResolvedMedia } from "@repo/blocks";
+import type { ResolvedMedia } from "@repo/blocks";
 import { pageNumberOf } from "@repo/contracts/collections";
 import { FormId, MediaId } from "@repo/contracts/ids";
 import { pageName } from "@repo/contracts/page";
@@ -62,7 +62,6 @@ export const getSitePage = createServerFn({ method: "GET" }).handler(async ({ co
     page,
     parts: manifest.parts,
     lockfile: manifest.lockfile,
-    interactive: await interactiveParts(page, manifest.parts, manifest.lockfile),
     site: {
       settings: manifest.settings,
       identity: manifest.brand.identity,

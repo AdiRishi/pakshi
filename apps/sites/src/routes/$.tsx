@@ -1,15 +1,10 @@
 import { siteData, SitePage } from "@repo/blocks";
 import { createFileRoute } from "@tanstack/react-router";
-import { Hydrate } from "@tanstack/react-start";
-import { never, visible } from "@tanstack/react-start/hydration";
 import { useMemo } from "react";
 
 import { getSitePage, type SitePageData } from "../page-data.ts";
 
 type Shown = Extract<SitePageData, { readonly kind: "page" }>;
-
-const whenVisible = visible();
-const neverInBrowser = never();
 
 const fullTitle = (data: SitePageData) =>
   data.title === data.head.siteName ? data.title : `${data.title} · ${data.head.siteName}`;
@@ -78,13 +73,9 @@ export const Route = createFileRoute("/$")({
   },
 });
 
-/**
- * A page's blocks. Each of the header, sections and footer that runs in the
- * browser hydrates once it scrolls into view; every other part stays the
- * server's HTML and never loads its code.
- */
+/** A page's blocks, with what they read of the site. */
 function Page({ data }: { readonly data: Shown }) {
-  const { site: inputs, sent, current: shown, motion, interactive: running } = data;
+  const { site: inputs, sent, current: shown, motion } = data;
   const site = useMemo(
     () => ({
       ...siteData({ ...inputs, media: (id) => inputs.media[id] }),
@@ -94,16 +85,5 @@ function Page({ data }: { readonly data: Shown }) {
     }),
     [inputs, sent, shown, motion],
   );
-  const interactive = useMemo(() => new Set(running), [running]);
-  return (
-    <SitePage
-      site={site}
-      page={data.page}
-      parts={data.parts}
-      lockfile={data.lockfile}
-      part={(id, block) => (
-        <Hydrate when={interactive.has(id) ? whenVisible : neverInBrowser}>{block}</Hydrate>
-      )}
-    />
-  );
+  return <SitePage site={site} page={data.page} parts={data.parts} lockfile={data.lockfile} />;
 }

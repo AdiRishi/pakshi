@@ -111,16 +111,6 @@
   }
 }
 
-/*
- * On a site, each of the page's header, sections and footer sits in a
- * TanStack Start hydration marker, which takes no part in the layout. The
- * rules below that place sections by their neighbours look through it, and
- * still match the editor canvas, which has none.
- */
-[data-ts-hydrate-id] {
-  display: contents;
-}
-
 @layer base {
   body {
     margin: 0;
@@ -152,8 +142,7 @@
 
 @media (prefers-reduced-motion: no-preference) {
   @supports (animation-timeline: view()) {
-    main > [data-surface],
-    main > [data-ts-hydrate-id] > [data-surface] {
+    main > [data-surface] {
       animation: var(--theme-section-entrance) linear both;
       animation-timeline: view();
       animation-range: entry 0% entry 40%;
@@ -223,19 +212,7 @@
   :where(main) > :where([data-surface="tint"]) + &:where([data-surface="tint"]),
   :where(main) > :where([data-surface="brand"]) + &:where([data-surface="brand"]),
   :where(main) > :where([data-surface="accent"]) + &:where([data-surface="accent"]),
-  :where(main) > :where([data-surface="inverse"]) + &:where([data-surface="inverse"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="default"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="default"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="muted"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="muted"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="tint"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="tint"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="brand"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="brand"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="accent"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="accent"]),
-  :where(main > [data-ts-hydrate-id]:has(> [data-surface="inverse"]) + [data-ts-hydrate-id])
-    > &:where([data-surface="inverse"]) {
+  :where(main) > :where([data-surface="inverse"]) + &:where([data-surface="inverse"]) {
     padding-top: calc(var(--theme-section-space) / 2);
   }
 }
@@ -495,7 +472,6 @@ main::after {
   border-inline: var(--theme-lines) solid var(--border);
 }
 
-main > * + :not([data-ts-hydrate-id]),
-main > * + [data-ts-hydrate-id] > * {
+main > * + * {
   border-top: var(--theme-lines) solid var(--border);
 }

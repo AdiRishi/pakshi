@@ -168,7 +168,6 @@ export default defineBlock({
       "more than a sentence of text",
     ],
   },
-  interactive: true,
   placeholder,
   component: Card,
 });

@@ -377,7 +377,6 @@ export default defineBlock({
   version: 4,
   title: "Hero",
   placement: "section",
-  interactive: true,
   props,
   variants: ["stacked", "split", "cover", "editorial", "panel"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],

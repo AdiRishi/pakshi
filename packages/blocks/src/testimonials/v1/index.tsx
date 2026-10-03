@@ -185,7 +185,6 @@ export default defineBlock({
   variants: ["grid", "masonry", "scroller", "marquee"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: { items: { title: "Testimonials", accepts: ["testimonial"] } },
-  interactive: true,
   agent: {
     purpose:
       "What several people say about you, each in their own words with their name: three or more students, parents or partners. The masonry layout suits a wall of quotes of different lengths, the marquee a long run of short ones",

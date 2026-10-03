@@ -405,7 +405,6 @@ export default defineBlock({
   variants: ["grid", "mosaic", "masonry", "scroller"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
   slots: {},
-  interactive: true,
   agent: {
     purpose:
       "A set of photos that together show a place, an event or work, each with an optional caption",

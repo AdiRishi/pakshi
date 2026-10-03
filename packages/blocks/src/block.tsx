@@ -50,8 +50,6 @@ type BlockSpec<
   /** The previous version's variants this version renames, and what it calls each now. */
   readonly renamedVariants?: Readonly<Record<string, Variant>>;
   readonly changes?: NonNullable<BlockContract["changes"]>;
-  /** Whether the block runs in the visitor's browser; false when left out. */
-  readonly interactive?: boolean;
   readonly component: ComponentType<BlockComponentProps<F, Variant>>;
 };
 
@@ -129,7 +127,6 @@ const contractOf = <F extends Fields, Variant extends string, P extends Placemen
     migrate: spec.migrate ?? null,
     renamedVariants: spec.renamedVariants ?? {},
     changes: spec.changes ?? null,
-    interactive: spec.interactive ?? false,
   };
   const placed: PlacementSpec = spec;
   switch (placed.placement) {

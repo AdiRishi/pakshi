@@ -217,7 +217,6 @@ export default defineBlock({
   version: 2,
   title: "Call to action",
   placement: "section",
-  interactive: true,
   props,
   variants: ["centered", "split", "panel", "image"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],

@@ -129,7 +129,6 @@ export default defineBlock({
       "the sidebar layout without a heading to put beside the text",
     ],
   },
-  interactive: true,
   placeholder,
   component: RichTextBlock,
 });
