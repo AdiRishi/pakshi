@@ -28,4 +28,17 @@ export const migrations = Migrator.fromRecord({
       object text not null
     )`;
   }),
+  "0002_thread": Effect.gen(function* () {
+    const sql = yield* SqlClient.SqlClient;
+    // The conversation becomes one TanStack AI thread, a message per row in
+    // order, which both the model and the chat panel read. The model's
+    // history in Effect AI's format and the chat's turns go, conversations
+    // and all.
+    yield* sql`drop table turns`;
+    yield* sql`alter table conversation drop column prompt`;
+    yield* sql`create table messages (
+      seq integer primary key,
+      message text not null
+    )`;
+  }),
 });

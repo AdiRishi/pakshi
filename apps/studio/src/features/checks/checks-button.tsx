@@ -14,11 +14,10 @@ import {
 } from "@repo/editor";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { DateTime } from "effect";
-import { useEffect, useState, useSyncExternalStore } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { type Conversation, isWorking } from "@/features/agent/conversation";
+import type { Agent } from "@/features/agent/agent";
 
 import { ChecksPopover, type PakshiReadiness } from "./checks-popover";
 import { fixPlaceOf } from "./issues";
@@ -96,7 +95,7 @@ export function ChecksButton(props: {
   readonly site: SiteId;
   readonly draft: DraftId;
   readonly contracts: BlockContracts;
-  readonly conversation: Conversation;
+  readonly agent: Agent;
   /** Shows the chat with Pakshi, so the person sees it work. */
   readonly onShowPakshi: () => void;
 }) {
@@ -107,7 +106,6 @@ export function ChecksButton(props: {
   const view = useDraftView();
   const page = usePage();
   const goTo = useGoTo(props.site, props.draft);
-  const chat = useSyncExternalStore(props.conversation.subscribe, props.conversation.getState);
   const closure = useDraftClosure();
   const accessEnded = useAccessEnded();
   const outdated = useOutdated();
@@ -115,11 +113,11 @@ export function ChecksButton(props: {
   const closed = closure !== null || accessEnded || outdated;
   const pakshi: PakshiReadiness = closed
     ? "closed"
-    : chat.status === "connecting"
+    : props.agent.status === "connecting"
       ? "connecting"
-      : chat.status === "closed"
+      : props.agent.status === "closed"
         ? "offline"
-        : isWorking(chat)
+        : props.agent.working
           ? "working"
           : "ready";
   return (
@@ -130,14 +128,7 @@ export function ChecksButton(props: {
       pakshi={pakshi}
       onFixAll={(message) => {
         props.onShowPakshi();
-        props.conversation.send({
-          _tag: "Send",
-          text: message,
-          sources: [],
-          page,
-          selected: null,
-          timeZone: DateTime.zoneMakeLocal(),
-        });
+        props.agent.send(message, { sources: [], page, selected: null, builds: null });
       }}
     />
   );

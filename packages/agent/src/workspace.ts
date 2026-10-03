@@ -1,4 +1,4 @@
-import type { Part, Selected, Source } from "@repo/contracts/agent";
+import type { Selected, Source } from "@repo/contracts/agent";
 import type { Draft } from "@repo/contracts/draft";
 import type { PageId, SourceId, TurnId } from "@repo/contracts/ids";
 import type { Collaborator, Focus, Presence } from "@repo/contracts/live";
@@ -13,6 +13,9 @@ import { Context, type DateTime, type Effect, type Option } from "effect";
  * SiteAgent against the site's SiteDoc, in tests, and in the evals against
  * an in-memory draft.
  */
+
+/** Every service a turn's tools reach. */
+export type TurnServices = Workspace | Sources | Web | BlockRequests | Turn;
 
 /** A field someone is typing in, which the agent leaves alone. */
 export interface TypingIn extends Focus {
@@ -84,10 +87,7 @@ export class BlockRequests extends Context.Service<
   }
 >()("Pakshi/Agent/BlockRequests") {}
 
-/**
- * The turn under way: whom it's for, where they are, what they linked to, and
- * the chat the person follows it in.
- */
+/** The turn under way: whom it's for, where they are, and what they linked to. */
 export class Turn extends Context.Service<
   Turn,
   {
@@ -100,9 +100,5 @@ export class Turn extends Context.Service<
     readonly selected: Selected | null;
     /** Addresses in the person's own messages, the only ones the agent may fetch. */
     readonly links: ReadonlySet<string>;
-    /** Adds a part to the turn's chat, or replaces the one with its ID. */
-    readonly show: (part: Part) => Effect.Effect<void>;
-    /** Adds text to a text part of the turn's chat. */
-    readonly write: (part: string, delta: string) => Effect.Effect<void>;
   }
 >()("Pakshi/Agent/Turn") {}

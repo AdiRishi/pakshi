@@ -1,8 +1,10 @@
 import { RichTextDocument } from "@repo/blocks";
 import type { Field } from "@repo/blocks/fields";
 import { richTextFromMarkdown, richTextToMarkdown } from "@repo/blocks/markdown";
-import { Effect, Option, Result, Schema, Stream } from "effect";
-import { LanguageModel, type Prompt } from "effect/ai";
+import { chat, type ModelMessage } from "@tanstack/ai";
+import { Effect, Option, Result, Schema } from "effect";
+
+import { type LanguageModel, modelOptions } from "./model.ts";
 
 /*
  * Suggestions a person accepts or not: alt text for an image, and a merged
@@ -17,15 +19,17 @@ const isString = Schema.is(Schema.String);
 /** The most alt text a placement holds. */
 const altTextLimit = 250;
 
-/** A model's whole answer, streamed as every call is. */
-const answer = (prompt: Prompt.RawInput) =>
-  LanguageModel.streamText({ prompt }).pipe(
-    Stream.filterMap((part) =>
-      part.type === "text-delta" ? Result.succeed(part.delta) : Result.failVoid,
-    ),
-    Stream.mkString,
-    Effect.map((text) => text.trim().replace(/^["“]|["”]$/g, "")),
-  );
+/** A model's whole answer, without the quotes models like to wrap one in. */
+const answer = (model: LanguageModel, system: string, message: ModelMessage) =>
+  Effect.tryPromise(() =>
+    chat({
+      adapter: model,
+      systemPrompts: [system],
+      messages: [message],
+      modelOptions,
+      stream: false,
+    }),
+  ).pipe(Effect.map((text) => text.trim().replace(/^["“]|["”]$/g, "")));
 
 /**
  * Alt text for an image where it's placed, or none when the model gives
@@ -33,22 +37,24 @@ const answer = (prompt: Prompt.RawInput) =>
  * the Visit page, headed Plan your visit".
  */
 export const suggestAltText = Effect.fn("Agent.suggestAltText")(function* (
+  model: LanguageModel,
   image: { readonly data: Uint8Array; readonly mediaType: string },
   where: string,
 ) {
-  const text = yield* answer([
-    {
-      role: "system",
-      content: `You write alt text for images on websites. Describe what a visitor who can't see the image needs to know, in one plain sentence of at most ${altTextLimit} characters. Don't start with "Image of" or "Photo of". Reply with the alt text only.`,
-    },
+  const text = yield* answer(
+    model,
+    `You write alt text for images on websites. Describe what a visitor who can't see the image needs to know, in one plain sentence of at most ${altTextLimit} characters. Don't start with "Image of" or "Photo of". Reply with the alt text only.`,
     {
       role: "user",
       content: [
-        { type: "text", text: `The image is in ${where}.` },
-        { type: "file", mediaType: image.mediaType, data: image.data },
+        { type: "text", content: `The image is in ${where}.` },
+        {
+          type: "image",
+          source: { type: "data", value: image.data.toBase64(), mimeType: image.mediaType },
+        },
       ],
     },
-  ]);
+  );
   if (text !== "" && text.length <= altTextLimit) return Option.some(text);
   yield* Effect.logInfo("The model's alt text didn't fit", { text });
   return Option.none<string>();
@@ -69,6 +75,7 @@ const asText = (value: Json | undefined) =>
  * when the model gives nothing the field takes.
  */
 export const suggestMerge = Effect.fn("Agent.suggestMerge")(function* (
+  model: LanguageModel,
   field: Extract<Field, { readonly kind: "text" | "richText" }>,
   sides: {
     readonly base?: Json | undefined;
@@ -80,16 +87,14 @@ export const suggestMerge = Effect.fn("Agent.suggestMerge")(function* (
     field.kind === "text"
       ? `plain text of at most ${field.max} characters${field.multiline ? "" : " on one line"}`
       : "Markdown using only the formatting the versions use";
-  const text = yield* answer([
-    {
-      role: "system",
-      content: `Two people changed the same ${field.title} of a web page from the same starting text. Write one version that keeps what each of them meant to change. Reply with ${form}, and nothing else.`,
-    },
+  const text = yield* answer(
+    model,
+    `Two people changed the same ${field.title} of a web page from the same starting text. Write one version that keeps what each of them meant to change. Reply with ${form}, and nothing else.`,
     {
       role: "user",
       content: `Starting text:\n${asText(sides.base)}\n\nFirst person's version:\n${asText(sides.draft)}\n\nSecond person's version:\n${asText(sides.live)}`,
     },
-  ]);
+  );
   const merged: Option.Option<Json> =
     field.kind === "richText"
       ? Result.getSuccess(richTextFromMarkdown(field, text))

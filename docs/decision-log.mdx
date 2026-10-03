@@ -9,6 +9,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 
 | #   | Decision                                                                            | Date       | Status              |
 | --- | ----------------------------------------------------------------------------------- | ---------- | ------------------- |
+| 102 | The agent runs on TanStack AI                                                       | 2026-10-03 | Accepted            |
 | 101 | Blocks use shadcn/ui and Magic UI as made, and never hide content until scripts run | 2026-10-03 | Accepted            |
 | 100 | Sites render and hydrate with TanStack Start                                        | 2026-10-03 | Accepted            |
 | 099 | Blocks are tested by their behaviour, and stop being frozen until production        | 2026-10-03 | Accepted            |
@@ -52,7 +53,7 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 061 | One conversation per person per draft                                               | 2026-10-01 | Accepted            |
 | 060 | The agent proposes a site plan with a tool, and the plan becomes its brief          | 2026-10-01 | Accepted            |
 | 059 | One spend limit on AI Gateway for the whole product                                 | 2026-10-01 | Accepted            |
-| 058 | The agent runs on Effect AI in a PartyServer Durable Object                         | 2026-10-01 | Accepted            |
+| 058 | The agent runs on Effect AI in a PartyServer Durable Object                         | 2026-10-01 | Superseded by 102   |
 | 057 | One turn orders every change to submissions and the live release                    | 2026-10-01 | Accepted            |
 | 056 | A submission whose merge needs a person goes back to its draft                      | 2026-10-01 | Accepted            |
 | 055 | A draft's sharing lives with the draft in SiteDoc                                   | 2026-10-01 | Accepted            |
@@ -110,6 +111,16 @@ One short entry per significant decision: the context, what we chose, and why. N
 | 003 | Four Workers: a web and API pair for sites and for Studio                           | 2026-09-27 | Amended by 054      |
 | 002 | Host on Cloudflare                                                                  | 2026-09-27 | Accepted            |
 | 001 | Sites pin block versions                                                            | 2026-09-27 | Accepted            |
+
+## 102 — The agent runs on TanStack AI [#decision-102]
+
+**Context.** [Decision 058](#decision-058) ran the agent on Effect AI with a chat protocol of Pakshi's own. That left Pakshi maintaining the step loop, an adapter that rewrote Workers AI's stream for Effect's OpenAI-compatible provider, two stores of each conversation (the model's history and the chat's turns), a parts model, and a chat client with plain-text rendering, and gave no way to see what a turn did while developing.
+
+**Decision.** Turns run on TanStack AI's `chat()` with its Cloudflare adapter, sending requests over the AI binding through AI Gateway, with Pakshi's policy as middleware: three refusals in a row and the agent explains, a tool that waits for the person ends the turn, and the turn's context reaches the model without being kept. Tools are TanStack tool definitions over the same Effect schemas, and their handlers stay Effect, run over the turn's services. `SiteAgent` stays a PartyServer room: it keeps one thread of TanStack messages, saved before each model call and when a turn ends, and sends every connection the conversation as AG-UI events. Studio's chat panel is TanStack AI's `useChat` over that connection, with typed tool parts, Markdown, and shadcn's chat components, and the AI devtools show its turns.
+
+**Rejected.** Flue, which needs Valibot schemas and its own Vite build of the Durable Object; staying on Effect AI, which has no chat model or client to build on.
+
+**Consequences.** Pakshi keeps the transport and the policy, not the loop, the stream rewriting or the chat state. The thread is one store that the model and the chat read. Server events don't reach the devtools from the Durable Object, so the panel shows what the chat sees.
 
 ## 101 — Blocks use shadcn/ui and Magic UI as made, and never hide content until scripts run [#decision-101]
 

@@ -1,78 +1,120 @@
-import { expect, it } from "@effect/vitest";
-import { Effect, Schema, Stream } from "effect";
-import { LanguageModel, Tool, Toolkit } from "effect/ai";
+import { chat, toolDefinition, type UsageInfo } from "@tanstack/ai";
+import { Schema } from "effect";
+import { expect, it } from "vitest";
 
-import { languageModel, type ModelRequest } from "../src/model.ts";
+import { type AiBinding, languageModel, modelOptions } from "../src/model.ts";
 import { eventStream, textStream, toolCallStream } from "./support/workers-ai.ts";
-
-const SetHeading = Tool.make("set_heading", {
-  parameters: Schema.Struct({ block: Schema.String, heading: Schema.String }),
-  success: Schema.Struct({ ok: Schema.Boolean }),
-});
-const tools = Toolkit.make(SetHeading);
-const handlers = tools.toLayer({ set_heading: () => Effect.succeed({ ok: true }) });
 
 const tags = { brand: "brand_harbour", site: "site_harbour", person: "user_sam" };
 
-/** The edit model over a stand-in AI Gateway that streams `events` and keeps each request. */
-const gateway = (events: ReadonlyArray<string>) => {
-  const sent: Array<ModelRequest> = [];
+/** The edit model over a stand-in AI binding that streams `events` and keeps each call. */
+const workersAi = (events: ReadonlyArray<string>) => {
+  const calls: Array<Parameters<AiBinding["run"]>> = [];
   const model = languageModel(
-    async (request) => {
-      sent.push(request);
-      return new Response(eventStream(events), {
-        headers: { "content-type": "text/event-stream" },
-      });
+    {
+      binding: {
+        run: async (...call) => {
+          calls.push(call);
+          return new Response(eventStream(events), {
+            headers: { "content-type": "text/event-stream" },
+          });
+        },
+      },
     },
+    "gateway_harbour",
     tags,
     "edit",
   );
-  return { sent, model };
+  return { calls, model };
 };
 
-const setHeading = LanguageModel.streamText({
-  prompt: "Set the hero heading to 'Hello there'.",
-  toolkit: tools,
-}).pipe(Stream.runCollect);
+const setHeading = toolDefinition({
+  name: "set_heading",
+  description: "Sets a block's heading",
+  inputSchema: Schema.toStandardJSONSchemaV1(
+    Schema.Struct({ block: Schema.String, heading: Schema.String }),
+  ),
+});
 
-it.effect("asks Workers AI's edit model for low reasoning effort, tagged for cost tracking", () =>
-  Effect.gen(function* () {
-    const { sent, model } = gateway(toolCallStream);
-    yield* setHeading.pipe(Effect.provide(model));
-    expect(sent).toMatchObject([
+it("asks Workers AI's edit model for low reasoning effort, through AI Gateway, tagged for cost tracking", async () => {
+  const { calls, model } = workersAi(textStream("Hello."));
+  await chat({
+    adapter: model,
+    messages: [{ role: "user", content: "Hi" }],
+    modelOptions,
+    stream: false,
+  });
+  expect(calls).toMatchObject([
+    [
+      "@cf/zai-org/glm-5.3-flash",
+      { stream: true, reasoning_effort: "low" },
       {
-        model: "@cf/zai-org/glm-5.3-flash",
-        inputs: { stream: true, reasoning_effort: "low" },
-        tags: { ...tags, task: "edit" },
+        gateway: { id: "gateway_harbour", metadata: { ...tags, task: "edit" } },
+        returnRawResponse: true,
       },
-    ]);
-  }).pipe(Effect.provide(handlers)),
-);
+    ],
+  ]);
+});
 
-it.effect("a tool call streamed by Workers AI reaches the agent whole, with its token counts", () =>
-  Effect.gen(function* () {
-    const parts = yield* setHeading.pipe(Effect.provide(gateway(toolCallStream).model));
-    expect(parts.filter((part) => part.type === "tool-call").map((part) => part.params)).toEqual([
-      { block: "b_hero", heading: "Hello there" },
-    ]);
-    expect(parts.find((part) => part.type === "finish")).toMatchObject({
-      reason: "tool-calls",
-      usage: { inputTokens: { total: 172, cacheRead: 64 }, outputTokens: { total: 19 } },
-    });
-  }).pipe(Effect.provide(handlers)),
-);
+it("a tool call streamed by Workers AI reaches the agent whole, with its token counts", async () => {
+  const { model } = workersAi(toolCallStream);
+  const inputs: Array<unknown> = [];
+  const usage: Array<UsageInfo> = [];
+  await chat({
+    adapter: model,
+    messages: [{ role: "user", content: "Set the hero heading to 'Hello there'." }],
+    tools: [
+      setHeading.server(async (input) => {
+        inputs.push(input);
+        return { ok: true };
+      }),
+    ],
+    agentLoopStrategy: () => false,
+    middleware: [{ onUsage: (_ctx, found) => void usage.push(found) }],
+    stream: false,
+  });
+  expect(inputs).toEqual([{ block: "b_hero", heading: "Hello there" }]);
+  expect(usage).toMatchObject([{ promptTokens: 172, completionTokens: 19 }]);
+});
 
-it.effect("replies streamed at once keep their text whole, even split within a character", () =>
-  Effect.gen(function* () {
-    const replies = ["é".repeat(60), "ü".repeat(60)];
-    const read = (text: string) =>
-      LanguageModel.streamText({ prompt: "Say something." }).pipe(
-        Stream.runCollect,
-        Effect.map((parts) =>
-          parts.flatMap((part) => (part.type === "text-delta" ? [part.delta] : [])).join(""),
-        ),
-        Effect.provide(gateway(textStream(text)).model),
-      );
-    expect(yield* Effect.forEach(replies, read, { concurrency: "unbounded" })).toEqual(replies);
-  }),
-);
+it("replies streamed at once keep their text whole, even split within a character", async () => {
+  const text = "Plané, sail and launch 🚤 on the harbour.";
+  const { model } = workersAi(textStream(text));
+  expect(
+    await chat({ adapter: model, messages: [{ role: "user", content: "Hi" }], stream: false }),
+  ).toBe(text);
+});
+
+it("a stopped turn cancels the model's call rather than waiting for it", async () => {
+  const stop = new AbortController();
+  let cancelled = false;
+  // A model that streams nothing until it's cancelled.
+  const model = languageModel(
+    {
+      binding: {
+        run: async () =>
+          new Response(
+            new ReadableStream({
+              cancel() {
+                cancelled = true;
+              },
+            }),
+            { headers: { "content-type": "text/event-stream" } },
+          ),
+      },
+    },
+    "gateway_harbour",
+    tags,
+    "edit",
+  );
+  const turn = chat({
+    adapter: model,
+    messages: [{ role: "user", content: "Hi" }],
+    abortController: stop,
+    stream: false,
+  }).catch(() => "");
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  stop.abort();
+  await turn;
+  expect(cancelled).toBe(true);
+});

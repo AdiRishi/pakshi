@@ -186,7 +186,7 @@ The agent builds and edits sites through the same path as people.
 
 **Build:**
 
-- [`SiteAgent`](/technical-design#the-agent) on PartyServer and Effect AI, one per person and draft, reached only through `studio-api`'s agent route with the trusted user header ([decision 058](/decision-log#decision-058), [decision 061](/decision-log#decision-061)).
+- [`SiteAgent`](/technical-design#the-agent) on PartyServer and TanStack AI, one per person and draft, reached only through `studio-api`'s agent route with the trusted user header ([decision 058](/decision-log#decision-058), [decision 061](/decision-log#decision-061), [decision 102](/decision-log#decision-102)).
 - The chat panel through `studio-api`: it catches up on the conversation when it connects and follows each turn as it streams.
 - In the editor: [the agent's changes highlighted](/editor#with-the-agent) as they land, the selected block passed to the agent, and undo of an agent turn from the chat panel.
 - Every agent tool, including `propose_plan` ([decision 060](/decision-log#decision-060)), the recipes `get_recipe` and `create_page` read, the cacheable context prefix, structured validation errors with two repair attempts, and presence as the agent acting for its user.

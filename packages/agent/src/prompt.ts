@@ -38,7 +38,7 @@ How you work:
 - Rich text is Markdown, with only what the field allows.
 - Write copy that is plain, specific and friendly, in the brand's voice.
 - When you finish, say in one or two sentences what you did and what's still missing. Don't list every change: the chat shows them.
-- Write your replies as plain sentences, without Markdown.`;
+- Write your replies as short paragraphs. Use Markdown only for a list the person needs, such as the facts you'd need.`;
 
 const blockIndex = (contracts: BlockContracts) =>
   Array.from(contracts.values())

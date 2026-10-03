@@ -1,21 +1,21 @@
 export {
   type CostTags,
   languageModel,
+  type LanguageModel,
   models,
-  type ModelRequest,
-  openAiStream,
-  type SendToModel,
+  modelOptions,
   type Task,
+  type WorkersAi,
 } from "./model.ts";
 export { systemPrompt, turnContext } from "./prompt.ts";
-export { AgentTools } from "./tools.ts";
-export { runTurn } from "./turn.ts";
+export { type RunningTurn, runTurn, type TurnOptions } from "./turn.ts";
 export {
   BlockRequests,
   type Committed,
   type Fetched,
   Sources,
   Turn,
+  type TurnServices,
   type TypingIn,
   Web,
   Workspace,

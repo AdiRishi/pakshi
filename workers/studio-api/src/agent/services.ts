@@ -1,16 +1,8 @@
 import { D1Client } from "@effect/sql-d1";
-import {
-  BlockRequests,
-  type Committed,
-  languageModel,
-  Sources,
-  Turn,
-  Web,
-  Workspace,
-} from "@repo/agent";
+import { BlockRequests, type Committed, Sources, Turn, Web, Workspace } from "@repo/agent";
 import { loadBlocks } from "@repo/blocks";
 import { Permission } from "@repo/contracts/access";
-import type { Part, Selected } from "@repo/contracts/agent";
+import type { Selected } from "@repo/contracts/agent";
 import {
   BatchId,
   BrandId,
@@ -31,7 +23,6 @@ import type { Outcome } from "../site-doc.ts";
 import type { BatchResult } from "../site/drafts.ts";
 import type { DraftView, Site } from "../site/site.ts";
 import { Conversation } from "./conversation.ts";
-import { sendThroughGateway } from "./gateway.ts";
 import { readWebPage } from "./web.ts";
 
 /** Whom a conversation is for, as studio-api found them, and where. */
@@ -65,7 +56,7 @@ const closed: Committed = {
 /**
  * Everything a turn's tools reach, for one person's turn in their draft:
  * the draft through its site's SiteDoc, the conversation's documents, the
- * web, block requests in D1, and the model through AI Gateway.
+ * web, and block requests in D1.
  */
 export const turnServices = (
   env: StudioApiEnv,
@@ -76,8 +67,6 @@ export const turnServices = (
     readonly page: PageId;
     readonly selected: Selected | null;
     readonly links: ReadonlySet<string>;
-    readonly show: (part: Part) => Promise<void>;
-    readonly write: (part: string, delta: string) => void;
   },
 ) => {
   const person = { id: who.person.id, name: who.person.name };
@@ -165,19 +154,6 @@ export const turnServices = (
     page: turn.page,
     selected: turn.selected,
     links: turn.links,
-    show: (part) => Effect.promise(() => turn.show(part)),
-    write: (part, delta) => Effect.sync(() => turn.write(part, delta)),
   });
-  return Layer.mergeAll(
-    workspace,
-    sources,
-    web,
-    blockRequests,
-    current,
-    languageModel(
-      sendThroughGateway(env),
-      { brand: who.brand, site: who.site, person: who.person.id },
-      "edit",
-    ),
-  );
+  return Layer.mergeAll(workspace, sources, web, blockRequests, current);
 };

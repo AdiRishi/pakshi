@@ -2,6 +2,8 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/onest";
+/* shadcn/typeset, copied from https://ui.shadcn.com/typeset.css: prose that stays put while it streams. */
+@import "./typeset.css";
 
 @source "../../../../apps/studio/src";
 @source "../../../editor/src";
@@ -216,5 +218,15 @@
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
+  }
+}
+
+/* Prose in the chat with Pakshi: the panel's own size, and tighter than a document. */
+@layer components {
+  .typeset-chat {
+    --typeset-font-heading: inherit;
+    --typeset-size: 0.875rem;
+    --typeset-leading: 1.6;
+    --typeset-flow: 0.75em;
   }
 }

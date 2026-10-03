@@ -1,25 +1,55 @@
-import { SitePlan, Source, Turn } from "@repo/contracts/agent";
+import { SitePlan, Source } from "@repo/contracts/agent";
 import { SourceId } from "@repo/contracts/ids";
+import type { ModelMessage } from "@tanstack/ai";
 import { Context, Effect, Layer, Option, Schema } from "effect";
 import { type SqlError, SqlClient, SqlSchema } from "effect/sql";
 
 /*
  * One person's conversation in one draft, in its SiteAgent's SQLite storage:
- * the turns the chat panel shows, the model's own history, the brief, and
- * the documents attached.
+ * the thread of messages, as the model reads it, the brief, and the
+ * documents attached.
  */
 
 type StorageError = SqlError.SqlError | Schema.SchemaError;
 
 const json = Schema.fromJsonString;
 
-const encodeTurn = Schema.encodeSync(json(Turn));
-const encodeBrief = Schema.encodeSync(json(SitePlan));
-
-const ConversationRow = Schema.Struct({
-  prompt: Schema.NullOr(Schema.String),
-  brief: Schema.NullOr(json(SitePlan)),
+const ToolCall = Schema.Struct({
+  id: Schema.String,
+  type: Schema.Literal("function"),
+  function: Schema.Struct({ name: Schema.String, arguments: Schema.String }),
 });
+
+/**
+ * A message of the thread as TanStack AI's `ModelMessage` holds it, with the
+ * fields the agent's conversations use. A thread outlives deploys, so it's
+ * read back through this schema.
+ */
+const Message = Schema.Struct({
+  id: Schema.optionalKey(Schema.String),
+  role: Schema.Literals(["user", "assistant", "tool"]),
+  content: Schema.NullOr(Schema.String),
+  name: Schema.optionalKey(Schema.String),
+  toolCalls: Schema.optionalKey(Schema.mutable(Schema.Array(ToolCall))),
+  toolCallId: Schema.optionalKey(Schema.String),
+  thinking: Schema.optionalKey(
+    Schema.mutable(
+      Schema.Array(
+        Schema.Struct({
+          content: Schema.String,
+          signature: Schema.optionalKey(Schema.String),
+          redacted: Schema.optionalKey(Schema.Boolean),
+        }),
+      ),
+    ),
+  ),
+  error: Schema.optionalKey(Schema.String),
+  metadata: Schema.optionalKey(Schema.Record(Schema.String, Schema.Json)),
+  createdAt: Schema.optionalKey(Schema.DateFromString),
+});
+
+const encodeMessage = Schema.encodeUnknownSync(json(Message));
+const encodeBrief = Schema.encodeSync(json(SitePlan));
 
 const SourceRow = Schema.Struct({
   id: SourceId,
@@ -31,19 +61,19 @@ const SourceRow = Schema.Struct({
 export class Conversation extends Context.Service<
   Conversation,
   {
-    readonly turns: Effect.Effect<ReadonlyArray<Turn>, StorageError>;
-    /** Adds a turn, or saves one that's already there as it now stands. */
-    readonly saveTurn: (turn: Turn) => Effect.Effect<void, StorageError>;
-    /** The model's history, as Effect AI's Chat exports it, once there is one. */
-    readonly prompt: Effect.Effect<Option.Option<string>, StorageError>;
-    readonly savePrompt: (prompt: string) => Effect.Effect<void, StorageError>;
+    readonly thread: Effect.Effect<ReadonlyArray<ModelMessage>, StorageError>;
+    /** Saves the thread from its message at `from` on, replacing what was there. */
+    readonly saveThread: (
+      from: number,
+      messages: ReadonlyArray<ModelMessage>,
+    ) => Effect.Effect<void, StorageError>;
     readonly brief: Effect.Effect<SitePlan | null, StorageError>;
     readonly saveBrief: (brief: SitePlan) => Effect.Effect<void, StorageError>;
     readonly sources: Effect.Effect<ReadonlyArray<Source>, StorageError>;
     /** Where a source's file is in R2. Its Markdown is beside it. */
     readonly sourceObject: (id: SourceId) => Effect.Effect<Option.Option<string>, StorageError>;
     readonly addSource: (source: Source, object: string) => Effect.Effect<void, StorageError>;
-    /** Forgets the conversation: its turns, history, brief and sources. */
+    /** Forgets the conversation: its thread, brief and sources. */
     readonly clear: Effect.Effect<void, StorageError>;
   }
 >()("Pakshi/StudioApi/Conversation") {
@@ -51,15 +81,15 @@ export class Conversation extends Context.Service<
     Conversation,
     Effect.gen(function* () {
       const sql = yield* SqlClient.SqlClient;
-      const findTurns = SqlSchema.findAll({
+      const findThread = SqlSchema.findAll({
         Request: Schema.Void,
-        Result: Schema.Struct({ turn: json(Turn) }),
-        execute: () => sql`select turn from turns order by seq`,
+        Result: Schema.Struct({ message: json(Message) }),
+        execute: () => sql`select message from messages order by seq`,
       });
-      const findConversation = SqlSchema.findOneOption({
+      const findBrief = SqlSchema.findOneOption({
         Request: Schema.Void,
-        Result: ConversationRow,
-        execute: () => sql`select prompt, brief from conversation where id = 1`,
+        Result: Schema.Struct({ brief: Schema.NullOr(json(SitePlan)) }),
+        execute: () => sql`select brief from conversation where id = 1`,
       });
       const findSources = SqlSchema.findAll({
         Request: Schema.Void,
@@ -71,27 +101,27 @@ export class Conversation extends Context.Service<
         Result: SourceRow,
         execute: (id) => sql`select id, name, size, object from sources where id = ${id}`,
       });
-      const row = Effect.map(findConversation(undefined), Option.getOrUndefined);
-      const ensureRow = sql`insert into conversation (id) values (1) on conflict (id) do nothing`;
 
       return Conversation.of({
-        turns: Effect.map(findTurns(undefined), (rows) => rows.map((found) => found.turn)),
-        saveTurn: (turn: Turn) =>
-          Effect.asVoid(sql`insert into turns (id, turn) values (${turn.id}, ${encodeTurn(turn)})
-            on conflict (id) do update set turn = excluded.turn`),
-        prompt: Effect.map(row, (found) => Option.fromNullishOr(found?.prompt)),
-        savePrompt: (prompt) =>
-          Effect.asVoid(
-            Effect.andThen(ensureRow, sql`update conversation set prompt = ${prompt} where id = 1`),
-          ),
-        brief: Effect.map(row, (found) => found?.brief ?? null),
-        saveBrief: (brief) =>
-          Effect.asVoid(
+        thread: Effect.map(findThread(undefined), (rows) => rows.map((row) => row.message)),
+        saveThread: (from, messages) =>
+          sql.withTransaction(
             Effect.andThen(
-              ensureRow,
-              sql`update conversation set brief = ${encodeBrief(brief)} where id = 1`,
+              sql`delete from messages where seq >= ${from}`,
+              Effect.forEach(
+                messages.slice(from),
+                (message, index) =>
+                  sql`insert into messages (seq, message) values (${from + index}, ${encodeMessage(message)})`,
+                { discard: true },
+              ),
             ),
           ),
+        brief: Effect.map(findBrief(undefined), (found) =>
+          Option.match(found, { onNone: () => null, onSome: (row) => row.brief }),
+        ),
+        saveBrief: (brief) =>
+          Effect.asVoid(sql`insert into conversation (id, brief) values (1, ${encodeBrief(brief)})
+            on conflict (id) do update set brief = excluded.brief`),
         sources: Effect.map(findSources(undefined), (rows) =>
           rows.map(({ id, name, size }) => ({ id, name, size })),
         ),
@@ -106,7 +136,7 @@ export class Conversation extends Context.Service<
         clear: sql.withTransaction(
           Effect.asVoid(
             Effect.all([
-              sql`delete from turns`,
+              sql`delete from messages`,
               sql`delete from conversation`,
               sql`delete from sources`,
             ]),

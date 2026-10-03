@@ -1,24 +1,30 @@
 import { D1Client } from "@effect/sql-d1";
 import { SqliteClient } from "@effect/sql-sqlite-do";
-import { runTurn, systemPrompt, turnContext } from "@repo/agent";
+import { languageModel, runTurn, systemPrompt, turnContext } from "@repo/agent";
+import { editingTools } from "@repo/agent/tools";
 import { loadBlocks } from "@repo/blocks";
 import {
+  agentEvents,
   AgentClientMessage,
   AgentClientMessageJson,
-  type AgentServerMessage,
-  AgentServerMessageJson,
-  type Part,
-  type Request as TurnRequest,
-  type Selected,
+  SitePlan,
+  type Source,
   sourcesSegment,
-  type Turn,
+  TurnRecord,
+  turnKey,
   type TurnStatus,
 } from "@repo/contracts/agent";
-import { type PageId, randomId, SourceId, TurnId } from "@repo/contracts/ids";
-import { now } from "@repo/contracts/release";
+import { randomId, SourceId, TurnId } from "@repo/contracts/ids";
 import type { StudioApiEnv } from "@repo/infra/worker-bindings";
-import { Cause, type DateTime, Effect, Exit, Layer, ManagedRuntime, Option, Schema } from "effect";
-import { Chat } from "effect/ai";
+import {
+  encodeWsFrame,
+  EventType,
+  type ModelMessage,
+  modelMessagesToUIMessages,
+  type StreamChunk,
+  uiMessagesToWire,
+} from "@tanstack/ai";
+import { Effect, Exit, Layer, ManagedRuntime, Option, Schema, Scope } from "effect";
 import type { SqlError } from "effect/sql";
 import * as Migrator from "effect/sql/Migrator";
 import {
@@ -42,9 +48,14 @@ import { voiceOf } from "./brands.ts";
 
 const decodeAuthorization = Schema.decodeUnknownOption(Schema.fromJsonString(AgentAuthorization));
 const decodeMessage = Schema.decodeUnknownOption(AgentClientMessageJson);
-const encodeMessage = Schema.encodeSync(AgentServerMessageJson);
+const decodeRecord = Schema.decodeUnknownOption(TurnRecord);
+const encodeRecord = Schema.encodeSync(TurnRecord);
+const decodePlan = Schema.decodeUnknownOption(
+  Schema.fromJsonString(Schema.Struct({ plan: SitePlan })),
+);
 
 type AgentConnection = Connection<AgentAuthorization>;
+type Send = Extract<AgentClientMessage, { _tag: "Send" }>;
 
 /** Everything the conversation's storage can fail with. Its callers treat it as a defect. */
 type StorageError = SqlError.SqlError | Schema.SchemaError;
@@ -62,34 +73,104 @@ const sourceTypes = new Map([
   ["html", "text/html"],
 ]);
 
-/** Addresses in a person's words, which the agent may fetch. */
-const linksIn = (text: string) =>
-  Array.from(text.matchAll(/https?:\/\/[^\s<>()"']+/g), ([found]) =>
-    URL.canParse(found) ? [new URL(found).href] : [],
-  ).flat();
+const busy = "Pakshi is still working on your last message. Stop it first, or wait.";
 
-/** A turn's part replaced, or added when the turn has none with its ID. */
-const withPart = (turn: Turn, part: Part): Turn => {
-  const index = turn.parts.findIndex((found) => found.id === part.id);
-  return {
-    ...turn,
-    parts: index === -1 ? [...turn.parts, part] : turn.parts.with(index, part),
-  };
+const readText = Schema.decodeUnknownOption(Schema.String);
+
+/** Addresses in a person's message, which the agent may fetch. */
+const linksIn = (message: ModelMessage) =>
+  Option.toArray(readText(message.content)).flatMap((text) =>
+    Array.from(text.matchAll(/https?:\/\/[^\s<>()"']+/g), ([found]) =>
+      URL.canParse(found) ? [new URL(found).href] : [],
+    ).flat(),
+  );
+
+/** The turn a person's message started, as Pakshi recorded it on the message. */
+const recordOf = (message: ModelMessage | undefined) => decodeRecord(message?.metadata?.[turnKey]);
+
+/** A person's message with its turn as it now stands. */
+const withRecord = (message: ModelMessage, record: TurnRecord): ModelMessage => ({
+  ...message,
+  metadata: { ...message.metadata, [turnKey]: encodeRecord(record) },
+});
+
+/** The thread with the turn of the message at `at` changed by `change`. */
+const changeTurn = (
+  thread: ReadonlyArray<ModelMessage>,
+  at: number,
+  change: (record: TurnRecord) => TurnRecord,
+) => {
+  const message = thread[at];
+  const record = recordOf(message);
+  if (message === undefined || Option.isNone(record)) return thread;
+  return thread.with(at, withRecord(message, change(record.value)));
 };
 
-/** A turn as it ends: anything still running when it stopped didn't finish. */
-const ended = (turn: Turn, status: TurnStatus): Turn => ({
-  ...turn,
-  status,
-  parts: turn.parts.map((part) =>
-    part._tag === "Activity" && part.status === "running" ? { ...part, status: "failed" } : part,
-  ),
+/** The plan a propose_plan call proposed, by the call's ID. */
+const planOf = (thread: ReadonlyArray<ModelMessage>, call: string) =>
+  Option.map(
+    decodePlan(
+      thread
+        .flatMap((message) => message.toolCalls ?? [])
+        .find((found) => found.id === call && found.function.name === "propose_plan")?.function
+        .arguments,
+    ),
+    (found) => found.plan,
+  );
+
+/** The conversation as the chat panel takes it whole. */
+const snapshot = (thread: ReadonlyArray<ModelMessage>): StreamChunk => ({
+  type: EventType.MESSAGES_SNAPSHOT,
+  timestamp: Date.now(),
+  messages: uiMessagesToWire(modelMessagesToUIMessages([...thread])),
 });
+
+/** Something the agent couldn't do for a message, for the person who sent it. */
+const noticeEvent = (message: string): StreamChunk => ({
+  type: EventType.CUSTOM,
+  timestamp: Date.now(),
+  name: agentEvents.notice,
+  value: { message },
+});
+
+/** The documents attached to the conversation. */
+const sourcesEvent = (sources: ReadonlyArray<Source>): StreamChunk => ({
+  type: EventType.CUSTOM,
+  timestamp: Date.now(),
+  name: agentEvents.sources,
+  value: { sources },
+});
+
+/**
+ * An event of a turn, under the run ID the chat panel gave it. The model's
+ * adapter names each model call's run itself, so the panel couldn't tell
+ * its turn's events from another's.
+ */
+const underRun = (event: StreamChunk, run: string): StreamChunk => {
+  switch (event.type) {
+    case EventType.RUN_STARTED:
+    case EventType.RUN_FINISHED:
+    case EventType.RUN_ERROR:
+      return { ...event, runId: run };
+    default:
+      return event;
+  }
+};
+
+/** Whether an event ends a turn's run, rather than one model call of it. */
+const endsRun = (event: StreamChunk) =>
+  event.type === EventType.RUN_ERROR ||
+  (event.type === EventType.RUN_FINISHED &&
+    event.metadata?.tanstack?.finishReason !== "tool_calls");
 
 /** The turn under way, and what stops it. */
 interface Working {
-  turn: Turn;
+  readonly run: string;
+  /** Where the turn's message is in the thread. */
+  readonly at: number;
   readonly stop: AbortController;
+  /** The turn's events so far, for a connection that opens while it runs. */
+  readonly events: Array<StreamChunk>;
   done: Promise<void>;
 }
 
@@ -97,6 +178,10 @@ interface Working {
  * One person's conversation with the agent in one draft, named by the site,
  * draft and person. studio-api is the only way in: it checks the person may
  * edit the draft and says who they are in a header it sets.
+ *
+ * The conversation is a TanStack AI thread. Every connection gets it as a
+ * snapshot when it opens, follows each turn's events as they come, and gets
+ * a new snapshot when a turn starts, ends or is undone.
  *
  * PartyServer requires its env to extend the global `Cloudflare.Env`, as
  * SiteDoc explains.
@@ -123,6 +208,10 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     return this.#conversation().runPromise(Effect.orDie(Conversation.use(use)));
   }
 
+  #sources() {
+    return this.#run((conversation) => conversation.sources);
+  }
+
   #authorized(request: Request) {
     const authorization = decodeAuthorization(request.headers.get(agentAuthorizationHeader));
     return Option.filter(
@@ -131,13 +220,17 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     );
   }
 
-  #broadcast(message: AgentServerMessage) {
-    const text = encodeMessage(message);
-    for (const connection of this.getConnections()) connection.send(text);
+  #broadcast(event: StreamChunk) {
+    const frame = encodeWsFrame(event, undefined);
+    for (const connection of this.getConnections()) connection.send(frame);
   }
 
-  #send(connection: AgentConnection, message: AgentServerMessage) {
-    connection.send(encodeMessage(message));
+  #send(connection: AgentConnection, event: StreamChunk) {
+    connection.send(encodeWsFrame(event, undefined));
+  }
+
+  #notice(connection: AgentConnection, message: string) {
+    this.#send(connection, noticeEvent(message));
   }
 
   /** Runs each message after the ones before it, in the order they arrive. */
@@ -147,17 +240,24 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     return next;
   }
 
-  #saveTurn(turn: Turn) {
-    this.#broadcast({ _tag: "TurnChanged", turn });
-    return this.#run((conversation) => conversation.saveTurn(turn));
+  /** Changes the turn of the message at `at`, and shows every connection. */
+  async #changeTurn(at: number, change: (record: TurnRecord) => TurnRecord) {
+    const thread = changeTurn(await this.#run((conversation) => conversation.thread), at, change);
+    await this.#run((conversation) => conversation.saveThread(at, thread));
+    this.#broadcast(snapshot(thread));
   }
 
   override async onStart() {
     // A turn still working when the object was evicted was cut off.
-    const turns = await this.#run((conversation) => conversation.turns);
-    for (const turn of turns)
-      if (turn.status === "working")
-        await this.#run((conversation) => conversation.saveTurn(ended(turn, "interrupted")));
+    const thread = await this.#run((conversation) => conversation.thread);
+    const at = thread.findLastIndex((message) => message.role === "user");
+    if (Option.exists(recordOf(thread[at]), (record) => record.status === "working"))
+      await this.#run((conversation) =>
+        conversation.saveThread(
+          at,
+          changeTurn(thread, at, (record) => ({ ...record, status: "interrupted" })),
+        ),
+      );
   }
 
   override onConnect(connection: AgentConnection, { request }: ConnectionContext) {
@@ -167,6 +267,17 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
       return;
     }
     connection.setState(authorization.value);
+    return this.#inOrder(async () => {
+      const [thread, sources] = await Promise.all([
+        this.#run((conversation) => conversation.thread),
+        this.#sources(),
+      ]);
+      const working = this.#working;
+      // A turn under way is replayed from its events, after its message.
+      this.#send(connection, snapshot(working === null ? thread : thread.slice(0, working.at + 1)));
+      for (const event of working?.events ?? []) this.#send(connection, event);
+      this.#send(connection, sourcesEvent(sources));
+    });
   }
 
   override onMessage(connection: AgentConnection, raw: WSMessage) {
@@ -178,71 +289,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
         return;
       }
       await AgentClientMessage.match(message.value, {
-        Sync: async () => {
-          const [turns, sources] = await Promise.all([
-            this.#run((conversation) => conversation.turns),
-            this.#run((conversation) => conversation.sources),
-          ]);
-          const working = this.#working?.turn;
-          this.#send(connection, {
-            _tag: "Synced",
-            turns: turns.map((turn) => (turn.id === working?.id ? working : turn)),
-            sources,
-          });
-        },
-        Send: ({ text, sources, page, selected, timeZone }) =>
-          this.#startTurn(connection, who, { text, sources, page, selected, timeZone }),
-        Answer: async ({ turn: id, part, answer, page, timeZone }) => {
-          const turn = (await this.#run((conversation) => conversation.turns)).find(
-            (found) => found.id === id,
-          );
-          const question = turn?.parts.find((found) => found.id === part);
-          if (turn === undefined || question?._tag !== "Question" || question.answer !== null)
-            return;
-          if (this.#busy(connection)) return;
-          await this.#saveTurn(withPart(turn, { ...question, answer }));
-          await this.#startTurn(connection, who, {
-            text: answer,
-            sources: [],
-            page,
-            selected: null,
-            timeZone,
-          });
-        },
-        Build: async ({ turn: id, part, page, timeZone }) => {
-          const turns = await this.#run((conversation) => conversation.turns);
-          const plan = turns
-            .find((found) => found.id === id)
-            ?.parts.find((found) => found.id === part);
-          if (plan?._tag !== "Plan" || plan.status !== "proposed") return;
-          if (this.#busy(connection)) return;
-          for (const turn of turns) {
-            const proposed = turn.parts.filter(
-              (found) => found._tag === "Plan" && found.status === "proposed",
-            );
-            if (proposed.length === 0) continue;
-            await this.#saveTurn(
-              proposed.reduce(
-                (changed, found) =>
-                  found._tag === "Plan"
-                    ? withPart(changed, {
-                        ...found,
-                        status: found.id === part ? "building" : "replaced",
-                      })
-                    : changed,
-                turn,
-              ),
-            );
-          }
-          await this.#run((conversation) => conversation.saveBrief(plan.plan));
-          await this.#startTurn(connection, who, {
-            text: "Build the plan.",
-            sources: [],
-            page,
-            selected: null,
-            timeZone,
-          });
-        },
+        Send: (send) => this.#startTurn(connection, who, send),
         Stop: async () => {
           const working = this.#working;
           if (working === null) return;
@@ -256,14 +303,14 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
             working.stop.abort();
             await working.done;
           }
-          const sources = await this.#run((conversation) => conversation.sources);
-          for (const source of sources) {
+          for (const source of await this.#sources()) {
             const object = await this.#run((conversation) => conversation.sourceObject(source.id));
             if (Option.isSome(object))
               await this.env.CONTENT.delete([object.value, `${object.value}.md`]);
           }
           await this.#run((conversation) => conversation.clear);
-          this.#broadcast({ _tag: "Cleared" });
+          this.#broadcast(snapshot([]));
+          this.#broadcast(sourcesEvent([]));
         },
       });
     });
@@ -277,153 +324,185 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     await this.ctx.storage.deleteAll();
   }
 
-  /** Whether a turn is under way, which the person is told, since the conversation takes one at a time. */
-  #busy(connection: AgentConnection) {
-    if (this.#working === null) return false;
-    this.#send(connection, {
-      _tag: "Notice",
-      message: "Pakshi is still working on your last message. Stop it first, or wait.",
-    });
-    return true;
-  }
-
-  /** Starts a turn for a person's message, unless one is under way. */
-  async #startTurn(
-    connection: AgentConnection,
-    who: AgentAuthorization,
-    message: {
-      readonly text: string;
-      readonly sources: ReadonlyArray<SourceId>;
-      readonly page: PageId;
-      readonly selected: Selected | null;
-      readonly timeZone: DateTime.TimeZone;
-    },
-  ) {
-    if (this.#busy(connection)) return;
-    const [turns, attached] = await Promise.all([
-      this.#run((conversation) => conversation.turns),
-      this.#run((conversation) => conversation.sources),
+  /** Starts a turn for a person's message, unless one is under way, which ends the message's run. */
+  async #startTurn(connection: AgentConnection, who: AgentAuthorization, send: Send) {
+    if (this.#working !== null) {
+      this.#notice(connection, busy);
+      this.#send(connection, {
+        type: EventType.RUN_ERROR,
+        timestamp: Date.now(),
+        runId: send.run,
+        message: busy,
+      });
+      return;
+    }
+    const [thread, attached] = await Promise.all([
+      this.#run((conversation) => conversation.thread),
+      this.#sources(),
     ]);
-    const request: TurnRequest = {
-      text: message.text,
-      sources: attached.filter((source) => message.sources.includes(source.id)),
-      selected: message.selected,
-      at: now(),
-    };
-    const turn: Turn = {
+    if (send.builds !== null) {
+      const plan = planOf(thread, send.builds);
+      if (Option.isSome(plan))
+        await this.#run((conversation) => conversation.saveBrief(plan.value));
+    }
+    const record: TurnRecord = {
       id: TurnId.make(randomId("turn")),
-      request,
-      parts: [],
       status: "working",
       undone: false,
+      sources: attached.filter((source) => send.sources.includes(source.id)),
+      selected: send.selected,
+      builds: send.builds,
     };
-    const stop = new AbortController();
-    const links = new Set(
-      [...turns.map((found) => found.request.text), message.text].flatMap(linksIn),
-    );
-    const working: Working = { turn, stop, done: Promise.resolve() };
+    const started = [
+      ...thread,
+      withRecord(
+        { id: send.message.id, role: "user", content: send.message.text, createdAt: new Date() },
+        record,
+      ),
+    ];
+    const working: Working = {
+      run: send.run,
+      at: thread.length,
+      stop: new AbortController(),
+      events: [],
+      done: Promise.resolve(),
+    };
     this.#working = working;
-    await this.#saveTurn(turn);
-
-    const show = (part: Part) => {
-      working.turn = withPart(working.turn, part);
-      return this.#saveTurn(working.turn);
-    };
-    const write = (id: string, delta: string) => {
-      const part = working.turn.parts.find((found) => found.id === id);
-      if (part?._tag !== "Text") return;
-      working.turn = withPart(working.turn, { ...part, text: part.text + delta });
-      this.#broadcast({ _tag: "TextDelta", turn: turn.id, part: id, delta });
-    };
-    const env = this.env;
-    const services = turnServices(env, who, {
-      id: turn.id,
-      timeZone: message.timeZone,
-      page: message.page,
-      selected: message.selected,
-      links,
-      show,
-      write,
+    await this.#run((conversation) => conversation.saveThread(working.at, started));
+    this.#broadcast(snapshot(started));
+    working.done = this.#runTurn(working, who, send, started, record).then(async (status) => {
+      if (!working.events.some(endsRun)) {
+        const ended: StreamChunk = {
+          type: EventType.RUN_FINISHED,
+          timestamp: Date.now(),
+          runId: working.run,
+          threadId: this.name,
+        };
+        working.events.push(ended);
+        this.#broadcast(ended);
+      }
+      this.#working = null;
+      await this.#changeTurn(working.at, (turn) => ({ ...turn, status }));
+      const doc = await getServerByName(this.env.SITE_DOC, who.site);
+      await doc.agentPresence({ id: who.person.id, name: who.person.name }, who.draft, null);
     });
-    const program = Effect.gen(function* () {
-      const conversation = yield* Conversation;
-      const history = yield* conversation.prompt;
-      const chat = Option.isSome(history)
-        ? yield* Effect.orDie(Chat.fromJson(history.value))
-        : yield* Chat.empty;
-      const doc = yield* Effect.promise(() => getServerByName(env.SITE_DOC, who.site));
-      const [view, typing] = yield* Effect.promise(() =>
-        Promise.all([doc.viewDraft(who.draft), doc.typingIn(who.draft)]),
-      );
-      if (!view.ok) return "failed" as const;
-      const draft = view.value.draft;
-      const contracts = yield* Effect.promise(() => loadBlocks(draft.lockfile));
-      const context = turnContext({
-        draft,
-        contracts,
-        person: { id: who.person.id, name: who.person.name },
-        page: draft.pages[message.page],
-        selected: message.selected,
-        typing,
-        sources: attached,
-      });
-      const saveHistory = Effect.flatMap(Effect.orDie(chat.exportJson), (json) =>
-        Effect.orDie(conversation.savePrompt(json)),
-      );
-      return yield* runTurn({
-        chat,
-        system: systemPrompt(
-          contracts,
-          yield* voiceOf(who.brand).pipe(
-            Effect.provide(D1Client.layer({ db: env.CORE })),
-            Effect.orDie,
-          ),
-          yield* conversation.brief,
-        ),
-        message: `${context}\n\n${message.text}`,
-        afterStep: saveHistory,
-      }).pipe(Effect.ensuring(saveHistory));
-    }).pipe(Effect.provide(services));
+  }
 
-    working.done = this.#conversation()
-      .runPromiseExit(Effect.orDie(program), { signal: stop.signal })
-      .then(async (exit) => {
-        if (Exit.isFailure(exit) && !Cause.hasInterruptsOnly(exit.cause))
-          console.error("An agent turn failed", Cause.pretty(exit.cause));
-        const status: TurnStatus = Exit.isSuccess(exit)
-          ? exit.value
-          : Cause.hasInterruptsOnly(exit.cause)
-            ? "stopped"
-            : "failed";
-        this.#working = null;
-        await this.#saveTurn(ended(working.turn, status));
-        const doc = await getServerByName(env.SITE_DOC, who.site);
-        await doc.agentPresence({ id: who.person.id, name: who.person.name }, who.draft, null);
+  /** Runs a turn to its end, sending every connection its events, and says how it ended. */
+  async #runTurn(
+    working: Working,
+    who: AgentAuthorization,
+    send: Send,
+    thread: ReadonlyArray<ModelMessage>,
+    record: TurnRecord,
+  ): Promise<TurnStatus> {
+    const scope = Scope.makeUnsafe();
+    try {
+      const env = this.env;
+      const doc = await getServerByName(env.SITE_DOC, who.site);
+      const [view, typing] = await Promise.all([doc.viewDraft(who.draft), doc.typingIn(who.draft)]);
+      if (!view.ok) return "failed";
+      const draft = view.value.draft;
+      const contracts = await loadBlocks(draft.lockfile);
+      const [voice, brief] = await Promise.all([
+        Effect.runPromise(
+          voiceOf(who.brand).pipe(Effect.provide(D1Client.layer({ db: env.CORE })), Effect.orDie),
+        ),
+        this.#run((conversation) => conversation.brief),
+      ]);
+      const services = await this.#conversation().runPromise(
+        Layer.buildWithScope(
+          turnServices(env, who, {
+            id: record.id,
+            timeZone: send.timeZone,
+            page: send.page,
+            selected: send.selected,
+            links: new Set(
+              thread.flatMap((message) => (message.role === "user" ? linksIn(message) : [])),
+            ),
+          }),
+          scope,
+        ),
+      );
+      const turn = runTurn({
+        model: languageModel(
+          { binding: env.AI },
+          env.AI_GATEWAY,
+          { brand: who.brand, site: who.site, person: who.person.id },
+          "edit",
+        ),
+        messages: thread,
+        system: systemPrompt(contracts, voice, brief),
+        context: turnContext({
+          draft,
+          contracts,
+          person: { id: who.person.id, name: who.person.name },
+          page: draft.pages[send.page],
+          selected: send.selected,
+          typing,
+          sources: record.sources,
+        }),
+        services,
+        threadId: this.name,
+        runId: working.run,
+        abortController: working.stop,
+        save: (messages) =>
+          this.#run((conversation) => conversation.saveThread(working.at, messages)),
       });
+      for await (const event of turn.events) {
+        const sent = underRun(event, working.run);
+        working.events.push(sent);
+        this.#broadcast(sent);
+      }
+      return turn.status();
+    } catch (error) {
+      console.error("An agent turn failed", error);
+      return "failed";
+    } finally {
+      await Effect.runPromise(Scope.close(scope, Exit.void));
+    }
   }
 
   /** Undoes everything a turn changed, except what someone has changed since. */
   async #undo(connection: AgentConnection, who: AgentAuthorization, id: TurnId) {
-    const turn = (await this.#run((conversation) => conversation.turns)).find(
-      (found) => found.id === id,
+    const thread = await this.#run((conversation) => conversation.thread);
+    const at = thread.findIndex((message) =>
+      Option.exists(recordOf(message), (record) => record.id === id),
     );
-    const changed = turn?.parts.some((part) => part._tag === "Activity" && part.changed) ?? false;
-    if (turn === undefined || turn.undone || !changed || this.#working?.turn.id === id) {
-      this.#send(connection, { _tag: "Notice", message: "There's nothing in that turn to undo." });
+    const next = thread.findIndex((message, index) => index > at && message.role === "user");
+    const turn = thread.slice(at + 1, next === -1 ? undefined : next);
+    const edits = new Set(
+      turn.flatMap((message) =>
+        (message.toolCalls ?? []).flatMap((call) =>
+          editingTools.has(call.function.name) ? [call.id] : [],
+        ),
+      ),
+    );
+    const changed = turn.some(
+      (message) =>
+        message.role === "tool" &&
+        message.error === undefined &&
+        message.toolCallId !== undefined &&
+        edits.has(message.toolCallId),
+    );
+    const record = recordOf(thread[at]);
+    if (
+      at === -1 ||
+      !changed ||
+      Option.exists(record, (found) => found.undone || found.status === "working")
+    ) {
+      this.#notice(connection, "There's nothing in that turn to undo.");
       return;
     }
     const doc = await getServerByName(this.env.SITE_DOC, who.site);
     const outcome = await doc.undoTurn({ id: who.person.id, name: who.person.name }, who.draft, id);
     if (!outcome.ok || outcome.value.status === "refused") {
-      this.#send(connection, { _tag: "Notice", message: "You can no longer edit this draft." });
+      this.#notice(connection, "You can no longer edit this draft.");
       return;
     }
-    await this.#saveTurn({ ...turn, undone: true });
+    await this.#changeTurn(at, (turn) => ({ ...turn, undone: true }));
     if (outcome.value.status === "undone" && outcome.value.kept)
-      this.#send(connection, {
-        _tag: "Notice",
-        message: "Some of it stayed, because someone changed it after Pakshi did.",
-      });
+      this.#notice(connection, "Some of it stayed, because someone changed it after Pakshi did.");
   }
 
   /** Takes a document someone attached, converted to Markdown for the agent. */
@@ -464,7 +543,7 @@ export class SiteAgent extends Server<StudioApiEnv & Cloudflare.Env> {
     });
     const source = { id, name: file.name, size: file.size };
     await this.#run((conversation) => conversation.addSource(source, object));
-    this.#broadcast({ _tag: "SourceAdded", source });
+    this.#broadcast(sourcesEvent(await this.#sources()));
     return Response.json(source);
   }
 }

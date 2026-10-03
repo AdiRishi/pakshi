@@ -1,15 +1,14 @@
 import { expect, it } from "@effect/vitest";
 import { emptyVoiceGuide } from "@repo/contracts/brand";
 import { PageId } from "@repo/contracts/ids";
-import { Effect, Layer, Schema } from "effect";
-import { Chat } from "effect/ai";
+import { Effect, Schema } from "effect";
 
-import { languageModel, type ModelRequest } from "../src/model.ts";
 import { systemPrompt } from "../src/prompt.ts";
-import { InsertSection } from "../src/tools.ts";
-import { runTurn } from "../src/turn.ts";
+import { insertSection } from "../src/tools.ts";
+import { toolParts } from "./support/chat.ts";
 import { harbourDraft } from "./support/draft.ts";
-import { eventStream, textStream } from "./support/workers-ai.ts";
+import type { Reply } from "./support/model.ts";
+import { turnWith } from "./support/turn.ts";
 import { desk } from "./support/workspace.ts";
 
 const home = PageId.make("pg_home");
@@ -20,85 +19,44 @@ const emptyHome = {
   ),
 };
 
-const insertionResult = Schema.Struct({
+const InsertionResult = Schema.Struct({
   role: Schema.Literal("tool"),
-  content: Schema.fromJsonString(InsertSection.successSchema),
+  content: Schema.fromJsonString(insertSection.outputSchema),
 });
-const readResult = Schema.decodeUnknownSync(insertionResult);
-const readMessages = Schema.decodeUnknownSync(Schema.Array(Schema.Json));
+const readResult = Schema.decodeUnknownSync(InsertionResult);
 
-const sectionCall = (after: string | null | undefined, type: string, step: number) => [
-  JSON.stringify({
-    choices: [
-      {
-        delta: {
-          role: "assistant",
-          tool_calls: [
-            {
-              index: 0,
-              id: `call_${step}`,
-              type: "function",
-              function: {
-                name: "insert_section",
-                arguments: JSON.stringify({ page: home, after, section: { type } }),
-              },
-            },
-          ],
-        },
-        finish_reason: "tool_calls",
-        index: 0,
-      },
-    ],
-    created: 1790788667,
-    id: `chat_${step}`,
-    model: "@cf/zai-org/glm-5.3-flash",
-    object: "chat.completion.chunk",
-  }),
-  "[DONE]",
-];
-
+/**
+ * Has the agent build the empty homepage's three sections, the first
+ * inserted with `firstAfter` and each after that after the block the last
+ * insertion returned.
+ */
 const buildHome = (firstAfter: string | null | undefined) =>
   Effect.gen(function* () {
-    const { state, layer, contracts } = yield* Effect.promise(() => desk(emptyHome));
-    const sent: Array<ModelRequest> = [];
+    const { contracts } = yield* Effect.promise(() => desk(emptyHome));
     const types = ["hero", "feature-grid", "call-to-action"];
-    const model = languageModel(
-      async (request) => {
-        const step = sent.length;
-        sent.push(request);
+    return yield* turnWith(
+      (request, step): Reply => {
         const section = step - (firstAfter === null || step === 0 ? 0 : 1);
         const type = types[section];
-        let events: ReadonlyArray<string>;
-        if (type === undefined) events = textStream("I added the three sections.");
-        else {
-          const messages = readMessages(request.inputs["messages"]);
-          const after =
-            step === 0
-              ? firstAfter
-              : section === 0
-                ? null
-                : readResult(messages.at(-1)).content.block;
-          events = sectionCall(after, type, step);
-        }
-        return new Response(eventStream(events), {
-          headers: { "content-type": "text/event-stream" },
-        });
+        if (type === undefined) return { text: "I added the three sections." };
+        const after =
+          step === 0
+            ? firstAfter
+            : section === 0
+              ? null
+              : readResult(request.messages.at(-1)).content.block;
+        return {
+          calls: [{ name: "insert_section", params: { page: home, after, section: { type } } }],
+        };
       },
-      { brand: "brand_harbour", site: "site_harbour", person: "user_sam" },
-      "edit",
+      "Add a generic homepage with three sections.",
+      { draft: emptyHome, system: systemPrompt(contracts, emptyVoiceGuide, null) },
     );
-    const status = yield* runTurn({
-      chat: yield* Chat.empty,
-      system: systemPrompt(contracts, emptyVoiceGuide, null),
-      message: "Add a generic homepage with three sections.",
-      afterStep: Effect.void,
-    }).pipe(Effect.provide(Layer.merge(layer, model)));
-    return { state, sent, status };
   });
 
 it.effect("inserts first on an empty homepage, then after each returned section ID", () =>
   Effect.gen(function* () {
-    const { state, sent, status } = yield* buildHome(null);
+    const { state, requests, status } = yield* buildHome(null);
     const page = state.draft.pages[home];
     expect(status).toBe("done");
     expect(page?.root.map((id) => page.blocks[id]?.type)).toEqual([
@@ -107,7 +65,7 @@ it.effect("inserts first on an empty homepage, then after each returned section 
       "call-to-action",
     ]);
     expect(state.draft.parts).toEqual(harbourDraft.parts);
-    expect(sent[0]?.inputs["tools"]).toContainEqual(
+    expect(requests[0]?.tools).toContainEqual(
       expect.objectContaining({
         function: expect.objectContaining({
           name: "insert_section",
@@ -133,9 +91,9 @@ for (const [name, after] of [
 ] as const) {
   it.effect(`can repair after when it is ${name}, then build the empty homepage in order`, () =>
     Effect.gen(function* () {
-      const { state, sent, status } = yield* buildHome(after);
+      const { state, requests, chat, status } = yield* buildHome(after);
       expect(status).toBe("done");
-      expect(JSON.stringify(sent[1]?.inputs["messages"])).toContain(
+      expect(JSON.stringify(requests[1]?.messages)).toContain(
         "Supply after: null to insert first, including on an empty page, or an existing block ID",
       );
       const page = state.draft.pages[home];
@@ -144,9 +102,11 @@ for (const [name, after] of [
         "feature-grid",
         "call-to-action",
       ]);
-      expect(state.parts.filter((part) => part._tag === "Activity" && part.changed)).toHaveLength(
-        3,
-      );
+      expect(
+        toolParts(chat, "insert_section").filter(
+          (part) => part.type === "tool-call" && part.state === "complete",
+        ),
+      ).toHaveLength(3);
     }),
   );
 }
