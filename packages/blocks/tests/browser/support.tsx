@@ -8,7 +8,12 @@ import { renderToString } from "react-dom/server";
 import { onTestFinished } from "vitest";
 import { render } from "vitest-browser-react";
 
-import { type SiteData, SiteDataProvider } from "../../src/components.tsx";
+import {
+  type FieldEditing,
+  FieldEditingProvider,
+  type SiteData,
+  SiteDataProvider,
+} from "../../src/components.tsx";
 import { blockFixtures, fixtureSite, fixtureTree } from "../../src/fixtures.ts";
 import { latestLockfile, loadBlocks, renderTree } from "../../src/render.tsx";
 import { sampleMedia } from "../../src/sample-media.ts";
@@ -49,6 +54,49 @@ export const show = async (tree: BlockTree, data: Partial<SiteData> = {}) => {
     <SiteDataProvider value={{ ...site, ...data }}>
       <main>{definitions.get(tree.type)?.placement === "item" ? <ul>{block}</ul> : block}</main>
     </SiteDataProvider>,
+  );
+};
+
+/**
+ * Plain stand-ins for the editor's field components, each marking its
+ * element with the field it edits, as the canvas's do.
+ */
+const editing: FieldEditing = {
+  Root: ({ element: Element, surface, className, children }) => (
+    <Element data-surface={surface} className={className}>
+      {children}
+    </Element>
+  ),
+  Text: ({ as: Element, path, value, className }) => (
+    <Element data-field={path.join(".")} className={className}>
+      {value}
+    </Element>
+  ),
+  RichText: ({ path, className }) => <div data-field={path.join(".")} className={className} />,
+  Media: ({ path, file, value, className }) => (
+    <img data-field={path.join(".")} src={file.src} alt={value.alt ?? ""} className={className} />
+  ),
+  Cta: ({ path, href, value, className }) => (
+    <a data-field={path.join(".")} href={href} className={className}>
+      {value.label}
+    </a>
+  ),
+  Slot: ({ as: Element = "div", className, children }) => (
+    <Element className={className}>{children}</Element>
+  ),
+  Form: ({ render: form }) => form({}),
+};
+
+/** Shows a block as the editor canvas renders it, with its fields editable. */
+export const showEditing = async (tree: BlockTree) => {
+  const definitions = await loadBlocks(latestLockfile);
+  const block = renderTree(definitions, tree);
+  return render(
+    <FieldEditingProvider value={editing}>
+      <SiteDataProvider value={site}>
+        <main>{definitions.get(tree.type)?.placement === "item" ? <ul>{block}</ul> : block}</main>
+      </SiteDataProvider>
+    </FieldEditingProvider>,
   );
 };
 

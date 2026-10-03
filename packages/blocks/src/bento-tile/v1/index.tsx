@@ -1,7 +1,7 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Cta, Media, Root, Text, useMotion } from "../../components.tsx";
+import { Cta, Media, Root, Text, useEditing, useMotion } from "../../components.tsx";
 import { choice, cta, icon, media, optional, text } from "../../fields.ts";
 import { buttonClass } from "../../kit/button.ts";
 import { Icon } from "../../kit/icon.tsx";
@@ -63,51 +63,56 @@ const Words = ({
   readonly tile: Tile;
   readonly lifts: boolean;
   readonly className?: string;
-}) => (
-  <div className={cx("flex flex-col gap-2 p-6 md:p-8", className)}>
-    {tile.icon && (
-      <Icon
-        name={tile.icon}
-        className={cx(
-          "mb-3 size-10 origin-left text-primary",
-          tile.link &&
-            "transition-transform duration-300 ease-out motion-safe:group-hover:scale-75",
-        )}
-      />
-    )}
-    {tile.kicker && (
-      <Text field="kicker" as="p" value={tile.kicker} className="kicker mb-1 text-primary" />
-    )}
-    <Text
-      field="title"
-      as="h3"
-      value={tile.title}
-      className={cx("max-w-xl", tile.size === "large" ? "text-title" : "text-heading")}
-    />
-    {tile.body && (
+}) => {
+  const editing = useEditing();
+  return (
+    <div className={cx("flex flex-col gap-2 p-6 md:p-8", className)}>
+      {tile.icon && (
+        <Icon
+          name={tile.icon}
+          className={cx(
+            "mb-3 size-10 origin-left text-primary",
+            tile.link &&
+              "transition-transform duration-300 ease-out motion-safe:group-hover:scale-75",
+          )}
+        />
+      )}
+      {tile.kicker && (
+        <Text field="kicker" as="p" value={tile.kicker} className="kicker mb-1 text-primary" />
+      )}
       <Text
-        field="body"
-        as="p"
-        value={tile.body}
-        className="text-body max-w-lg whitespace-pre-line text-muted-foreground"
+        field="title"
+        as="h3"
+        value={tile.title}
+        className={cx("max-w-xl", tile.size === "large" ? "text-title" : "text-heading")}
       />
-    )}
-    {tile.link && (
-      <Cta
-        field="link"
-        value={tile.link}
-        className={buttonClass({
-          variant: "link",
-          size: "sm",
-          className: cx(
-            "mt-2 self-start before:absolute before:inset-0 before:z-10",
-            lifts && lifting,
-          ),
-        })}
-      />
-    )}
-  </div>
-);
+      {tile.body && (
+        <Text
+          field="body"
+          as="p"
+          value={tile.body}
+          className="text-body max-w-lg whitespace-pre-line text-muted-foreground"
+        />
+      )}
+      {tile.link && (
+        <Cta
+          field="link"
+          value={tile.link}
+          className={buttonClass({
+            variant: "link",
+            size: "sm",
+            className: cx(
+              // In the editor the link covers nothing, so every field can be reached.
+              "mt-2 self-start",
+              !editing && "before:absolute before:inset-0 before:z-10",
+              lifts && lifting,
+            ),
+          })}
+        />
+      )}
+    </div>
+  );
+};
 
 /**
  * A tile of a bento grid, after Magic UI's bento card: a card in a color of

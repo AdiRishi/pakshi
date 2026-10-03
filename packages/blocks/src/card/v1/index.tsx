@@ -1,7 +1,7 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Media, Root, Text, useHref, useMotion } from "../../components.tsx";
+import { Media, Root, Text, useEditing, useHref, useMotion } from "../../components.tsx";
 import { icon, link, media, optional, text } from "../../fields.ts";
 import { Icon } from "../../kit/icon.tsx";
 import { MagicCard } from "../../kit/magic/magic-card.tsx";
@@ -78,16 +78,17 @@ const withImage = cx(
 
 /*
  * The title links to the card's page, and the link stretches over the whole
- * card, so anywhere on it opens the page. The card draws the focus ring.
+ * card, so anywhere on it opens the page. The card draws the focus ring. In
+ * the editor the link covers nothing, so every field can be reached.
  */
-const stretchedLink = cx(
-  "after:absolute after:inset-0 after:z-10",
-  "decoration-1 underline-offset-4 group-hover:underline focus-visible:outline-none",
-);
+const titleLink =
+  "decoration-1 underline-offset-4 group-hover:underline focus-visible:outline-none";
+const stretched = "after:absolute after:inset-0 after:z-10";
 
 const Card = ({ props: card }: BlockComponentProps<typeof props, "default">) => {
   const href = useHref(card.link);
   const moving = useMotion();
+  const editing = useEditing();
   const hasImage = card.image !== undefined;
   const hasIcon = card.icon !== undefined;
   return (
@@ -131,7 +132,7 @@ const Card = ({ props: card }: BlockComponentProps<typeof props, "default">) => 
             <Text field="kicker" as="p" value={card.kicker} className="kicker text-primary" />
           )}
           <h3 className="text-heading in-data-[cards=list]:text-lead text-balance in-data-[cards=list]:font-medium">
-            <a href={href} className={stretchedLink}>
+            <a href={href} className={cx(titleLink, !editing && stretched)}>
               <Text field="title" as="span" value={card.title} />
             </a>
           </h3>

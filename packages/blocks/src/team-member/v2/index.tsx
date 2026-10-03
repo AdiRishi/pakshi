@@ -1,7 +1,7 @@
 import { cx } from "class-variance-authority";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
-import { Media, Root, Text, useHref } from "../../components.tsx";
+import { Media, Root, Text, useEditing, useHref } from "../../components.tsx";
 import { link, media, optional, text } from "../../fields.ts";
 import { Icon } from "../../kit/icon.tsx";
 import placeholder from "./fixtures/placeholder.json" with { type: "json" };
@@ -48,6 +48,8 @@ const initials = (name: string) => {
 
 const Name = ({ member }: { readonly member: Member }) => {
   const href = useHref(member.link ?? "#");
+  // In the editor the link covers nothing, so every field can be reached.
+  const stretched = !useEditing();
   const words = <Text field="name" as="span" value={member.name} />;
   return (
     <h3 className="text-heading in-data-[team=list]:text-lead in-data-[team=list]:font-heading">
@@ -56,7 +58,10 @@ const Name = ({ member }: { readonly member: Member }) => {
       ) : (
         <a
           href={href}
-          className="inline-flex items-baseline gap-1.5 decoration-1 underline-offset-4 group-hover:underline after:absolute after:inset-0 after:z-10 focus-visible:outline-none"
+          className={cx(
+            "inline-flex items-baseline gap-1.5 decoration-1 underline-offset-4 group-hover:underline focus-visible:outline-none",
+            stretched && "after:absolute after:inset-0 after:z-10",
+          )}
         >
           {words}
           <Icon
