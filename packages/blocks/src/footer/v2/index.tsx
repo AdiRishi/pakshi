@@ -6,6 +6,7 @@ import {
   type ResolvedMenuItem,
   Root,
   Text,
+  useAddress,
   useHref,
   useLogo,
   useMenu,
@@ -72,7 +73,7 @@ const SocialLink = ({ item }: { readonly item: NonNullable<Footer["social"]>[num
         href={href}
         aria-label={networkName(item.icon)}
         className={cx(
-          "inline-flex size-9 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:bg-foreground/5",
+          "inline-flex size-10 items-center justify-center rounded-full border border-border text-foreground transition-colors hover:border-foreground hover:bg-foreground hover:text-background",
           focus,
         )}
       >
@@ -97,9 +98,10 @@ const Social = ({ footer, center }: { readonly footer: Footer; readonly center?:
 const Brand = ({ className }: { readonly className?: string }) => {
   const name = useSiteName();
   const logo = useLogo();
+  const address = useAddress();
   return (
     <a
-      href="/"
+      href={address("/")}
       className={cx(
         "inline-block rounded-sm font-heading text-lead font-semibold",
         focus,
@@ -214,21 +216,50 @@ const Legal = ({ footer }: { readonly footer: Footer }) =>
     />
   ) : null;
 
-const Newsletter = ({ footer }: { readonly footer: Footer }) =>
+/** The sign-up form under its heading, or beside it in a band across the footer. */
+const Newsletter = ({
+  footer,
+  band,
+  center,
+}: {
+  readonly footer: Footer;
+  readonly band?: boolean;
+  readonly center?: boolean;
+}) =>
   footer.newsletter === undefined ? null : (
-    <div className="flex w-full max-w-md flex-col gap-3">
+    <div
+      className={cx(
+        band
+          ? "grid gap-6 border-b border-border pb-12 md:grid-cols-2 md:items-end md:gap-12"
+          : "flex w-full max-w-md flex-col gap-4",
+      )}
+    >
       {footer.newsletterHeading && (
         <Text
           field="newsletterHeading"
           as="p"
           value={footer.newsletterHeading}
-          className="font-semibold"
+          className={
+            band
+              ? "font-heading text-heading max-w-md font-semibold text-balance"
+              : cx("font-semibold text-balance", center && "text-center")
+          }
         />
       )}
-      <FormView field="newsletter" value={footer.newsletter} layout="inline" />
+      <FormView
+        field="newsletter"
+        value={footer.newsletter}
+        layout="inline"
+        className={cx("w-full", band && "max-w-md md:justify-self-end")}
+      />
     </div>
   );
 
+/**
+ * The bottom of every page: the brand, the main menu as columns or a row,
+ * social links, a sign-up form and small print, with the site's name set
+ * across the foot in the wordmark layout.
+ */
 const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof props, Variant>) => {
   const name = useSiteName();
   const menu = useMenu("main");
@@ -236,14 +267,14 @@ const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof prop
     case "simple":
       return (
         <Root as="footer" className="bg-background py-12 text-foreground">
-          <div className="page-width flex flex-col gap-8">
+          <div className="page-width flex flex-col gap-10">
             <div className="flex flex-wrap items-center justify-between gap-6">
               <Brand />
               <LegalLinks />
               <Social footer={footer} />
             </div>
             {(footer.note || footer.legal || footer.newsletter) && (
-              <div className="flex flex-wrap items-end justify-between gap-6">
+              <div className="flex flex-wrap items-end justify-between gap-8 border-t border-border pt-8">
                 <div className="flex flex-col gap-2">
                   <Note footer={footer} />
                   <Legal footer={footer} />
@@ -256,11 +287,11 @@ const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof prop
       );
     case "centered":
       return (
-        <Root as="footer" className="bg-background py-16 text-foreground">
+        <Root as="footer" className="bg-background py-20 text-foreground">
           <div className="page-width flex flex-col items-center gap-8 text-center">
             <Brand />
             <Note footer={footer} className="mx-auto" />
-            <Newsletter footer={footer} />
+            <Newsletter footer={footer} center />
             <LegalLinks center />
             <Social footer={footer} center />
             <Legal footer={footer} />
@@ -270,13 +301,19 @@ const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof prop
     case "columns":
     case "wordmark":
       return (
-        <Root as="footer" className="overflow-hidden bg-background pt-20 pb-10 text-foreground">
+        <Root
+          as="footer"
+          className={cx(
+            "overflow-hidden bg-background pt-20 text-foreground",
+            variant === "wordmark" ? "pb-4" : "pb-10",
+          )}
+        >
           <div className="page-width flex flex-col gap-16">
+            <Newsletter footer={footer} band />
             <div className="grid gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]">
               <div className="flex flex-col items-start gap-6">
                 <Brand />
                 <Note footer={footer} />
-                <Newsletter footer={footer} />
                 <Social footer={footer} />
               </div>
               <Columns items={menu} />
@@ -288,7 +325,13 @@ const FooterBlock = ({ props: footer, variant }: BlockComponentProps<typeof prop
           </div>
           {variant === "wordmark" && (
             <div className="page-width @container mt-16">
-              <p aria-hidden className={cx("wordmark text-foreground", wordmarkFit(name))}>
+              <p
+                aria-hidden
+                className={cx(
+                  "wordmark bg-linear-to-b from-foreground from-20% to-foreground/10 bg-clip-text text-transparent",
+                  wordmarkFit(name),
+                )}
+              >
                 {name}
               </p>
             </div>
@@ -306,6 +349,7 @@ export default defineBlock({
   props,
   variants: ["columns", "simple", "centered", "wordmark"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
+  interactive: true,
   agent: {
     purpose:
       "The bottom of every page: the site's menu as columns, a short note, social links, an optional sign-up form and small print",

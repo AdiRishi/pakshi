@@ -294,7 +294,7 @@ describe("blocks that read the site", () => {
     if (!result.ok) throw new Error(result.problem);
     const html = markup(result.element);
     expect(html).toContain(">Harbour Summer School</a>");
-    expect(html).toContain('<a href="/programme"');
+    expect(html).toContain('href="/programme"');
     expect(html).toContain(">Workshops</a>");
   });
 });

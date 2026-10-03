@@ -1,4 +1,6 @@
 import { cx } from "class-variance-authority";
+import { motion, useReducedMotion } from "motion/react";
+import { type MouseEvent, useState } from "react";
 
 import { type BlockComponentProps, defineBlock } from "../../block.tsx";
 import {
@@ -6,14 +8,27 @@ import {
   type ResolvedMenuItem,
   Root,
   Text,
+  useAddress,
+  useEditing,
   useHref,
   useLogo,
   useMenu,
+  useMotion,
   useSiteName,
 } from "../../components.tsx";
 import { choice, cta, link, optional, text } from "../../fields.ts";
 import { buttonClass } from "../../kit/button.ts";
 import { Icon } from "../../kit/icon.tsx";
+import {
+  NavigationMenu,
+  NavigationMenuContent,
+  NavigationMenuItem,
+  NavigationMenuLink,
+  NavigationMenuList,
+  NavigationMenuTrigger,
+  navigationMenuItemClass,
+} from "../../kit/ui/navigation-menu.tsx";
+import { Sheet, SheetContent, SheetTitle, SheetTrigger } from "../../kit/ui/sheet.tsx";
 
 const props = {
   cta: optional(cta({ title: "Button" })),
@@ -33,8 +48,12 @@ const focus = "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 const Brand = () => {
   const name = useSiteName();
   const logo = useLogo();
+  const address = useAddress();
   return (
-    <a href="/" className={cx("shrink-0 rounded-sm font-heading text-lead font-semibold", focus)}>
+    <a
+      href={address("/")}
+      className={cx("shrink-0 rounded-sm font-heading text-lead font-semibold", focus)}
+    >
       {logo === null ? (
         name
       ) : (
@@ -66,45 +85,52 @@ const navLink = cx(
   focus,
 );
 
-/** The main menu across the header, with a menu item's children in a panel under it. */
-const Menu = ({ items }: { readonly items: ReadonlyArray<ResolvedMenuItem> }) => (
-  <nav aria-label="Main" className="hidden md:block">
-    <ul className="flex items-center gap-7">
-      {items.map((item) => (
-        <li key={item.id} className="group relative">
-          <a href={item.href} className={cx(navLink, "inline-flex items-center gap-1")}>
-            {item.label}
-            {item.children.length > 0 && (
-              <Icon
-                name="chevron-down"
-                className="size-3.5 opacity-60 transition-transform group-focus-within:rotate-180 group-hover:rotate-180"
-              />
+/**
+ * The main menu across the header. An item with children opens a panel of
+ * them on hover, click or the keyboard, led by a link to the item's own page.
+ * The panels stay in the page's HTML, hidden, until the menu first opens.
+ */
+const Menu = ({ items }: { readonly items: ReadonlyArray<ResolvedMenuItem> }) => {
+  const editing = useEditing();
+  return (
+    <NavigationMenu aria-label="Main" value={editing ? null : undefined} className="hidden md:flex">
+      <NavigationMenuList>
+        {items.map((item) => (
+          <NavigationMenuItem key={item.id}>
+            {item.children.length === 0 ? (
+              <NavigationMenuLink href={item.href} className={navigationMenuItemClass}>
+                {item.label}
+              </NavigationMenuLink>
+            ) : (
+              <>
+                <NavigationMenuTrigger>{item.label}</NavigationMenuTrigger>
+                <NavigationMenuContent keepMounted>
+                  <ul className="flex w-64 flex-col">
+                    <li className="mb-1 border-b border-border pb-1">
+                      <NavigationMenuLink href={item.href} className="link-arrow font-medium">
+                        {item.label}
+                      </NavigationMenuLink>
+                    </li>
+                    {item.children.map((child) => (
+                      <li key={child.id}>
+                        <NavigationMenuLink
+                          href={child.href}
+                          className="text-muted-foreground hover:text-foreground focus-visible:text-foreground"
+                        >
+                          {child.label}
+                        </NavigationMenuLink>
+                      </li>
+                    ))}
+                  </ul>
+                </NavigationMenuContent>
+              </>
             )}
-          </a>
-          {item.children.length > 0 && (
-            <div className="invisible absolute top-full left-1/2 z-50 -translate-x-1/2 pt-3 opacity-0 transition-opacity group-focus-within:visible group-focus-within:opacity-100 group-hover:visible group-hover:opacity-100">
-              <ul className="flex min-w-56 flex-col rounded-lg border border-border bg-popover p-2 text-popover-foreground shadow-card">
-                {item.children.map((child) => (
-                  <li key={child.id}>
-                    <a
-                      href={child.href}
-                      className={cx(
-                        "block rounded-md px-3 py-2 text-small transition-colors hover:bg-muted",
-                        focus,
-                      )}
-                    >
-                      {child.label}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </li>
-      ))}
-    </ul>
-  </nav>
-);
+          </NavigationMenuItem>
+        ))}
+      </NavigationMenuList>
+    </NavigationMenu>
+  );
+};
 
 /** The header's buttons: a quiet second link, then the main button. */
 const Buttons = ({ header }: { readonly header: Header }) =>
@@ -116,68 +142,101 @@ const Buttons = ({ header }: { readonly header: Header }) =>
   );
 
 /**
- * The menu on a phone: a button that opens every link, children included,
- * and the header's buttons. It opens without any script.
+ * The menu on a phone: a button that opens a sheet of every link, each
+ * item's children under it, and the header's buttons. Choosing a link closes
+ * it. In the editor it stays shut, as the header's fields show beside it.
  */
-const MobileMenu = ({
+const PhoneMenu = ({
   items,
   header,
 }: {
   readonly items: ReadonlyArray<ResolvedMenuItem>;
   readonly header: Header;
-}) =>
-  items.length === 0 && header.cta === undefined && header.secondary === undefined ? null : (
-    <details className="group/menu md:hidden">
-      <summary
+}) => {
+  const editing = useEditing();
+  const [open, setOpen] = useState(false);
+  const moving = useMotion();
+  const reduced = useReducedMotion() === true;
+  if (items.length === 0 && header.cta === undefined && header.secondary === undefined) return null;
+  const closeOnLink = (event: MouseEvent<HTMLDivElement>) => {
+    if (event.target instanceof Element && event.target.closest("a") !== null) setOpen(false);
+  };
+  return (
+    <Sheet open={open && !editing} onOpenChange={setOpen}>
+      <SheetTrigger
         aria-label="Menu"
         className={cx(
-          "flex size-10 cursor-pointer list-none items-center justify-center rounded-md hover:bg-foreground/5",
+          "flex size-10 cursor-pointer items-center justify-center rounded-button transition-colors hover:bg-foreground/5 md:hidden",
           focus,
         )}
       >
-        <Icon name="menu" className="size-5 group-open/menu:hidden" />
-        <Icon name="x" className="hidden size-5 group-open/menu:block" />
-      </summary>
-      <div className="px-gutter absolute inset-x-0 top-full z-50 border-b border-border bg-background pt-4 pb-8 shadow-card">
-        <nav aria-label="Main">
-          <ul className="flex flex-col divide-y divide-border">
-            {items.map((item) => (
-              <li key={item.id} className="py-3">
-                <a href={item.href} className={cx("block rounded-sm text-lead font-medium", focus)}>
-                  {item.label}
-                </a>
-                {item.children.length > 0 && (
-                  <ul className="mt-2 flex flex-col gap-2 pl-4">
-                    {item.children.map((child) => (
-                      <li key={child.id}>
-                        <a href={child.href} className={cx(navLink, "text-body")}>
-                          {child.label}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </li>
-            ))}
-          </ul>
-        </nav>
+        <Icon name="menu" className="size-5" />
+      </SheetTrigger>
+      <SheetContent onClick={closeOnLink} className="gap-0 overflow-y-auto">
+        <SheetTitle className="sr-only">Menu</SheetTitle>
+        <div className="flex h-18 shrink-0 items-center pr-16 pl-6">
+          <Brand />
+        </div>
+        {items.length > 0 && (
+          <nav aria-label="Main" className="px-6 pt-2 pb-8">
+            <ul className="flex flex-col">
+              {items.map((item, index) => (
+                <motion.li
+                  key={item.id}
+                  initial={moving && !reduced ? { opacity: 0, x: 16 } : false}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.06 + index * 0.04, duration: 0.3, ease: "easeOut" }}
+                  className="border-b border-border py-2 last:border-b-0"
+                >
+                  <a
+                    href={item.href}
+                    className={cx(
+                      "block rounded-sm py-1.5 font-heading text-heading font-semibold",
+                      focus,
+                    )}
+                  >
+                    {item.label}
+                  </a>
+                  {item.children.length > 0 && (
+                    <ul className="mt-1 mb-2 flex flex-col gap-1 border-l border-border pl-4">
+                      {item.children.map((child) => (
+                        <li key={child.id}>
+                          <a
+                            href={child.href}
+                            className={cx(
+                              "block rounded-sm py-1 text-body text-muted-foreground transition-colors hover:text-foreground",
+                              focus,
+                            )}
+                          >
+                            {child.label}
+                          </a>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </motion.li>
+              ))}
+            </ul>
+          </nav>
+        )}
         {(header.cta || header.secondary) && (
-          <div className="mt-6 flex flex-col gap-3">
+          <div className="mt-auto flex flex-col gap-3 border-t border-border p-6">
             {header.cta && (
-              <Cta field="cta" value={header.cta} className={buttonClass({ size: "md" })} />
+              <Cta field="cta" value={header.cta} className={buttonClass({ size: "lg" })} />
             )}
             {header.secondary && (
               <Cta
                 field="secondary"
                 value={header.secondary}
-                className={buttonClass({ variant: "secondary", size: "md" })}
+                className={buttonClass({ variant: "secondary", size: "lg" })}
               />
             )}
           </div>
         )}
-      </div>
-    </details>
+      </SheetContent>
+    </Sheet>
   );
+};
 
 /** A line of news across the top of every page, in a color of its own. */
 const Announcement = ({ header }: { readonly header: Header }) => {
@@ -206,6 +265,11 @@ const positions = {
   overlay: "absolute inset-x-0 top-0 bg-transparent",
 } as const satisfies Record<Header["position"], string>;
 
+/**
+ * The top of every page: the brand, the main menu with its panels, and the
+ * header's buttons, with a sheet of the same links on a phone, under an
+ * optional line of news.
+ */
 const HeaderBlock = ({ props: header, variant }: BlockComponentProps<typeof props, Variant>) => {
   const menu = useMenu("main");
   const floating = variant === "floating";
@@ -224,12 +288,12 @@ const HeaderBlock = ({ props: header, variant }: BlockComponentProps<typeof prop
         <div className={floating ? "page-width pt-4" : undefined}>
           <div
             className={cx(
-              "relative flex h-16 items-center justify-between gap-8",
+              "relative flex h-16 items-center justify-between gap-6",
               floating
-                ? "rounded-xl border border-border bg-background/85 pr-3 pl-5 shadow-card backdrop-blur-md"
+                ? "rounded-xl border border-border bg-background/85 pr-2 pl-5 shadow-card backdrop-blur-md"
                 : "page-width",
-              variant === "centered-menu" && "md:grid md:grid-cols-[1fr_auto_1fr]",
-              variant === "centered-logo" && "md:grid md:grid-cols-[1fr_auto_1fr]",
+              (variant === "centered-menu" || variant === "centered-logo") &&
+                "md:grid md:grid-cols-[1fr_auto_1fr]",
             )}
           >
             {variant === "centered-logo" ? (
@@ -249,7 +313,7 @@ const HeaderBlock = ({ props: header, variant }: BlockComponentProps<typeof prop
             )}
             <div className="flex items-center justify-end gap-2">
               <Buttons header={header} />
-              <MobileMenu items={menu} header={header} />
+              <PhoneMenu items={menu} header={header} />
             </div>
           </div>
         </div>
@@ -266,6 +330,7 @@ export default defineBlock({
   props,
   variants: ["standard", "centered-menu", "centered-logo", "floating"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
+  interactive: true,
   agent: {
     purpose:
       "The brand's logo or the site's name, the main menu, at most one button and one quieter link, and an optional line of news above, at the top of every page",
