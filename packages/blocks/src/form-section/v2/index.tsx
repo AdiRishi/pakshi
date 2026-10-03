@@ -159,7 +159,6 @@ export default defineBlock({
       "the inline layout for a form with long answers or choices, which it can't show",
     ],
   },
-  interactive: true,
   placeholder,
   component: FormSectionBlock,
 });

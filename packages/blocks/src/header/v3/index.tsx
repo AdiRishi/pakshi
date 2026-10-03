@@ -330,7 +330,6 @@ export default defineBlock({
   props,
   variants: ["standard", "centered-menu", "centered-logo", "floating"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
-  interactive: true,
   agent: {
     purpose:
       "The brand's logo or the site's name, the main menu, at most one button and one quieter link, and an optional line of news above, at the top of every page",

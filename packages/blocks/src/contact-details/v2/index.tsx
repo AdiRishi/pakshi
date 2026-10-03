@@ -231,7 +231,6 @@ export default defineBlock({
       "directions and a map, which belong in a location section",
     ],
   },
-  interactive: true,
   placeholder,
   component: ContactDetails,
 });

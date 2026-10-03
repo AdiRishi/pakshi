@@ -1,4 +1,4 @@
-import { HeadContent, Scripts, createRootRoute, useMatch } from "@tanstack/react-router";
+import { HeadContent, Scripts, createRootRoute } from "@tanstack/react-router";
 import type { ReactNode } from "react";
 
 import siteCss from "@repo/blocks/site.css?url";
@@ -15,9 +15,6 @@ export const Route = createRootRoute({
 });
 
 function Document({ children }: { readonly children: ReactNode }) {
-  // A page with nothing interactive is only its HTML: it loads no scripts and never hydrates.
-  const page = useMatch({ from: "/$", shouldThrow: false });
-  const runs = page?.loaderData?.kind === "page" && page.loaderData.interactive.length > 0;
   return (
     <html lang="en">
       <head>
@@ -25,7 +22,7 @@ function Document({ children }: { readonly children: ReactNode }) {
       </head>
       <body>
         {children}
-        {runs && <Scripts />}
+        <Scripts />
       </body>
     </html>
   );

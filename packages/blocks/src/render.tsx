@@ -1,7 +1,6 @@
 import type { BlockId, BlockType } from "@repo/contracts/ids";
 import type { BlockTree } from "@repo/contracts/ops";
-import type { BlockInstance, PageDocument } from "@repo/contracts/page";
-import type { SiteParts } from "@repo/contracts/site";
+import type { BlockInstance } from "@repo/contracts/page";
 import type { Lockfile } from "@repo/contracts/snapshot";
 import { Fragment, use } from "react";
 
@@ -185,22 +184,4 @@ export const PlacedBlock = (props: {
       loaded.get(pinnedKey(type, props.lockfile)) ?? use(loadBlock(type, props.lockfile)),
     );
   return renderBlock(definitions, props.blocks, props.id);
-};
-
-/**
- * The page's header, sections and footer that run in the visitor's browser:
- * each interactive block, and each holding an interactive item.
- */
-export const interactiveParts = async (
-  page: PageDocument,
-  parts: SiteParts,
-  lockfile: Lockfile,
-): Promise<ReadonlyArray<BlockId>> => {
-  const definitions = await loadBlocks(lockfile);
-  const runs = (blocks: Readonly<Record<BlockId, BlockInstance>>, id: BlockId) =>
-    typesUnder(blocks, id).some((type) => definitions.get(type)?.interactive === true);
-  return [
-    ...[parts.header, parts.footer].filter((id) => runs(parts.blocks, id)),
-    ...page.root.filter((id) => runs(page.blocks, id)),
-  ];
 };

@@ -2,35 +2,31 @@ import type { BlockId } from "@repo/contracts/ids";
 import type { PageDocument } from "@repo/contracts/page";
 import type { SiteParts } from "@repo/contracts/site";
 import type { Lockfile } from "@repo/contracts/snapshot";
-import { Fragment, type ReactNode } from "react";
+import { Suspense } from "react";
 
 import { type SiteData, SiteDataProvider } from "./components.tsx";
 import { PlacedBlock } from "./render.tsx";
 
 /**
  * A page as a site serves it: the header, the page's sections and the footer,
- * at the lockfile's block versions, with the site's data. `part` wraps each
- * of the header, sections and footer, as `sites` does to hydrate them.
+ * at the lockfile's block versions, with the site's data. In the browser,
+ * each part hydrates as soon as its versions' code has loaded.
  */
 export const SitePage = (props: {
   readonly site: SiteData;
   readonly page: PageDocument;
   readonly parts: SiteParts;
   readonly lockfile: Lockfile;
-  readonly part?: (id: BlockId, block: ReactNode) => ReactNode;
 }) => {
-  const placed = (blocks: PageDocument["blocks"], id: BlockId) => {
-    const block = <PlacedBlock blocks={blocks} id={id} lockfile={props.lockfile} />;
-    return props.part === undefined ? block : props.part(id, block);
-  };
+  const placed = (blocks: PageDocument["blocks"], id: BlockId) => (
+    <Suspense key={id}>
+      <PlacedBlock blocks={blocks} id={id} lockfile={props.lockfile} />
+    </Suspense>
+  );
   return (
     <SiteDataProvider value={props.site}>
       {placed(props.parts.blocks, props.parts.header)}
-      <main>
-        {props.page.root.map((id) => (
-          <Fragment key={id}>{placed(props.page.blocks, id)}</Fragment>
-        ))}
-      </main>
+      <main>{props.page.root.map((id) => placed(props.page.blocks, id))}</main>
       {placed(props.parts.blocks, props.parts.footer)}
     </SiteDataProvider>
   );

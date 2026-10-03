@@ -349,7 +349,6 @@ export default defineBlock({
   props,
   variants: ["columns", "simple", "centered", "wordmark"],
   surfaces: ["default", "muted", "tint", "brand", "accent", "inverse"],
-  interactive: true,
   agent: {
     purpose:
       "The bottom of every page: the site's menu as columns, a short note, social links, an optional sign-up form and small print",

@@ -102,7 +102,6 @@ export {
   registeredVersions,
   removedBlockVersions,
   renderBlock,
-  interactiveParts,
   PlacedBlock,
   renderTree,
   withNewBlockTypes,
