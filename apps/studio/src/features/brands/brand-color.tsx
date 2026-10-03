@@ -6,8 +6,10 @@ import { useId, useState } from "react";
 
 const isHexColor = Schema.is(HexColor);
 
-/** The brand color, as a picker and as text, which only takes a whole color. */
+/** A brand's color, as a picker and as text, which only takes a whole color. */
 export function BrandColor(props: {
+  /** What the color is, such as "Brand color". */
+  readonly label?: string;
   readonly value: HexColor;
   readonly disabled: boolean;
   readonly onChange: (value: HexColor) => void;
@@ -23,13 +25,14 @@ export function BrandColor(props: {
     setText(props.value);
   }
   const invalid = props.error !== undefined || undefined;
+  const label = props.label ?? "Brand color";
   return (
     <Field data-invalid={invalid}>
-      <FieldLabel htmlFor={id}>Brand color</FieldLabel>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
       <div className="flex gap-2">
         <input
           type="color"
-          aria-label="Pick the brand color"
+          aria-label={`Pick the ${label.toLowerCase()}`}
           value={props.value}
           disabled={props.disabled}
           className="h-9 w-12 shrink-0 cursor-pointer rounded-md border bg-background p-1"

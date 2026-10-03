@@ -1,0 +1,95 @@
+{
+  "variant": "scroller",
+  "surface": "inverse",
+  "props": {
+    "actions": [],
+    "columns": "3",
+    "style": "cards",
+    "align": "start",
+    "heading": "Five days, a hundred stories",
+    "intro": "Swipe through what last summer's students said."
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "I'd never held a chisel before. By Friday I'd built a boat that floats, and I rowed it across the harbour myself.",
+          "name": "Priya Shah",
+          "role": "Student, summer 2026",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_samplePriya",
+            "alt": "Priya Shah"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "The mentors never did it for you. They showed you once, then let you get it wrong until you got it right.",
+          "name": "Dan Okafor",
+          "role": "Student, summer 2026",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleDan",
+            "alt": "Dan Okafor"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Our daughter came home sunburnt, smelling of varnish and talking about nothing but clinker planking. The best week of her summer, by a long way.",
+          "name": "Mei Chen",
+          "role": "Parent",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleMei",
+            "alt": "Mei Chen"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "The summer school has brought young people back to the harbour. You hear them on the slipway every July, arguing about knots.",
+          "name": "Asha Patel",
+          "role": "Chair, Westbay Harbour Trust",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleAsha",
+            "alt": "Asha Patel"
+          },
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleHarbourTrust",
+            "alt": "Westbay Harbour Trust"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Small groups, proper tools and lunch on the quay. I've signed up again.",
+          "name": "Sam Taylor",
+          "role": "Student, summer 2025"
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Five days, one boat, and a group of strangers who are now my closest friends.",
+          "name": "Jonah Reed",
+          "role": "Student, summer 2026"
+        }
+      }
+    ]
+  }
+}

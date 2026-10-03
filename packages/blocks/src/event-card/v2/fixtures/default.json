@@ -1,0 +1,22 @@
+{
+  "variant": "default",
+  "props": {
+    "date": "Fri 11 July",
+    "time": "4pm",
+    "place": "The slipway, North Quay",
+    "title": "Launch day",
+    "body": "Students put their boats in the water for the first time. Bring a towel, just in case.",
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "The jetty under the boatshed roof on a misty morning"
+    },
+    "link": {
+      "label": "See the programme",
+      "link": {
+        "$ref": "page",
+        "id": "pg_programme"
+      }
+    }
+  }
+}

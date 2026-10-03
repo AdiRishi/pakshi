@@ -1,3 +1,4 @@
+import { latestLockfile } from "@repo/blocks";
 import { noIdentity } from "@repo/contracts/brand";
 import { BrandId } from "@repo/contracts/ids";
 import { PageDocument, PageMeta } from "@repo/contracts/page";
@@ -44,7 +45,7 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
     header: "b_header",
     footer: "b_footer",
     blocks: {
-      b_header: { type: "header", variant: "simple", surface: "default", props: {} },
+      b_header: { type: "header", variant: "standard", surface: "default", props: {} },
       b_footer: { type: "footer", variant: "simple", surface: "muted", props: {} },
     },
     menus: { main: [], footer: [] },
@@ -55,7 +56,7 @@ const manifest = Schema.decodeSync(SnapshotManifest)({
     "/catalogue": "https://catalogue.northbanklibraries.org",
     "/whats-on": { $ref: "page", id: "pg_events" },
   },
-  lockfile: { header: 1, footer: 1, hero: 1 },
+  lockfile: latestLockfile,
   brand: Schema.encodeSync(SnapshotManifest.fields.brand)({
     brand: BrandId.make("brand_city"),
     number: 1,
@@ -89,7 +90,7 @@ const page = (props: Schema.JsonObject) =>
     meta: { title: "Borrow", description: "Borrow books." },
     root: ["b_hero"],
     blocks: {
-      b_hero: { type: "hero", variant: "centered", surface: "brand", props },
+      b_hero: { type: "hero", variant: "split", surface: "brand", props },
     },
   });
 

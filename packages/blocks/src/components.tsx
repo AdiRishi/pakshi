@@ -1,4 +1,4 @@
-import type { FormDefinition } from "@repo/contracts/form";
+import type { FormDefinition, FormField } from "@repo/contracts/form";
 import type { BlockId, FormId, MediaId, MenuItemId, PageId } from "@repo/contracts/ids";
 import type { PostMeta } from "@repo/contracts/page";
 import type { FormRef, Link, MediaRef } from "@repo/contracts/references";
@@ -16,6 +16,7 @@ import {
 
 import { useBlockFrame } from "./block.tsx";
 import { type Field, fieldAt } from "./fields.ts";
+import { buttonClass } from "./kit/button.ts";
 import { samplePosts } from "./placeholders.ts";
 import { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 import type { RichTextDocument } from "./rich-text.ts";
@@ -236,6 +237,9 @@ const FieldEditingContext = createContext<FieldEditing | null>(null);
 
 export const FieldEditingProvider = FieldEditingContext.Provider;
 
+/** Whether blocks render in the editor canvas, where every field must be reachable. */
+export const useEditing = () => useContext(FieldEditingContext) !== null;
+
 /** The field a component renders, from the block's own fields. */
 const useField = (field: FieldPath) => {
   const frame = useBlockFrame();
@@ -363,6 +367,8 @@ interface SlotProps {
   readonly name: string;
   readonly as?: "div" | "ul" | "ol" | undefined;
   readonly className?: string | undefined;
+  /** Whether the slot's element scrolls sideways, so the keyboard needs to reach it. */
+  readonly scrolls?: boolean;
 }
 
 /** A section's slot: the items placed in it, rendered inside this element. */
@@ -382,11 +388,24 @@ export const Slot = (options: SlotProps) => {
       </editing.Slot>
     );
   const Element = options.as ?? "div";
-  return <Element className={options.className}>{items}</Element>;
+  return (
+    <Element tabIndex={options.scrolls === true ? 0 : undefined} className={options.className}>
+      {items}
+    </Element>
+  );
 };
+
+/** A field that fits a form laid out in one row. */
+type RowField = Exclude<FormField, { readonly kind: "longText" | "select" }>;
+
+const fitRow = (fields: ReadonlyArray<FormField>): fields is ReadonlyArray<RowField> =>
+  fields.every((field) => field.kind !== "longText" && field.kind !== "select");
 
 const inputClass =
   "w-full rounded-md border border-input bg-background px-4 py-3 text-body text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+
+const inlineInputClass =
+  "h-11 min-w-0 flex-1 basis-56 rounded-button border border-input bg-background px-4 text-body text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
 
 /**
  * A form from the site's forms, with its fields in order. Its markup lives
@@ -396,6 +415,13 @@ const inputClass =
 export const FormView = (options: {
   readonly field: FieldPath;
   readonly value: FormRef;
+  /**
+   * Fields one under another with their labels above them, or in one row
+   * with the button, labelled by their placeholders, as a sign-up form is.
+   * Checkboxes go under the row. A form with a longer answer or a choice
+   * doesn't fit a row, so it's stacked whatever the layout.
+   */
+  readonly layout?: "stacked" | "inline";
   readonly className?: string | undefined;
 }) => {
   const address = useField(options.field);
@@ -406,6 +432,92 @@ export const FormView = (options: {
   if (sent === definition.id)
     return <output className="text-lead">Thank you. Your answers were sent.</output>;
   const inputId = (id: string) => `${address.block}-${id}`;
+  const submit = (
+    <button
+      type="submit"
+      // A disabled default button also stops Enter from submitting the form.
+      disabled={preview !== null}
+      className={buttonClass({ size: "md" })}
+    >
+      {definition.submitLabel}
+    </button>
+  );
+  const fields = definition.fields;
+  if (options.layout === "inline" && fitRow(fields)) {
+    const inline = (editable: EditableAttributes) => (
+      <form
+        {...editable}
+        method="post"
+        action={`?form=${definition.id}`}
+        className={options.className}
+      >
+        <div className="flex flex-wrap gap-2">
+          {fields.map((field) => {
+            switch (field.kind) {
+              case "hidden":
+                return <input key={field.id} type="hidden" name={field.id} value={field.value} />;
+              case "checkbox":
+                return null;
+              default:
+                return (
+                  <input
+                    key={field.id}
+                    aria-label={field.label}
+                    placeholder={field.label}
+                    name={field.id}
+                    required={field.required}
+                    type={{ shortText: "text", email: "email", phone: "tel" }[field.kind]}
+                    autoComplete={
+                      { shortText: undefined, email: "email", phone: "tel" }[field.kind]
+                    }
+                    className={inlineInputClass}
+                  />
+                );
+            }
+          })}
+          {submit}
+        </div>
+        {fields.map((field) =>
+          field.kind === "checkbox" ? (
+            <label
+              key={field.id}
+              className="text-small mt-3 flex items-start gap-2 text-muted-foreground"
+            >
+              <input
+                name={field.id}
+                type="checkbox"
+                required={field.required}
+                className="mt-0.5 size-4 accent-primary"
+              />
+              <span>
+                {field.label}
+                {field.link && (
+                  <>
+                    {" "}
+                    <a
+                      className="text-primary underline"
+                      href={
+                        Predicate.isString(field.link)
+                          ? field.link
+                          : (privacyHref(field.link.id) ?? "#")
+                      }
+                    >
+                      Privacy policy
+                    </a>
+                  </>
+                )}
+              </span>
+            </label>
+          ) : null,
+        )}
+      </form>
+    );
+    return editing === null ? (
+      inline({})
+    ) : (
+      <editing.Form {...address} value={options.value} render={inline} />
+    );
+  }
   const render = (editable: EditableAttributes) => (
     <form
       {...editable}
@@ -489,14 +601,7 @@ export const FormView = (options: {
             );
         }
       })}
-      <button
-        type="submit"
-        // A disabled default button also stops Enter from submitting the form.
-        disabled={preview !== null}
-        className="text-body self-start rounded-md bg-primary px-6 py-3 text-primary-foreground shadow-card transition-opacity hover:opacity-90 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-      >
-        {definition.submitLabel}
-      </button>
+      <div>{submit}</div>
     </form>
   );
   return editing === null ? (

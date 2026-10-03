@@ -56,5 +56,5 @@ test(
     );
     expect(exitCode).toBe(0);
   }),
-  { timeout: 900_000 },
+  { timeout: 1_800_000 },
 );

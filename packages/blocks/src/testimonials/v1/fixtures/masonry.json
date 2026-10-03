@@ -1,0 +1,138 @@
+{
+  "variant": "masonry",
+  "surface": "muted",
+  "props": {
+    "actions": [],
+    "columns": "3",
+    "style": "cards",
+    "align": "center",
+    "kicker": "Reviews",
+    "heading": "Loved on the harbour.",
+    "headingRest": "Students, parents and the people we work with."
+  },
+  "slots": {
+    "items": [
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "I'd never held a chisel before. By Friday I'd built a boat that floats, and I rowed it across the harbour myself.",
+          "name": "Priya Shah",
+          "role": "Student, summer 2026",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_samplePriya",
+            "alt": "Priya Shah"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "I was nervous about the sailing. By Wednesday I was the one asking to stay out longer.\n\nThe instructors are endlessly patient, and the boat I helped build is still in the harbour fleet. I go and look at it most weekends.",
+          "name": "Leo Marsh",
+          "role": "Student, summer 2025"
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Our apprentices learned more in five days on the slipway than in a term of drawings.",
+          "name": "Tom Penrose",
+          "role": "Yard manager, North Quay Boatyard",
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleBoatyard",
+            "alt": "North Quay Boatyard"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Our daughter came home sunburnt, smelling of varnish and talking about nothing but clinker planking. The best week of her summer, by a long way.",
+          "name": "Mei Chen",
+          "role": "Parent",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleMei",
+            "alt": "Mei Chen"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Small groups, proper tools and lunch on the quay. I've signed up again.",
+          "name": "Sam Taylor",
+          "role": "Student, summer 2025"
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "The summer school has brought young people back to the harbour. You hear them on the slipway every July, arguing about knots.",
+          "name": "Asha Patel",
+          "role": "Chair, Westbay Harbour Trust",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleAsha",
+            "alt": "Asha Patel"
+          },
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleHarbourTrust",
+            "alt": "Westbay Harbour Trust"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "The mentors never did it for you. They showed you once, then let you get it wrong until you got it right.",
+          "name": "Dan Okafor",
+          "role": "Student, summer 2026",
+          "avatar": {
+            "$ref": "media",
+            "id": "med_sampleDan",
+            "alt": "Dan Okafor"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "We fund a lot of projects. This is the one people stop us in the street to talk about.",
+          "name": "Ruth Alder",
+          "role": "Programme lead, County Arts Council",
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleArtsCouncil",
+            "alt": "County Arts Council"
+          }
+        }
+      },
+      {
+        "type": "testimonial",
+        "variant": "default",
+        "props": {
+          "quote": "Every summer we send a few of our young members. They come back steadier in a boat and far more curious about how one is put together.",
+          "name": "Ellie Ward",
+          "role": "Junior captain, Westbay Rowing Club",
+          "logo": {
+            "$ref": "media",
+            "id": "med_sampleRowingClub",
+            "alt": "Westbay Rowing Club"
+          }
+        }
+      }
+    ]
+  }
+}

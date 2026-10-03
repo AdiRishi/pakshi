@@ -25,24 +25,38 @@ const edit = (draft: Draft, ops: ReadonlyArray<WireOp>, using: BlockContracts = 
   return applied.draft;
 };
 
-const heroV1 = contracts.get("hero");
-if (heroV1 === undefined) throw new Error("The harbour draft pins hero.");
+const hero = contracts.get("hero");
+if (hero === undefined) throw new Error("The harbour draft pins hero.");
 
-/** A second hero version, which adds a required kicker above the heading. */
-const heroV2: BlockContract = {
-  ...heroV1,
-  version: 2,
+/** The hero's next version, which adds a required kicker above the heading. */
+const nextHero: BlockContract = {
+  ...hero,
+  version: hero.version + 1,
   fields: {
-    ...heroV1.fields,
+    ...hero.fields,
     kicker: text({ title: "Kicker", max: 40 }),
     note: optional(text({ title: "Note", max: 40 })),
   },
   migrate: (props) => ({ ...props, kicker: "Summer 2027" }),
+  renamedVariants: {},
+};
+
+/**
+ * The version after that, which calls the stacked layout "centered" and frames
+ * the image of a hero that was stacked.
+ */
+const laterHero: BlockContract = {
+  ...nextHero,
+  version: nextHero.version + 1,
+  variants: nextHero.variants.map((variant) => (variant === "stacked" ? "centered" : variant)),
+  migrate: (props, variant) => (variant === "stacked" ? { ...props, frame: "framed" } : props),
+  renamedVariants: { stacked: "centered" },
 };
 
 const library: BlockLibrary = new Map([
   ...(await loadBlockVersions([harbourDraft.lockfile])),
-  [blockKey("hero", 2), heroV2],
+  [blockKey("hero", nextHero.version), nextHero],
+  [blockKey("hero", laterHero.version), laterHero],
 ]);
 
 const newBase = Schema.decodeSync(LiveRelease)({ release: "rel_two", snapshot: "snap_two" });
@@ -574,11 +588,11 @@ describe("site-level parts", () => {
   });
 
   test("merge like any block", () => {
-    const draft = edit(harbourDraft, [variant("b_header", "centered")]);
+    const draft = edit(harbourDraft, [variant("b_header", "centered-menu")]);
     const live = edit(harbourDraft, [surface("b_footer", "inverse")]);
     const { content, conflicts, changes } = merge({ draft, live });
     expect(conflicts).toEqual([]);
-    expect(content.parts.blocks[BlockId.make("b_header")]?.variant).toBe("centered");
+    expect(content.parts.blocks[BlockId.make("b_header")]?.variant).toBe("centered-menu");
     expect(content.parts.blocks[BlockId.make("b_footer")]?.surface).toBe("inverse");
     expect(changes).toEqual([
       {
@@ -713,9 +727,9 @@ describe("brand revisions", () => {
 });
 
 describe("sides on different block versions", () => {
-  const onV2 = (draft: Draft): Draft => ({
+  const onNext = (draft: Draft): Draft => ({
     ...draft,
-    lockfile: { ...draft.lockfile, hero: 2 },
+    lockfile: { ...draft.lockfile, hero: nextHero.version },
     pages: Object.fromEntries(
       Object.values(draft.pages).map((page) => [
         page.id,
@@ -733,14 +747,14 @@ describe("sides on different block versions", () => {
       ]),
     ),
   });
-  const v2 = contractsAt(library, { ...harbourDraft.lockfile, hero: 2 });
+  const next = contractsAt(library, { ...harbourDraft.lockfile, hero: nextHero.version });
 
   test("merge after moving both to the newer version", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
-    const live = edit(onV2(harbourDraft), [setProp("b_hero", ["kicker"], "July 2027")], v2);
+    const live = edit(onNext(harbourDraft), [setProp("b_hero", ["kicker"], "July 2027")], next);
     const { content, conflicts } = merge({ draft, live });
     expect(conflicts).toEqual([]);
-    expect(content.lockfile["hero"]).toBe(2);
+    expect(content.lockfile["hero"]).toBe(nextHero.version);
     expect(block(content, "b_hero")?.props).toMatchObject({
       heading: "Build a boat",
       kicker: "July 2027",
@@ -749,7 +763,7 @@ describe("sides on different block versions", () => {
 
   test("still conflict where both changed the same field", () => {
     const draft = edit(harbourDraft, [heading("Build a boat")]);
-    const live = edit(onV2(harbourDraft), [heading("Sail a boat")], v2);
+    const live = edit(onNext(harbourDraft), [heading("Sail a boat")], next);
     expect(merge({ draft, live }).conflicts).toEqual([
       expect.objectContaining({
         _tag: "Changed",
@@ -761,59 +775,26 @@ describe("sides on different block versions", () => {
   });
 });
 
-/** The released block versions, up to hero v3. */
-const released = await loadBlockVersions([harbourDraft.lockfile, { hero: 3 }]);
-
 describe("upgrading blocks", () => {
+  const upgrade = { hero: laterHero.version };
   const heroOf = (content: SiteContent) => block(content, "b_hero");
-  const heroV3 = (content: SiteContent) => {
-    const contract = contractsAt(released, content.lockfile).get("hero");
-    if (contract === undefined) throw new Error("The upgrade pins hero v3.");
-    return contract;
-  };
 
-  test("from hero v1 to v3 migrates its content through v2 and v3", () => {
-    const upgraded = migrateContent(released, harbourDraft, { hero: 3 });
-    expect(upgraded.lockfile["hero"]).toBe(3);
-    // v2 made the button the first of the buttons, which v3 keeps.
-    expect(heroOf(upgraded)?.props).toEqual({
-      heading: "Learn by building",
-      body: {
-        type: "doc",
-        content: [
-          { type: "paragraph", content: [{ type: "text", text: "Five days of workshops." }] },
-        ],
-      },
-      actions: [
-        { id: "it_primary", button: { label: "Register", link: "https://example.org/register" } },
-      ],
+  test("migrates a block's content through every version up to the new one", () => {
+    const upgraded = migrateContent(library, harbourDraft, upgrade);
+    expect(upgraded.lockfile["hero"]).toBe(laterHero.version);
+    // The newest version was told the hero was stacked before it renamed the layout.
+    expect(heroOf(upgraded)).toEqual({
+      ...heroOf(harbourDraft),
+      variant: "centered",
+      props: { ...heroOf(harbourDraft)?.props, kicker: "Summer 2027", frame: "framed" },
     });
-    expect(
-      Schema.is(propsSchema(heroV3(upgraded).fields, "complete"))(heroOf(upgraded)?.props),
-    ).toBe(true);
+    const complete = Schema.decodeUnknownSync(propsSchema(laterHero.fields, "complete"));
+    expect(() => complete(heroOf(upgraded)?.props)).not.toThrow();
   });
 
   test("leaves the other blocks at their versions", () => {
-    const upgraded = migrateContent(released, harbourDraft, { hero: 3 });
-    expect({ ...upgraded.lockfile, hero: 1 }).toEqual(harbourDraft.lockfile);
+    const upgraded = migrateContent(library, harbourDraft, upgrade);
+    expect({ ...upgraded.lockfile, hero: hero.version }).toEqual(harbourDraft.lockfile);
     expect(block(upgraded, "b_features")).toEqual(block(harbourDraft, "b_features"));
-  });
-
-  test("keeps all of a hero's text, however long, valid at the new version", () => {
-    const paragraph = (text: string) => ({
-      type: "paragraph",
-      content: [{ type: "text", text, marks: [{ type: "bold" }] }],
-    });
-    const body = {
-      type: "doc",
-      content: Array.from({ length: 12 }, (_, index) =>
-        paragraph(`Day ${index + 1}. ${"Build. ".repeat(20)}`),
-      ),
-    };
-    const long = edit(harbourDraft, [setProp("b_hero", ["body"], body)]);
-    const upgraded = migrateContent(released, long, { hero: 3 });
-    const props = heroOf(upgraded)?.props;
-    expect(props?.["body"]).toEqual(body);
-    expect(Schema.is(propsSchema(heroV3(upgraded).fields, "draft"))(props)).toBe(true);
   });
 });

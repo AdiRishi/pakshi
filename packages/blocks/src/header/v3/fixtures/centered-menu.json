@@ -1,0 +1,17 @@
+{
+  "variant": "centered-menu",
+  "surface": "default",
+  "props": {
+    "cta": {
+      "label": "Register",
+      "link": "https://example.org/register"
+    },
+    "announcement": "Applications for summer 2027 are open",
+    "announcementLink": {
+      "$ref": "page",
+      "id": "pg_programme"
+    },
+    "position": "sticky",
+    "bar": "brand"
+  }
+}

@@ -1,4 +1,11 @@
-import { type Field, type FieldKind, placeholderCollection, placeholderForm } from "@repo/blocks";
+import {
+  type Field,
+  type FieldKind,
+  IconName,
+  icons,
+  placeholderCollection,
+  placeholderForm,
+} from "@repo/blocks";
 import { collectionKinds } from "@repo/contracts/collections";
 import type { BatchError, Op } from "@repo/contracts/ops";
 import { pageName } from "@repo/contracts/page";
@@ -15,6 +22,8 @@ import {
 } from "@repo/ui/components/field";
 import { Input } from "@repo/ui/components/input";
 import { NativeSelect, NativeSelectOption } from "@repo/ui/components/native-select";
+import { Popover, PopoverContent, PopoverTrigger } from "@repo/ui/components/popover";
+import { ToggleGroup, ToggleGroupItem } from "@repo/ui/components/toggle-group";
 import { Predicate, Schema } from "effect";
 import { ArrowDownIcon, ArrowUpIcon, PlusIcon, XIcon } from "lucide-react";
 import { type ComponentType, type ReactNode, useRef, useState } from "react";
@@ -551,6 +560,124 @@ function NumberControl(props: ControlProps<KindOf<"number">>) {
   );
 }
 
+/** What a choice's option is called. */
+const optionLabel = (definition: KindOf<"choice">, option: string) =>
+  definition.labels[option] ?? option;
+
+/** One of a choice's options: side by side when there are a few, from a list when there are more. */
+function ChoiceControl(props: ControlProps<KindOf<"choice">>) {
+  const { run, errors } = useRun();
+  const { definition, field } = props;
+  const current = props.value ?? definition.options[0];
+  const choose = (option: string) => {
+    if (option !== current && definition.options.includes(option)) run([setProp(field, option)]);
+  };
+  return (
+    <ControlRow field={field} definition={definition} value={props.value} errors={errors}>
+      {definition.options.length <= 3 ? (
+        <ToggleGroup
+          id={controlId(field)}
+          aria-label={definition.title}
+          variant="outline"
+          size="sm"
+          spacing={0}
+          className="w-full"
+          value={[current]}
+          onValueChange={(values) => {
+            const [chosen] = values;
+            if (chosen !== undefined) choose(chosen);
+          }}
+        >
+          {definition.options.map((option) => (
+            <ToggleGroupItem key={option} value={option} className="flex-1">
+              {optionLabel(definition, option)}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
+      ) : (
+        <NativeSelect
+          id={controlId(field)}
+          value={current}
+          onChange={(event) => choose(event.target.value)}
+          className="w-full"
+        >
+          {definition.options.map((option) => (
+            <NativeSelectOption key={option} value={option}>
+              {optionLabel(definition, option)}
+            </NativeSelectOption>
+          ))}
+        </NativeSelect>
+      )}
+    </ControlRow>
+  );
+}
+
+/** An icon's name in words, such as "Map pin". */
+const iconTitle = (name: string) => {
+  const words = name.replaceAll("-", " ");
+  return words.charAt(0).toUpperCase() + words.slice(1);
+};
+
+/** An icon, picked from the library's set by looking or by searching its name. */
+function IconControl(props: ControlProps<KindOf<"icon">>) {
+  const { run, errors } = useRun();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { definition, field, value } = props;
+  if (value === undefined && definition.optional)
+    return (
+      <ControlRow field={field} definition={definition} value={value} errors={errors}>
+        <AddField title={definition.title} onAdd={() => run([setProp(field, "sparkles")])} />
+      </ControlRow>
+    );
+  const Current = value === undefined ? null : icons[value];
+  const found = IconName.literals.filter((name) => name.includes(search.trim().toLowerCase()));
+  return (
+    <ControlRow field={field} definition={definition} value={value} errors={errors}>
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <Button id={controlId(field)} variant="outline" size="sm" className="self-start">
+              {Current !== null && <Current aria-hidden />}
+              {value === undefined ? "Choose an icon" : iconTitle(value)}
+            </Button>
+          }
+        />
+        <PopoverContent align="start" className="w-80 gap-3">
+          <Input
+            aria-label="Search icons"
+            placeholder="Search icons"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <div className="grid max-h-64 grid-cols-7 gap-1 overflow-y-auto">
+            {found.map((name) => {
+              const Icon = icons[name];
+              return (
+                <Button
+                  key={name}
+                  variant={name === value ? "secondary" : "ghost"}
+                  size="icon-sm"
+                  aria-label={iconTitle(name)}
+                  aria-pressed={name === value}
+                  title={iconTitle(name)}
+                  onClick={() => {
+                    run([setProp(field, name)]);
+                    setOpen(false);
+                  }}
+                >
+                  <Icon aria-hidden />
+                </Button>
+              );
+            })}
+          </div>
+          {found.length === 0 && <FieldDescription>No icon has a name like that.</FieldDescription>}
+        </PopoverContent>
+      </Popover>
+    </ControlRow>
+  );
+}
+
 /** A list's items, each with its own fields, which can be moved, removed and added to within the list's limits. */
 function ListControl(props: ControlProps<KindOf<"list">>) {
   const ui = useEditorUi();
@@ -669,6 +796,8 @@ const controls = {
   list: ListControl,
   collection: CollectionControl,
   number: NumberControl,
+  choice: ChoiceControl,
+  icon: IconControl,
 } satisfies { readonly [K in FieldKind]: ComponentType<ControlProps<KindOf<K>>> };
 
 /** A field's control, chosen by its kind. Each reads the draft and emits setProp; none keeps its own copy. */

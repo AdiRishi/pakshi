@@ -1,0 +1,29 @@
+{
+  "variant": "vertical",
+  "surface": "default",
+  "props": {
+    "heading": "How it unfolds",
+    "intro": "Walk people through what happens and when, one step at a time.",
+    "actions": [],
+    "entries": [
+      {
+        "id": "it_first",
+        "when": "First",
+        "title": "Where it all starts",
+        "detail": "A sentence on what happens at this step and who's involved."
+      },
+      {
+        "id": "it_next",
+        "when": "Next",
+        "title": "What comes after",
+        "detail": "Keep each step short enough to read at a glance."
+      },
+      {
+        "id": "it_last",
+        "when": "Finally",
+        "title": "How it ends",
+        "detail": "Say what people leave with."
+      }
+    ]
+  }
+}

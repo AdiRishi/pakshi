@@ -1,0 +1,64 @@
+{
+  "variant": "list",
+  "surface": "inverse",
+  "props": {
+    "heading": "Before you arrive",
+    "intro": "Three dates for students and parents before the week begins.",
+    "actions": [
+      {
+        "id": "it_cal",
+        "button": {
+          "label": "Add to your calendar",
+          "link": "https://example.org/calendar.ics"
+        }
+      }
+    ],
+    "columns": "3"
+  },
+  "slots": {
+    "events": [
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Thu 26 June",
+          "time": "6:30pm",
+          "place": "Online",
+          "title": "Parents' evening",
+          "body": "Meet the mentors and hear how the week runs. There's time for questions at the end.",
+          "link": {
+            "label": "Join the call",
+            "link": "https://example.org/parents-evening"
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sat 28 June",
+          "time": "10am to noon",
+          "place": "The boatshed, North Quay",
+          "title": "Kit check",
+          "body": "Bring your boots and waterproofs and we'll make sure they fit.",
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "The jetty under the boatshed roof on a misty morning"
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Mon 30 June",
+          "time": "9am",
+          "place": "The boatshed, North Quay",
+          "title": "First day",
+          "body": "Arrive by nine for tools, a safety talk and a cup of tea. Lunch is provided."
+        }
+      }
+    ]
+  }
+}

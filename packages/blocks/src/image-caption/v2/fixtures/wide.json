@@ -1,0 +1,14 @@
+{
+  "variant": "wide",
+  "surface": "default",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "caption": "The last evening of the summer school. Both boats were built by students that week, and launched from North Quay on the Friday tide.",
+    "credit": "Photo: Ana Moreno",
+    "crop": "original"
+  }
+}

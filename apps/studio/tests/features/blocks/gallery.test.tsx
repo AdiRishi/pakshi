@@ -16,7 +16,7 @@ const search = () => page.getByRole("searchbox", { name: "Search blocks" });
 test("search keeps the blocks whose name or summary holds the words, and says when none do", async () => {
   const onAsk = vi.fn<() => void>();
   await renderGallery({ onAsk });
-  expect(cardNames()).toHaveLength(21);
+  expect(cardNames()).toHaveLength(27);
 
   await userEvent.fill(search(), "Photo ");
   expect(cardNames()).toEqual(["Image and text", "Image", "Gallery"]);
@@ -27,7 +27,7 @@ test("search keeps the blocks whose name or summary holds the words, and says wh
   expect(onAsk).toHaveBeenCalled();
 
   await page.getByRole("button", { name: "Clear the search" }).click();
-  expect(cardNames()).toHaveLength(21);
+  expect(cardNames()).toHaveLength(27);
 });
 
 test("only someone with updates to see has an Updates tab, even at its address", async () => {

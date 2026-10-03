@@ -1,0 +1,25 @@
+{
+  "variant": "image",
+  "surface": "inverse",
+  "props": {
+    "kicker": "See you at the harbour",
+    "heading": "The tide waits for no one.",
+    "headingRest": "Neither does registration.",
+    "actions": [
+      {
+        "id": "it_register",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      }
+    ],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "mediaSide": "end",
+    "backdrop": "none"
+  }
+}

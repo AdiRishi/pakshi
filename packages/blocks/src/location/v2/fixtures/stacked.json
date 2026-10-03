@@ -1,0 +1,37 @@
+{
+  "variant": "stacked",
+  "surface": "tint",
+  "props": {
+    "heading": "The boatshed and the slipway",
+    "intro": "Everything happens within a few minutes' walk of North Quay.",
+    "address": "The Boatshed, North Quay\nPortlow PL12 3AB",
+    "hours": [
+      {
+        "id": "it_term",
+        "days": "During summer school",
+        "times": "Every day, 8:30am to 5pm"
+      },
+      {
+        "id": "it_rest",
+        "days": "The rest of the year",
+        "times": "Saturdays, 10am to 1pm"
+      }
+    ],
+    "directions": "Trains run hourly to Portlow. The 42 bus stops at Harbour Road, two minutes from the gate.",
+    "map": {
+      "$ref": "media",
+      "id": "med_sampleMap",
+      "alt": "A map of North Quay, with the boatshed and slipway marked"
+    },
+    "actions": [
+      {
+        "id": "it_directions",
+        "button": {
+          "label": "Get directions",
+          "link": "https://www.openstreetmap.org/search?query=North%20Quay%20Portlow"
+        }
+      }
+    ],
+    "mediaSide": "end"
+  }
+}

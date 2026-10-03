@@ -95,6 +95,13 @@ const openPublished = async (
   });
   const page = await context.newPage();
   await page.goto(fixturesUrl(site));
+  await page.evaluate(() => {
+    // The canvas opens every disclosure so its fields can be edited.
+    for (const disclosure of document.querySelectorAll<HTMLDetailsElement>(
+      "details[data-disclosure]",
+    ))
+      disclosure.open = true;
+  });
   await page.evaluate(() =>
     Promise.all(
       Array.from(document.images, (image) => {
@@ -113,6 +120,8 @@ for (const scheme of ["light", "dark"] as const) {
   test(`every block fixture renders the same in the editor canvas and in sites, in ${scheme}`, async ({
     browser,
   }) => {
+    // Two screenshots of every fixture, which outlasts the default timeout.
+    test.setTimeout(600_000);
     const studio = await asAdmin(browser);
     for (const site of sites) {
       const frame = await openCanvas(studio, site, scheme);
@@ -120,6 +129,13 @@ for (const scheme of ["light", "dark"] as const) {
       const published = await openPublished(browser, site, Math.round(width), scheme);
       for (const block of blocksOf(site)) {
         const inCanvas = frame.locator(`[data-pakshi-block="${block}"]`);
+        // An item scrolled along a sideways row runs off the page, where neither side can be
+        // photographed; its section's comparison covers the part that shows.
+        const offPage = await inCanvas.evaluate((element) => {
+          const { left, right } = element.getBoundingClientRect();
+          return left < 0 || right > element.ownerDocument.documentElement.clientWidth;
+        });
+        if (offPage) continue;
         // The canvas renders into a container where sites renders into the body, so the
         // same element is found in sites by its position under the body.
         const position = await inCanvas.evaluate((element) => {
@@ -301,6 +317,9 @@ for (const scheme of ["light", "dark"] as const) {
             button.removeAttribute("disabled");
           return Promise.all(
             Array.from(document.images, (image) => {
+              // sites offers resized copies, where the preview shows the original, and a
+              // copy's rounded size can rebalance a masonry gallery. Both show the original.
+              image.removeAttribute("srcset");
               image.loading = "eager";
               return image.decode().catch(() => undefined);
             }),

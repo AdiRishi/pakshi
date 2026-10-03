@@ -1,25 +1,56 @@
 {
-  "settings": { "name": "Harbour Summer School", "sharingImage": null },
+  "settings": {
+    "name": "Harbour Summer School",
+    "sharingImage": null
+  },
   "menus": {
     "main": [
-      { "id": "mi_home", "label": "Home", "target": { "$ref": "page", "id": "pg_home" } },
+      {
+        "id": "mi_home",
+        "label": "Home",
+        "target": {
+          "$ref": "page",
+          "id": "pg_home"
+        }
+      },
       {
         "id": "mi_programme",
         "label": "Programme",
-        "target": { "$ref": "page", "id": "pg_programme" },
+        "target": {
+          "$ref": "page",
+          "id": "pg_programme"
+        },
         "children": [
           {
             "id": "mi_workshops",
             "label": "Workshops",
-            "target": { "$ref": "page", "id": "pg_programme" }
+            "target": {
+              "$ref": "page",
+              "id": "pg_programme"
+            }
           }
         ]
       },
-      { "id": "mi_news", "label": "News", "target": { "$ref": "page", "id": "pg_news" } }
+      {
+        "id": "mi_news",
+        "label": "News",
+        "target": {
+          "$ref": "page",
+          "id": "pg_news"
+        }
+      }
     ],
     "footer": [
-      { "id": "mi_contact", "label": "Contact", "target": "mailto:hello@example.org" },
-      { "id": "mi_privacy", "label": "Privacy", "target": "https://example.org/privacy" }
+      {
+        "id": "mi_contact",
+        "label": "Contact",
+        "target": "mailto:hello@example.org"
+      },
+      {
+        "id": "mi_privacy",
+        "label": "Privacy",
+        "target": "https://example.org/privacy"
+      }
     ]
   },
   "forms": {
@@ -28,9 +59,24 @@
       "name": "Registration",
       "submitLabel": "Register",
       "fields": [
-        { "kind": "shortText", "id": "ff_name", "label": "Your name", "required": true },
-        { "kind": "email", "id": "ff_email", "label": "Email", "required": true },
-        { "kind": "phone", "id": "ff_phone", "label": "Phone", "required": false },
+        {
+          "kind": "shortText",
+          "id": "ff_name",
+          "label": "Your name",
+          "required": true
+        },
+        {
+          "kind": "email",
+          "id": "ff_email",
+          "label": "Email",
+          "required": true
+        },
+        {
+          "kind": "phone",
+          "id": "ff_phone",
+          "label": "Phone",
+          "required": false
+        },
         {
           "kind": "select",
           "id": "ff_week",
@@ -51,12 +97,40 @@
           "required": true,
           "link": "https://example.org/privacy"
         },
-        { "kind": "hidden", "id": "ff_source", "label": "Source", "value": "website" }
+        {
+          "kind": "hidden",
+          "id": "ff_source",
+          "label": "Source",
+          "value": "website"
+        }
+      ]
+    },
+    "frm_newsletter": {
+      "id": "frm_newsletter",
+      "name": "Newsletter",
+      "submitLabel": "Sign up",
+      "fields": [
+        {
+          "kind": "email",
+          "id": "ff_email",
+          "label": "Email address",
+          "required": true
+        },
+        {
+          "kind": "hidden",
+          "id": "ff_source",
+          "label": "Source",
+          "value": "footer"
+        }
       ]
     }
   },
   "media": {
-    "med_harbour": { "contentType": "image/jpeg", "width": 1600, "height": 1067 }
+    "med_harbour": {
+      "contentType": "image/jpeg",
+      "width": 1600,
+      "height": 1067
+    }
   },
   "pages": {
     "pg_home": {
@@ -76,7 +150,10 @@
       "id": "pg_programme",
       "type": "page",
       "path": "/programme",
-      "meta": { "title": "Programme", "description": "What happens each day." },
+      "meta": {
+        "title": "Programme",
+        "description": "What happens each day."
+      },
       "root": [],
       "blocks": {}
     },
@@ -86,7 +163,10 @@
       "type": "collection",
       "kind": "blog",
       "path": "/news",
-      "meta": { "title": "News", "description": "What's happening at the harbour." },
+      "meta": {
+        "title": "News",
+        "description": "What's happening at the harbour."
+      },
       "root": [],
       "blocks": {}
     },

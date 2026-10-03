@@ -1,0 +1,83 @@
+{
+  "variant": "standard",
+  "surface": "default",
+  "props": {
+    "points": [
+      {
+        "id": "it_tools",
+        "title": "Tools provided",
+        "body": "Chisels, planes and saws, sharpened every evening.",
+        "icon": "hammer"
+      },
+      {
+        "id": "it_timber",
+        "title": "Local timber",
+        "body": "Larch and oak from woods along the estuary.",
+        "icon": "tree-pine"
+      },
+      {
+        "id": "it_small",
+        "title": "Small groups",
+        "body": "Six to a bench, so nobody waits for help.",
+        "icon": "users"
+      },
+      {
+        "id": "it_safe",
+        "title": "Safety first",
+        "body": "Gloves, glasses and a first aider in every shed.",
+        "icon": "shield-check"
+      }
+    ],
+    "actions": [
+      {
+        "id": "it_programme",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "mediaSide": "alternate",
+    "verticalAlign": "center",
+    "frame": "plain",
+    "background": "full",
+    "kicker": "Mornings",
+    "heading": "On the workshop floor.",
+    "headingRest": "Every joint cut by hand, with a mentor beside you.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Each morning starts with a short demonstration at the bench. Then you build your own version, "
+            },
+            {
+              "type": "text",
+              "text": "one mentor for every six students",
+              "marks": [
+                {
+                  "type": "bold"
+                }
+              ]
+            },
+            {
+              "type": "text",
+              "text": "."
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    }
+  }
+}

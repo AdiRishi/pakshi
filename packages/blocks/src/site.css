@@ -46,3 +46,421 @@
     }
   }
 }
+
+@layer base {
+  h1,
+  h2,
+  h3 {
+    text-transform: var(--theme-heading-case);
+    text-wrap: balance;
+  }
+
+  p {
+    text-wrap: pretty;
+  }
+
+  summary::-webkit-details-marker {
+    display: none;
+  }
+}
+
+/*
+ * A section's space above and below. One that follows a section on the same
+ * surface continues the same band of color, so it starts closer: two sections'
+ * worth of space between them reads as a break that isn't there.
+ */
+/*
+ * A grid of items set to more columns than it has items fills its one row on
+ * a wide screen: three features in a four-column grid take a third each.
+ * `fill-row-3` and `fill-row-4` go with a grid's three or four columns. The
+ * examples the editor shows of items that could be added don't count.
+ */
+@utility fill-row-3 {
+  @media (width >= 64rem) {
+    &:has(> :nth-child(2 of :not([data-pakshi-ghost]))):not(
+        :has(> :nth-child(3 of :not([data-pakshi-ghost])))
+      ) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+  }
+}
+
+@utility fill-row-4 {
+  @media (width >= 64rem) {
+    &:has(> :nth-child(2 of :not([data-pakshi-ghost]))):not(
+        :has(> :nth-child(3 of :not([data-pakshi-ghost])))
+      ) {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    &:has(> :nth-child(3 of :not([data-pakshi-ghost]))):not(
+        :has(> :nth-child(4 of :not([data-pakshi-ghost])))
+      ) {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+  }
+}
+
+@utility section-space {
+  padding-block: var(--theme-section-space);
+
+  :where(main) > :where([data-surface="default"]) + &:where([data-surface="default"]),
+  :where(main) > :where([data-surface="muted"]) + &:where([data-surface="muted"]),
+  :where(main) > :where([data-surface="tint"]) + &:where([data-surface="tint"]),
+  :where(main) > :where([data-surface="brand"]) + &:where([data-surface="brand"]),
+  :where(main) > :where([data-surface="accent"]) + &:where([data-surface="accent"]),
+  :where(main) > :where([data-surface="inverse"]) + &:where([data-surface="inverse"]) {
+    padding-top: calc(var(--theme-section-space) / 2);
+  }
+}
+
+/*
+ * Section backdrops: a glow of the section's button color from the top, or a
+ * fine grid or dots in its border color, fading out. Each sits behind the
+ * section's content in a layer of its own, so the fade never touches it.
+ */
+@utility decor-glow {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: radial-gradient(
+      60% 55% at 50% 0%,
+      color-mix(in oklch, var(--primary) 22%, transparent),
+      transparent 75%
+    );
+  }
+}
+
+@utility decor-grid {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image:
+      linear-gradient(var(--border) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border) 1px, transparent 1px);
+    background-size: 4rem 4rem;
+    background-position: center top;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 100%);
+  }
+}
+
+@utility decor-dots {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: radial-gradient(var(--border) 1.5px, transparent 1.5px);
+    background-size: 1.5rem 1.5rem;
+    mask-image: radial-gradient(ellipse 70% 60% at 50% 0%, black 30%, transparent 100%);
+  }
+}
+
+/* A link that reads as "go on": an arrow after its words, drawn in its own color. */
+@utility link-arrow {
+  &::after {
+    content: "";
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-inline-start: 0.375em;
+    vertical-align: -0.125em;
+    background-color: currentColor;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12h14M13 6l6 6-6 6'/%3E%3C/svg%3E")
+      center / contain no-repeat;
+    transition: translate var(--theme-motion-duration) ease-out;
+  }
+  &:hover::after {
+    translate: 0.2em 0;
+  }
+}
+
+/*
+ * A row that scrolls by itself, for logos and quotes. Its items are shown
+ * twice so the row loops without a gap, and it pauses while a pointer or
+ * keyboard focus is in it. With the theme's motion off, or for visitors who
+ * ask for less motion, it stands still: the copy goes, and the row scrolls
+ * sideways so every item can still be reached.
+ */
+@keyframes pakshi-marquee {
+  to {
+    translate: -50% 0;
+  }
+}
+
+@utility marquee {
+  display: flex;
+  overflow-x: var(--theme-marquee-overflow);
+  mask-image: linear-gradient(90deg, transparent, black 10%, black 90%, transparent);
+  &:focus-within > * {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    overflow-x: auto;
+  }
+}
+
+@utility marquee-track {
+  display: flex;
+  flex-shrink: 0;
+  width: max-content;
+  animation: pakshi-marquee 50s linear infinite;
+  animation-play-state: var(--theme-animation);
+  &:hover {
+    animation-play-state: paused;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+
+@utility marquee-copy {
+  display: var(--theme-marquee-copies);
+  @media (prefers-reduced-motion: reduce) {
+    display: none;
+  }
+}
+
+/*
+ * A row that scrolls sideways across the whole width of its section, with
+ * its first and last items lined up with the page's content.
+ */
+@utility scroller-row {
+  padding-inline: max(var(--theme-gutter), (100% - var(--theme-width)) / 2);
+  scroll-padding-inline: max(var(--theme-gutter), (100% - var(--theme-width)) / 2);
+}
+
+/* Long-form text set for reading: a comfortable measure, rhythm and lists. */
+@utility prose {
+  font-size: var(--theme-text-body);
+  line-height: 1.7;
+  & > * + * {
+    margin-top: 1.25em;
+  }
+  & h2 {
+    margin-top: 2.25em;
+    font-size: var(--theme-text-heading);
+    letter-spacing: var(--theme-tracking-heading);
+    line-height: 1.25;
+  }
+  & h3 {
+    margin-top: 1.75em;
+    font-size: var(--theme-text-lead);
+    line-height: 1.35;
+  }
+  & h2 + *,
+  & h3 + * {
+    margin-top: 0.75em;
+  }
+  & ul {
+    list-style: disc;
+    padding-inline-start: 1.5em;
+  }
+  & ol {
+    list-style: decimal;
+    padding-inline-start: 1.5em;
+  }
+  & li + li {
+    margin-top: 0.5em;
+  }
+  & li::marker {
+    color: var(--muted-foreground);
+  }
+  & a {
+    color: var(--primary);
+    text-decoration: underline;
+    text-underline-offset: 0.2em;
+    text-decoration-thickness: 1px;
+  }
+  & strong {
+    font-weight: 600;
+  }
+}
+
+/* A site's name set as large as the page is wide, across a line or two. */
+/*
+ * A wordmark fills the width of its container: `wordmark-fit-N` sizes a name
+ * of N letters by how wide the theme's heading letters run.
+ */
+@utility wordmark-fit-* {
+  font-size: calc(100cqi / (--value(integer) * var(--theme-heading-glyph)));
+}
+
+@utility wordmark {
+  font-family: var(--theme-font-heading);
+  font-weight: var(--theme-heading-weight);
+  text-transform: var(--theme-heading-case);
+  line-height: 0.85;
+  letter-spacing: var(--theme-tracking-display);
+  text-wrap: balance;
+}
+
+/*
+ * More backdrops: film grain, fine diagonal stripes, and a glow rising as
+ * an arc from the section's foot.
+ */
+@utility decor-noise {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    opacity: 0.35;
+    mix-blend-mode: soft-light;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 0 0.5 0 0 0 1.2 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+}
+
+@utility decor-stripes {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(-45deg, var(--border) 0 1px, transparent 1px 10px);
+    mask-image: linear-gradient(to bottom, black, transparent 70%);
+  }
+}
+
+@utility decor-arc {
+  &::before {
+    content: "";
+    position: absolute;
+    inset: auto -25% -60% -25%;
+    height: 90%;
+    z-index: -1;
+    pointer-events: none;
+    border-radius: 50%;
+    background: radial-gradient(
+      closest-side,
+      color-mix(in oklch, var(--primary) 45%, transparent),
+      color-mix(in oklch, var(--primary) 12%, transparent) 60%,
+      transparent
+    );
+    filter: blur(2rem);
+  }
+}
+
+/*
+ * Frames for screenshots: a browser window with its toolbar, and a phone.
+ * The phone keeps its own rounded corners whatever the theme's, since a
+ * phone's are part of what it is.
+ */
+@utility frame-browser {
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--foreground) 12%, transparent);
+  border-radius: calc(var(--theme-radius) * 1.5);
+  background-color: var(--background);
+  box-shadow:
+    0 1px 2px oklch(0 0 0 / 6%),
+    0 24px 60px -24px oklch(0 0 0 / 30%);
+}
+
+@utility frame-browser-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.25rem;
+  padding-inline: 0.9rem;
+  border-bottom: 1px solid color-mix(in oklch, var(--foreground) 10%, transparent);
+  background-color: var(--muted);
+  & > span {
+    width: 0.625rem;
+    height: 0.625rem;
+    border-radius: 999px;
+    background-color: color-mix(in oklch, var(--foreground) 18%, transparent);
+  }
+}
+
+@utility frame-phone {
+  width: min(100%, 19rem);
+  margin-inline: auto;
+  padding: 0.55rem;
+  border-radius: 2.75rem;
+  background-color: color-mix(in oklch, var(--foreground) 92%, var(--background));
+  box-shadow: 0 30px 70px -30px oklch(0 0 0 / 45%);
+  & > img {
+    width: 100%;
+    aspect-ratio: 9 / 19.5;
+    object-fit: cover;
+    border-radius: 2.25rem;
+  }
+}
+
+/*
+ * A highlight that travels slowly round an element's edge, for the one thing
+ * on a page that should catch the eye, such as a featured plan. It stays
+ * still with the theme's motion off or for visitors who ask for less motion.
+ */
+@property --pakshi-shine-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes pakshi-shine {
+  to {
+    --pakshi-shine-angle: 360deg;
+  }
+}
+
+@utility border-shine {
+  position: relative;
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    padding: 1.5px;
+    border-radius: inherit;
+    pointer-events: none;
+    background: conic-gradient(
+      from var(--pakshi-shine-angle),
+      transparent 0deg,
+      var(--primary) 50deg,
+      transparent 110deg,
+      transparent 360deg
+    );
+    mask:
+      linear-gradient(black 0 0) content-box exclude,
+      linear-gradient(black 0 0);
+    animation: pakshi-shine 6s linear infinite;
+    animation-play-state: var(--theme-animation);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    &::after {
+      animation: none;
+    }
+  }
+}
+
+/*
+ * With the theme's lines on, thin rules run just outside the content's sides through
+ * the whole page and divide its sections, like a ruled sheet. Each section
+ * draws its rule in its own border color.
+ */
+main {
+  position: relative;
+}
+
+main::after {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline: max(var(--theme-gutter) / 2, (100% - var(--theme-width)) / 2 - var(--theme-gutter));
+  z-index: 1;
+  pointer-events: none;
+  border-inline: var(--theme-lines) solid var(--border);
+}
+
+main > * + * {
+  border-top: var(--theme-lines) solid var(--border);
+}

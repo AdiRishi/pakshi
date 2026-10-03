@@ -1,0 +1,20 @@
+{
+  "variant": "centered",
+  "surface": "tint",
+  "props": {
+    "note": "Five days of hands-on workshops at the harbour, every July.",
+    "social": [
+      {
+        "id": "it_instagram",
+        "icon": "instagram",
+        "link": "https://instagram.com/example"
+      },
+      {
+        "id": "it_facebook",
+        "icon": "facebook",
+        "link": "https://facebook.com/example"
+      }
+    ],
+    "legal": "\u00a9 2027 Harbour Schools"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "variant": "default",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Boats moored close to the quay"
+    },
+    "kicker": "The week",
+    "title": "What happens each day",
+    "text": "Workshops in the morning, sailing in the afternoon.",
+    "link": {
+      "$ref": "page",
+      "id": "pg_programme"
+    }
+  }
+}

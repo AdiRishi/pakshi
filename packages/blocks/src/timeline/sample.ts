@@ -1,41 +1,49 @@
 import type { BlockSample } from "../presentation.ts";
-import type timeline from "./v1/index.tsx";
+import type timeline from "./v2/index.tsx";
 
 export default {
   variant: "agenda",
   surface: "default",
   props: {
-    heading: "A day at the summer school",
-    intro: "Every day follows the same pattern, so you always know what's next.",
-    entries: [
+    kicker: "Every day",
+    heading: "A day at the summer school.",
+    headingRest: "The same rhythm all week, so you always know what's next.",
+    actions: [
       {
-        id: "it_arrive",
-        when: "9:00",
-        title: "Arrive at the boatshed",
+        id: "it_print",
+        button: { label: "Download the timetable", link: "https://example.org/timetable.pdf" },
       },
+    ],
+    entries: [
+      { id: "it_arrive", when: "9:00", title: "Arrive at the boatshed", place: "Main gate" },
       {
         id: "it_workshop",
         when: "9:30",
         title: "Morning workshop",
+        who: "Tom Penrose",
+        place: "The boatshed",
         detail: "A short demonstration, then you try it yourself with your mentor.",
       },
+      { id: "it_tea", when: "11:00", title: "Tea on the quay", icon: "coffee" },
       {
-        id: "it_lunch",
-        when: "12:30",
-        title: "Lunch on the quay",
+        id: "it_lofting",
+        when: "11:20",
+        title: "Lines and lofting",
+        who: "Mei Chen",
+        place: "The sail loft",
+        detail: "Drawing the boat full size on the loft floor, so every plank fits.",
       },
+      { id: "it_lunch", when: "12:30", title: "Lunch", place: "The Net Loft", icon: "utensils" },
       {
         id: "it_water",
         when: "13:30",
         title: "Out on the water",
+        who: "Dan Okafor",
+        place: "The slipway",
         detail:
           "Life jackets are provided. If the weather turns, we stay in and carry on building.",
       },
-      {
-        id: "it_pickup",
-        when: "16:00",
-        title: "Pick-up at the main gate",
-      },
+      { id: "it_pickup", when: "16:00", title: "Pick-up at the main gate" },
     ],
   },
 } satisfies BlockSample<typeof timeline>;

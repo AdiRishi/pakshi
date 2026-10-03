@@ -1,5 +1,5 @@
 import type { Presentation } from "../presentation.ts";
-import type gallery from "./v1/index.tsx";
+import type gallery from "./v2/index.tsx";
 
 export default {
   name: "Gallery",
@@ -7,14 +7,38 @@ export default {
   hint: "Use it for several photos that belong together. For a single photo, use an Image.",
   order: 70,
   variants: {
-    grid: { label: "Three across", description: "Photos in rows of three." },
-    wide: { label: "Two across", description: "Bigger photos, two to a row." },
+    grid: { label: "Grid", description: "Photos in even rows, all cropped to the same size." },
+    mosaic: {
+      label: "Mosaic",
+      description: "The first photo large, with the others in smaller tiles beside it.",
+    },
+    masonry: {
+      label: "Columns",
+      description: "Photos in columns, each at its own height, as they were taken.",
+    },
+    scroller: {
+      label: "Scrolling row",
+      description: "One row of photos that people swipe or scroll through sideways.",
+    },
   },
   lists: {
     images: { singular: "photo", plural: "photos", titleField: "caption" },
   },
+  choices: {
+    columns: {
+      options: { "3": "Three across", "2": "Two across", "4": "Four across" },
+      layouts: ["grid", "masonry", "scroller"],
+    },
+    crop: {
+      options: { landscape: "Landscape", square: "Square", portrait: "Portrait" },
+      layouts: ["grid", "scroller"],
+    },
+  },
   fields: {
-    heading: { hint: "Say what this part is about" },
+    kicker: { label: "Small line above the heading" },
+    heading: { hint: "Say what these photos show" },
+    headingRest: { label: "Rest of the heading", hint: "Carries on the heading in a softer color" },
+    intro: { hint: "A sentence to introduce them" },
     images: { label: "Photos" },
     "images.image": { label: "Photo" },
     "images.caption": { hint: "What the photo shows" },

@@ -1,0 +1,49 @@
+{
+  "variant": "overlay",
+  "surface": "default",
+  "props": {
+    "heading": "Two ways to spend the week",
+    "actions": [],
+    "columns": "2",
+    "crop": "landscape",
+    "rows": "lines"
+  },
+  "slots": {
+    "cards": [
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "Boats moored close to the quay"
+          },
+          "title": "Build a boat",
+          "text": "Five mornings in the boatshed, from lofting to launch.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleHarbour",
+            "alt": "Two dinghies sailing past the harbour wall"
+          },
+          "title": "Learn to sail",
+          "text": "Five afternoons on the water with an instructor.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ]
+  }
+}

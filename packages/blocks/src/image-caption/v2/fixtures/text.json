@@ -1,0 +1,13 @@
+{
+  "variant": "text",
+  "surface": "muted",
+  "props": {
+    "image": {
+      "$ref": "media",
+      "id": "med_sampleMap",
+      "alt": "A map of North Quay, with the boatshed marked"
+    },
+    "caption": "The boatshed is at the end of North Quay, a short walk from the bus stop.",
+    "crop": "landscape"
+  }
+}

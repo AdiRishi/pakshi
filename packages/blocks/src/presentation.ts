@@ -27,10 +27,21 @@ type ItemFieldsOf<F extends Field> = F extends { readonly item: infer Item exten
   ? Item
   : never;
 
-/** The fields that can name an item: text, a button's label, or an image's alt text. */
-type TitleNames<F extends Fields> = NamesWhere<F, { readonly kind: "text" | "cta" | "media" }>;
+/** The fields that can name an item: text, a button's label, an image's alt text, an icon or a link. */
+type TitleNames<F extends Fields> = NamesWhere<
+  F,
+  { readonly kind: "text" | "cta" | "media" | "icon" | "link" }
+>;
 
 type ListNames<F extends Fields> = NamesWhere<F, { readonly kind: "list" }>;
+
+type ChoiceNames<F extends Fields> = NamesWhere<F, { readonly kind: "choice" }>;
+
+type OptionsOf<F extends Field> = F extends {
+  readonly options: ReadonlyArray<infer O extends string>;
+}
+  ? O
+  : never;
 
 /** A field's name, or a list's name and one of its items' fields, as `questions.answer`. */
 type FieldPath<F extends Fields> = {
@@ -59,7 +70,7 @@ export interface FieldLabel {
 export interface ItemNaming<TitleField extends string = string> {
   readonly singular: string;
   readonly plural: string;
-  /** The field that names an item in a list of them: its text, its button's label or its image's alt text. */
+  /** The field that names an item in a list of them, such as its text, its button's label or its image's alt text. */
   readonly titleField: TitleField;
 }
 
@@ -71,6 +82,22 @@ type Lists<F extends Fields> = [ListNames<F>] extends [never]
   : {
       readonly lists: {
         readonly [K in ListNames<F>]: ItemNaming<TitleNames<ItemFieldsOf<F[K]>>>;
+      };
+    };
+
+/** How a choice is shown: what each option is called, and the layouts it applies to. */
+export interface ChoiceLabels<Option extends string = string, Variant extends string = string> {
+  /** What each option is called, such as "Three columns". */
+  readonly options: { readonly [O in Option]: string };
+  /** The layouts the choice changes anything in, when it doesn't apply to every layout. */
+  readonly layouts?: ReadonlyArray<Variant>;
+}
+
+type Choices<F extends Fields, Variant extends string> = [ChoiceNames<F>] extends [never]
+  ? { readonly choices?: never }
+  : {
+      readonly choices: {
+        readonly [K in ChoiceNames<F>]: ChoiceLabels<OptionsOf<F[K]>, Variant>;
       };
     };
 
@@ -87,6 +114,11 @@ export type Presentation<D extends AnyBlock> = {
   /** One sentence of advice on using it well. */
   readonly hint: string;
   readonly variants: { readonly [V in Variants<D>]: LayoutLabel };
+  /**
+   * The layouts of older versions that the newest renamed, which sites on
+   * those versions still show, with what they're called.
+   */
+  readonly retiredVariants?: Readonly<Record<string, LayoutLabel>>;
   readonly fields?: { readonly [P in FieldPath<FieldsOf<D>>]?: FieldLabel };
   /** The optional fields a layout can't do without, such as the photo text sits over. */
   readonly needs?: {
@@ -95,6 +127,7 @@ export type Presentation<D extends AnyBlock> = {
     >;
   };
 } & Lists<FieldsOf<D>> &
+  Choices<FieldsOf<D>, Variants<D>> &
   (Declared<D>["placement"] extends "item"
     ? { readonly item: ItemNaming<TitleNames<FieldsOf<D>>> }
     : {
@@ -122,10 +155,13 @@ export interface BlockPresentation {
   readonly order: number | null;
   /** How a section names this item, or null for a block that isn't one. */
   readonly item: ItemNaming | null;
+  /** What each layout is called: the newest version's, then any older ones it renamed. */
   readonly variants: Readonly<Record<string, LayoutLabel>>;
   /** Labels and hints by field path, as `heading` or `questions.answer`. */
   readonly fields: Readonly<Record<string, FieldLabel>>;
   readonly lists: Readonly<Record<string, ItemNaming>>;
+  /** How each choice is shown, by the choice's field name. */
+  readonly choices: Readonly<Record<string, ChoiceLabels>>;
   readonly needs: Readonly<Record<string, ReadonlyArray<string>>>;
 }
 
@@ -137,8 +173,10 @@ interface PresentationFile {
   readonly order?: number;
   readonly item?: ItemNaming;
   readonly variants: Readonly<Record<string, LayoutLabel>>;
+  readonly retiredVariants?: Readonly<Record<string, LayoutLabel>>;
   readonly fields?: Readonly<Record<string, FieldLabel>>;
   readonly lists?: Readonly<Record<string, ItemNaming>>;
+  readonly choices?: Readonly<Record<string, ChoiceLabels>>;
   readonly needs?: Readonly<Record<string, ReadonlyArray<string>>>;
 }
 
@@ -149,9 +187,10 @@ const presentationOfFile = (type: BlockType, file: PresentationFile): BlockPrese
   hint: file.hint,
   order: file.order ?? null,
   item: file.item ?? null,
-  variants: file.variants,
+  variants: { ...file.variants, ...file.retiredVariants },
   fields: file.fields ?? {},
   lists: file.lists ?? {},
+  choices: file.choices ?? {},
   needs: file.needs ?? {},
 });
 
@@ -191,16 +230,29 @@ const labelledItem = (item: ItemFields, labels: BlockPresentation["fields"], lis
     ]),
   );
 
-/** Fields with the titles a presentation gives them in place of their own. */
-export const labelledFields = (fields: Fields, labels: BlockPresentation["fields"]): Fields =>
+/**
+ * Fields with the titles a presentation gives them in place of their own,
+ * and a choice's options with the names it gives them.
+ */
+export const labelledFields = (fields: Fields, presentation: BlockPresentation): Fields =>
   Object.fromEntries(
     Object.entries(fields).map(([name, field]) => {
-      const title = labels[name]?.label ?? field.title;
-      return [
-        name,
-        field.kind === "list"
-          ? { ...field, title, item: labelledItem(field.item, labels, name) }
-          : { ...field, title },
-      ];
+      const title = presentation.fields[name]?.label ?? field.title;
+      switch (field.kind) {
+        case "list":
+          return [
+            name,
+            { ...field, title, item: labelledItem(field.item, presentation.fields, name) },
+          ];
+        case "choice": {
+          const shown = presentation.choices[name];
+          return [
+            name,
+            { ...field, title, labels: shown?.options ?? {}, layouts: shown?.layouts ?? null },
+          ];
+        }
+        default:
+          return [name, { ...field, title }];
+      }
     }),
   );

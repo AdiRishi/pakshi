@@ -68,9 +68,9 @@ const insertQuote: WireOp = {
   block: {
     id: "b_quote",
     type: "feature-grid",
-    variant: "three-columns",
+    variant: "grid",
     surface: "default",
-    props: { heading: "Kind words" },
+    props: { heading: "Kind words", actions: [] },
     slots: {
       items: [
         {
@@ -94,7 +94,7 @@ describe("a batch", () => {
 
   test("that breaks a rule is refused, saying where and why", () => {
     const { commit } = session();
-    const result = commit(meera, [setHeading("x".repeat(81))]);
+    const result = commit(meera, [setHeading("x".repeat(91))]);
     expect(result).toEqual({
       ok: false,
       errors: [expect.objectContaining({ op: 0, rule: "value", path: ["heading"] })],
@@ -119,14 +119,20 @@ describe("a batch", () => {
   test("replacing a whole value replaces the writes to its parts", () => {
     const { committed } = session();
     committed(meera, [
-      { op: "setProp", target: "pg_home", block: "b_hero", path: ["cta", "label"], value: "Join" },
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["actions", "it_register", "button", "label"],
+        value: "Join",
+      },
     ]);
     const result = committed(sam, [
       {
         op: "setProp",
         target: "pg_home",
         block: "b_hero",
-        path: ["cta"],
+        path: ["actions", "it_register", "button"],
         value: { label: "Sign up", link: "https://example.org/sign-up" },
       },
     ]);
@@ -136,25 +142,25 @@ describe("a batch", () => {
 
 test("each commit reports the change that keeps stored writes in step", () => {
   const { committed } = session();
-  const cta = (label: string): WireOp => ({
+  const button = (label: string): WireOp => ({
     op: "setProp",
     target: "pg_home",
     block: "b_hero",
-    path: ["cta"],
+    path: ["actions", "it_register", "button"],
     value: { label, link: "https://example.org/register" },
   });
-  const ctaLabel = (value: string): WireOp => ({
+  const buttonLabel = (value: string): WireOp => ({
     op: "setProp",
     target: "pg_home",
     block: "b_hero",
-    path: ["cta", "label"],
+    path: ["actions", "it_register", "button", "label"],
     value,
   });
   const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
-    [meera, [ctaLabel("Join"), cta("Sign up")]],
-    [sam, [ctaLabel("Go")]],
-    [meera, [cta("Register"), ctaLabel("Book")]],
-    [sam, [cta("Enrol")]],
+    [meera, [buttonLabel("Join"), button("Sign up")]],
+    [sam, [buttonLabel("Go")]],
+    [meera, [button("Register"), buttonLabel("Book")]],
+    [sam, [button("Enrol")]],
     [meera, [setWorkshopsTitle("Classes")]],
     [sam, [{ op: "removeBlock", page: "pg_home", block: "b_features" }]],
   ];
@@ -181,7 +187,7 @@ describe("a batch held to completeness", () => {
     const { commit } = session();
     const withShortHeading = {
       ...insertQuote,
-      block: { ...insertQuote.block, props: { heading: "" } },
+      block: { ...insertQuote.block, props: { heading: "", actions: [] } },
     };
     expect(commit(meera, [withShortHeading], false, "complete")).toEqual({
       ok: false,
@@ -201,7 +207,7 @@ describe("a batch held to completeness", () => {
           op: "setProp",
           target: "pg_home",
           block: "b_hero",
-          path: ["cta", "label"],
+          path: ["actions", "it_register", "button", "label"],
           value: "Join",
         },
       ],
@@ -297,9 +303,23 @@ describe("an undo batch", () => {
   test("of a part passes over it once someone else has replaced the whole value", () => {
     const { committed } = session();
     const label = committed(meera, [
-      { op: "setProp", target: "pg_home", block: "b_hero", path: ["cta", "label"], value: "Join" },
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["actions", "it_register", "button", "label"],
+        value: "Join",
+      },
     ]);
-    committed(sam, [{ op: "setProp", target: "pg_home", block: "b_hero", path: ["cta"] }]);
+    committed(sam, [
+      {
+        op: "setProp",
+        target: "pg_home",
+        block: "b_hero",
+        path: ["actions", "it_register", "button"],
+        value: { label: "Sign up", link: "https://example.org/sign-up" },
+      },
+    ]);
     expect(committed(meera, label.inverse, true).skipped).toEqual([0]);
   });
 });

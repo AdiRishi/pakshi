@@ -32,13 +32,17 @@ export {
   useMenu,
   useSiteName,
 } from "./components.tsx";
+export { brandNames, IconName, symbolNames } from "./icon-names.ts";
+export { icons } from "./icons.tsx";
 export type {
+  ChoiceField,
   CollectionField,
   CtaField,
   Field,
   FieldKind,
   Fields,
   FormField,
+  IconField,
   LinkField,
   ListField,
   ListItem,
@@ -49,11 +53,13 @@ export type {
   TextField,
 } from "./fields.ts";
 export {
+  choice,
   collection,
   cta,
   fieldAt,
   fieldParts,
   form,
+  icon,
   link,
   list,
   media,
@@ -66,6 +72,7 @@ export {
 export type {
   BlockPresentation,
   BlockSample,
+  ChoiceLabels,
   FieldLabel,
   ItemNaming,
   LayoutLabel,

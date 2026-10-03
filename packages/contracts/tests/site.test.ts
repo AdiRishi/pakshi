@@ -3,7 +3,7 @@ import { expect, test } from "vitest";
 
 import { SiteParts } from "../src/site.ts";
 
-const header = { type: "header", variant: "simple", surface: "default", props: {} };
+const header = { type: "header", variant: "standard", surface: "default", props: {} };
 const footer = { type: "footer", variant: "simple", surface: "muted", props: {} };
 const menus = { main: [], footer: [] };
 

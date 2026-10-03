@@ -1,0 +1,95 @@
+{
+  "variant": "standard",
+  "surface": "tint",
+  "props": {
+    "points": [],
+    "actions": [
+      {
+        "id": "it_register",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_plans",
+        "button": {
+          "label": "Download the plans",
+          "link": "https://example.org/plans.pdf"
+        }
+      }
+    ],
+    "mediaSide": "start",
+    "verticalAlign": "top",
+    "frame": "framed",
+    "background": "full",
+    "kicker": "The plans",
+    "heading": "Every boat starts on paper.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "We draw each boat full size before any timber is cut, so you see how the lines come together."
+            }
+          ]
+        },
+        {
+          "type": "orderedList",
+          "content": [
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Lofting the hull at full size"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Taking off the moulds"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "type": "listItem",
+              "content": [
+                {
+                  "type": "paragraph",
+                  "content": [
+                    {
+                      "type": "text",
+                      "text": "Setting up the strongback"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "image": {
+      "$ref": "media",
+      "id": "med_sampleMap",
+      "alt": "A map of the harbour with the boatyard marked"
+    }
+  }
+}

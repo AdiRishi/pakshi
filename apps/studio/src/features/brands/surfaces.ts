@@ -9,6 +9,8 @@ export const schemeTitles = {
 export const surfaceTitles = {
   default: "page background",
   muted: "shaded sections",
+  tint: "brand-tinted sections",
   brand: "brand-colored sections",
+  accent: "accent-colored sections",
   inverse: "reversed sections",
 } as const satisfies Record<Surface, string>;

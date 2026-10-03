@@ -1,11 +1,13 @@
 import type { BlockSample } from "../presentation.ts";
-import type split from "./v1/index.tsx";
+import type split from "./v2/index.tsx";
 
 export default {
-  variant: "image-right",
+  variant: "standard",
   surface: "default",
   props: {
-    heading: "Mornings on the workshop floor",
+    kicker: "Mornings",
+    heading: "On the workshop floor.",
+    headingRest: "Every joint cut by hand, with a mentor beside you.",
     body: {
       type: "doc",
       content: [
@@ -14,56 +16,52 @@ export default {
           content: [
             {
               type: "text",
-              text: "Every morning starts with a short demonstration, then you build your own version with a mentor beside you.",
-            },
-          ],
-        },
-        {
-          type: "bulletList",
-          content: [
-            {
-              type: "listItem",
-              content: [
-                {
-                  type: "paragraph",
-                  content: [
-                    {
-                      type: "text",
-                      text: "Tools and materials provided",
-                    },
-                  ],
-                },
-              ],
-            },
-            {
-              type: "listItem",
-              content: [
-                {
-                  type: "paragraph",
-                  content: [
-                    {
-                      type: "text",
-                      text: "Groups of six at most",
-                    },
-                  ],
-                },
-              ],
+              text: "Each morning starts with a short demonstration at the bench. Then you build your own version, with one mentor for every six students.",
             },
           ],
         },
       ],
     },
+    points: [
+      {
+        id: "it_tools",
+        icon: "hammer",
+        title: "Tools provided",
+        body: "Chisels, planes and saws, sharpened every evening.",
+      },
+      {
+        id: "it_timber",
+        icon: "tree-pine",
+        title: "Local timber",
+        body: "Larch and oak from woods along the estuary.",
+      },
+      {
+        id: "it_small",
+        icon: "users",
+        title: "Small groups",
+        body: "Six to a bench, so nobody waits for help.",
+      },
+      {
+        id: "it_safe",
+        icon: "shield-check",
+        title: "Safety first",
+        body: "Gloves, glasses and a first aider in every shed.",
+      },
+    ],
+    actions: [
+      {
+        id: "it_programme",
+        button: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
+      },
+    ],
     image: {
       $ref: "media",
-      id: "med_pakshiArch",
-      alt: "An open doorway with the sea beyond",
+      id: "med_sampleHarbour",
+      alt: "Two sailing boats on the harbour at sunset",
     },
-    cta: {
-      label: "See the programme",
-      link: {
-        $ref: "page",
-        id: "pg_programme",
-      },
-    },
+    mediaSide: "alternate",
+    verticalAlign: "center",
+    frame: "plain",
+    background: "full",
   },
 } satisfies BlockSample<typeof split>;

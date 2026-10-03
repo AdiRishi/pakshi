@@ -29,9 +29,9 @@ const fixture = (type: string, name: string) => {
 
 const draft = fixtureDraft({
   lockfile: latestLockfile,
-  header: fixture("header", "simple"),
+  header: fixture("header", "standard"),
   footer: fixture("footer", "simple"),
-  sections: [fixture("hero", "centered"), fixture("feature-grid", "three-columns")],
+  sections: [fixture("hero", "stacked"), fixture("feature-grid", "grid")],
 });
 
 const homePage = Object.values(draft.pages).find(

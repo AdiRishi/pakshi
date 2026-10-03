@@ -19,8 +19,8 @@ import { insertOp } from "../src/structure.ts";
 import { definitions, fakeSiteDoc, fixtureDraft, meera, sam } from "./support/site-doc.ts";
 
 const page = PageId.make("pg_home");
-const hero = BlockId.make("b_herocentered");
-const original = "Summer school at the harbour";
+const hero = BlockId.make("b_herostacked");
+const original = "Learn to build boats.";
 
 const setHeading = (value: string): Op => ({
   op: "setProp",
@@ -81,7 +81,7 @@ describe("a command", () => {
   test("that breaks a rule is refused locally and never sent", async () => {
     const siteDoc = fakeSiteDoc();
     const { store } = open(siteDoc);
-    expect(store.run([setHeading("x".repeat(81))])).toEqual([
+    expect(store.run([setHeading("x".repeat(91))])).toEqual([
       expect.objectContaining({ rule: "value", path: ["heading"] }),
     ]);
     await settle();
@@ -133,7 +133,7 @@ describe("typing", () => {
     const { store } = open(siteDoc);
     await settle();
     store.run([setHeading("Sail")], "heading");
-    const setVariant: Op = { op: "setVariant", target: page, block: hero, variant: "split-image" };
+    const setVariant: Op = { op: "setVariant", target: page, block: hero, variant: "split" };
     store.run([setVariant]);
     await settle();
     expect(siteDoc.log().map((batch) => batch.ops)).toEqual([[setHeading("Sail")], [setVariant]]);
@@ -157,9 +157,9 @@ describe("undo", () => {
     const siteDoc = fakeSiteDoc();
     const { store } = open(siteDoc);
     store.run([setHeading("First")]);
-    store.run([{ op: "setVariant", target: page, block: hero, variant: "split-image" }]);
+    store.run([{ op: "setVariant", target: page, block: hero, variant: "split" }]);
     store.undo();
-    expect(store.getState().view.pages[page]?.blocks[hero]?.variant).toBe("centered");
+    expect(store.getState().view.pages[page]?.blocks[hero]?.variant).toBe("stacked");
     expect(headingOf(store)).toBe("First");
     store.undo();
     expect(headingOf(store)).toBe(original);
@@ -167,7 +167,7 @@ describe("undo", () => {
     expect(headingOf(store)).toBe("First");
     await settle();
     expect(serverHeading(siteDoc)).toBe("First");
-    expect(siteDoc.draft().pages[page]?.blocks[hero]?.variant).toBe("centered");
+    expect(siteDoc.draft().pages[page]?.blocks[hero]?.variant).toBe("stacked");
   });
 
   test("a new command clears what redo could bring back", () => {

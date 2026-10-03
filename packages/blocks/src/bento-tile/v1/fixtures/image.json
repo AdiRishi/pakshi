@@ -1,0 +1,23 @@
+{
+  "variant": "default",
+  "props": {
+    "kicker": "Afternoons",
+    "title": "Sail what you built",
+    "body": "An instructor in every boat, and life jackets for everyone.",
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "link": {
+      "label": "How we keep you safe",
+      "link": {
+        "$ref": "page",
+        "id": "pg_programme"
+      }
+    },
+    "size": "tall",
+    "media": "bottom",
+    "tone": "tint"
+  }
+}

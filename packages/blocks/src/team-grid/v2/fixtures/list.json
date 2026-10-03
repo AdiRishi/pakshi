@@ -1,0 +1,69 @@
+{
+  "variant": "list",
+  "surface": "muted",
+  "props": {
+    "heading": "Who runs the summer school",
+    "intro": "Write to any of us. We read everything, and reply within two working days.",
+    "actions": [
+      {
+        "id": "it_contact",
+        "button": {
+          "label": "Contact the office",
+          "link": "mailto:hello@example.org"
+        }
+      }
+    ],
+    "columns": "4",
+    "align": "start"
+  },
+  "slots": {
+    "people": [
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "name": "Ruth Hollis",
+          "role": "Director",
+          "bio": "Ruth set up the summer school in 2019, after thirty years building boats on the Fal.",
+          "link": "https://example.org/ruth-hollis"
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_samplePriya",
+            "alt": "Priya Nair"
+          },
+          "name": "Priya Nair",
+          "role": "Bookings and places",
+          "bio": "Priya answers questions about dates, places and bursaries."
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "name": "Ben Tregear",
+          "role": "Safety officer"
+        }
+      },
+      {
+        "type": "team-member",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleAsha",
+            "alt": "Asha Patel"
+          },
+          "name": "Asha Patel",
+          "role": "Kitchen",
+          "bio": "Asha cooks lunch for everyone, every day."
+        }
+      }
+    ]
+  }
+}

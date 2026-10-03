@@ -146,6 +146,39 @@ describe("a turn", () => {
     }),
   );
 
+  it.effect("takes a list of buttons written as a JSON string", () =>
+    Effect.gen(function* () {
+      const { state } = yield* turnWith([
+        {
+          calls: [
+            {
+              name: "apply_ops",
+              params: {
+                page: "pg_home",
+                ops: [
+                  {
+                    op: "setProp",
+                    block: "b_hero",
+                    path: ["actions"],
+                    value: JSON.stringify([
+                      { button: { label: "Book a place", link: "https://harbour.example/book" } },
+                    ]),
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      ]);
+      expect(state.draft.pages[home]?.blocks[BlockId.make("b_hero")]?.props["actions"]).toEqual([
+        {
+          id: expect.stringMatching(/^it_/),
+          button: { label: "Book a place", link: "https://harbour.example/book" },
+        },
+      ]);
+    }),
+  );
+
   it.effect("adds a section with the items it's given, in its only slot", () =>
     Effect.gen(function* () {
       const { state } = yield* turnWith([
@@ -154,7 +187,11 @@ describe("a turn", () => {
           props: { heading: "What you'll do" },
           items: [
             { type: "feature-item", props: { title: "Plane", body: "Shape the hull." } },
-            { type: "feature-item", props: { title: "Sail", body: "Launch on Friday." } },
+            {
+              type: "feature-item",
+              props: { title: "Sail", body: "Launch on Friday." },
+              slot: null,
+            },
           ],
         }),
       ]);
@@ -170,7 +207,7 @@ describe("a turn", () => {
     "returns refused changes to the model, and after two repairs has it explain instead",
     () =>
       Effect.gen(function* () {
-        const tooLong = "x".repeat(81);
+        const tooLong = "x".repeat(91);
         const { state, calls } = yield* turnWith([
           { calls: [{ name: "apply_ops", params: heading(tooLong) }] },
           { calls: [{ name: "apply_ops", params: heading(tooLong) }] },
@@ -181,7 +218,7 @@ describe("a turn", () => {
         expect(calls).toHaveLength(4);
         expect(calls.slice(0, 3).map((call) => call.toolChoice)).toEqual(["auto", "auto", "auto"]);
         expect(calls[3]?.toolChoice).toBe("none");
-        expect(JSON.stringify(calls[1]?.prompt)).toContain("Use at most 80 characters");
+        expect(JSON.stringify(calls[1]?.prompt)).toContain("Use at most 90 characters");
         expect(
           state.parts.filter((part) => part._tag === "Activity").map((part) => part.status),
         ).toEqual(["failed", "failed", "failed"]);

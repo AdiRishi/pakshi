@@ -1,49 +1,41 @@
 import type { BlockSample } from "../presentation.ts";
-import type hero from "./v3/index.tsx";
+import type hero from "./v4/index.tsx";
 
 export default {
-  variant: "full-bleed",
+  variant: "stacked",
   surface: "default",
   props: {
-    kicker: "Summer 2027",
-    heading: "Learn by building",
-    body: {
-      type: "doc",
-      content: [
-        {
-          type: "paragraph",
-          content: [
-            {
-              type: "text",
-              text: "Mornings are for making. Afternoons are for trying what you made on the water.",
-            },
-          ],
-        },
-      ],
-    },
+    badge: "Applications open for 2027",
+    badgeLink: { $ref: "page", id: "pg_programme" },
+    heading: "Learn to build boats.",
+    headingRest: "Five days on the harbour.",
+    actions: [
+      { id: "it_register", button: { label: "Register", link: "https://example.org/register" } },
+      {
+        id: "it_programme",
+        button: { label: "See the programme", link: { $ref: "page", id: "pg_programme" } },
+      },
+    ],
+    points: [
+      { id: "it_beginners", point: "No experience needed" },
+      { id: "it_lunch", point: "Lunch every day" },
+      { id: "it_tools", point: "Tools provided" },
+    ],
+    proof: "Loved by 2,000 sailors since 2019",
+    proofImages: [
+      { id: "it_tom", photo: { $ref: "media", id: "med_sampleTom", alt: "Tom" } },
+      { id: "it_mei", photo: { $ref: "media", id: "med_sampleMei", alt: "Mei" } },
+      { id: "it_dan", photo: { $ref: "media", id: "med_sampleDan", alt: "Dan" } },
+    ],
     image: {
       $ref: "media",
       id: "med_sampleHarbour",
       alt: "Two sailing boats on the harbour at sunset",
     },
-    actions: [
-      {
-        id: "it_register",
-        button: {
-          label: "Register",
-          link: "https://example.org/register",
-        },
-      },
-      {
-        id: "it_programme",
-        button: {
-          label: "See the programme",
-          link: {
-            $ref: "page",
-            id: "pg_programme",
-          },
-        },
-      },
-    ],
+    align: "center",
+    mediaSide: "end",
+    height: "auto",
+    frame: "browser",
+    backdrop: "glow",
   },
 } satisfies BlockSample<typeof hero>;

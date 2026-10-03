@@ -1,4 +1,4 @@
-import { loadBlocks } from "@repo/blocks";
+import { latestLockfile, loadBlocks } from "@repo/blocks";
 import { noIdentity } from "@repo/contracts/brand";
 import { Draft } from "@repo/contracts/draft";
 import { defaultTheme, resolveTheme } from "@repo/tokens";
@@ -23,7 +23,7 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     header: "b_header",
     footer: "b_footer",
     blocks: {
-      b_header: { type: "header", variant: "simple", surface: "default", props: {} },
+      b_header: { type: "header", variant: "standard", surface: "default", props: {} },
       b_footer: { type: "footer", variant: "simple", surface: "muted", props: {} },
     },
     menus: { main: [], footer: [] },
@@ -40,24 +40,7 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
     },
   },
   redirects: {},
-  lockfile: {
-    ...Object.fromEntries(
-      [
-        "call-to-action",
-        "feature-grid",
-        "feature-item",
-        "footer",
-        "form-section",
-        "gallery",
-        "header",
-        "hero",
-        "post-header",
-        "rich-text",
-        "split",
-      ].map((type) => [type, 1]),
-    ),
-    "post-list": 2,
-  },
+  lockfile: latestLockfile,
   brand: {
     brand: "brand_harbour",
     number: 1,
@@ -75,19 +58,25 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
       blocks: {
         b_hero: {
           type: "hero",
-          variant: "centered",
+          variant: "stacked",
           surface: "brand",
           props: {
             heading: "Learn by building",
             body: paragraph("Five days of workshops."),
-            cta: { label: "Register", link: "https://example.org/register" },
+            actions: [
+              {
+                id: "it_register",
+                button: { label: "Register", link: "https://example.org/register" },
+              },
+            ],
+            points: [],
           },
         },
         b_features: {
           type: "feature-grid",
-          variant: "three-columns",
+          variant: "grid",
           surface: "default",
-          props: { heading: "What's included" },
+          props: { heading: "What's included", actions: [] },
           slots: { items: ["b_workshops", "b_mentors"] },
         },
         b_workshops: {
@@ -123,9 +112,9 @@ export const harbourDraft: Draft = Schema.decodeSync(Draft)({
       blocks: {
         b_story: {
           type: "feature-grid",
-          variant: "two-columns",
+          variant: "grid",
           surface: "muted",
-          props: { heading: "Our story" },
+          props: { heading: "Our story", actions: [], columns: "2" },
           slots: { items: [] },
         },
       },

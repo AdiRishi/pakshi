@@ -1,0 +1,15 @@
+{
+  "variant": "default",
+  "props": {
+    "name": "Name of the plan",
+    "price": "£0",
+    "period": "each",
+    "description": "Who it's for, in a sentence.",
+    "features": [
+      { "id": "it_featureOne", "feature": "Something it includes" },
+      { "id": "it_featureTwo", "feature": "Something else it includes" }
+    ],
+    "button": { "label": "Choose this", "link": "https://example.com" },
+    "featured": "no"
+  }
+}

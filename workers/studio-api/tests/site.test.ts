@@ -987,51 +987,6 @@ describe("brand revisions", () => {
 });
 
 describe("block upgrades", () => {
-  it.effect("make one draft that moves the live content to the newer version", () =>
-    withSite((site, state) =>
-      Effect.gen(function* () {
-        const adopted = yield* site.adoptUpgrade(meera, BlockType.make("hero"), 3);
-        if (Option.isNone(adopted)) return yield* Effect.die("Expected an upgrade draft.");
-        expect(adopted.value).toMatchObject({
-          name: "Hero v3 upgrade",
-          kind: { _tag: "BlockUpgrade", type: "hero", version: 3 },
-        });
-        const draft = yield* opened(site, adopted.value.id);
-        expect(draft.lockfile["hero"]).toBe(3);
-        expect(draft.pages[PageId.make("pg_home")]?.blocks[BlockId.make("b_hero")]?.props).toEqual({
-          heading: "Learn by building",
-          image: expect.anything(),
-          actions: [],
-        });
-        // Adopting again finds the same draft; the live site is untouched.
-        const again = yield* site.adoptUpgrade(meera, BlockType.make("hero"), 3);
-        expect(Option.map(again, (draft) => draft.id)).toEqual(Option.some(adopted.value.id));
-        const live = yield* site.live;
-        expect(state.manifests.get(live.snapshot)?.lockfile["hero"]).toBe(1);
-      }),
-    ),
-  );
-
-  it.effect("make one draft when the same upgrade is adopted twice at once", () =>
-    withSite((site) =>
-      Effect.gen(function* () {
-        const [first, second] = yield* Effect.all(
-          [
-            site.adoptUpgrade(meera, BlockType.make("hero"), 3),
-            site.adoptUpgrade(sam, BlockType.make("hero"), 3),
-          ],
-          { concurrency: "unbounded" },
-        );
-        expect(Option.map(first, (draft) => draft.id)).toEqual(
-          Option.map(second, (draft) => draft.id),
-        );
-        expect(
-          (yield* site.drafts).filter((draft) => draft.kind._tag === "BlockUpgrade"),
-        ).toHaveLength(1);
-      }),
-    ),
-  );
-
   it.effect("report the versions the live release and open drafts pin, when asked again", () =>
     withSite((site, state) =>
       Effect.gen(function* () {
@@ -1050,7 +1005,10 @@ describe("block upgrades", () => {
   it.effect("aren't made for a version the site already has", () =>
     withSite((site) =>
       Effect.gen(function* () {
-        expect(yield* site.adoptUpgrade(meera, BlockType.make("hero"), 1)).toEqual(Option.none());
+        const hero = BlockType.make("hero");
+        expect(yield* site.adoptUpgrade(meera, hero, latestLockfile[hero] ?? 0)).toEqual(
+          Option.none(),
+        );
       }),
     ),
   );

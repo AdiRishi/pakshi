@@ -1,9 +1,0 @@
-{
-  "variant": "card",
-  "surface": "muted",
-  "props": {
-    "heading": "Register for summer school",
-    "intro": "Places are limited. We'll email you within two days to confirm.",
-    "form": { "$ref": "form", "id": "frm_register" }
-  }
-}

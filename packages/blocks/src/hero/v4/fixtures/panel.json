@@ -1,0 +1,52 @@
+{
+  "variant": "panel",
+  "surface": "brand",
+  "props": {
+    "kicker": "North Quay Boatyard",
+    "heading": "Summer school 2027",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Five days of hands-on workshops for anyone who wants to learn by building."
+            }
+          ]
+        }
+      ]
+    },
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Book a place",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_secondary",
+        "button": {
+          "label": "Free for members",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "points": [],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "align": "start",
+    "mediaSide": "start",
+    "height": "auto",
+    "frame": "plain",
+    "backdrop": "none"
+  }
+}

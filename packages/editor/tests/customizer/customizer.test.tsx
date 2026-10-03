@@ -139,26 +139,26 @@ describe("a list", () => {
 describe("a part the block can leave out", () => {
   test("is removed with its ×, and added back from where it was", async () => {
     const { canvas, find, point, parts } = await open("hero");
-    point(find("[data-pakshi-field='kicker']"));
+    point(find("[data-pakshi-field='badge']"));
     await userEvent.click(page.getByRole("button", { name: "Remove this part" }));
-    await expect.poll(() => canvas().querySelector("[data-pakshi-field='kicker']")).toBeNull();
-    await expect.element(parts.getByText("Not shown")).toBeVisible();
+    await expect.poll(() => canvas().querySelector("[data-pakshi-field='badge']")).toBeNull();
+    await expect.element(parts.getByText("Not shown").first()).toBeVisible();
 
-    find("[data-pakshi-add='kicker']").click();
+    find("[data-pakshi-add='badge']").click();
     await expect
-      .poll(() => canvas().querySelector("[data-pakshi-field='kicker']")?.textContent)
-      .toBe("Summer 2027");
+      .poll(() => canvas().querySelector("[data-pakshi-field='badge']")?.textContent)
+      .toBe("Applications open for 2027");
   });
 
   test("is turned on by a layout that needs it, which keeps it while it's chosen", async () => {
     const { canvas, find, point } = await open("hero");
     const layouts = page.getByRole("group", { name: "Layout" });
-    await userEvent.click(layouts.getByRole("button", { name: /Text in the middle/ }));
+    await userEvent.click(layouts.getByRole("button", { name: /Words over a picture/ }));
     point(find("img[data-pakshi-field='image']"));
     await userEvent.click(page.getByRole("button", { name: "Remove this part" }));
     await expect.poll(() => canvas().querySelector("img[data-pakshi-field='image']")).toBeNull();
 
-    await userEvent.click(layouts.getByRole("button", { name: /Text over a photo/ }));
+    await userEvent.click(layouts.getByRole("button", { name: /Words on a photo/ }));
     await expect
       .poll(() => canvas().querySelector("img[data-pakshi-field='image']"))
       .not.toBeNull();

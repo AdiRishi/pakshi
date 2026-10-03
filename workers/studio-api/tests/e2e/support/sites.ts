@@ -28,7 +28,7 @@ export const newSite = (client: Studio, name: string, address: SiteAddress) =>
 export const textSection = (heading: string): BlockTree => ({
   id: BlockId.make(randomId("b")),
   type: "rich-text",
-  variant: "narrow",
+  variant: "article",
   surface: "default",
   props: {
     heading,

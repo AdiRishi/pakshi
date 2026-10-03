@@ -1,10 +1,10 @@
 import { RichTextDocument } from "@repo/blocks";
 import type { BlockContract } from "@repo/blocks/contract";
-import { type Field, type Fields, fieldParts } from "@repo/blocks/fields";
+import { type Field, type Fields, fieldParts, IconName } from "@repo/blocks/fields";
 import { markdownAllowed, richTextFromMarkdown, richTextToMarkdown } from "@repo/blocks/markdown";
 import { collectionKinds } from "@repo/contracts/collections";
 import { ItemId, randomId } from "@repo/contracts/ids";
-import { Array as Arr, Result, Schema } from "effect";
+import { Array as Arr, Option, Result, Schema } from "effect";
 
 /*
  * Block content as the agent reads and writes it. It's the stored content
@@ -20,6 +20,10 @@ const isRichText = Schema.is(RichTextDocument);
 const isItemId = Schema.is(ItemId);
 const isJsonObject = Schema.is(Schema.JsonObject);
 const isString = Schema.is(Schema.String);
+const fromJsonText = Schema.decodeUnknownOption(Schema.fromJsonString(Schema.Json));
+
+/** Fields whose values are lists or objects, which models often send as JSON text. */
+const structured = new Set<Field["kind"]>(["list", "cta", "media", "form", "collection"]);
 
 /** A field's stored value as the agent reads it. */
 export const agentValue = (field: Field, value: Json): Json => {
@@ -50,9 +54,13 @@ const problem = (path: ReadonlyArray<string>, message: string) =>
 /** A field's value from the agent's form to the stored one. */
 export const storedValue = (
   field: Field,
-  value: Json,
+  sent: Json,
   path: ReadonlyArray<string>,
 ): Result.Result<Json, ContentProblem> => {
+  const value =
+    structured.has(field.kind) && isString(sent)
+      ? Option.getOrElse(fromJsonText(sent), () => sent)
+      : sent;
   if (field.kind === "richText") {
     if (!isString(value))
       return problem(path, `Write ${field.title} as Markdown text: ${markdownAllowed(field)}.`);
@@ -125,6 +133,10 @@ const describeField = (field: Field): Json => {
       };
     case "number":
       return { ...base, min: field.min, max: field.max, value: "a whole number" };
+    case "choice":
+      return { ...base, options: Arr.fromIterable(field.options), value: "one of the options" };
+    case "icon":
+      return { ...base, options: Arr.fromIterable(IconName.literals), value: "an icon's name" };
     case "list":
       return {
         ...base,

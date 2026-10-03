@@ -1,5 +1,5 @@
 import type { BlockSample } from "../presentation.ts";
-import type logoStrip from "./v1/index.tsx";
+import type logoStrip from "./v2/index.tsx";
 
 export default {
   variant: "row",
@@ -9,37 +9,22 @@ export default {
     logos: [
       {
         id: "it_trust",
-        logo: {
-          $ref: "media",
-          id: "med_sampleHarbourTrust",
-          alt: "Westbay Harbour Trust",
-        },
+        logo: { $ref: "media", id: "med_sampleHarbourTrust", alt: "Westbay Harbour Trust" },
         link: "https://example.org/harbour-trust",
       },
       {
         id: "it_rowing",
-        logo: {
-          $ref: "media",
-          id: "med_sampleRowingClub",
-          alt: "Westbay Rowing Club",
-        },
+        logo: { $ref: "media", id: "med_sampleRowingClub", alt: "Westbay Rowing Club" },
       },
       {
         id: "it_boatyard",
-        logo: {
-          $ref: "media",
-          id: "med_sampleBoatyard",
-          alt: "North Quay Boatyard",
-        },
+        logo: { $ref: "media", id: "med_sampleBoatyard", alt: "North Quay Boatyard" },
       },
       {
         id: "it_arts",
-        logo: {
-          $ref: "media",
-          id: "med_sampleArtsCouncil",
-          alt: "County Arts Council",
-        },
+        logo: { $ref: "media", id: "med_sampleArtsCouncil", alt: "County Arts Council" },
       },
     ],
+    color: "mono",
   },
 } satisfies BlockSample<typeof logoStrip>;

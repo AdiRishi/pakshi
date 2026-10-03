@@ -1,0 +1,156 @@
+{
+  "placement": "item",
+  "variants": [
+    "default"
+  ],
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "quote": {
+          "type": "string",
+          "maxLength": 320
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "avatar": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id"
+          ],
+          "additionalProperties": true
+        },
+        "logo": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "quote",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "quote": {
+          "type": "string",
+          "maxLength": 320
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "avatar": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id",
+            "alt"
+          ],
+          "additionalProperties": true
+        },
+        "logo": {
+          "type": "object",
+          "properties": {
+            "$ref": {
+              "type": "string",
+              "enum": [
+                "media"
+              ]
+            },
+            "id": {
+              "type": "string",
+              "pattern": "^med_[A-Za-z0-9]{1,64}$"
+            },
+            "alt": {
+              "type": "string",
+              "maxLength": 250
+            }
+          },
+          "required": [
+            "$ref",
+            "id",
+            "alt"
+          ],
+          "additionalProperties": true
+        }
+      },
+      "required": [
+        "quote",
+        "name"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

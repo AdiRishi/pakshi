@@ -32,7 +32,7 @@ const holding = (id: PageId, block: PageDocument["blocks"][BlockId]): PageDocume
 
 const draft = fixtureDraft({
   lockfile: latestLockfile,
-  header: fixture("header", "simple"),
+  header: fixture("header", "standard"),
   footer: fixture("footer", "simple"),
   sections: [],
 });
@@ -72,7 +72,8 @@ describe("a previewed page", () => {
     });
     const shown = mainText(await preview(page, 1));
     expect(shown).toContain("Meet this year's mentors");
-    expect(shown).toContain("15 April 2027, Sam Okafor");
+    expect(shown).toContain("15 April 2027");
+    expect(shown).toContain("Sam Okafor");
     expect(shown).not.toContain("Our plans for the year ahead");
   });
 

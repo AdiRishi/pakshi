@@ -1,0 +1,179 @@
+{
+  "placement": "section",
+  "variants": [
+    "start",
+    "center"
+  ],
+  "surfaces": [
+    "default",
+    "muted",
+    "tint",
+    "brand",
+    "accent",
+    "inverse"
+  ],
+  "slots": {},
+  "interactive": false,
+  "draft": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "kicker": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "headingRest": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "link": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        },
+        "size": {
+          "type": "string",
+          "enum": [
+            "large",
+            "huge"
+          ]
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  },
+  "complete": {
+    "dialect": "draft-2020-12",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "kicker": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "heading": {
+          "type": "string",
+          "maxLength": 160
+        },
+        "headingRest": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "name": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "role": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "link": {
+          "type": "object",
+          "properties": {
+            "label": {
+              "type": "string",
+              "maxLength": 40
+            },
+            "link": {
+              "anyOf": [
+                {
+                  "type": "object",
+                  "properties": {
+                    "$ref": {
+                      "type": "string",
+                      "enum": [
+                        "page"
+                      ]
+                    },
+                    "id": {
+                      "type": "string",
+                      "pattern": "^pg_[A-Za-z0-9]{1,64}$"
+                    }
+                  },
+                  "required": [
+                    "$ref",
+                    "id"
+                  ],
+                  "additionalProperties": true
+                },
+                {
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "required": [
+            "label",
+            "link"
+          ],
+          "additionalProperties": true
+        },
+        "size": {
+          "type": "string",
+          "enum": [
+            "large",
+            "huge"
+          ]
+        }
+      },
+      "required": [
+        "heading"
+      ],
+      "additionalProperties": true
+    },
+    "definitions": {}
+  }
+}

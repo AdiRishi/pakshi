@@ -1,0 +1,35 @@
+{
+  "variant": "panel",
+  "surface": "brand",
+  "props": {
+    "kicker": "Places are limited",
+    "heading": "Spend a week on the water.",
+    "intro": "Registration closes on 30 November. Bursaries cover the fee for anyone under eighteen.",
+    "actions": [
+      {
+        "id": "it_register",
+        "button": {
+          "label": "Register now",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_bursary",
+        "button": {
+          "label": "About bursaries",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "image": {
+      "$ref": "media",
+      "id": "med_harbour",
+      "alt": "Two sailing boats on a calm harbour at sunset"
+    },
+    "mediaSide": "end",
+    "backdrop": "none"
+  }
+}

@@ -71,7 +71,7 @@ it.live(
             type: "form-section",
             variant: "card",
             surface: "default",
-            props: { heading: "Book a room", form: { $ref: "form", id: booking } },
+            props: { heading: "Book a room", points: [], form: { $ref: "form", id: booking } },
           },
         },
       ]);

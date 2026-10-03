@@ -1,0 +1,84 @@
+{
+  "variant": "overlay",
+  "surface": "inverse",
+  "props": {
+    "heading": "Who's teaching this year",
+    "intro": "Each mentor leads one workshop. Find out what they'll teach.",
+    "actions": [],
+    "columns": "4",
+    "crop": "portrait",
+    "rows": "lines"
+  },
+  "slots": {
+    "cards": [
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleMei",
+            "alt": "Mei Chen in the boatshed"
+          },
+          "kicker": "Planking",
+          "title": "Mei Chen",
+          "link": {
+            "$ref": "page",
+            "id": "pg_news"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleTom",
+            "alt": "Tom Penrose on the slipway"
+          },
+          "kicker": "Rigging",
+          "title": "Tom Penrose",
+          "link": {
+            "$ref": "page",
+            "id": "pg_news"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleDan",
+            "alt": "Dan Okafor holding a mooring line"
+          },
+          "kicker": "Seamanship",
+          "title": "Dan Okafor",
+          "link": {
+            "$ref": "page",
+            "id": "pg_news"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleAsha",
+            "alt": "Asha Patel at the workbench"
+          },
+          "kicker": "Frames",
+          "title": "Asha Patel",
+          "link": {
+            "$ref": "page",
+            "id": "pg_news"
+          }
+        }
+      }
+    ]
+  }
+}

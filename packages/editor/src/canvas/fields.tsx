@@ -563,6 +563,9 @@ function RootElement({
   const selected = useEditorState(
     (state) => state.selection?.kind === "block" && state.selection.block === props.block,
   );
+  // Where the press began. Focusing a field can show controls above it that move it out
+  // from under the pointer before the button comes up, so a click is judged by its start.
+  const pressed = useRef<EventTarget | null>(null);
   const Tag = props.element;
   return (
     <Tag
@@ -572,11 +575,15 @@ function RootElement({
       data-pakshi-block={props.block}
       data-pakshi-selected={selected || undefined}
       tabIndex={-1}
+      onPointerDown={(event) => {
+        pressed.current = event.target;
+      }}
       onClick={(event) => {
+        const start = pressed.current ?? event.target;
+        pressed.current = null;
         // Canvas nodes belong to the frame's window, so they're checked against its Element.
         const frame = event.currentTarget.ownerDocument.defaultView;
-        const clicked =
-          frame !== null && event.target instanceof frame.Element ? event.target : null;
+        const clicked = frame !== null && start instanceof frame.Element ? start : null;
         if (clicked === null || clicked.closest("[data-pakshi-block]") !== event.currentTarget)
           return;
         if (clicked.closest("[data-pakshi-field], [data-pakshi-add]") !== null) return;

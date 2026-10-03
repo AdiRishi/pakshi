@@ -289,6 +289,10 @@ const madeUpValue = (field: Field): Json => {
       return { $ref: "page", id: placeholderCollection };
     case "number":
       return field.min;
+    case "choice":
+      return field.options[0];
+    case "icon":
+      return "sparkles";
     case "list":
       return [];
   }

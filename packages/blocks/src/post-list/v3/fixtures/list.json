@@ -1,0 +1,14 @@
+{
+  "variant": "list",
+  "surface": "muted",
+  "props": {
+    "heading": "Every post",
+    "intro": "News, dates and stories from the summer school, newest first.",
+    "collection": {
+      "$ref": "page",
+      "id": "pg_news"
+    },
+    "count": 12,
+    "columns": "3"
+  }
+}

@@ -1,4 +1,5 @@
 import { expect, it } from "@effect/vitest";
+import { latestLockfile } from "@repo/blocks";
 import { Effect } from "effect";
 
 import { edit, newSite, publish, readyPage } from "./support/sites.ts";
@@ -22,7 +23,12 @@ it.live("a block's usage names the person's sites whose live release shows it", 
     yield* publish(meera, school.site, school.draft);
 
     expect(yield* meera.blockUsage({ type: "rich-text" })).toEqual([
-      { site: { id: school.site, name: "Summer School" }, version: 1, pages: 1, sitewide: false },
+      {
+        site: { id: school.site, name: "Summer School" },
+        version: latestLockfile["rich-text"],
+        pages: 1,
+        sitewide: false,
+      },
     ]);
     // Every site pins every block, but only the ones it shows count.
     expect(yield* meera.blockUsage({ type: "faq" })).toEqual([]);

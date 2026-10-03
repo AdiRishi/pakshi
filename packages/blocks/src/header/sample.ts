@@ -1,13 +1,13 @@
 import type { BlockSample } from "../presentation.ts";
-import type header from "./v2/index.tsx";
+import type header from "./v3/index.tsx";
 
 export default {
-  variant: "simple",
+  variant: "standard",
   surface: "default",
   props: {
-    cta: {
-      label: "Register",
-      link: "https://example.org/register",
-    },
+    cta: { label: "Register", link: "https://example.org/register" },
+    secondary: { label: "Sign in", link: "https://example.org/sign-in" },
+    position: "static",
+    bar: "brand",
   },
 } satisfies BlockSample<typeof header>;

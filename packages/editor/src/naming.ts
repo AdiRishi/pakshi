@@ -54,6 +54,8 @@ export const fewestLabel = (min: number) => `Needs at least ${min}`;
 export const surfaceNames: Readonly<Record<Surface, string>> = {
   default: "Plain",
   muted: "Soft",
+  tint: "Brand tint",
   brand: "Brand color",
-  inverse: "Dark",
+  accent: "Accent color",
+  inverse: "Reversed",
 };

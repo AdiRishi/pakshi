@@ -1,0 +1,8 @@
+{
+  "variant": "default",
+  "props": {
+    "title": "A short title",
+    "body": "A sentence or two about this point.",
+    "icon": "sparkles"
+  }
+}

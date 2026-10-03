@@ -1,0 +1,9 @@
+{
+  "variant": "default",
+  "props": {
+    "quote": "Our apprentices learned more in five days on the slipway than in a term of drawings.",
+    "name": "Tom Penrose",
+    "role": "Yard manager, North Quay Boatyard",
+    "logo": { "$ref": "media", "id": "med_sampleBoatyard", "alt": "North Quay Boatyard" }
+  }
+}

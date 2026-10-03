@@ -143,7 +143,7 @@ test("a blog lists its posts on the live site and in its feed, and its posts fol
   );
 
   await visitor.goto(`${live}/news/${slug}`);
-  const header = visitor.locator("header").filter({ has: visitor.locator("time") });
+  const header = visitor.locator("main section").filter({ has: visitor.locator("time") });
   await expect(header.getByRole("heading", { level: 1 })).toHaveText("Summer reading starts");
   await expect(header).toContainText(admin.name);
 

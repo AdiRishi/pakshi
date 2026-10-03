@@ -1,0 +1,66 @@
+{
+  "variant": "grid",
+  "surface": "default",
+  "props": {
+    "heading": "What's on",
+    "intro": "Dates, times and places for everything coming up.",
+    "actions": [],
+    "columns": "3"
+  },
+  "slots": {
+    "events": [
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sat 14 June",
+          "time": "10am",
+          "place": "Where it happens",
+          "title": "Name the event",
+          "body": "A sentence or two on what happens and who it's for.",
+          "image": {
+            "$ref": "media",
+            "id": "med_pakshiSea",
+            "alt": ""
+          },
+          "link": {
+            "label": "Find out more",
+            "link": "https://example.com"
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Wed 2 July",
+          "time": "6pm",
+          "place": "Online, with a link sent when you book",
+          "title": "Another event",
+          "body": "A short talk, then time for questions.",
+          "image": {
+            "$ref": "media",
+            "id": "med_pakshiHills",
+            "alt": ""
+          }
+        }
+      },
+      {
+        "type": "event-card",
+        "variant": "default",
+        "props": {
+          "date": "Sun 20 July",
+          "time": "All day",
+          "place": "Out on the green",
+          "title": "One more",
+          "body": "Stalls, music and food. Say who's welcome.",
+          "image": {
+            "$ref": "media",
+            "id": "med_pakshiCircles",
+            "alt": ""
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,68 @@
+{
+  "variant": "tiles",
+  "surface": "brand",
+  "props": {
+    "heading": "Get involved",
+    "intro": "The summer school runs on the time and skill of people from the harbour.",
+    "actions": [],
+    "columns": "4",
+    "crop": "landscape",
+    "rows": "lines"
+  },
+  "slots": {
+    "cards": [
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "hammer",
+          "title": "Volunteer",
+          "text": "Help in the boatshed for a morning or the whole week.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "hand-heart",
+          "title": "Fund a place",
+          "text": "Pay for a student who couldn't come otherwise.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "sailboat",
+          "title": "Lend a boat",
+          "text": "We're always short of dinghies in August.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      },
+      {
+        "type": "card",
+        "variant": "default",
+        "props": {
+          "icon": "megaphone",
+          "title": "Spread the word",
+          "text": "Posters and leaflets for schools and clubs.",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "variant": "row",
+  "surface": "default",
+  "props": {
+    "align": "center",
+    "background": "full",
+    "heading": "Small groups, real boats.",
+    "intro": "Every number below is from the 2026 summer school.",
+    "stats": [
+      {
+        "id": "it_days",
+        "value": "5",
+        "label": "Days at the yard"
+      },
+      {
+        "id": "it_ratio",
+        "value": "1:6",
+        "label": "Mentors to students"
+      },
+      {
+        "id": "it_hours",
+        "value": "60",
+        "label": "Hours of hands-on work"
+      }
+    ]
+  }
+}

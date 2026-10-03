@@ -45,7 +45,8 @@
   "scripts": {
     "generate": "node scripts/generate-registry.ts",
     "test": "vitest run",
-    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests"
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tests",
+    "lab": "vite --config lab/vite.config.ts"
   },
   "dependencies": {
     "@repo/contracts": "workspace:*",
@@ -63,18 +64,23 @@
     "@tiptap/markdown": "catalog:",
     "@tiptap/pm": "catalog:",
     "@tiptap/static-renderer": "catalog:",
+    "class-variance-authority": "catalog:",
     "effect": "catalog:",
+    "lucide-react": "catalog:",
     "marked": "catalog:",
     "react": "catalog:",
     "tailwindcss": "catalog:"
   },
   "devDependencies": {
     "@repo/tsconfig": "workspace:*",
+    "@tailwindcss/vite": "catalog:",
     "@types/node": "catalog:",
     "@types/react": "catalog:",
     "@types/react-dom": "catalog:",
+    "@vitejs/plugin-react": "catalog:",
     "react-dom": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
   }
 }

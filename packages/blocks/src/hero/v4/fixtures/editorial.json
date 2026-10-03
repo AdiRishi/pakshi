@@ -1,0 +1,46 @@
+{
+  "variant": "editorial",
+  "surface": "default",
+  "props": {
+    "heading": "A summer school for people who make things.",
+    "body": {
+      "type": "doc",
+      "content": [
+        {
+          "type": "paragraph",
+          "content": [
+            {
+              "type": "text",
+              "text": "Five days of workshops at the harbour, led by boatbuilders, sailmakers and the people who keep the old yard running."
+            }
+          ]
+        }
+      ]
+    },
+    "actions": [
+      {
+        "id": "it_primary",
+        "button": {
+          "label": "Register",
+          "link": "https://example.org/register"
+        }
+      },
+      {
+        "id": "it_secondary",
+        "button": {
+          "label": "See the programme",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "points": [],
+    "align": "start",
+    "mediaSide": "end",
+    "height": "auto",
+    "frame": "plain",
+    "backdrop": "grid"
+  }
+}

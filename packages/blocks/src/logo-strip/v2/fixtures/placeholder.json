@@ -1,0 +1,42 @@
+{
+  "variant": "row",
+  "surface": "default",
+  "props": {
+    "color": "mono",
+    "heading": "Who we work with",
+    "logos": [
+      {
+        "id": "it_circle",
+        "logo": {
+          "$ref": "media",
+          "id": "med_pakshiLogoCircle",
+          "alt": ""
+        }
+      },
+      {
+        "id": "it_square",
+        "logo": {
+          "$ref": "media",
+          "id": "med_pakshiLogoSquare",
+          "alt": ""
+        }
+      },
+      {
+        "id": "it_triangle",
+        "logo": {
+          "$ref": "media",
+          "id": "med_pakshiLogoTriangle",
+          "alt": ""
+        }
+      },
+      {
+        "id": "it_wave",
+        "logo": {
+          "$ref": "media",
+          "id": "med_pakshiLogoWave",
+          "alt": ""
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "variant": "split",
+  "surface": "tint",
+  "props": {
+    "heading": "Contact the office",
+    "intro": "Questions about places, bursaries or what to bring? Ask us. We reply within two working days.",
+    "actions": [
+      {
+        "id": "it_message",
+        "button": {
+          "label": "Send us a message",
+          "link": {
+            "$ref": "page",
+            "id": "pg_programme"
+          }
+        }
+      }
+    ],
+    "email": "office@example.org",
+    "phone": "01632 960432",
+    "address": "Harbour Summer School\nThe Boatshed, North Quay\nWestbay WB3 4HQ",
+    "hours": "Tuesday and Thursday, 10am to 2pm"
+  }
+}

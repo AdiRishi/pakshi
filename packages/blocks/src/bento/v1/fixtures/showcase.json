@@ -1,0 +1,76 @@
+{
+  "variant": "showcase",
+  "surface": "inverse",
+  "props": {
+    "actions": [],
+    "align": "center",
+    "background": "full",
+    "heading": "A day at the yard.",
+    "headingRest": "From the first cut to the last tide."
+  },
+  "slots": {
+    "tiles": [
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "tall",
+          "media": "bottom",
+          "tone": "brand",
+          "kicker": "Afternoons",
+          "title": "Sail what you built",
+          "body": "An instructor in every boat, and life jackets for everyone.",
+          "image": {
+            "$ref": "media",
+            "id": "med_sampleHarbour",
+            "alt": "Two sailing boats on the harbour at sunset"
+          }
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "small",
+          "media": "bottom",
+          "tone": "default",
+          "icon": "hammer",
+          "title": "Tools provided",
+          "body": "Chisels, planes and saws, sharpened every evening."
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "small",
+          "media": "bottom",
+          "tone": "accent",
+          "icon": "sun",
+          "title": "Mornings in the boatshed",
+          "body": "Two hands-on sessions before lunch."
+        }
+      },
+      {
+        "type": "bento-tile",
+        "variant": "default",
+        "props": {
+          "size": "wide",
+          "media": "cover",
+          "tone": "default",
+          "title": "Launch day",
+          "body": "Friends and family welcome on the Friday high tide.",
+          "image": {
+            "$ref": "media",
+            "id": "med_harbour",
+            "alt": "Boats moored by a wooden jetty"
+          },
+          "link": {
+            "label": "Book a place",
+            "link": "https://example.org/register"
+          }
+        }
+      }
+    ]
+  }
+}

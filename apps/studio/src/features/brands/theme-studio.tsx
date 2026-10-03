@@ -5,8 +5,12 @@ import {
   type ContrastIssue,
   fontCatalog,
   FontId,
+  type HexColor,
   NeutralTone,
+  type ResolvedTheme,
   resolveTheme,
+  Surface,
+  themeSchemes,
   type ThemeValues,
 } from "@repo/tokens";
 import { Alert, AlertDescription, AlertTitle } from "@repo/ui/components/alert";
@@ -41,33 +45,62 @@ import { ThemePreview, usePreviewSections } from "./theme-preview";
 /** A setting's options, each a value and what to call it. */
 type Options<Value extends string | number> = ReadonlyArray<readonly [Value, string]>;
 
+const colorModes = [
+  ["light", "Light"],
+  ["dark", "Dark"],
+  ["system", "Visitor's choice"],
+] as const satisfies Options<ThemeValues["colorMode"]>;
 const typeSizes = [
+  ["x-small", "Extra small"],
   ["small", "Small"],
   ["medium", "Medium"],
   ["large", "Large"],
+  ["x-large", "Extra large"],
 ] as const satisfies Options<ThemeValues["typeScale"]>;
 const headingWeights = [
+  [300, "Light"],
+  [400, "Regular"],
   [500, "Medium"],
   [600, "Semibold"],
   [700, "Bold"],
   [800, "Heavy"],
 ] as const satisfies Options<ThemeValues["headingWeight"]>;
+const headingStyles = [
+  ["tight", "Tight"],
+  ["normal", "Normal"],
+  ["uppercase", "Capitals"],
+] as const satisfies Options<ThemeValues["headingStyle"]>;
+const labelStyles = [
+  ["plain", "Plain"],
+  ["uppercase", "Small capitals"],
+  ["pill", "Pill"],
+  ["mono", "Monospace"],
+] as const satisfies Options<ThemeValues["labelStyle"]>;
 const radii = [
   ["none", "None"],
   ["small", "Small"],
   ["medium", "Medium"],
   ["large", "Large"],
 ] as const satisfies Options<ThemeValues["radius"]>;
-const shadows = [
-  ["flat", "Flat"],
-  ["soft", "Soft"],
+const buttonCorners = [
+  ["rounded", "Like corners"],
+  ["pill", "Pill"],
+] as const satisfies Options<ThemeValues["buttons"]>;
+const cardStyles = [
+  ["outline", "Outline"],
+  ["filled", "Filled"],
   ["raised", "Raised"],
-] as const satisfies Options<ThemeValues["shadow"]>;
+] as const satisfies Options<ThemeValues["cards"]>;
 const densities = [
   ["compact", "Compact"],
   ["comfortable", "Comfortable"],
   ["spacious", "Spacious"],
 ] as const satisfies Options<ThemeValues["density"]>;
+const widths = [
+  ["narrow", "Narrow"],
+  ["regular", "Regular"],
+  ["wide", "Wide"],
+] as const satisfies Options<ThemeValues["width"]>;
 const imageCorners = [
   ["square", "Square"],
   ["rounded", "Rounded"],
@@ -121,7 +154,7 @@ function Choice<Value extends string | number>(props: {
 }
 
 /** A setting chosen from a list. */
-function Select<Value extends string>(props: {
+function Select<Value extends string | number>(props: {
   readonly label: string;
   readonly options: Options<Value>;
   readonly value: Value;
@@ -135,15 +168,15 @@ function Select<Value extends string>(props: {
       <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
       <NativeSelect
         id={id}
-        value={props.value}
+        value={String(props.value)}
         disabled={props.disabled}
         onChange={(event) => {
-          const option = options.find(([value]) => value === event.target.value);
+          const option = options.find(([value]) => String(value) === event.target.value);
           if (option !== undefined) props.onChange(option[0]);
         }}
       >
         {options.map(([value, title]) => (
-          <NativeSelectOption key={value} value={value}>
+          <NativeSelectOption key={value} value={String(value)}>
             {title}
           </NativeSelectOption>
         ))}
@@ -176,14 +209,14 @@ function Section(props: {
   );
 }
 
-/** The backgrounds Pakshi generated, light and dark, so a brand color's effect shows at a glance. */
-function Swatches(props: { readonly colors: ReturnType<typeof resolveTheme>["theme"]["colors"] }) {
-  const shades = (["light", "dark"] as const).flatMap((scheme) =>
-    (["default", "muted", "brand", "inverse"] as const).map((surface) => ({
+/** The backgrounds Pakshi generated, in each scheme pages show, so the colors' effect shows at a glance. */
+function Swatches(props: { readonly theme: ResolvedTheme }) {
+  const shades = themeSchemes(props.theme).flatMap((scheme) =>
+    Surface.literals.map((surface) => ({
       key: `${scheme}-${surface}`,
       label: `${schemeTitles[scheme]}, ${surfaceTitles[surface]}`,
-      color: props.colors[scheme][surface].background,
-      text: props.colors[scheme][surface].foreground,
+      color: props.theme.colors[scheme][surface].background,
+      text: props.theme.colors[scheme][surface].foreground,
     })),
   );
   return (
@@ -202,7 +235,7 @@ function Swatches(props: { readonly colors: ReturnType<typeof resolveTheme>["the
         ))}
       </ul>
       <figcaption className="text-sm text-muted-foreground">
-        Backgrounds Pakshi made from your brand color, in light and dark
+        Backgrounds Pakshi made from your colors
       </figcaption>
     </figure>
   );
@@ -308,7 +341,7 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
         <Card className="h-fit gap-0 py-0">
           <Section
             title="Colors"
-            description="Pakshi makes the light and dark palettes from one brand color."
+            description="Pakshi makes the light and dark palettes from your brand color, and a second color if you choose one."
           >
             <FieldGroup className="grid grid-cols-2 gap-4">
               <BrandColor
@@ -324,10 +357,23 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
                 onChange={(value) => set("neutral", value)}
               />
             </FieldGroup>
-            <Swatches colors={resolved.theme.colors} />
+            <AccentColor
+              value={theme.accentColor}
+              brandColor={theme.brandColor}
+              disabled={disabled}
+              onChange={(value) => set("accentColor", value)}
+            />
+            <Choice
+              label="Pages are"
+              options={colorModes}
+              value={theme.colorMode}
+              disabled={disabled}
+              onChange={(value) => set("colorMode", value)}
+            />
+            <Swatches theme={resolved.theme} />
             <ContrastCheck issues={resolved.issues} />
           </Section>
-          <Section title="Fonts and type size">
+          <Section title="Type">
             <FieldGroup className="grid grid-cols-2 gap-4">
               <Select
                 label="Heading font"
@@ -350,16 +396,30 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
                 disabled={disabled}
                 onChange={(value) => set("typeScale", value)}
               />
+              <Select
+                label="Heading weight"
+                options={headingWeights}
+                value={theme.headingWeight}
+                disabled={disabled}
+                onChange={(value) => set("headingWeight", value)}
+              />
             </FieldGroup>
             <Choice
-              label="Heading weight"
-              options={headingWeights}
-              value={theme.headingWeight}
+              label="Headings"
+              options={headingStyles}
+              value={theme.headingStyle}
               disabled={disabled}
-              onChange={(value) => set("headingWeight", value)}
+              onChange={(value) => set("headingStyle", value)}
+            />
+            <Select
+              label="Labels above headings"
+              options={labelStyles}
+              value={theme.labelStyle}
+              disabled={disabled}
+              onChange={(value) => set("labelStyle", value)}
             />
           </Section>
-          <Section title="Shape and depth">
+          <Section title="Shape">
             <Choice
               label="Corners"
               options={radii}
@@ -368,20 +428,42 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
               onChange={(value) => set("radius", value)}
             />
             <Choice
-              label="Shadows"
-              options={shadows}
-              value={theme.shadow}
+              label="Buttons"
+              options={buttonCorners}
+              value={theme.buttons}
               disabled={disabled}
-              onChange={(value) => set("shadow", value)}
+              onChange={(value) => set("buttons", value)}
+            />
+            <Choice
+              label="Cards"
+              options={cardStyles}
+              value={theme.cards}
+              disabled={disabled}
+              onChange={(value) => set("cards", value)}
             />
           </Section>
-          <Section title="Density">
+          <Section title="Layout">
             <Choice
               label="Spacing"
               options={densities}
               value={theme.density}
               disabled={disabled}
               onChange={(value) => set("density", value)}
+            />
+            <Choice
+              label="Page width"
+              options={widths}
+              value={theme.width}
+              disabled={disabled}
+              onChange={(value) => set("width", value)}
+            />
+          </Section>
+          <Section title="Lines">
+            <Toggle
+              label="Rule the page: thin lines down its sides and between sections"
+              checked={theme.lines}
+              disabled={disabled}
+              onChange={(lines) => set("lines", lines)}
             />
           </Section>
           <Section title="Imagery">
@@ -397,7 +479,8 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
             title="Motion"
             description="Visitors who ask their device for less motion never see it."
           >
-            <Motion
+            <Toggle
+              label="Fade sections in as visitors scroll"
               checked={theme.motion}
               disabled={disabled}
               onChange={(motion) => set("motion", motion)}
@@ -426,23 +509,25 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
                 </CardDescription>
               </div>
               <div className="ml-auto flex items-center gap-3">
-                <ToggleGroup
-                  aria-label="Color scheme"
-                  variant="outline"
-                  size="sm"
-                  spacing={0}
-                  value={[scheme]}
-                  onValueChange={(chosen) => {
-                    if (chosen[0] === "light" || chosen[0] === "dark") setScheme(chosen[0]);
-                  }}
-                >
-                  <ToggleGroupItem value="light">
-                    <SunIcon /> Light
-                  </ToggleGroupItem>
-                  <ToggleGroupItem value="dark">
-                    <MoonIcon /> Dark
-                  </ToggleGroupItem>
-                </ToggleGroup>
+                {theme.colorMode === "system" && (
+                  <ToggleGroup
+                    aria-label="Color scheme"
+                    variant="outline"
+                    size="sm"
+                    spacing={0}
+                    value={[scheme]}
+                    onValueChange={(chosen) => {
+                      if (chosen[0] === "light" || chosen[0] === "dark") setScheme(chosen[0]);
+                    }}
+                  >
+                    <ToggleGroupItem value="light">
+                      <SunIcon /> Light
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="dark">
+                      <MoonIcon /> Dark
+                    </ToggleGroupItem>
+                  </ToggleGroup>
+                )}
                 <Suspense fallback={null}>
                   <BlockFilter value={only} onChange={setOnly} />
                 </Suspense>
@@ -467,7 +552,40 @@ function ThemeEditor(props: { readonly viewer: Viewer; readonly view: BrandView 
   );
 }
 
-function Motion(props: {
+/** The brand's second color, which accent sections take, or none, when they take a light shade of the first. */
+function AccentColor(props: {
+  readonly value: HexColor | null;
+  readonly brandColor: HexColor;
+  readonly disabled: boolean;
+  readonly onChange: (value: HexColor | null) => void;
+}) {
+  const id = useId();
+  return (
+    <div className="flex flex-col gap-3">
+      <Field orientation="horizontal" className="justify-between">
+        <FieldLabel htmlFor={id}>A second color for accent sections</FieldLabel>
+        <Switch
+          id={id}
+          checked={props.value !== null}
+          disabled={props.disabled}
+          onCheckedChange={(checked) => props.onChange(checked ? props.brandColor : null)}
+        />
+      </Field>
+      {props.value !== null && (
+        <BrandColor
+          label="Accent color"
+          value={props.value}
+          disabled={props.disabled}
+          onChange={props.onChange}
+        />
+      )}
+    </div>
+  );
+}
+
+/** A setting that's on or off. */
+function Toggle(props: {
+  readonly label: string;
   readonly checked: boolean;
   readonly disabled: boolean;
   readonly onChange: (checked: boolean) => void;
@@ -475,7 +593,7 @@ function Motion(props: {
   const id = useId();
   return (
     <Field orientation="horizontal" className="justify-between">
-      <FieldLabel htmlFor={id}>Fade sections in as visitors scroll</FieldLabel>
+      <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
       <Switch
         id={id}
         checked={props.checked}

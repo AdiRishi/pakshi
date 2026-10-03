@@ -103,9 +103,9 @@ const insertMore: WireOp = {
   block: {
     id: "b_more",
     type: "feature-grid",
-    variant: "two-columns",
+    variant: "grid",
     surface: "muted",
-    props: { heading: "More" },
+    props: { heading: "More", actions: [] },
     slots: { items: [item("lunch", "Lunch")] },
   },
 };
@@ -118,7 +118,7 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
   ],
   [
     "remove an optional field",
-    [{ op: "setProp", target: "pg_home", block: "b_hero", path: ["cta"] }],
+    [{ op: "setProp", target: "pg_home", block: "b_hero", path: ["body"] }],
   ],
   [
     "set a button's label",
@@ -127,7 +127,7 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
         op: "setProp",
         target: "pg_home",
         block: "b_hero",
-        path: ["cta", "label"],
+        path: ["actions", "it_register", "button", "label"],
         value: "Sign up",
       },
     ],
@@ -169,7 +169,7 @@ const batches: ReadonlyArray<readonly [string, ReadonlyArray<WireOp>]> = [
   ],
   [
     "change a variant",
-    [{ op: "setVariant", target: "pg_home", block: "b_hero", variant: "split-image" }],
+    [{ op: "setVariant", target: "pg_home", block: "b_hero", variant: "split" }],
   ],
   [
     "change a surface",
@@ -303,25 +303,34 @@ describe("applying ops", () => {
     "a new %s with its placeholder content can be inserted, and is complete",
     (type, contract) => {
       const tree = placeholderTree(contracts, type);
-      const host = Object.entries(home().blocks).flatMap(([id, placed]) => {
-        const hostContract = contracts.get(placed.type);
-        return hostContract?.placement === "section"
-          ? Object.entries(hostContract.slots)
+      const host = addable.flatMap((section) =>
+        section.placement === "section"
+          ? Object.entries(section.slots)
               .filter(([, spec]) => spec.accepts.includes(type))
-              .map(([slot]) => ({ block: BlockId.make(id), slot }))
-          : [];
-      })[0];
-      const list = contract.placement === "section" ? ("root" as const) : host;
-      if (list === undefined) throw new Error(`No section on the home page can hold a ${type}.`);
+              .map(([slot]) => ({ tree: placeholderTree(contracts, section.type), slot }))
+          : [],
+      )[0];
       // A section that shows a post's details goes on a post.
       const page = PageId.make(
         contract.placement === "section" && contract.entryOf !== null ? "pg_dates" : "pg_home",
       );
-      const result = applyOps(
-        harbourDraft,
-        [{ op: "insertBlock", page, list, after: null, block: tree }],
-        contracts,
-      );
+      const ops: ReadonlyArray<Op> =
+        contract.placement === "section"
+          ? [{ op: "insertBlock", page, list: "root", after: null, block: tree }]
+          : host === undefined
+            ? []
+            : [
+                { op: "insertBlock", page, list: "root", after: null, block: host.tree },
+                {
+                  op: "insertBlock",
+                  page,
+                  list: { block: host.tree.id, slot: host.slot },
+                  after: null,
+                  block: tree,
+                },
+              ];
+      if (ops.length === 0) throw new Error(`No section can hold a ${type}.`);
+      const result = applyOps(harbourDraft, ops, contracts);
       expect(result.ok ? [] : result.errors).toEqual([]);
       for (const placed of [tree, ...Object.values(tree.slots ?? {}).flat()]) {
         const placedContract = contracts.get(placed.type);
@@ -367,9 +376,9 @@ describe("applying ops", () => {
         block: {
           id: "b_more",
           type: "feature-grid",
-          variant: "two-columns",
+          variant: "grid",
           surface: "muted",
-          props: { heading: "More" },
+          props: { heading: "More", actions: [] },
         },
       },
       {
@@ -438,11 +447,11 @@ describe("applying ops", () => {
       target: "pg_home",
       block: "b_hero",
       path: ["heading"],
-      value: "x".repeat(81),
+      value: "x".repeat(91),
     });
     expect(Schema.is(BatchError)(error)).toBe(true);
     expect(error).toMatchObject({ op: 0, path: ["heading"], rule: "value" });
-    expect(error?.message).toBe("Use at most 80 characters");
+    expect(error?.message).toBe("Use at most 90 characters");
   });
 });
 
@@ -546,7 +555,7 @@ describe("each rule rejects the ops that break it", () => {
         page: "pg_home",
         list: "root",
         after: null,
-        block: { id: "b_top", type: "header", variant: "simple", surface: "default", props: {} },
+        block: { id: "b_top", type: "header", variant: "standard", surface: "default", props: {} },
       },
       "placement",
     ],
@@ -570,8 +579,8 @@ describe("each rule rejects the ops that break it", () => {
         block: {
           id: "b_more",
           type: "feature-grid",
-          variant: "two-columns",
-          props: { heading: "More" },
+          variant: "grid",
+          props: { heading: "More", actions: [] },
         },
       },
       "surface",
@@ -613,7 +622,7 @@ describe("each rule rejects the ops that break it", () => {
         op: "setProp",
         target: "pg_home",
         block: "b_hero",
-        path: ["cta", "link"],
+        path: ["actions", "it_register", "button", "link"],
         value: "javascript:alert(1)",
       },
       "value",
@@ -733,7 +742,7 @@ test("a form can't be removed while a block uses it", () => {
         type: "form-section",
         variant: "card",
         surface: "default",
-        props: { heading: "Plan a visit", form: { $ref: "form", id: "frm_visit" } },
+        props: { heading: "Plan a visit", points: [], form: { $ref: "form", id: "frm_visit" } },
       },
     },
     { op: "removeForm", form: "frm_visit" },
