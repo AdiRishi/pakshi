@@ -1,8 +1,12 @@
-import type { FormDefinition, FormField } from "@repo/contracts/form";
+// Blocks run in browsers, and Workers that load block definitions typecheck
+// them without the DOM library, which every block reaches through this module.
+/// <reference lib="dom" />
+import { answerProblem, type FormDefinition, type FormField } from "@repo/contracts/form";
 import type { BlockId, FormId, MediaId, MenuItemId, PageId } from "@repo/contracts/ids";
 import type { PostMeta } from "@repo/contracts/page";
 import type { FormRef, Link, MediaRef } from "@repo/contracts/references";
 import type { Surface } from "@repo/tokens";
+import { useForm as useTanStackForm } from "@tanstack/react-form";
 import { renderToReactElement } from "@tiptap/static-renderer/pm/react";
 import { Predicate } from "effect";
 import {
@@ -11,12 +15,24 @@ import {
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
+  type SubmitEvent,
   useContext,
+  useEffect,
+  useRef,
 } from "react";
 
 import { useBlockFrame } from "./block.tsx";
 import { type Field, fieldAt } from "./fields.ts";
 import { buttonClass } from "./kit/button.ts";
+import {
+  Checkbox,
+  Field as Control,
+  FieldError,
+  FieldLabel,
+  Input,
+  NativeSelect,
+  Textarea,
+} from "./kit/ui/field.tsx";
 import { samplePosts } from "./placeholders.ts";
 import { richTextExtensions, toJsonContent } from "./rich-text-extensions.ts";
 import type { RichTextDocument } from "./rich-text.ts";
@@ -88,6 +104,8 @@ export interface SiteData {
    * preview.
    */
   readonly current: { readonly page: PageId; readonly number: number } | null;
+  /** Whether the theme's motion is on. Visitors who ask for less motion still get less. */
+  readonly motion: boolean;
 }
 
 const SiteDataContext = createContext<SiteData | null>(null);
@@ -239,6 +257,13 @@ export const FieldEditingProvider = FieldEditingContext.Provider;
 
 /** Whether blocks render in the editor canvas, where every field must be reachable. */
 export const useEditing = () => useContext(FieldEditingContext) !== null;
+
+/**
+ * Whether blocks may move by themselves: the theme's motion is on and the
+ * block isn't being edited. Each animation still holds still for visitors
+ * who ask for less motion.
+ */
+export const useMotion = () => useSiteData().motion && !useEditing();
 
 /** The field a component renders, from the block's own fields. */
 const useField = (field: FieldPath) => {
@@ -401,16 +426,27 @@ type RowField = Exclude<FormField, { readonly kind: "longText" | "select" }>;
 const fitRow = (fields: ReadonlyArray<FormField>): fields is ReadonlyArray<RowField> =>
   fields.every((field) => field.kind !== "longText" && field.kind !== "select");
 
-const inputClass =
-  "w-full rounded-md border border-input bg-background px-4 py-3 text-body text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+type AnsweredField = Exclude<FormField, { readonly kind: "hidden" }>;
 
-const inlineInputClass =
-  "h-11 min-w-0 flex-1 basis-56 rounded-button border border-input bg-background px-4 text-body text-foreground placeholder:text-muted-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring";
+const inputType = { shortText: "text", email: "email", phone: "tel" } as const;
+const autoComplete = { shortText: undefined, email: "email", phone: "tel" } as const;
+
+/** What a form's live check says about an answer: the problem, or nothing. */
+const check =
+  (field: AnsweredField) =>
+  ({ value }: { readonly value: string }) =>
+    answerProblem(field, value) ?? undefined;
 
 /**
  * A form from the site's forms, with its fields in order. Its markup lives
  * here rather than in block versions, so the way forms post can change
  * without a new version of every block that shows one.
+ *
+ * It's a plain HTML form that posts to the page, so it sends before the
+ * page's script loads. Once hydrated, TanStack Form checks each answer as
+ * the visitor leaves it and again on sending, with the rules sites-api
+ * applies, and sends only answers that pass, moving focus to the first that
+ * doesn't.
  */
 export const FormView = (options: {
   readonly field: FieldPath;
@@ -427,181 +463,209 @@ export const FormView = (options: {
   const address = useField(options.field);
   const editing = useContext(FieldEditingContext);
   const definition = useForm(options.value.id);
-  const { pagePath: privacyHref, preview, sent } = useSiteData();
+  const { pagePath, preview, sent } = useSiteData();
+  const element = useRef<HTMLFormElement>(null);
+  const answered = (definition?.fields ?? []).filter(
+    (field): field is AnsweredField => field.kind !== "hidden",
+  );
+  const form = useTanStackForm({
+    defaultValues: Object.fromEntries(answered.map((field) => [field.id, ""])),
+    onSubmit: () => element.current?.submit(),
+    onSubmitInvalid: () =>
+      element.current?.querySelector<HTMLElement>("[aria-invalid=true]")?.focus(),
+  });
+  // The browser's own checks stand in until the page hydrates; then this form's take over.
+  useEffect(() => {
+    if (element.current !== null) element.current.noValidate = true;
+  }, []);
   if (definition === undefined) return null;
   if (sent === definition.id)
     return <output className="text-lead">Thank you. Your answers were sent.</output>;
   const inputId = (id: string) => `${address.block}-${id}`;
+  const errorId = (id: string) => `${address.block}-${id}-error`;
+  const send = (event: SubmitEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    form.handleSubmit().catch(reportError);
+  };
+  const privacyLink = (link: Link) =>
+    Predicate.isString(link) ? link : (pagePath(link.id) ?? "#");
   const submit = (
-    <button
-      type="submit"
-      // A disabled default button also stops Enter from submitting the form.
-      disabled={preview !== null}
-      className={buttonClass({ size: "md" })}
-    >
-      {definition.submitLabel}
-    </button>
+    <form.Subscribe selector={(state) => state.isSubmitting}>
+      {(submitting) => (
+        <button
+          type="submit"
+          // A disabled default button also stops Enter from submitting the form.
+          disabled={preview !== null || submitting}
+          className={buttonClass({ size: "md" })}
+        >
+          {definition.submitLabel}
+        </button>
+      )}
+    </form.Subscribe>
   );
-  const fields = definition.fields;
-  if (options.layout === "inline" && fitRow(fields)) {
-    const inline = (editable: EditableAttributes) => (
-      <form
-        {...editable}
-        method="post"
-        action={`?form=${definition.id}`}
-        className={options.className}
-      >
-        <div className="flex flex-wrap gap-2">
-          {fields.map((field) => {
-            switch (field.kind) {
-              case "hidden":
-                return <input key={field.id} type="hidden" name={field.id} value={field.value} />;
-              case "checkbox":
-                return null;
-              default:
-                return (
-                  <input
-                    key={field.id}
-                    aria-label={field.label}
-                    placeholder={field.label}
-                    name={field.id}
-                    required={field.required}
-                    type={{ shortText: "text", email: "email", phone: "tel" }[field.kind]}
-                    autoComplete={
-                      { shortText: undefined, email: "email", phone: "tel" }[field.kind]
-                    }
-                    className={inlineInputClass}
-                  />
-                );
-            }
-          })}
-          {submit}
-        </div>
-        {fields.map((field) =>
-          field.kind === "checkbox" ? (
-            <label
-              key={field.id}
-              className="text-small mt-3 flex items-start gap-2 text-muted-foreground"
-            >
-              <input
-                name={field.id}
-                type="checkbox"
-                required={field.required}
-                className="mt-0.5 size-4 accent-primary"
-              />
-              <span>
+  const checkbox = (field: Extract<AnsweredField, { readonly kind: "checkbox" }>) => (
+    <form.Field
+      key={field.id}
+      name={field.id}
+      validators={{ onChange: check(field), onSubmit: check(field) }}
+    >
+      {(state) => {
+        const problem = state.state.meta.errors[0];
+        return (
+          <Control orientation="horizontal">
+            <Checkbox
+              id={inputId(field.id)}
+              name={field.id}
+              required={field.required}
+              checked={state.state.value === "Yes"}
+              onChange={(event) => state.handleChange(event.target.checked ? "Yes" : "")}
+              onBlur={state.handleBlur}
+              aria-invalid={problem !== undefined || undefined}
+              aria-describedby={problem === undefined ? undefined : errorId(field.id)}
+            />
+            <div className="flex flex-col gap-1">
+              <FieldLabel htmlFor={inputId(field.id)} className="text-body font-normal">
                 {field.label}
                 {field.link && (
                   <>
                     {" "}
-                    <a
-                      className="text-primary underline"
-                      href={
-                        Predicate.isString(field.link)
-                          ? field.link
-                          : (privacyHref(field.link.id) ?? "#")
-                      }
-                    >
+                    <a className="text-primary underline" href={privacyLink(field.link)}>
                       Privacy policy
                     </a>
                   </>
                 )}
-              </span>
-            </label>
-          ) : null,
-        )}
-      </form>
-    );
-    return editing === null ? (
-      inline({})
-    ) : (
-      <editing.Form {...address} value={options.value} render={inline} />
-    );
-  }
+              </FieldLabel>
+              <FieldError id={errorId(field.id)}>{problem}</FieldError>
+            </div>
+          </Control>
+        );
+      }}
+    </form.Field>
+  );
+  const fields = definition.fields;
+  const hidden = fields.map((field) =>
+    field.kind === "hidden" ? (
+      <input key={field.id} type="hidden" name={field.id} value={field.value} />
+    ) : null,
+  );
+  const inline = options.layout === "inline" && fitRow(fields);
   const render = (editable: EditableAttributes) => (
     <form
       {...editable}
+      ref={element}
       method="post"
       action={`?form=${definition.id}`}
+      onSubmit={send}
       className={options.className}
     >
-      {definition.fields.map((field) => {
-        switch (field.kind) {
-          case "hidden":
-            return <input key={field.id} type="hidden" name={field.id} value={field.value} />;
-          case "checkbox":
-            return (
-              <div key={field.id} className="flex items-start gap-3">
-                <input
-                  id={inputId(field.id)}
+      {hidden}
+      {inline ? (
+        <>
+          <div className="flex flex-wrap items-start gap-2">
+            {fields.map((field) =>
+              field.kind === "checkbox" || field.kind === "hidden" ? null : (
+                <form.Field
+                  key={field.id}
                   name={field.id}
-                  type="checkbox"
-                  required={field.required}
-                  className="mt-1 size-5 accent-primary"
-                />
-                <label htmlFor={inputId(field.id)} className="text-body">
-                  {field.label}
-                  {field.link && (
-                    <>
-                      {" "}
-                      <a
-                        className="text-primary underline"
-                        href={
-                          Predicate.isString(field.link)
-                            ? field.link
-                            : (privacyHref(field.link.id) ?? "#")
-                        }
-                      >
-                        Privacy policy
-                      </a>
-                    </>
-                  )}
-                </label>
-              </div>
-            );
-          default:
-            return (
-              <div key={field.id} className="flex flex-col gap-2">
-                <label htmlFor={inputId(field.id)} className="text-small font-medium">
-                  {field.label}
-                  {!field.required && <span className="text-muted-foreground"> (optional)</span>}
-                </label>
-                {field.kind === "longText" ? (
-                  <textarea
-                    id={inputId(field.id)}
-                    name={field.id}
-                    required={field.required}
-                    rows={5}
-                    className={inputClass}
-                  />
-                ) : field.kind === "select" ? (
-                  <select
-                    id={inputId(field.id)}
-                    name={field.id}
-                    required={field.required}
-                    className={inputClass}
-                  >
-                    {field.options.map((option) => (
-                      <option key={option}>{option}</option>
-                    ))}
-                  </select>
-                ) : (
-                  <input
-                    id={inputId(field.id)}
-                    name={field.id}
-                    required={field.required}
-                    type={{ shortText: "text", email: "email", phone: "tel" }[field.kind]}
-                    autoComplete={
-                      { shortText: undefined, email: "email", phone: "tel" }[field.kind]
-                    }
-                    className={inputClass}
-                  />
-                )}
-              </div>
-            );
-        }
-      })}
-      <div>{submit}</div>
+                  validators={{ onBlur: check(field), onSubmit: check(field) }}
+                >
+                  {(state) => {
+                    const problem = state.state.meta.errors[0];
+                    return (
+                      <div className="flex min-w-0 flex-1 basis-56 flex-col gap-1">
+                        <Input
+                          aria-label={field.label}
+                          placeholder={field.label}
+                          name={field.id}
+                          required={field.required}
+                          type={inputType[field.kind]}
+                          autoComplete={autoComplete[field.kind]}
+                          value={state.state.value}
+                          onChange={(event) => state.handleChange(event.target.value)}
+                          onBlur={state.handleBlur}
+                          aria-invalid={problem !== undefined || undefined}
+                          aria-describedby={problem === undefined ? undefined : errorId(field.id)}
+                          className="rounded-button h-11"
+                        />
+                        <FieldError id={errorId(field.id)}>{problem}</FieldError>
+                      </div>
+                    );
+                  }}
+                </form.Field>
+              ),
+            )}
+            {submit}
+          </div>
+          {answered.some((field) => field.kind === "checkbox") && (
+            <div className="text-small mt-3 flex flex-col gap-3 text-muted-foreground">
+              {answered.map((field) => (field.kind === "checkbox" ? checkbox(field) : null))}
+            </div>
+          )}
+        </>
+      ) : (
+        <div className="flex flex-col gap-6">
+          {answered.map((field) =>
+            field.kind === "checkbox" ? (
+              checkbox(field)
+            ) : (
+              <form.Field
+                key={field.id}
+                name={field.id}
+                validators={{ onBlur: check(field), onSubmit: check(field) }}
+              >
+                {(state) => {
+                  const problem = state.state.meta.errors[0];
+                  const control = {
+                    id: inputId(field.id),
+                    name: field.id,
+                    required: field.required,
+                    value: state.state.value,
+                    onBlur: state.handleBlur,
+                    "aria-invalid": problem !== undefined || undefined,
+                    "aria-describedby": problem === undefined ? undefined : errorId(field.id),
+                  };
+                  return (
+                    <Control>
+                      <FieldLabel htmlFor={inputId(field.id)}>
+                        {field.label}
+                        {!field.required && (
+                          <span className="font-normal text-muted-foreground"> (optional)</span>
+                        )}
+                      </FieldLabel>
+                      {field.kind === "longText" ? (
+                        <Textarea
+                          {...control}
+                          rows={5}
+                          onChange={(event) => state.handleChange(event.target.value)}
+                        />
+                      ) : field.kind === "select" ? (
+                        <NativeSelect
+                          {...control}
+                          onChange={(event) => state.handleChange(event.target.value)}
+                        >
+                          <option value="">Choose one</option>
+                          {field.options.map((option) => (
+                            <option key={option}>{option}</option>
+                          ))}
+                        </NativeSelect>
+                      ) : (
+                        <Input
+                          {...control}
+                          type={inputType[field.kind]}
+                          autoComplete={autoComplete[field.kind]}
+                          onChange={(event) => state.handleChange(event.target.value)}
+                        />
+                      )}
+                      <FieldError id={errorId(field.id)}>{problem}</FieldError>
+                    </Control>
+                  );
+                }}
+              </form.Field>
+            ),
+          )}
+          <div>{submit}</div>
+        </div>
+      )}
     </form>
   );
   return editing === null ? (

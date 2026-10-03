@@ -67,7 +67,7 @@ export function ThemePreview(props: {
   const blocks = usePreviewBlocks();
   const data = useMemo(() => {
     const files = new Map(props.media.map((file) => [file.id, file]));
-    return siteData({
+    const data = siteData({
       settings: { name: props.brand.name, sharingImage: null },
       identity: props.identity,
       menus: fixtureSite.menus,
@@ -80,7 +80,8 @@ export function ThemePreview(props: {
           : { src: brandMediaSrc(props.brand.id, id), width: file.width, height: file.height };
       },
     });
-  }, [props.brand, props.identity, props.media]);
+    return { ...data, motion: props.theme.motion };
+  }, [props.brand, props.identity, props.media, props.theme.motion]);
 
   const shown = blocks.filter((block) =>
     props.only === null ? true : block.section && block.type === props.only,

@@ -28,7 +28,7 @@ const png = (width: number, height: number) => {
 };
 
 /** Uploads a file to a library as Studio forwards a browser's upload. */
-const upload = (session: string, library: string, name: string, body: Uint8Array) =>
+const upload = (session: string, library: string, name: string, body: Uint8Array<ArrayBuffer>) =>
   Effect.promise(() =>
     exports.default.fetch(
       new Request(`${studioOrigin}${mediaUploadPath}?${library}&name=${name}`, {

@@ -84,10 +84,15 @@ export const Route = createFileRoute("/$")({
  * server's HTML and never loads its code.
  */
 function Page({ data }: { readonly data: Shown }) {
-  const { site: inputs, sent, current: shown, interactive: running } = data;
+  const { site: inputs, sent, current: shown, motion, interactive: running } = data;
   const site = useMemo(
-    () => ({ ...siteData({ ...inputs, media: (id) => inputs.media[id] }), sent, current: shown }),
-    [inputs, sent, shown],
+    () => ({
+      ...siteData({ ...inputs, media: (id) => inputs.media[id] }),
+      sent,
+      current: shown,
+      motion,
+    }),
+    [inputs, sent, shown, motion],
   );
   const interactive = useMemo(() => new Set(running), [running]);
   return (

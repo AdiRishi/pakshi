@@ -8,6 +8,109 @@
 
 @source ".";
 
+/* Magic UI's animations, which its components in the kit name. */
+@theme {
+  --animate-marquee: marquee var(--duration) infinite linear;
+  --animate-shine: shine var(--duration) infinite linear;
+  --animate-shiny-text: shiny-text 8s infinite;
+
+  @keyframes marquee {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(calc(-100% - var(--gap)));
+    }
+  }
+
+  @keyframes shine {
+    0% {
+      background-position: 0% 0%;
+    }
+    50% {
+      background-position: 100% 100%;
+    }
+    to {
+      background-position: 0% 0%;
+    }
+  }
+
+  @keyframes shiny-text {
+    0%,
+    90%,
+    100% {
+      background-position: calc(-100% - var(--shiny-width)) 0;
+    }
+    30%,
+    60% {
+      background-position: calc(100% + var(--shiny-width)) 0;
+    }
+  }
+}
+
+/* An element that takes its parent's corners, as Magic UI's borders do. */
+@utility rounded-inherit {
+  border-radius: inherit;
+}
+
+/* Magic UI's shine border, its colors the theme's brand colors. */
+@utility shine-border {
+  padding: var(--border-width);
+  background-image: radial-gradient(
+    transparent,
+    transparent,
+    var(--primary),
+    var(--accent),
+    transparent,
+    transparent
+  );
+  background-size: 300% 300%;
+  mask:
+    linear-gradient(black 0 0) content-box,
+    linear-gradient(black 0 0);
+  mask-composite: exclude;
+  will-change: background-position;
+}
+
+/*
+ * Magic UI's magic card: its border lights up in the brand's colors around
+ * the pointer, and a soft glow follows it across the card.
+ */
+@utility magic-card {
+  --magic-x: -100%;
+  --magic-y: -100%;
+  border: 1px solid transparent;
+  background:
+    linear-gradient(var(--card) 0 0) padding-box,
+    radial-gradient(
+        16rem circle at var(--magic-x) var(--magic-y),
+        var(--primary),
+        var(--accent),
+        var(--border) 100%
+      )
+      border-box;
+
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 300ms;
+    background: radial-gradient(
+      16rem circle at var(--magic-x) var(--magic-y),
+      color-mix(in oklch, var(--primary) 12%, transparent),
+      transparent 100%
+    );
+  }
+
+  &:hover::after {
+    opacity: 1;
+  }
+}
+
 /*
  * On a site, each of the page's header, sections and footer sits in a
  * TanStack Start hydration marker, which takes no part in the layout. The

@@ -40,8 +40,9 @@ const collectionsOf = (pages: ReadonlyArray<PageListing>) => {
 /**
  * Builds what blocks read beyond their props from a site's settings, menus,
  * pages, forms and media. Placeholder images, the placeholder form and the
- * placeholder blog resolve on every site. It shows no page in particular;
- * a caller showing one sets `current`.
+ * placeholder blog resolve on every site. It shows no page in particular,
+ * and moves as a theme with motion does; a caller showing one sets `current`,
+ * and a caller with the theme sets `motion`.
  */
 export const siteData = (site: {
   readonly settings: PublishedSettings;
@@ -78,5 +79,6 @@ export const siteData = (site: {
     preview: null,
     sent: null,
     current: null,
+    motion: true,
   };
 };
